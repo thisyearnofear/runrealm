@@ -1,0 +1,431 @@
+/**
+ * TerritoryDashboard - Vanilla TypeScript implementation
+ * Gamified interface for territory management with AI integration
+ */
+
+import { AIService } from '../services/ai-service';
+import { Web3Service } from '../services/web3-service';
+import { EventBus } from '../core/event-bus';
+import { DOMService } from '../services/dom-service';
+
+export interface Territory {
+  geohash: string;
+  owner: string;
+  claimedAt: Date;
+  lastActivity: Date;
+  difficulty: number;
+  estimatedReward: number;
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  landmarks: string[];
+  metadata: {
+    name: string;
+    description: string;
+    imageUrl?: string;
+  };
+}
+
+export interface PlayerStats {
+  realmBalance: number;
+  territoriesOwned: number;
+  totalDistance: number;
+  level: number;
+  experience: number;
+  achievements: string[];
+}
+
+export class TerritoryDashboard {
+  private static instance: TerritoryDashboard;
+  private container: HTMLElement | null = null;
+  private eventBus: EventBus;
+  private aiService: AIService;
+  private web3Service: Web3Service;
+  private domService: DOMService;
+  private isVisible: boolean = false;
+  private territories: Territory[] = [];
+  private playerStats: PlayerStats = {
+    realmBalance: 0,
+    territoriesOwned: 0,
+    totalDistance: 0,
+    level: 1,
+    experience: 0,
+    achievements: []
+  };
+
+  private constructor() {
+    this.eventBus = EventBus.getInstance();
+    this.aiService = AIService.getInstance();
+    this.web3Service = Web3Service.getInstance();
+    this.domService = DOMService.getInstance();
+
+    this.setupEventListeners();
+  }
+
+  static getInstance(): TerritoryDashboard {
+    if (!TerritoryDashboard.instance) {
+      TerritoryDashboard.instance = new TerritoryDashboard();
+    }
+    return TerritoryDashboard.instance;
+  }
+
+  public initialize(parentElement: HTMLElement): void {
+    this.container = this.domService.createElement('div', {
+      id: 'territory-dashboard',
+      className: 'territory-dashboard hidden',
+      parent: parentElement
+    });
+
+    this.render();
+  }
+
+  private setupEventListeners(): void {
+    this.eventBus.on('territory:claimed', (data) => {
+      this.handleTerritoryUpdate(data);
+    });
+
+    this.eventBus.on('web3:walletConnected', (data) => {
+      this.updateWalletStatus(data);
+    });
+
+    this.eventBus.on('game:rewardEarned', (data) => {
+      this.updateRewards(data);
+    });
+  }
+
+  private render(): void {
+    if (!this.container) return;
+
+    this.container.innerHTML = `
+      <div class="dashboard-header">
+        <h2>Territory Command</h2>
+        <button id="dashboard-close" class="close-btn">&times;</button>
+      </div>
+
+      <div class="dashboard-content">
+        <div class="player-stats-section">
+          ${this.renderPlayerStats()}
+        </div>
+
+        <div class="territories-section">
+          <h3>Your Territories</h3>
+          <div id="territories-list">
+            ${this.renderTerritories()}
+          </div>
+        </div>
+
+        <div class="actions-section">
+          <h3>Actions</h3>
+          <div class="action-buttons">
+            <button id="claim-territory-btn" class="action-btn primary">
+              Claim Territory
+            </button>
+            <button id="ai-route-btn" class="action-btn secondary">
+              AI Route Suggestion
+            </button>
+            <button id="territory-analysis-btn" class="action-btn secondary">
+              Territory Analysis
+            </button>
+          </div>
+        </div>
+
+        <div class="ai-insights-section">
+          <h3>AI Insights</h3>
+          <div id="ai-insights" class="insights-content">
+            <p class="placeholder">Connect your wallet and start running to get AI-powered territory insights!</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.setupInteractions();
+  }
+
+  private renderPlayerStats(): string {
+    return `
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value">${this.playerStats.realmBalance.toFixed(2)}</div>
+          <div class="stat-label">$REALM Balance</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${this.playerStats.territoriesOwned}</div>
+          <div class="stat-label">Territories Owned</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${(this.playerStats.totalDistance / 1000).toFixed(1)}km</div>
+          <div class="stat-label">Total Distance</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">Level ${this.playerStats.level}</div>
+          <div class="stat-label">${this.playerStats.experience} XP</div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderTerritories(): string {
+    if (this.territories.length === 0) {
+      return '<p class="no-territories">No territories claimed yet. Start running to claim your first territory!</p>';
+    }
+
+    return this.territories.map(territory => `
+      <div class="territory-card ${territory.rarity}">
+        <div class="territory-header">
+          <h4>${territory.metadata.name}</h4>
+          <span class="rarity-badge ${territory.rarity}">${territory.rarity.toUpperCase()}</span>
+        </div>
+        <div class="territory-info">
+          <p>${territory.metadata.description}</p>
+          <div class="territory-stats">
+            <span>Difficulty: ${territory.difficulty}/100</span>
+            <span>Reward: ${territory.estimatedReward} $REALM</span>
+          </div>
+          <div class="territory-landmarks">
+            ${territory.landmarks.map(landmark => `<span class="landmark-tag">${landmark}</span>`).join('')}
+          </div>
+        </div>
+        <div class="territory-actions">
+          <button class="analyze-btn" data-geohash="${territory.geohash}">Analyze</button>
+          <button class="visit-btn" data-geohash="${territory.geohash}">Visit</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  private setupInteractions(): void {
+    if (!this.container) return;
+
+    // Close button
+    const closeBtn = this.container.querySelector('#dashboard-close') as HTMLButtonElement;
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => this.hide());
+    }
+
+    // Action buttons
+    const claimBtn = this.container.querySelector('#claim-territory-btn') as HTMLButtonElement;
+    if (claimBtn) {
+      claimBtn.addEventListener('click', () => this.handleClaimTerritory());
+    }
+
+    const aiRouteBtn = this.container.querySelector('#ai-route-btn') as HTMLButtonElement;
+    if (aiRouteBtn) {
+      aiRouteBtn.addEventListener('click', () => this.requestAIRoute());
+    }
+
+    const analysisBtn = this.container.querySelector('#territory-analysis-btn') as HTMLButtonElement;
+    if (analysisBtn) {
+      analysisBtn.addEventListener('click', () => this.requestTerritoryAnalysis());
+    }
+
+    // Territory-specific actions
+    this.container.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+
+      if (target.classList.contains('analyze-btn')) {
+        const geohash = target.getAttribute('data-geohash');
+        if (geohash) this.analyzeTerritoryDetail(geohash);
+      }
+
+      if (target.classList.contains('visit-btn')) {
+        const geohash = target.getAttribute('data-geohash');
+        if (geohash) this.visitTerritory(geohash);
+      }
+    });
+  }
+
+  private handleClaimTerritory(): void {
+    this.eventBus.emit('territory:claimRequested', {
+      geohash: `territory_${Date.now()}`,
+      estimatedReward: 25
+    });
+  }
+
+  private requestAIRoute(): void {
+    this.eventBus.emit('ai:routeRequested', {
+      distance: 2000,
+      difficulty: 50,
+      goals: ['exploration', 'territory']
+    });
+  }
+
+  private requestTerritoryAnalysis(): void {
+    if (this.territories.length === 0) {
+      this.updateAIInsights('No territories to analyze. Claim your first territory by going for a run!');
+      return;
+    }
+
+    this.updateAIInsights('Analyzing your territories... This may take a moment.');
+
+    // Analyze the most recent territory
+    const latestTerritory = this.territories[this.territories.length - 1];
+    this.analyzeTerritoryDetail(latestTerritory.geohash);
+  }
+
+  private async analyzeTerritoryDetail(geohash: string): Promise<void> {
+    try {
+      const territory = this.territories.find(t => t.geohash === geohash);
+      if (!territory) return;
+
+      const analysis = await this.aiService.analyzeTerritory(geohash, {
+        distance: territory.estimatedReward * 10, // Mock calculation
+        difficulty: territory.difficulty,
+        landmarks: territory.landmarks,
+        elevation: 50 // Mock elevation
+      });
+
+      this.updateAIInsights(`
+        <h4>Analysis for ${territory.metadata.name}</h4>
+        <div class="analysis-scores">
+          <div class="score">Strategic Value: ${analysis.value}/100</div>
+          <div class="score">Rarity: ${analysis.rarity}/100</div>
+          <div class="score">Competition: ${analysis.competition}/100</div>
+        </div>
+        <div class="recommendations">
+          <h5>Recommendations:</h5>
+          <ul>
+            ${analysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+          </ul>
+        </div>
+      `);
+    } catch (error) {
+      this.updateAIInsights('Failed to analyze territory. Please try again later.');
+      console.error('Territory analysis error:', error);
+    }
+  }
+
+  private visitTerritory(geohash: string): void {
+    // Emit event to center map on territory
+    this.eventBus.emit('map:focusTerritory', { geohash });
+  }
+
+  private updateAIInsights(content: string): void {
+    const insightsElement = this.container?.querySelector('#ai-insights');
+    if (insightsElement) {
+      insightsElement.innerHTML = content;
+    }
+  }
+
+  private handleTerritoryUpdate(data: any): void {
+    // Add or update territory
+    const existingIndex = this.territories.findIndex(t => t.geohash === data.geohash);
+
+    const territory: Territory = {
+      geohash: data.geohash,
+      owner: data.owner || 'You',
+      claimedAt: new Date(),
+      lastActivity: new Date(),
+      difficulty: Math.floor(Math.random() * 100),
+      estimatedReward: data.estimatedReward || 25,
+      rarity: this.calculateRarity(),
+      landmarks: data.landmarks || ['Park', 'Street'],
+      metadata: {
+        name: `Territory ${data.geohash.substring(0, 8)}`,
+        description: 'A strategic running territory with great potential.',
+        imageUrl: undefined
+      }
+    };
+
+    if (existingIndex >= 0) {
+      this.territories[existingIndex] = territory;
+    } else {
+      this.territories.push(territory);
+    }
+
+    this.playerStats.territoriesOwned = this.territories.length;
+    this.updateDisplay();
+  }
+
+  private calculateRarity(): Territory['rarity'] {
+    const rand = Math.random();
+    if (rand < 0.05) return 'legendary';
+    if (rand < 0.15) return 'epic';
+    if (rand < 0.35) return 'rare';
+    if (rand < 0.65) return 'uncommon';
+    return 'common';
+  }
+
+  private updateWalletStatus(data: any): void {
+    // Update player stats when wallet connects
+    this.playerStats.realmBalance = data.balance || 0;
+    this.updateDisplay();
+  }
+
+  private updateRewards(data: any): void {
+    this.playerStats.realmBalance += data.amount;
+    this.playerStats.experience += data.amount * 10;
+
+    // Level up logic
+    const newLevel = Math.floor(this.playerStats.experience / 1000) + 1;
+    if (newLevel > this.playerStats.level) {
+      this.playerStats.level = newLevel;
+      this.eventBus.emit('game:levelUp', { newLevel, player: 'current' });
+    }
+
+    this.updateDisplay();
+  }
+
+  private updateDisplay(): void {
+    if (!this.container) return;
+
+    const statsSection = this.container.querySelector('.player-stats-section');
+    if (statsSection) {
+      statsSection.innerHTML = this.renderPlayerStats();
+    }
+
+    const territoriesList = this.container.querySelector('#territories-list');
+    if (territoriesList) {
+      territoriesList.innerHTML = this.renderTerritories();
+    }
+  }
+
+  public show(): void {
+    if (this.container) {
+      this.container.classList.remove('hidden');
+      this.isVisible = true;
+    }
+  }
+
+  public hide(): void {
+    if (this.container) {
+      this.container.classList.add('hidden');
+      this.isVisible = false;
+    }
+  }
+
+  public toggle(): void {
+    if (this.isVisible) {
+      this.hide();
+    } else {
+      this.show();
+    }
+  }
+
+  public updatePlayerStats(stats: Partial<PlayerStats>): void {
+    Object.assign(this.playerStats, stats);
+    this.updateDisplay();
+  }
+
+  public addTerritory(territory: Territory): void {
+    this.territories.push(territory);
+    this.playerStats.territoriesOwned = this.territories.length;
+    this.updateDisplay();
+  }
+
+  public getTerritories(): Territory[] {
+    return [...this.territories];
+  }
+
+  public getPlayerStats(): PlayerStats {
+    return { ...this.playerStats };
+  }
+
+  public cleanup(): void {
+    if (this.container) {
+      this.container.remove();
+      this.container = null;
+    }
+    this.territories = [];
+    this.isVisible = false;
+  }
+}
+
+export default TerritoryDashboard;

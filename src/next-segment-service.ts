@@ -2,7 +2,9 @@ import { SdkConfig } from '@mapbox/mapbox-sdk/lib/classes/mapi-client';
 import { MapiResponse } from '@mapbox/mapbox-sdk/lib/classes/mapi-response';
 import DirectionsFactory, { DirectionsService, DirectionsResponse } from '@mapbox/mapbox-sdk/services/directions';
 import { LngLat } from 'mapbox-gl';
-import { length, lineString, LineString } from '@turf/turf';
+import length from '@turf/length';
+import * as turfHelpers from '@turf/helpers';
+import { LineString } from 'geojson';
 import uuid from 'uuid';
 import { RunSegment } from './current-run';
 
@@ -71,8 +73,8 @@ export class NextSegmentService {
       [nextLngLat.lng, nextLngLat.lat]
     ];
 
-    const distance = length(lineString(lineCoordinates), { units: 'meters' });
-    const line = { type: 'LineString', coordinates: lineCoordinates } as LineString;
+    const distance = length(turfHelpers.lineString(lineCoordinates), { units: 'meters' });
+    const line = turfHelpers.lineString(lineCoordinates).geometry;
     return new RunSegment(
       uuid(),
       nextLngLat,

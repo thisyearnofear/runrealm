@@ -1,7 +1,78 @@
-node_modules
-npm-debug.log
-.DS_Store
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Sensitive configuration
 /src/appsettings.secrets.ts
+config/secrets.json
+
+# Build outputs
+/public/*.js
+/public/*.map
+/public/*.css
+/dist/
+/build/
+.next/
+out/
+
+# Testing
 /spec/.working/
-.nyc_output
-coverage
+.nyc_output/
+coverage/
+*.lcov
+test-results/
+playwright-report/
+
+# Smart contract artifacts
+/artifacts/
+/cache/
+/deployments/*.json
+typechain-types/
+hardhat-logs/
+
+# Development tools
+.aider*
+.qodo/
+.zencoder/
+.vscode/settings.json
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# IDE files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/launch.json
+
+# Temporary files
+tmp/
+temp/
+.tmp/

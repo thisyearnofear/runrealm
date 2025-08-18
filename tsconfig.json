@@ -15,11 +15,14 @@
     "typeRoots": [
       "node_modules/@types",
       "./custom_typings"
-    ]
+    ],
+    "jsx": "react"
   },
   "exclude": [
     "webpack.config.js",
     "webpack-build.config.js",
-    "webpack-service.config.js"
+    "webpack-service.config.js",
+    "node_modules/@types/mocha",
+    "src/legacy"
   ]
 }
