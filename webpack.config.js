@@ -5,7 +5,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 // Base configuration with optimizations
 const baseConfig = {
   entry: {
-    app: './src/index.ts'
+    app: path.resolve(__dirname, 'src/index.ts')
   },
   
   module: {
