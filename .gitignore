@@ -58,6 +58,7 @@ Thumbs.db
 # Logs
 logs/
 *.log
+nohup.out
 
 # Runtime data
 pids/
@@ -79,3 +80,4 @@ temp/
 \n# Sensitive files\naccess_token
 access_token.json
 access_token
+nohup.out
