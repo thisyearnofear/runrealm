@@ -429,6 +429,7 @@ export class LocationService extends BaseService {
       const lng = parseFloat(item.dataset.lng!);
       const name = item.dataset.name!;
       
+      console.log(`LocationService: Setting location to ${name} (${lat}, ${lng})`);
       this.setManualLocation(lat, lng, name);
       this.hideLocationModal();
     });

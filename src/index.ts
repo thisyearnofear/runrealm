@@ -95,9 +95,30 @@ async function initializeApp(): Promise<void> {
     if (process.env.NODE_ENV === 'development') {
       (window as any).runRealmApp = app;
 
+      // Expose widget system debug utilities
+      (window as any).debugWidgets = () => {
+        const mainUI = (app as any).mainUI;
+        if (mainUI && mainUI.widgetSystem) {
+          console.log('Widget System Debug Info:', mainUI.widgetSystem.getDebugInfo());
+          return mainUI.widgetSystem.getDebugInfo();
+        }
+        console.log('Widget system not available');
+        return null;
+      };
+
       // Import widget debug utility
       import('./utils/widget-debug').then(() => {
         console.log('🔧 Widget debug utility available: WidgetDebug');
+        console.log('🔧 Debug widgets with: debugWidgets()');
+      });
+
+      // Import widget test utility
+      import('./utils/widget-test').then(() => {
+        console.log('🧪 Widget test utility loaded');
+        // Auto-run tests after a short delay to let everything initialize
+        setTimeout(() => {
+          (window as any).WidgetTest?.runAllTests();
+        }, 3000);
       });
 
       // Only show debug panel if explicitly requested (URL param)

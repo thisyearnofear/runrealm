@@ -40,6 +40,10 @@ export class WidgetSystem extends BaseService {
     this.widgets.set(widget.id, widget);
     this.renderWidget(widget);
     this.arrangeWidgets();
+    
+    // Force immediate render and log for debugging
+    this.forceRender();
+    console.log(`Widget '${widget.id}' registered and rendered at position '${widget.position}'`);
   }
 
   /**
@@ -106,6 +110,13 @@ export class WidgetSystem extends BaseService {
    * Create the main widget container
    */
   private createWidgetContainer(): void {
+    // Ensure container doesn't already exist
+    const existing = document.getElementById('widget-system');
+    if (existing) {
+      this.widgetContainer = existing;
+      return;
+    }
+
     this.widgetContainer = this.domService.createElement('div', {
       id: 'widget-system',
       className: 'widget-system',
@@ -117,6 +128,10 @@ export class WidgetSystem extends BaseService {
       `,
       parent: document.body
     });
+
+    // Force immediate DOM insertion and styling
+    this.widgetContainer.offsetHeight; // Trigger reflow
+    console.log('Widget system container created and mounted');
   }
 
   /**
@@ -516,5 +531,39 @@ export class WidgetSystem extends BaseService {
 
     const rect = element.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0;
+  }
+
+  /**
+   * Force immediate render of all widgets (for debugging and reliability)
+   */
+  private forceRender(): void {
+    if (!this.widgetContainer) return;
+    
+    // Trigger reflow to ensure DOM changes are applied
+    this.widgetContainer.offsetHeight;
+    
+    // Ensure all widget zones are visible
+    const zones = this.widgetContainer.querySelectorAll('.widget-zone');
+    zones.forEach(zone => {
+      (zone as HTMLElement).offsetHeight; // Trigger reflow for each zone
+    });
+  }
+
+  /**
+   * Debug method to check widget system state
+   */
+  public getDebugInfo(): any {
+    return {
+      containerExists: !!this.widgetContainer,
+      containerInDOM: !!document.getElementById('widget-system'),
+      widgetCount: this.widgets.size,
+      widgets: Array.from(this.widgets.entries()).map(([id, widget]) => ({
+        id,
+        position: widget.position,
+        minimized: widget.minimized,
+        elementExists: !!this.getWidgetElement(id),
+        elementVisible: this.isWidgetVisible(id)
+      }))
+    };
   }
 }

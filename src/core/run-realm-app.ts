@@ -202,6 +202,11 @@ export class RunRealmApp {
       this.handleWalletConnected(data);
     });
 
+    // Location service integration - recenter map when location changes
+    this.eventBus.on('location:changed', (locationInfo) => {
+      this.handleLocationChanged(locationInfo);
+    });
+
     // Progression events
     this.eventBus.on('run:cleared', (data) => {
       // Add distance and time to progression
@@ -249,6 +254,13 @@ export class RunRealmApp {
 
       // Initialize main UI (replaces old fragmented UI)
       await this.mainUI.initialize();
+      
+      // Expose mainUI for debugging
+      if (process.env.NODE_ENV === 'development') {
+        (window as any).RunRealm = (window as any).RunRealm || {};
+        (window as any).RunRealm.mainUI = this.mainUI;
+        (window as any).RunRealm.map = this.map;
+      }
 
       this.loadSavedRun();
       this.initializeNavigation();
@@ -623,6 +635,34 @@ export class RunRealmApp {
     }
   }
 
+  private handleLocationChanged(locationInfo: any): void {
+    if (!this.map || !locationInfo) return;
+
+    try {
+      // Smoothly fly to the new location
+      this.map.flyTo({
+        center: [locationInfo.lng, locationInfo.lat],
+        zoom: 14, // Good zoom level for exploring territories
+        duration: 2000, // 2 second animation
+        essential: true // This animation is essential for user experience
+      });
+
+      // Show toast notification
+      const locationName = locationInfo.address || `${locationInfo.lat.toFixed(4)}, ${locationInfo.lng.toFixed(4)}`;
+      this.ui.showToast(`📍 Location set to: ${locationName}`, {
+        type: 'success'
+      });
+
+      // Save the new focus
+      this.saveFocus();
+
+      console.log('Map recentered to:', locationInfo);
+    } catch (error) {
+      console.error('Failed to recenter map:', error);
+      this.ui.showToast('Failed to update map location', { type: 'error' });
+    }
+  }
+
   private handlePointRemoved(): void {
     if (!this.currentRun || this.currentRun.segments.length === 0) return;
 
@@ -807,6 +847,11 @@ export class RunRealmApp {
 
   getMap(): Map {
     return this.map;
+  }
+
+  // Debug API (development only)
+  getMainUI(): MainUI {
+    return this.mainUI;
   }
 
   toggleUnits(): void {

@@ -41,12 +41,21 @@ export class MainUI extends BaseService {
   }
 
   protected async onInitialize(): Promise<void> {
+    console.log('MainUI: Starting initialization...');
+    
     // Initialize widget system first
     await this.widgetSystem.initialize();
+    console.log('MainUI: Widget system initialized');
 
     this.createMainInterface();
+    console.log('MainUI: Main interface created');
+    
     this.createWidgets();
+    console.log('MainUI: Core widgets created');
+    
     this.setupEventHandlers();
+    console.log('MainUI: Event handlers set up');
+    
     // URL param onboarding=reset support for QA/support
     const params = new URLSearchParams(window.location.search);
     if (params.get('onboarding') === 'reset') {
@@ -56,10 +65,15 @@ export class MainUI extends BaseService {
 
     // Create Settings widget (top-right)
     this.createSettingsWidget();
+    console.log('MainUI: Settings widget created');
+
+    // Force widget system debug info
+    console.log('MainUI: Widget system debug info:', this.widgetSystem.getDebugInfo());
 
     this.showWelcomeExperience();
 
     this.safeEmit('service:initialized', { service: 'MainUI', success: true });
+    console.log('MainUI: Initialization complete');
   }
 
   /**
@@ -411,6 +425,7 @@ export class MainUI extends BaseService {
    */
   private toggleGameFiMode(): void {
     this.isGameFiMode = !this.isGameFiMode;
+    console.log(`MainUI: Toggling GameFi mode to: ${this.isGameFiMode}`);
 
     if (this.isGameFiMode) {
       // Enable GameFi mode with widgets
@@ -418,12 +433,14 @@ export class MainUI extends BaseService {
       this.createGameFiWidgets();
       this.updateGameFiToggle(true);
       this.uiService.showToast('🎮 GameFi mode enabled! Connect wallet to start earning rewards.', { type: 'success' });
+      console.log('MainUI: GameFi widgets created:', this.widgetSystem.getDebugInfo());
     } else {
       // Disable GameFi mode and remove widgets
       document.body.classList.remove('gamefi-mode');
       this.removeGameFiWidgets();
       this.updateGameFiToggle(false);
       this.uiService.showToast('GameFi mode disabled', { type: 'info' });
+      console.log('MainUI: GameFi widgets removed');
     }
   }
 

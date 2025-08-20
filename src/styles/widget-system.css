@@ -18,25 +18,32 @@
 /* Widget System - Minimized/Expandable UI Components */
 
 .widget-system {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 100;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  pointer-events: none !important;
+  z-index: 100 !important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+  /* Ensure visibility */
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* Widget Zones */
 .widget-zone {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  pointer-events: none;
-  z-index: 101;
-  max-width: 320px;
+  position: absolute !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  pointer-events: none !important;
+  z-index: 101 !important;
+  max-width: 320px !important;
+  /* Ensure zones are visible */
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .widget-zone.top-left {
@@ -65,17 +72,22 @@
 
 /* Widget Base Styles */
 .widget {
-  background: var(--widget-bg);
-  border: 2px solid var(--widget-border-color);
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-  box-shadow: var(--widget-shadow);
-  pointer-events: auto;
-  transition: var(--widget-transition);
-  overflow: hidden;
-  max-width: 320px;
-  min-width: 200px;
-  z-index: 102;
+  background: var(--widget-bg) !important;
+  border: 2px solid var(--widget-border-color) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: var(--widget-shadow) !important;
+  pointer-events: auto !important;
+  transition: var(--widget-transition) !important;
+  overflow: hidden !important;
+  max-width: 320px !important;
+  min-width: 200px !important;
+  z-index: 102 !important;
+  /* Ensure widgets are visible */
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
 }
 
 .widget:hover {
