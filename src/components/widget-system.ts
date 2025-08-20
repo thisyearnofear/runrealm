@@ -49,6 +49,12 @@ export class WidgetSystem extends BaseService {
     const widget = this.widgets.get(widgetId);
     if (!widget) return;
 
+    const element = this.getWidgetElement(widgetId);
+    if (!element) return;
+
+    // Prevent rapid clicking during animation
+    if (element.classList.contains('widget-animating')) return;
+
     // If expanding this widget, minimize others in same position
     if (widget.minimized) {
       this.minimizeWidgetsInPosition(widget.position, widgetId);
@@ -58,21 +64,42 @@ export class WidgetSystem extends BaseService {
     }
 
     widget.minimized = !widget.minimized;
-    this.updateWidgetDisplay(widget);
-    this.arrangeWidgets();
+    this.updateWidgetDisplayImproved(widget);
   }
 
   /**
-   * Update widget content
+   * Update widget content with optional loading state
    */
-  public updateWidget(widgetId: string, content: string): void {
+  public updateWidget(widgetId: string, content: string, options?: { loading?: boolean; success?: boolean }): void {
     const widget = this.widgets.get(widgetId);
     if (!widget) return;
 
-    widget.content = content;
-    if (!widget.minimized) {
-      this.updateWidgetDisplay(widget);
+    const element = this.getWidgetElement(widgetId);
+    if (!element) return;
+
+    // Handle loading state
+    if (options?.loading) {
+      element.classList.add('widget-loading');
+      return;
+    } else {
+      element.classList.remove('widget-loading');
     }
+
+    // Handle success state
+    if (options?.success) {
+      element.classList.add('widget-success');
+      setTimeout(() => element.classList.remove('widget-success'), 400);
+    }
+
+    widget.content = content;
+    this.updateWidgetContent(element, widget);
+  }
+
+  /**
+   * Legacy updateWidgetDisplay method for backwards compatibility
+   */
+  private updateWidgetDisplay(widget: Widget): void {
+    this.updateWidgetDisplayImproved(widget);
   }
 
   /**
@@ -127,40 +154,41 @@ export class WidgetSystem extends BaseService {
    */
   private getWidgetHTML(widget: Widget): string {
     return `
-      <div class="widget-header" data-widget-id="${widget.id}">
+      <div class="widget-header" data-widget-id="${widget.id}" tabindex="0" role="button" 
+           aria-expanded="${!widget.minimized}" aria-controls="widget-content-${widget.id}">
         <span class="widget-icon">${widget.icon}</span>
         <span class="widget-title">${widget.title}</span>
-        <button class="widget-toggle" data-widget-id="${widget.id}">
+        <button class="widget-toggle" data-widget-id="${widget.id}" aria-label="Toggle ${widget.title}">
           ${widget.minimized ? '⬆️' : '⬇️'}
         </button>
       </div>
-      <div class="widget-content">
+      <div class="widget-content" id="widget-content-${widget.id}">
         ${widget.content}
       </div>
     `;
   }
 
   /**
-   * Update widget display state
+   * Update widget display state with improved reliability
    */
-  private updateWidgetDisplay(widget: Widget): void {
+  private updateWidgetDisplayImproved(widget: Widget): void {
     const element = this.getWidgetElement(widget.id);
     if (!element) return;
 
-    // Add transition class for smooth animation
-    element.classList.add('widget-transitioning');
+    // Mark as animating to prevent rapid clicks
+    element.classList.add('widget-animating');
     
-    // Update classes after a small delay to trigger animation
+    // Update toggle button immediately for better feedback
+    this.updateWidgetToggle(element, widget);
+    
+    // Apply state changes
+    this.updateWidgetClasses(element, widget);
+    this.updateWidgetContent(element, widget);
+    
+    // Remove animating class after animation completes
     setTimeout(() => {
-      this.updateWidgetClasses(element, widget);
-      this.updateWidgetContent(element, widget);
-      this.updateWidgetToggle(element, widget);
-      
-      // Remove transition class after animation completes
-      setTimeout(() => {
-        element.classList.remove('widget-transitioning');
-      }, 300);
-    }, 10);
+      element.classList.remove('widget-animating');
+    }, 350); // Slightly longer than CSS transition
   }
 
   /**
@@ -171,20 +199,26 @@ export class WidgetSystem extends BaseService {
   }
 
   /**
-   * Update widget CSS classes
+   * Update widget CSS classes with improved state management
    */
   private updateWidgetClasses(element: HTMLElement, widget: Widget): void {
-    // Remove active class from all widgets
-    document.querySelectorAll('.widget').forEach(el => {
-      el.classList.remove('active');
-    });
+    // Clear all state classes first
+    element.classList.remove('minimized', 'expanded', 'active');
     
-    // Add active class to expanded widget
-    if (!widget.minimized) {
-      element.classList.add('active');
+    // Remove active class from all widgets in same position
+    const zone = this.getWidgetZone(widget.position);
+    if (zone) {
+      zone.querySelectorAll('.widget').forEach(el => {
+        el.classList.remove('active');
+      });
     }
     
-    element.className = `widget ${widget.minimized ? 'minimized' : 'expanded'} widget-transitioning${!widget.minimized ? ' active' : ''}`;
+    // Apply new state
+    if (widget.minimized) {
+      element.classList.add('minimized');
+    } else {
+      element.classList.add('expanded', 'active');
+    }
   }
 
   /**
@@ -405,5 +439,73 @@ export class WidgetSystem extends BaseService {
     return Array.from(this.widgets.values())
       .filter(w => w.position === position)
       .sort((a, b) => b.priority - a.priority);
+  }
+
+  /**
+   * Add visual feedback for user actions
+   */
+  public showWidgetNotification(widgetId: string, message: string, type: 'info' | 'success' | 'warning' = 'info'): void {
+    const element = this.getWidgetElement(widgetId);
+    if (!element) return;
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `widget-notification widget-notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: absolute;
+      top: -30px;
+      right: 0;
+      background: ${type === 'success' ? '#00ff00' : type === 'warning' ? '#ff6b35' : '#007bff'};
+      color: ${type === 'success' ? '#000' : '#fff'};
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 1000;
+      animation: slideDown 0.3s ease;
+    `;
+
+    element.style.position = 'relative';
+    element.appendChild(notification);
+
+    // Remove notification after delay
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
+      }
+    }, 2000);
+  }
+
+  /**
+   * Focus on a specific widget (accessibility)
+   */
+  public focusWidget(widgetId: string): void {
+    const element = this.getWidgetElement(widgetId);
+    if (!element) return;
+
+    const header = element.querySelector('.widget-header') as HTMLElement;
+    if (header) {
+      header.focus();
+      header.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  /**
+   * Get active widget info
+   */
+  public getActiveWidget(): Widget | null {
+    return this.activeWidget ? this.widgets.get(this.activeWidget) || null : null;
+  }
+
+  /**
+   * Check if widget is visible (for responsive design)
+   */
+  public isWidgetVisible(widgetId: string): boolean {
+    const element = this.getWidgetElement(widgetId);
+    if (!element) return false;
+
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
   }
 }

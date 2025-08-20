@@ -146,20 +146,32 @@
   overflow-y: auto;
 }
 
-/* Widget States */
+/* Widget States - Improved for reliability */
+.widget {
+  transition: var(--widget-transition);
+}
+
 .widget.minimized {
   max-height: var(--widget-max-height-collapsed);
 }
 
 .widget.minimized .widget-content {
   display: none;
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 .widget.expanded {
   max-height: var(--widget-max-height-expanded);
   z-index: 103;
-  transform: translateX(0);
   box-shadow: var(--widget-shadow-active);
+}
+
+.widget.expanded .widget-content {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s;
 }
 
 .widget.expanded .widget-header {
@@ -167,45 +179,16 @@
   background: var(--widget-header-bg-active);
 }
 
-/* Smooth transition class */
-.widget-transitioning {
-  transition: var(--widget-transition);
+/* Prevent interaction during animation */
+.widget.widget-animating {
+  pointer-events: none;
 }
 
-/* Widget Animations */
-.widget.minimized {
-  animation: minimizeWidget 0.3s ease-out;
+.widget.widget-animating .widget-header {
+  pointer-events: auto; /* Allow header clicks during animation */
 }
 
-.widget.expanded {
-  animation: expandWidget 0.3s ease-out;
-}
-
-@keyframes minimizeWidget {
-  from {
-    max-height: var(--widget-max-height-expanded);
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    max-height: var(--widget-max-height-collapsed);
-    opacity: 0.9;
-    transform: translateX(0);
-  }
-}
-
-@keyframes expandWidget {
-  from {
-    max-height: var(--widget-max-height-collapsed);
-    opacity: 0.9;
-    transform: translateX(0);
-  }
-  to {
-    max-height: var(--widget-max-height-expanded);
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
+/* Removed conflicting keyframe animations - using CSS transitions instead */
 
 /* Pulse effect for active widget */
 .widget.active .widget-header {
@@ -221,6 +204,100 @@
   }
   100% {
     box-shadow: 0 0 0 0 rgba(0, 255, 0, 0);
+  }
+}
+
+/* Enhanced visual feedback */
+.widget-header {
+  position: relative;
+}
+
+.widget-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent, rgba(0, 255, 0, 0.1), transparent);
+  opacity: 0;
+  transform: translateX(-100%);
+  transition: transform 0.6s ease, opacity 0.3s ease;
+}
+
+.widget:hover .widget-header::before {
+  opacity: 1;
+  transform: translateX(100%);
+}
+
+/* Minimized widget pulse effect */
+.widget.minimized:hover {
+  animation: minimizedPulse 0.6s ease;
+}
+
+@keyframes minimizedPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+/* Expanded widget entrance animation */
+.widget.expanded {
+  animation: expandIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes expandIn {
+  0% {
+    transform: scale(0.95) translateY(-10px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Widget loading states */
+.widget-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.widget-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.8), transparent);
+  animation: widgetLoading 1.5s infinite;
+}
+
+@keyframes widgetLoading {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Success state animation */
+.widget-success {
+  animation: successPulse 0.4s ease;
+}
+
+@keyframes successPulse {
+  0%, 100% {
+    border-color: rgba(0, 255, 0, 0.3);
+  }
+  50% {
+    border-color: rgba(0, 255, 0, 0.8);
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
   }
 }
 
@@ -448,4 +525,60 @@
 
 .widget-content::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 255, 0, 0.5);
+}
+
+/* Widget Notification Animations */
+@keyframes slideDown {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Widget tip styling */
+.widget-tip {
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #ccc;
+  text-align: center;
+  margin: 8px 0;
+  border-left: 3px solid rgba(0, 255, 0, 0.3);
+}
+
+/* Widget buttons container */
+.widget-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+/* Enhanced hover states for better feedback */
+.widget-header {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.widget-header:hover {
+  background: var(--widget-header-bg-hover);
+}
+
+.widget-header:active {
+  transform: scale(0.98);
+}
+
+/* Focus states for better accessibility */
+.widget-header[tabindex] {
+  outline: none;
+}
+
+.widget-header[tabindex]:focus {
+  outline: 2px solid rgba(0, 255, 0, 0.6);
+  outline-offset: -2px;
 }
