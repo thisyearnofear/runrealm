@@ -14,11 +14,16 @@
     "noImplicitAny": true,
     "typeRoots": [
       "node_modules/@types",
-      "./custom_typings"
+      "./custom_typings",
+      "types"
     ],
     "jsx": "react",
     "skipLibCheck": true
   },
+  "include": [
+    "src/**/*",
+    "types/env.d.ts"
+  ],
   "exclude": [
     "webpack.config.js",
     "webpack-build.config.js",

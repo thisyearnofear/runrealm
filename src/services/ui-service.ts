@@ -93,45 +93,10 @@ export class UIService {
       this.cleanupFunctions.push(cleanup);
     }
 
-    // Setup mobile-specific UI
-    this.setupMobileUI();
+    // Mobile UI is now handled by MainUI component
   }
 
-  private setupMobileUI(): void {
-    // Create mobile-specific UI elements
-    this.createMobileActionBar();
-    this.optimizeForMobile();
-  }
-
-  private createMobileActionBar(): void {
-    const actionBar = this.dom.createElement('div', {
-      id: 'mobile-action-bar',
-      className: 'mobile-action-bar',
-      innerHTML: `
-        <button class="mobile-action-btn secondary" data-action="undo" title="Undo">
-          ↶
-        </button>
-        <button class="mobile-action-btn primary" data-action="add" title="Add Point">
-          📍
-        </button>
-        <button class="mobile-action-btn secondary" data-action="clear" title="Clear">
-          🗑️
-        </button>
-        <button class="mobile-action-btn secondary" data-action="share" title="Share">
-          📤
-        </button>
-      `,
-      parent: document.body
-    });
-
-    // Handle action bar clicks
-    const cleanup = this.dom.delegate(actionBar, '[data-action]', 'click', (e, target) => {
-      const action = target.dataset.action;
-      this.handleMobileAction(action!);
-    });
-
-    this.cleanupFunctions.push(cleanup);
-  }
+  // Removed setupMobileUI and createMobileActionBar - now handled by MainUI
 
   private handleMobileAction(action: string): void {
     switch (action) {
@@ -291,22 +256,7 @@ export class UIService {
     // Update units in the UI
   }
 
-  // Run controls
-  showRunControls(): void {
-    this.dom.removeClass('remove-last', 'slide-out');
-    this.dom.addClass('remove-last', 'slide-in');
-    this.dom.updateElement('remove-last', { attributes: { 'aria-hidden': 'false' } });
-    this.dom.show('save-run');
-    this.dom.show('clear-run');
-  }
-
-  hideRunControls(): void {
-    this.dom.removeClass('remove-last', 'slide-in');
-    this.dom.addClass('remove-last', 'slide-out');
-    this.dom.updateElement('remove-last', { attributes: { 'aria-hidden': 'true' } });
-    this.dom.hide('save-run');
-    this.dom.hide('clear-run');
-  }
+  // Run controls are now handled by MainUI component
 
   // Modal management
   closeAllModals(): void {

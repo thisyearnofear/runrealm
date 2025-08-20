@@ -1,0 +1,69 @@
+/* Z-Index System - Clear layering for all UI elements */
+
+/* Base Layers */
+:root {
+  --z-base: 0;
+  --z-map: 1;
+  --z-map-controls: 10;
+  --z-widgets: 100;
+  --z-tooltips: 200;
+  --z-dropdowns: 300;
+  --z-modals-backdrop: 900;
+  --z-modals: 1000;
+  --z-toasts: 1100;
+  --z-notifications: 1200;
+  --z-loading: 1300;
+}
+
+/* Map Container */
+#mapbox-container {
+  z-index: var(--z-map);
+}
+
+/* Widget System */
+.widget-system {
+  z-index: var(--z-widgets);
+}
+
+.widget-zone {
+  z-index: calc(var(--z-widgets) + 1);
+}
+
+.widget {
+  z-index: calc(var(--z-widgets) + 2);
+}
+
+.widget.expanded {
+  z-index: calc(var(--z-widgets) + 3);
+}
+
+/* Modals */
+.location-modal-overlay,
+.wallet-modal-overlay,
+.install-modal-overlay,
+.wallet-info-modal-overlay {
+  z-index: var(--z-modals-backdrop);
+}
+
+.location-modal,
+.wallet-modal,
+.install-modal,
+.wallet-info-modal {
+  z-index: var(--z-modals);
+}
+
+/* Tooltips */
+.tooltip {
+  z-index: var(--z-tooltips);
+}
+
+/* Toasts & Notifications */
+.toast-container,
+.notifications-container {
+  z-index: var(--z-notifications);
+}
+
+/* Loading Overlay */
+#loading {
+  z-index: var(--z-loading);
+}

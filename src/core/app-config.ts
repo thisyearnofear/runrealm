@@ -89,34 +89,81 @@ export class ConfigService {
     };
   }
 
-  private getMapboxToken(): string {
-    // Try multiple sources for token
-    let token: string | undefined;
+  private getEnvVar(name: keyof typeof __ENV__): string | undefined {
+    // Use webpack DefinePlugin injected environment variables (public only)
+    try {
+      const value = typeof __ENV__ !== 'undefined' ? __ENV__[name] : undefined;
+      return value || localStorage.getItem(`runrealm_${name.toLowerCase()}`);
+    } catch (error) {
+      console.warn(`Failed to access environment variable ${name}:`, error);
+      return localStorage.getItem(`runrealm_${name.toLowerCase()}`);
+    }
+  }
 
-    // Try to load from appsettings.secrets.ts (optional)
+  private getSecureEnvVar(name: string): string | undefined {
+    // For sensitive variables, only check localStorage and secrets file
+    // These are NOT exposed via webpack DefinePlugin for security
+    return localStorage.getItem(`runrealm_${name.toLowerCase()}`);
+  }
+
+  private getMapboxToken(): string {
+    // 🔒 SECURE: Try to load from appsettings.secrets.ts first (recommended)
     try {
       const secretsModule = require("../appsettings.secrets");
-      token = secretsModule.MAPBOX_ACCESS_TOKEN;
+      if (secretsModule && secretsModule.MAPBOX_ACCESS_TOKEN) {
+        return secretsModule.MAPBOX_ACCESS_TOKEN;
+      }
     } catch (error) {
       // Silently fail if secrets file doesn't exist - this is expected
-      console.debug("Optional secrets file not found, continuing with other sources");
-    }
-
-    if (!token) {
-      // Use webpack DefinePlugin injected environment variable
-      token =
-        process.env.MAPBOX_ACCESS_TOKEN ||
-        localStorage.getItem("MAPBOX_ACCESS_TOKEN") ||
-        undefined;
-    }
-
-    if (!token) {
-      console.warn(
-        "Mapbox access token not found. Provide it via src/appsettings.secrets.ts, environment (MAPBOX_ACCESS_TOKEN), or localStorage."
+      console.debug(
+        "Optional secrets file not found, continuing with other sources"
       );
     }
 
-    return token || "";
+    // 🔒 SECURE: Check localStorage (user can set manually)
+    const token = this.getSecureEnvVar("MAPBOX_ACCESS_TOKEN");
+
+    if (!token) {
+      console.warn(
+        "🔒 Mapbox access token not found. For security, provide it via:\n" +
+        "1. src/appsettings.secrets.ts (recommended for development)\n" +
+        "2. localStorage.setItem('runrealm_mapbox_access_token', 'your_token')\n" +
+        "3. Environment variables are NO LONGER exposed to client for security"
+      );
+      return "";
+    }
+
+    return token;
+  }
+
+  private getGeminiApiKey(): string {
+    // 🔒 SECURE: Try to load from appsettings.secrets.ts first (recommended)
+    try {
+      const secretsModule = require("../appsettings.secrets");
+      if (secretsModule && secretsModule.GOOGLE_GEMINI_API_KEY) {
+        return secretsModule.GOOGLE_GEMINI_API_KEY;
+      }
+    } catch (error) {
+      // Silently fail if secrets file doesn't exist - this is expected
+      console.debug(
+        "Optional secrets file not found, continuing with other sources"
+      );
+    }
+
+    // 🔒 SECURE: Check localStorage (user can set manually)
+    const apiKey = this.getSecureEnvVar("GOOGLE_GEMINI_API_KEY");
+
+    if (!apiKey) {
+      console.warn(
+        "🔒 Google Gemini API key not found. For security, provide it via:\n" +
+        "1. src/appsettings.secrets.ts (recommended for development)\n" +
+        "2. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
+        "3. Environment variables are NO LONGER exposed to client for security"
+      );
+      return "";
+    }
+
+    return apiKey;
   }
 
   private detectMobile(): boolean {
@@ -176,20 +223,12 @@ export class ConfigService {
       },
       ai: {
         enabled: this.getEnvVar("ENABLE_AI_FEATURES") === "true",
-        geminiApiKey: this.getEnvVar("GOOGLE_GEMINI_API_KEY") || "",
+        geminiApiKey: this.getGeminiApiKey(),
       },
     };
   }
 
-  private getEnvVar(name: string): string | undefined {
-    // Check multiple sources for environment variables
-    // Use webpack DefinePlugin injected environment variables
-    return (
-      (process.env as any)[name] ||
-      localStorage.getItem(`runrealm_${name.toLowerCase()}`) ||
-      undefined
-    );
-  }
+  
 
   isWeb3Enabled(): boolean {
     return this.config.web3?.enabled === true;

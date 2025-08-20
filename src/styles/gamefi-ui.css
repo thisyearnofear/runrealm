@@ -1,0 +1,445 @@
+/* GameFi UI Styles - Comprehensive gaming interface */
+
+/* Main HUD Container */
+.gamefi-hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 100;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* HUD Panels */
+.hud-panel {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid rgba(0, 255, 0, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.hud-panel:hover {
+  border-color: rgba(0, 255, 0, 0.6);
+  box-shadow: 0 12px 40px rgba(0, 255, 0, 0.2);
+}
+
+/* Player Stats Panel */
+.stats-panel {
+  top: 20px;
+  left: 20px;
+  min-width: 280px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 50, 0, 0.8));
+}
+
+.player-avatar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.avatar-ring {
+  width: 60px;
+  height: 60px;
+  border: 3px solid #00ff00;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(0, 255, 0, 0.1), transparent);
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+.avatar-image {
+  font-size: 24px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.level-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ff6b35;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  border: 2px solid #fff;
+}
+
+.player-info {
+  margin-left: 16px;
+  flex: 1;
+}
+
+.player-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #00ff00;
+  margin-bottom: 8px;
+}
+
+.player-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: #ccc;
+  margin-top: 4px;
+}
+
+/* Territory Preview Panel */
+.territory-panel {
+  top: 20px;
+  right: 20px;
+  min-width: 300px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(50, 0, 50, 0.8));
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.panel-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 16px;
+}
+
+.territory-info {
+  margin-bottom: 16px;
+}
+
+.territory-rarity {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.territory-rarity.common { background: #666; color: #fff; }
+.territory-rarity.uncommon { background: #00ff00; color: #000; }
+.territory-rarity.rare { background: #0099ff; color: #fff; }
+.territory-rarity.epic { background: #9900ff; color: #fff; }
+.territory-rarity.legendary { background: #ff6600; color: #fff; }
+
+.territory-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.territory-stat {
+  text-align: center;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+}
+
+.territory-stat-value {
+  display: block;
+  font-weight: bold;
+  color: #00ff00;
+}
+
+.territory-stat-label {
+  display: block;
+  font-size: 12px;
+  color: #ccc;
+}
+
+/* Action Buttons */
+.territory-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.gamefi-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gamefi-btn.primary {
+  background: linear-gradient(45deg, #00ff00, #00cc00);
+  color: #000;
+}
+
+.gamefi-btn.primary:hover {
+  background: linear-gradient(45deg, #00cc00, #00ff00);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 255, 0, 0.3);
+}
+
+.gamefi-btn.secondary {
+  background: linear-gradient(45deg, #666, #888);
+  color: #fff;
+}
+
+.gamefi-btn.secondary:hover {
+  background: linear-gradient(45deg, #888, #666);
+  transform: translateY(-2px);
+}
+
+.gamefi-btn.small {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Challenges Panel */
+.challenges-panel {
+  bottom: 20px;
+  left: 20px;
+  min-width: 320px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(50, 25, 0, 0.8));
+}
+
+.challenge-count {
+  background: #ff6b35;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.challenges-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.challenge-item {
+  padding: 12px;
+  margin: 8px 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border-left: 4px solid #ff6b35;
+}
+
+.challenge-title {
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.challenge-details {
+  font-size: 12px;
+  color: #ccc;
+}
+
+/* AI Coach Panel */
+.coach-panel {
+  bottom: 20px;
+  right: 20px;
+  min-width: 280px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 25, 50, 0.8));
+}
+
+.coach-avatar {
+  font-size: 32px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.coach-message {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.coach-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Notifications */
+.notifications-container {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  z-index: 1100;
+  pointer-events: none;
+}
+
+.reward-notification {
+  background: linear-gradient(45deg, #00ff00, #00cc00);
+  color: #000;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-weight: bold;
+  box-shadow: 0 4px 20px rgba(0, 255, 0, 0.3);
+  animation: slideInRight 0.5s ease, fadeOut 0.5s ease 3s forwards;
+  pointer-events: auto;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+  to { opacity: 0; transform: translateX(100%); }
+}
+
+/* Map Legend */
+.legend-panel {
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
+  min-width: 200px;
+}
+
+.legend-title {
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.legend-color.unclaimed { background: rgba(0, 255, 0, 0.3); }
+.legend-color.owned { background: rgba(0, 150, 255, 0.6); }
+.legend-color.contested { background: rgba(255, 100, 0, 0.6); }
+
+/* GameFi Mode Enhancements */
+body.gamefi-mode .game-ui {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 50, 0, 0.8));
+  border: 2px solid rgba(0, 255, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+body.gamefi-mode .control-btn {
+  background: linear-gradient(45deg, #00ff00, #00cc00);
+  color: #000;
+  border: 2px solid rgba(0, 255, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+body.gamefi-mode .control-btn:hover {
+  background: linear-gradient(45deg, #00cc00, #00ff00);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 255, 0, 0.3);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .hud-panel {
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  .stats-panel {
+    min-width: 240px;
+  }
+  
+  .territory-panel {
+    min-width: 260px;
+  }
+  
+  .challenges-panel,
+  .coach-panel {
+    min-width: 240px;
+  }
+  
+  .player-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .territory-actions {
+    flex-direction: column;
+  }
+  
+  .gamefi-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Hide panels when not in GameFi mode */
+body:not(.gamefi-mode) .gamefi-hud {
+  display: none;
+}

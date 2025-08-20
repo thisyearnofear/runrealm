@@ -55,9 +55,14 @@ export class GameFiUI extends BaseService {
   }
 
   protected async onInitialize(): Promise<void> {
+    // GameFi HUD is now an overlay that works with MainUI
     this.setupGameHUD();
     this.setupEventHandlers();
     this.startAnimationLoop();
+
+    // Hide by default - only show when GameFi mode is enabled
+    this.hideGameFiHUD();
+
     console.log('GameFiUI initialized');
   }
 
@@ -665,7 +670,36 @@ export class GameFiUI extends BaseService {
    */
   public enableGameFiMode(): void {
     document.body.classList.add('gamefi-mode');
+    this.showGameFiHUD();
     this.safeEmit('ui:settingsOpened', {}); // Trigger any necessary UI adjustments
+  }
+
+  /**
+   * Disable GameFi mode UI
+   */
+  public disableGameFiMode(): void {
+    document.body.classList.remove('gamefi-mode');
+    this.hideGameFiHUD();
+  }
+
+  /**
+   * Show GameFi HUD overlay
+   */
+  private showGameFiHUD(): void {
+    const hud = document.getElementById('gamefi-hud');
+    if (hud) {
+      hud.style.display = 'block';
+    }
+  }
+
+  /**
+   * Hide GameFi HUD overlay
+   */
+  private hideGameFiHUD(): void {
+    const hud = document.getElementById('gamefi-hud');
+    if (hud) {
+      hud.style.display = 'none';
+    }
   }
 
   /**

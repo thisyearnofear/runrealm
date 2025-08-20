@@ -21,6 +21,10 @@ import { PreferenceService } from '../preference-service';
 import { NextSegmentService } from '../next-segment-service';
 import { CurrentRun, RunStart } from '../current-run';
 import { getStyleById } from '../utils/map-style';
+import { GeocodingService } from '../geocoding-service';
+import { LocationService } from '../services/location-service';
+import { WalletConnection } from '../components/wallet-connection';
+import { MainUI } from '../components/main-ui';
 
 // Type definitions for Mapbox
 type MapboxGL = typeof import('mapbox-gl');
@@ -46,6 +50,10 @@ export class RunRealmApp {
   private ai: AIService;
   private web3: Web3Service;
   private gamefiUI: GameFiUI;
+  private locationService: LocationService;
+  private walletConnection: WalletConnection;
+  private geocodingService: GeocodingService;
+  private mainUI: MainUI;
 
   // New services
   private animationService: AnimationService;
@@ -112,6 +120,24 @@ export class RunRealmApp {
 
     // Initialize existing services
     this.preferenceService = new PreferenceService();
+    this.geocodingService = new GeocodingService(this.config.getConfig().mapbox.accessToken);
+
+    // Initialize location and wallet services
+    this.locationService = new LocationService(
+      this.geocodingService,
+      this.preferenceService,
+      this.dom
+    );
+    this.walletConnection = new WalletConnection(this.dom, this.web3);
+
+    // Initialize main UI (replaces fragmented UI systems)
+    this.mainUI = new MainUI(
+      this.dom,
+      this.locationService,
+      this.walletConnection,
+      this.ui,
+      this.gamefiUI
+    );
   }
 
   private initializeState(): void {
@@ -182,8 +208,11 @@ export class RunRealmApp {
       this.initializeMapServices();
       this.setupMapEventHandlers();
       await this.initializeGameFiServices();
+
+      // Initialize main UI (replaces old fragmented UI)
+      await this.mainUI.initialize();
+
       this.loadSavedRun();
-      this.initializeUI();
       this.initializeNavigation();
       this.initializeOnboarding();
 
@@ -226,16 +255,18 @@ export class RunRealmApp {
 
   private async initializeGameFiServices(): Promise<void> {
     try {
-      // Initialize GameFi UI first
-      await this.gamefiUI.init();
-
-      // Initialize AI Service
-      await this.ai.init();
+      // Initialize core services first
+      await this.locationService.initialize();
+      await this.ai.initialize();
 
       // Initialize Web3 Service (if enabled)
       if (this.config.isWeb3Enabled()) {
-        await this.web3.init();
+        await this.web3.initialize();
+        await this.walletConnection.initialize();
       }
+
+      // Initialize GameFi UI after core services
+      await this.gamefiUI.initialize();
 
       // Create Territory Dashboard container
       this.initializeTerritoryDashboard();
@@ -243,8 +274,8 @@ export class RunRealmApp {
       console.log('GameFi services initialized');
     } catch (error) {
       console.error('Failed to initialize GameFi services:', error);
-      // Continue without GameFi features
-      this.gameMode = false;
+      // Continue without GameFi features but show error
+      this.ui.showToast('Some GameFi features may not be available', { type: 'warning' });
     }
   }
 
@@ -615,25 +646,7 @@ export class RunRealmApp {
     this.preferenceService.saveCurrentFocus(position, this.map.getZoom());
   }
 
-  private initializeUI(): void {
-    // Initialize onboarding if needed
-    if (this.config.getConfig().features.enableOnboarding) {
-      this.initializeOnboarding();
-    }
-
-    // Show welcome message with animation
-    setTimeout(async () => {
-      const welcomeToast = this.dom.getElement('welcome-toast');
-      if (welcomeToast) {
-        await this.animationService.fadeIn(welcomeToast, { duration: 500 });
-      }
-      
-      this.ui.showToast('Welcome to RunRealm! Click on the map to start planning your route.', {
-        type: 'success',
-        duration: 4000
-      });
-    }, 1000);
-  }
+  // Removed old initializeUI - replaced by MainUI component
 
   private initializeNavigation(): void {
     // Set up navigation routes
@@ -759,6 +772,27 @@ export class RunRealmApp {
       throw new Error('Web3 service not initialized');
     }
     return this.web3.connectWallet();
+  }
+
+  // Location service methods
+  showLocationModal(): void {
+    if (this.locationService) {
+      this.locationService.showLocationModal();
+    }
+  }
+
+  getCurrentLocation(): Promise<any> {
+    if (!this.locationService) {
+      throw new Error('Location service not initialized');
+    }
+    return this.locationService.getCurrentLocation();
+  }
+
+  // Wallet connection methods
+  showWalletModal(): void {
+    if (this.walletConnection) {
+      this.walletConnection.showWalletModal();
+    }
   }
 
   // Cleanup

@@ -77,6 +77,7 @@ export interface AppEvents extends Web3Events {
   "progression:achievementsLoaded": { count: number };
   "progression:levelsLoaded": { maxLevel: number };
   "run:startRequested": {};
+  "location:changed": { lat: number; lng: number; accuracy?: number; address?: string; source: string; timestamp: number };
 }
 
 export class EventBus {

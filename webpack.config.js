@@ -1,174 +1,197 @@
 const path = require("path");
-const { merge } = require("webpack-merge");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const webpack = require("webpack");
 require("dotenv").config();
 
-// Base configuration with optimizations
-const baseConfig = {
-  entry: {
-    app: path.resolve(__dirname, "src/index.ts"),
-  },
+module.exports = (env, argv) => {
+  const isProduction = argv.mode === "production";
 
-  module: {
-    rules: [
-      {
-        test: /\.ts$/,
-        use: [
-          {
-            loader: "ts-loader",
-            options: {
-              transpileOnly: true, // Faster builds
-              experimentalWatchApi: true,
+  // Define ONLY PUBLIC environment variables to be exposed to the app
+  // ⚠️ WARNING: These values will be visible in the client-side bundle!
+  // DO NOT include sensitive API keys, private keys, or secrets here
+  const exposedEnvVariables = {
+    NODE_ENV: argv.mode || "development",
+    // Public configuration only
+    ENABLE_WEB3: process.env.ENABLE_WEB3 || "true",
+    ENABLE_AI_FEATURES: process.env.ENABLE_AI_FEATURES || "true",
+    ENABLE_CROSS_CHAIN: process.env.ENABLE_CROSS_CHAIN || "true",
+    AUTO_CONNECT_WALLET: process.env.AUTO_CONNECT_WALLET || "true",
+    // Public RPC URLs (these are meant to be public)
+    ZETACHAIN_RPC_URL:
+      process.env.ZETACHAIN_RPC_URL ||
+      "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
+    ETHEREUM_RPC_URL: process.env.ETHEREUM_RPC_URL || "",
+    POLYGON_RPC_URL: process.env.POLYGON_RPC_URL || "",
+    // Contract addresses (these become public once deployed)
+    TERRITORY_NFT_ADDRESS: process.env.TERRITORY_NFT_ADDRESS || "",
+    REALM_TOKEN_ADDRESS: process.env.REALM_TOKEN_ADDRESS || "",
+    TERRITORY_MANAGER_ADDRESS: process.env.TERRITORY_MANAGER_ADDRESS || "",
+  };
+
+  return {
+    mode: isProduction ? "production" : "development",
+    devtool: isProduction ? "source-map" : "eval-source-map",
+
+    entry: {
+      app: path.resolve(__dirname, "src/index.ts"),
+    },
+
+    output: {
+      path: path.join(__dirname, "public"),
+      publicPath: "/",
+      filename: isProduction ? "[name].[contenthash].js" : "[name].js",
+      chunkFilename: isProduction ? "[name].[contenthash].js" : "[name].js",
+      clean: true,
+      hashFunction: "sha256",
+    },
+
+    module: {
+      rules: [
+        {
+          test: /\.tsx?$/,
+          use: [
+            {
+              loader: "ts-loader",
+              options: {
+                transpileOnly: true,
+                experimentalWatchApi: true,
+              },
             },
+          ],
+          exclude: /node_modules/,
+        },
+        {
+          test: /\.css$/,
+          use: ["style-loader", "css-loader"],
+        },
+      ],
+    },
+
+    resolve: {
+      extensions: [".ts", ".tsx", ".js"],
+      alias: {
+        "@": path.resolve(__dirname, "src"),
+        "@core": path.resolve(__dirname, "src/core"),
+        "@services": path.resolve(__dirname, "src/services"),
+        "@components": path.resolve(__dirname, "src/components"),
+      },
+      fallback: {
+        "../appsettings.secrets": false,
+        process: require.resolve("process/browser"),
+      },
+    },
+
+    optimization: {
+      minimize: isProduction,
+      splitChunks: {
+        chunks: "all",
+        cacheGroups: {
+          googleai: {
+            test: /[\\/]node_modules[\\/]@google\/generative-ai[\\/]/,
+            name: "google-ai",
+            chunks: "all",
+            priority: 30,
+            enforce: true,
           },
-        ],
-        exclude: /node_modules/,
+          mapbox: {
+            test: /[\\/]node_modules[\\/].*mapbox*?[\\/]/,
+            name: "mapbox",
+            chunks: "all",
+            priority: 20,
+            enforce: true,
+          },
+          turf: {
+            test: /[\\/]node_modules[\\/]@turf[\\/]/,
+            name: "turf",
+            chunks: "all",
+            priority: 15,
+          },
+          ethers: {
+            test: /[\\/]node_modules[\\/](ethers|@ethersproject)[\\/]/,
+            name: "ethers",
+            chunks: "all",
+            priority: 15,
+          },
+          zetachain: {
+            test: /[\\/]node_modules[\\/]@zetachain[\\/]/,
+            name: "zetachain",
+            chunks: "all",
+            priority: 10,
+          },
+          mobile: {
+            test: /mobile-.*\.ts$/,
+            name: "mobile",
+            chunks: "async",
+            priority: 15,
+          },
+          common: {
+            name: "common",
+            minChunks: 2,
+            chunks: "all",
+            priority: 5,
+            reuseExistingChunk: true,
+          },
+        },
       },
+      runtimeChunk: {
+        name: "runtime",
+      },
+      usedExports: true,
+      sideEffects: false,
+    },
+
+    plugins: [
+      new HtmlWebpackPlugin({
+        template: path.resolve(__dirname, "src/template.html"),
+        filename: "index.html",
+        inject: "body",
+        minify: isProduction
+          ? {
+              removeComments: true,
+              collapseWhitespace: true,
+              removeRedundantAttributes: true,
+              useShortDoctype: true,
+              removeEmptyAttributes: true,
+              removeStyleLinkTypeAttributes: true,
+              keepClosingSlash: true,
+              minifyJS: true,
+              minifyCSS: true,
+              minifyURLs: true,
+            }
+          : false,
+      }),
+      new webpack.DefinePlugin({
+        __ENV__: JSON.stringify(exposedEnvVariables),
+        "process.env.NODE_ENV": JSON.stringify(argv.mode || "development"),
+      }),
+      new webpack.ProvidePlugin({
+        process: "process/browser",
+        Buffer: ["buffer", "Buffer"],
+      }),
     ],
-  },
 
-  resolve: {
-    extensions: [".ts", ".js"],
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-      "@core": path.resolve(__dirname, "src/core"),
-      "@services": path.resolve(__dirname, "src/services"),
-      "@components": path.resolve(__dirname, "src/components"),
+    performance: {
+      hints: isProduction ? "warning" : false,
+      maxEntrypointSize: 1000000, // 1MB - increased for crypto libraries
+      maxAssetSize: 500000, // 500KB - increased for large dependencies
     },
-    // Suppress warnings for missing optional dependencies
-    fallback: {
-      "../appsettings.secrets": false,
-    },
-  },
 
-  optimization: {
-    splitChunks: {
-      chunks: "all",
-      cacheGroups: {
-        // Split large libraries into separate chunks
-        googleai: {
-          test: /[\\/]node_modules[\\/]@google\/generative-ai[\\/]/,
-          name: "google-ai",
-          chunks: "all",
-          priority: 30,
-          enforce: true,
-        },
-        mapbox: {
-          test: /[\\/]node_modules[\\/]mapbox-gl[\\/]/,
-          name: "mapbox",
-          chunks: "all",
-          priority: 20,
-          enforce: true,
-        },
-        turf: {
-          test: /[\\/]node_modules[\\/]@turf[\\/]/,
-          name: "turf",
-          chunks: "all",
-          priority: 15,
-        },
-        ethers: {
-          test: /[\\/]node_modules[\\/]ethers[\\/]/,
-          name: "ethers",
-          chunks: "all",
-          priority: 15,
-        },
-        zetachain: {
-          test: /[\\/]node_modules[\\/]@zetachain[\\/]/,
-          name: "zetachain",
-          chunks: "all",
-          priority: 10,
-        },
-        mobile: {
-          test: /mobile-.*\.ts$/,
-          name: "mobile",
-          chunks: "async",
-          priority: 15,
-        },
-        common: {
-          name: "common",
-          minChunks: 2,
-          chunks: "all",
-          priority: 5,
-          reuseExistingChunk: true,
+    devServer: {
+      static: {
+        directory: path.join(__dirname, "public"),
+      },
+      compress: true,
+      port: 8080,
+      host: "localhost",
+      hot: true,
+      open: false,
+      historyApiFallback: true,
+      client: {
+        overlay: {
+          errors: true,
+          warnings: false,
         },
       },
     },
-    runtimeChunk: {
-      name: "runtime",
-    },
-    usedExports: true,
-    sideEffects: false,
-  },
-
-  output: {
-    filename: "[name].[contenthash].js",
-    chunkFilename: "[name].[contenthash].js",
-    path: path.join(__dirname, "public"),
-    clean: true, // Clean output directory
-    hashFunction: "sha256",
-    publicPath: "/",
-  },
-
-  plugins: [
-    new HtmlWebpackPlugin({
-      template: "./public/index.html",
-      filename: "index.html",
-      inject: "body",
-      chunksSortMode: "auto",
-    }),
-    new webpack.DefinePlugin({
-      "process.env.NODE_ENV": JSON.stringify(
-        process.env.NODE_ENV || "development"
-      ),
-      "process.env.MAPBOX_ACCESS_TOKEN": JSON.stringify(
-        process.env.MAPBOX_ACCESS_TOKEN || ""
-      ),
-      "process.env.GOOGLE_GEMINI_API_KEY": JSON.stringify(
-        process.env.GOOGLE_GEMINI_API_KEY || ""
-      ),
-      "process.env.ENABLE_WEB3": JSON.stringify(
-        process.env.ENABLE_WEB3 || "true"
-      ),
-      "process.env.ENABLE_AI_FEATURES": JSON.stringify(
-        process.env.ENABLE_AI_FEATURES || "true"
-      ),
-      "process.env.ENABLE_CROSS_CHAIN": JSON.stringify(
-        process.env.ENABLE_CROSS_CHAIN || "true"
-      ),
-      "process.env.ZETACHAIN_RPC_URL": JSON.stringify(
-        process.env.ZETACHAIN_RPC_URL || ""
-      ),
-    }),
-    new webpack.ProvidePlugin({
-      process: "process/browser",
-      Buffer: ["buffer", "Buffer"],
-    }),
-  ],
-
-  performance: {
-    hints: "warning",
-    maxEntrypointSize: 500000, // 500KB
-    maxAssetSize: 300000, // 300KB
-  },
-
-  devServer: {
-    static: {
-      directory: path.join(__dirname, "public"),
-    },
-    compress: true,
-    port: 8080,
-    host: "localhost",
-    hot: true,
-    open: false,
-    historyApiFallback: true,
-    client: {
-      overlay: {
-        errors: true,
-        warnings: false,
-      },
-    },
-  },
+  };
 };
-
-module.exports = baseConfig;
