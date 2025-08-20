@@ -5,14 +5,14 @@
   --z-base: 0;
   --z-map: 1;
   --z-map-controls: 10;
-  --z-widgets: 100;
-  --z-tooltips: 200;
-  --z-dropdowns: 300;
-  --z-modals-backdrop: 900;
-  --z-modals: 1000;
-  --z-toasts: 1100;
-  --z-notifications: 1200;
-  --z-loading: 1300;
+  --z-widgets: 1000;
+  --z-tooltips: 1100;
+  --z-dropdowns: 1200;
+  --z-modals-backdrop: 1900;
+  --z-modals: 2000;
+  --z-toasts: 2100;
+  --z-notifications: 2200;
+  --z-loading: 2300;
 }
 
 /* Map Container */

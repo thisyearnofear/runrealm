@@ -83,8 +83,7 @@ export class MainUI extends BaseService {
     // Remove old template UI elements that conflict
     this.cleanupOldUI();
 
-    // Create unified header bar (stays fixed)
-    this.createHeaderBar();
+    // Header removed - using widget-only interface for better mobile UX
   }
 
   /**
@@ -137,47 +136,7 @@ export class MainUI extends BaseService {
     if (oldControls) oldControls.remove();
   }
 
-  /**
-   * Create unified header bar with essential info
-   */
-  private createHeaderBar(): void {
-    const headerBar = this.domService.createElement('div', {
-      id: 'main-header',
-      className: 'main-header',
-      innerHTML: `
-        <div class="header-left">
-          <div class="app-logo">
-            <span class="logo-icon">🏃‍♂️</span>
-            <span class="logo-text">RunRealm</span>
-          </div>
-          <div class="run-stats">
-            <div class="stat-item">
-              <span class="stat-value" id="current-distance">0.00</span>
-              <span class="stat-label">km</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="header-right">
-          <button class="header-btn location-btn" id="location-btn" title="Set your location">
-            <span class="btn-icon">📍</span>
-            <span class="btn-text">Location</span>
-          </button>
-          
-          <button class="header-btn wallet-btn" id="wallet-btn" title="Connect wallet for GameFi features">
-            <span class="btn-icon">🔗</span>
-            <span class="btn-text">Connect</span>
-          </button>
-          
-          <button class="header-btn gamefi-toggle" id="gamefi-toggle" title="Toggle GameFi mode">
-            <span class="btn-icon">🎮</span>
-            <span class="btn-text">GameFi</span>
-          </button>
-        </div>
-      `,
-      parent: document.body
-    });
-  }
+  // Header removed - functionality moved to widgets for better mobile UX
 
   // Removed old UI creation methods - now using widget system
 
@@ -303,6 +262,15 @@ export class MainUI extends BaseService {
       const tip = `<div class="widget-tip">🤖 Could not generate a route. Try again in a moment or adjust your goals.</div>`;
       this.widgetSystem.updateWidget('territory-info', tip);
     });
+
+    // Handle run controls visibility events from UIService
+    this.subscribe('ui:showRunControls', () => {
+      this.showRunControls();
+    });
+
+    this.subscribe('ui:hideRunControls', () => {
+      this.hideRunControls();
+    });
   }
 
   /**
@@ -325,14 +293,75 @@ export class MainUI extends BaseService {
       localStorage.removeItem('runrealm_welcomed');
       this.showWelcomeTooltips();
     });
+
+    // GameFi toggle from settings
+    this.domService.delegate(document.body, '#gamefi-toggle-widget', 'click', () => {
+      this.toggleGameFiMode();
+      this.trackUserAction('gamefi_toggle_clicked');
+      // Update the settings widget content to reflect new state
+      this.widgetSystem.updateWidget('settings', this.getSettingsContent());
+    });
+
+    // Widget visibility toggles
+    this.domService.delegate(document.body, '#toggle-location', 'change', (e) => {
+      const target = e.target as HTMLInputElement;
+      this.toggleWidgetVisibility('location-info', target.checked);
+    });
+
+    this.domService.delegate(document.body, '#toggle-wallet', 'change', (e) => {
+      const target = e.target as HTMLInputElement;
+      this.toggleWidgetVisibility('wallet-info', target.checked);
+    });
+
+    this.domService.delegate(document.body, '#toggle-run-controls', 'change', (e) => {
+      const target = e.target as HTMLInputElement;
+      this.toggleWidgetVisibility('run-controls', target.checked);
+    });
   }
 
   private getSettingsContent(): string {
+    const gameFiActive = document.querySelector('.gamefi-toggle')?.classList.contains('active') || false;
+
     return `
-      <div class="widget-buttons">
-        <button class="widget-button" id="restart-onboarding-widget">🔁 Restart Onboarding</button>
+      <div class="widget-section">
+        <div class="widget-section-title">🎮 Game Features</div>
+        <div class="widget-buttons">
+          <button class="widget-button ${gameFiActive ? 'active' : ''}" id="gamefi-toggle-widget">
+            <span class="btn-icon">🎮</span>
+            <span class="btn-text">${gameFiActive ? 'GameFi ON' : 'GameFi OFF'}</span>
+          </button>
+        </div>
       </div>
-      <div class="widget-tip">Manage basic settings here. More options coming soon.</div>
+
+      <div class="widget-section">
+        <div class="widget-section-title">👁️ Widget Visibility</div>
+        <div class="widget-toggles">
+          <label class="widget-toggle">
+            <input type="checkbox" id="toggle-location" checked>
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">📍 Location</span>
+          </label>
+          <label class="widget-toggle">
+            <input type="checkbox" id="toggle-wallet" checked>
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">🦊 Wallet</span>
+          </label>
+          <label class="widget-toggle">
+            <input type="checkbox" id="toggle-run-controls" checked>
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">🏃‍♂️ Run Controls</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="widget-section">
+        <div class="widget-section-title">🔧 App Settings</div>
+        <div class="widget-buttons">
+          <button class="widget-button secondary" id="restart-onboarding-widget">🔁 Restart Onboarding</button>
+        </div>
+      </div>
+
+      <div class="widget-tip">💡 Drag widgets to move them around!</div>
     `;
   }
 
@@ -859,5 +888,39 @@ export class MainUI extends BaseService {
         </button>
       </div>
     `;
+  }
+
+  /**
+   * Show run controls by expanding the run-controls widget
+   */
+  private showRunControls(): void {
+    const widget = this.widgetSystem.getWidget('run-controls');
+    if (widget && widget.minimized) {
+      this.widgetSystem.toggleWidget('run-controls');
+    }
+  }
+
+  /**
+   * Hide run controls by minimizing the run-controls widget
+   */
+  private hideRunControls(): void {
+    const widget = this.widgetSystem.getWidget('run-controls');
+    if (widget && !widget.minimized) {
+      this.widgetSystem.toggleWidget('run-controls');
+    }
+  }
+
+  /**
+   * Toggle widget visibility (show/hide completely)
+   */
+  private toggleWidgetVisibility(widgetId: string, visible: boolean): void {
+    console.log(`Toggling widget ${widgetId} visibility to ${visible}`);
+    const widgetElement = document.getElementById(`widget-${widgetId}`);
+    if (widgetElement) {
+      widgetElement.style.display = visible ? 'block' : 'none';
+      console.log(`Widget ${widgetId} display set to: ${widgetElement.style.display}`);
+    } else {
+      console.error(`Widget element not found: widget-${widgetId}`);
+    }
   }
 }

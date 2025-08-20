@@ -937,8 +937,8 @@ body.modal-open .modal-overlay {
   border: 0;
 }
 
-/* Adjust map container for header */
+/* Map container uses full screen (no header) */
 #mapbox-container {
-  top: 60px;
-  height: calc(100vh - 60px);
+  top: 0;
+  height: 100vh;
 }

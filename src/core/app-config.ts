@@ -162,7 +162,7 @@ export class ConfigService {
   }
 
   private getMapboxToken(): string {
-    // 🔒 SECURE: Try to load from appsettings.secrets.ts first (recommended)
+    // 🔒 SECURE: Try to load from appsettings.secrets.ts first (recommended for development)
     try {
       const secretsModule = require("../appsettings.secrets");
       if (secretsModule && secretsModule.MAPBOX_ACCESS_TOKEN) {
@@ -196,7 +196,13 @@ export class ConfigService {
   }
 
   private getGeminiApiKey(): string {
-    // 🔒 SECURE: Try to load from appsettings.secrets.ts first (recommended)
+    // Try environment variables first (from .env via webpack DefinePlugin)
+    const envKey = this.getEnvVar("GOOGLE_GEMINI_API_KEY");
+    if (envKey) {
+      return envKey;
+    }
+
+    // 🔒 SECURE: Try to load from appsettings.secrets.ts (recommended for development)
     try {
       const secretsModule = require("../appsettings.secrets");
       if (secretsModule && secretsModule.GOOGLE_GEMINI_API_KEY) {
@@ -217,10 +223,10 @@ export class ConfigService {
       if (this.runtimeTokensLoaded) {
         console.warn(
           "🔒 Google Gemini API key not found. For security, provide it via:\n" +
-          "1. src/appsettings.secrets.ts (recommended for development)\n" +
-          "2. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
-          "3. Runtime token endpoint (production)\n" +
-          "4. Environment variables are NO LONGER exposed to client for security"
+          "1. Environment variables (.env file)\n" +
+          "2. src/appsettings.secrets.ts (recommended for development)\n" +
+          "3. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
+          "4. Runtime token endpoint (production)"
         );
       }
       return "";

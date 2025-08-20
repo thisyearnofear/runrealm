@@ -21,6 +21,9 @@ export class WidgetSystem extends BaseService {
   private widgets: Map<string, Widget> = new Map();
   private activeWidget: string | null = null;
   private widgetContainer: HTMLElement | null = null;
+  private draggedWidget: HTMLElement | null = null;
+  private dragOffset = { x: 0, y: 0 };
+  private isDragging = false;
 
   constructor(domService: DOMService) {
     super();
@@ -30,6 +33,7 @@ export class WidgetSystem extends BaseService {
   protected async onInitialize(): Promise<void> {
     this.createWidgetContainer();
     this.setupEventHandlers();
+    this.setupDragAndDrop();
     this.safeEmit('service:initialized', { service: 'WidgetSystem', success: true });
   }
 
@@ -39,8 +43,9 @@ export class WidgetSystem extends BaseService {
   public registerWidget(widget: Widget): void {
     this.widgets.set(widget.id, widget);
     this.renderWidget(widget);
-    this.arrangeWidgets();
-    
+    // Don't call arrangeWidgets() immediately - it destroys and recreates elements
+    // this.arrangeWidgets();
+
     // Force immediate render and log for debugging
     this.forceRender();
     console.log(`Widget '${widget.id}' registered and rendered at position '${widget.position}'`);
@@ -156,12 +161,33 @@ export class WidgetSystem extends BaseService {
    * Create widget DOM element
    */
   private createWidgetElement(widget: Widget): HTMLElement {
-    return this.domService.createElement('div', {
+    const widgetElement = this.domService.createElement('div', {
       id: `widget-${widget.id}`,
       className: `widget ${widget.minimized ? 'minimized' : 'expanded'}`,
       innerHTML: this.getWidgetHTML(widget),
       parent: undefined // We'll append manually
     });
+
+    // Make widget header draggable
+    const header = widgetElement.querySelector('.widget-header') as HTMLElement;
+    if (header) {
+      header.style.cursor = 'grab';
+
+      // Mouse events
+      header.addEventListener('mousedown', (e) => {
+        if ((e.target as HTMLElement).classList.contains('widget-toggle')) return; // Don't drag when clicking toggle
+        header.style.cursor = 'grabbing';
+        this.handleDragStart(e, widgetElement);
+      });
+
+      // Touch events
+      header.addEventListener('touchstart', (e) => {
+        if ((e.target as HTMLElement).classList.contains('widget-toggle')) return;
+        this.handleDragStart(e, widgetElement);
+      }, { passive: false });
+    }
+
+    return widgetElement;
   }
 
   /**
@@ -565,5 +591,128 @@ export class WidgetSystem extends BaseService {
         elementVisible: this.isWidgetVisible(id)
       }))
     };
+  }
+
+  /**
+   * Setup drag and drop functionality for widgets
+   */
+  private setupDragAndDrop(): void {
+    if (!this.widgetContainer) return;
+
+    // Add global mouse/touch event listeners
+    document.addEventListener('mousemove', this.handleDragMove.bind(this));
+    document.addEventListener('mouseup', this.handleDragEnd.bind(this));
+    document.addEventListener('touchmove', this.handleDragMove.bind(this), { passive: false });
+    document.addEventListener('touchend', this.handleDragEnd.bind(this));
+  }
+
+  /**
+   * Handle drag start
+   */
+  private handleDragStart(e: MouseEvent | TouchEvent, widgetElement: HTMLElement): void {
+    e.preventDefault();
+
+    this.isDragging = true;
+    this.draggedWidget = widgetElement;
+
+    // Get initial position
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    const rect = widgetElement.getBoundingClientRect();
+    this.dragOffset = {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+
+    // Add dragging class for visual feedback
+    widgetElement.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+  }
+
+  /**
+   * Handle drag move
+   */
+  private handleDragMove(e: MouseEvent | TouchEvent): void {
+    if (!this.isDragging || !this.draggedWidget) return;
+
+    e.preventDefault();
+
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    // Calculate new position
+    const newX = clientX - this.dragOffset.x;
+    const newY = clientY - this.dragOffset.y;
+
+    // Apply position
+    this.draggedWidget.style.position = 'fixed';
+    this.draggedWidget.style.left = `${newX}px`;
+    this.draggedWidget.style.top = `${newY}px`;
+    this.draggedWidget.style.zIndex = '10000';
+  }
+
+  /**
+   * Handle drag end
+   */
+  private handleDragEnd(e: MouseEvent | TouchEvent): void {
+    if (!this.isDragging || !this.draggedWidget) return;
+
+    // Remove dragging state
+    this.draggedWidget.classList.remove('dragging');
+    this.draggedWidget.style.position = '';
+    this.draggedWidget.style.zIndex = '';
+    document.body.style.userSelect = '';
+
+    // Find the best zone for the widget based on final position
+    const rect = this.draggedWidget.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const newPosition = this.getClosestZone(centerX, centerY);
+    const widgetId = this.draggedWidget.id.replace('widget-', '');
+
+    // Update widget position
+    this.moveWidgetToPosition(widgetId, newPosition);
+
+    // Reset drag state
+    this.isDragging = false;
+    this.draggedWidget = null;
+    this.dragOffset = { x: 0, y: 0 };
+  }
+
+  /**
+   * Get the closest zone based on coordinates
+   */
+  private getClosestZone(x: number, y: number): 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' {
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+
+    if (x < centerX && y < centerY) return 'top-left';
+    if (x >= centerX && y < centerY) return 'top-right';
+    if (x < centerX && y >= centerY) return 'bottom-left';
+    return 'bottom-right';
+  }
+
+  /**
+   * Move widget to a new position
+   */
+  private moveWidgetToPosition(widgetId: string, newPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'): void {
+    const widget = this.widgets.get(widgetId);
+    if (!widget) return;
+
+    // Update widget position
+    widget.position = newPosition;
+
+    // Remove widget from current zone
+    const currentElement = document.getElementById(`widget-${widgetId}`);
+    if (currentElement) {
+      currentElement.remove();
+    }
+
+    // Re-render widget in new position
+    this.renderWidget(widget);
+
+    console.log(`Widget ${widgetId} moved to ${newPosition}`);
   }
 }

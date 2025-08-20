@@ -40,11 +40,13 @@ export class UIService {
     // Listen to app events and update UI accordingly
     this.eventBus.on('run:pointAdded', (data) => {
       this.updateDistanceDisplay(data.totalDistance);
-      this.showRunControls();
+      // Run controls are now handled by MainUI component
+      this.eventBus.emit('ui:showRunControls', {});
     });
 
     this.eventBus.on('run:cleared', () => {
-      this.hideRunControls();
+      // Run controls are now handled by MainUI component
+      this.eventBus.emit('ui:hideRunControls', {});
       this.updateDistanceDisplay(0);
     });
 
