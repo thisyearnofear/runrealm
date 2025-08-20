@@ -84,11 +84,7 @@ export class RunRealmApp {
       this.NavigationControl = mapboxModule.NavigationControl;
       this.GeolocateControl = mapboxModule.GeolocateControl;
 
-      // Disable telemetry to prevent token exposure
-      if (process.env.NODE_ENV === 'production') {
-        // Set environment variable to disable Mapbox telemetry
-        (window as any).MapboxGLTelemetryDisabled = true;
-      }
+
 
       console.log('Mapbox GL loaded successfully');
     } catch (error) {

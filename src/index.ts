@@ -6,21 +6,76 @@ import './styles/location-wallet.css';
 import './styles/gamefi-ui.css';
 import './styles/widget-system.css';
 
-// Filter out noisy browser extension errors in production
+// Filter out noisy browser extension errors and token exposure in production
 if (process.env.NODE_ENV === 'production') {
   const originalError = console.error;
+  const originalLog = console.log;
+  const originalWarn = console.warn;
+
+  // Helper function to check if message contains sensitive tokens
+  const containsToken = (message: string) => {
+    return message.includes('access_token=') ||
+           message.includes('pk.eyJ') || // Mapbox token prefix
+           message.includes('AIzaSy'); // Google API key prefix
+  };
+
+  // Helper function to sanitize messages with tokens
+  const sanitizeMessage = (message: string) => {
+    return message
+      .replace(/access_token=[^&\s]*/g, 'access_token=[REDACTED]')
+      .replace(/pk\.eyJ[A-Za-z0-9._-]*/g, 'pk.[REDACTED]')
+      .replace(/AIzaSy[A-Za-z0-9._-]*/g, 'AIzaSy[REDACTED]');
+  };
+
   console.error = (...args) => {
     const message = args.join(' ');
     // Filter out known browser extension noise
     if (
       message.includes('Backpack couldn\'t override') ||
       message.includes('Could not establish connection') ||
-      message.includes('Receiving end does not exist') ||
-      message.includes('ERR_BLOCKED_BY_CLIENT')
+      message.includes('Receiving end does not exist')
     ) {
       return; // Suppress these errors
     }
+
+    // Sanitize token exposure in error messages
+    if (containsToken(message)) {
+      const sanitizedArgs = args.map(arg =>
+        typeof arg === 'string' ? sanitizeMessage(arg) : arg
+      );
+      originalError.apply(console, sanitizedArgs);
+      return;
+    }
+
     originalError.apply(console, args);
+  };
+
+  console.log = (...args) => {
+    const message = args.join(' ');
+    // Sanitize token exposure in log messages
+    if (containsToken(message)) {
+      const sanitizedArgs = args.map(arg =>
+        typeof arg === 'string' ? sanitizeMessage(arg) : arg
+      );
+      originalLog.apply(console, sanitizedArgs);
+      return;
+    }
+
+    originalLog.apply(console, args);
+  };
+
+  console.warn = (...args) => {
+    const message = args.join(' ');
+    // Sanitize token exposure in warning messages
+    if (containsToken(message)) {
+      const sanitizedArgs = args.map(arg =>
+        typeof arg === 'string' ? sanitizeMessage(arg) : arg
+      );
+      originalWarn.apply(console, sanitizedArgs);
+      return;
+    }
+
+    originalWarn.apply(console, args);
   };
 }
 
