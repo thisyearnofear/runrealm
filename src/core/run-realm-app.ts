@@ -204,6 +204,9 @@ export class RunRealmApp {
 
   async initialize(): Promise<void> {
     try {
+      // Initialize runtime tokens first (for production)
+      await this.config.initializeRuntimeTokens();
+
       await this.initializeMap();
       this.initializeMapServices();
       this.setupMapEventHandlers();

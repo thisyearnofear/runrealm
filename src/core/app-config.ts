@@ -63,6 +63,29 @@ export class ConfigService {
     return ConfigService.instance;
   }
 
+  async initializeRuntimeTokens(): Promise<void> {
+    try {
+      const runtimeTokens = await this.fetchRuntimeTokens();
+
+      // Store tokens in localStorage for immediate use
+      if (runtimeTokens.mapbox) {
+        localStorage.setItem('runrealm_mapbox_access_token', runtimeTokens.mapbox);
+        // Update the config
+        this.config.mapbox.accessToken = runtimeTokens.mapbox;
+      }
+
+      if (runtimeTokens.gemini && this.config.web3?.ai) {
+        localStorage.setItem('runrealm_google_gemini_api_key', runtimeTokens.gemini);
+        // Update the config
+        this.config.web3.ai.geminiApiKey = runtimeTokens.gemini;
+      }
+
+      console.debug('Runtime tokens initialized successfully');
+    } catch (error) {
+      console.debug('Runtime token initialization failed, using fallback sources');
+    }
+  }
+
   private loadConfig(): AppConfig {
     const isMobile = this.detectMobile();
 
@@ -106,6 +129,18 @@ export class ConfigService {
     return localStorage.getItem(`runrealm_${name.toLowerCase()}`);
   }
 
+  private async fetchRuntimeTokens(): Promise<{mapbox?: string, gemini?: string}> {
+    try {
+      const response = await fetch('/.netlify/functions/get-tokens');
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      console.debug('Runtime token fetch failed, falling back to other sources');
+    }
+    return {};
+  }
+
   private getMapboxToken(): string {
     // 🔒 SECURE: Try to load from appsettings.secrets.ts first (recommended)
     try {
@@ -128,7 +163,8 @@ export class ConfigService {
         "🔒 Mapbox access token not found. For security, provide it via:\n" +
         "1. src/appsettings.secrets.ts (recommended for development)\n" +
         "2. localStorage.setItem('runrealm_mapbox_access_token', 'your_token')\n" +
-        "3. Environment variables are NO LONGER exposed to client for security"
+        "3. Runtime token endpoint (production)\n" +
+        "4. Environment variables are NO LONGER exposed to client for security"
       );
       return "";
     }
@@ -158,7 +194,8 @@ export class ConfigService {
         "🔒 Google Gemini API key not found. For security, provide it via:\n" +
         "1. src/appsettings.secrets.ts (recommended for development)\n" +
         "2. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
-        "3. Environment variables are NO LONGER exposed to client for security"
+        "3. Runtime token endpoint (production)\n" +
+        "4. Environment variables are NO LONGER exposed to client for security"
       );
       return "";
     }

@@ -16,6 +16,9 @@ module.exports = (env, argv) => {
     ENABLE_AI_FEATURES: process.env.ENABLE_AI_FEATURES || "true",
     ENABLE_CROSS_CHAIN: process.env.ENABLE_CROSS_CHAIN || "true",
     AUTO_CONNECT_WALLET: process.env.AUTO_CONNECT_WALLET || "true",
+    // Public API keys (these are meant to be public-facing)
+    MAPBOX_ACCESS_TOKEN: process.env.MAPBOX_ACCESS_TOKEN || "",
+    GOOGLE_GEMINI_API_KEY: process.env.GOOGLE_GEMINI_API_KEY || "",
     // Public RPC URLs (these are meant to be public)
     ZETACHAIN_RPC_URL:
       process.env.ZETACHAIN_RPC_URL ||
