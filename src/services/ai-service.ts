@@ -59,6 +59,13 @@ export class AIService extends BaseService {
     super();
   }
 
+  /**
+   * Public initialization method
+   */
+  public async initializeService(): Promise<void> {
+    await this.initialize();
+  }
+
   static getInstance(): AIService {
     if (!AIService.instance) {
       AIService.instance = new AIService();
@@ -70,23 +77,51 @@ export class AIService extends BaseService {
    * Initialize AI service with Google Gemini
    */
   public async init(): Promise<void> {
+    // Always try to get the latest config which should have runtime tokens
     const web3Config = this.config.getWeb3Config();
     
-    if (!web3Config?.ai.enabled || !web3Config.ai.geminiApiKey) {
-      console.log('AIService: AI features disabled or no API key configured');
+    // Check if AI features are enabled
+    const aiEnabled = web3Config?.ai?.enabled;
+    if (!aiEnabled) {
+      console.log('AIService: AI features disabled');
+      this.isEnabled = false;
+      return;
+    }
+    
+    // Get API key, prioritizing runtime-injected tokens
+    let apiKey = '';
+    
+    // 1. Check runtime-injected tokens (highest priority for production)
+    if (web3Config?.ai?.geminiApiKey) {
+      apiKey = web3Config.ai.geminiApiKey;
+      console.log('AIService: Using runtime-injected Gemini API key');
+    } 
+    // 2. Fallback to localStorage (for development)
+    else if (typeof localStorage !== 'undefined') {
+      apiKey = localStorage.getItem('runrealm_google_gemini_api_key') || '';
+      if (apiKey) {
+        console.log('AIService: Using localStorage Gemini API key');
+      }
+    }
+    
+    if (!apiKey) {
+      console.log('AIService: No API key available for Google Gemini');
+      this.isEnabled = false;
       return;
     }
 
     // Dynamically import Google Generative AI only when needed
     try {
       const { GoogleGenerativeAI } = await import('@google/generative-ai');
-      this.genAI = new GoogleGenerativeAI(web3Config.ai.geminiApiKey);
+      this.genAI = new GoogleGenerativeAI(apiKey);
       this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
       this.isEnabled = true;
+      this.isInitialized = true; // Mark as fully initialized
       console.log('AIService: Google Generative AI initialized successfully');
     } catch (error) {
       console.error('AIService: Failed to initialize Google Generative AI:', error);
       this.isEnabled = false;
+      this.isInitialized = false;
     }
   }
 
@@ -96,7 +131,10 @@ export class AIService extends BaseService {
 
   protected ensureInitialized(): void {
     if (!this.isEnabled || !this.model) {
-      throw new Error('AIService not properly initialized. Call init() first.');
+      const status = this.getStatus();
+      const errorMsg = `AIService not properly initialized. Call init() first. Status: ${JSON.stringify(status)}`;
+      console.warn(errorMsg);
+      throw new Error(errorMsg);
     }
   }
 
@@ -520,10 +558,15 @@ Make this feel like a personal AI running coach in a game world!
     };
   }
 
-  public cleanup(): void {
-    this.genAI = null;
-    this.model = null;
-    this.isEnabled = false;
-    super.cleanup();
+  /**
+   * Refresh AI service configuration
+   * Call this when runtime tokens are updated
+   */
+  public async refreshConfig(): Promise<void> {
+    // Clean up existing resources
+    this.cleanup();
+    
+    // Re-initialize with new configuration
+    await this.init();
   }
 }

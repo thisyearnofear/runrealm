@@ -209,6 +209,12 @@ export class RunRealmApp {
       // Handle route changes
       console.log('Navigation to:', (data as any).routeId);
     });
+
+    // Listen for config updates (e.g., when runtime tokens are loaded)
+    this.eventBus.on('config:updated', () => {
+      // Refresh AI service when config is updated
+      this.refreshAIService();
+    });
   }
 
   async initialize(): Promise<void> {
@@ -292,13 +298,15 @@ export class RunRealmApp {
     try {
       // Initialize core services first
       await this.locationService.initialize();
-      await this.ai.initialize();
-
+      
       // Initialize Web3 Service (if enabled)
       if (this.config.isWeb3Enabled()) {
         await this.web3.initialize();
         await this.walletConnection.initialize();
       }
+      
+      // Initialize AI service AFTER web3/config is fully loaded
+      await this.ai.initializeService();
 
       // Initialize GameFi UI after core services
       await this.gamefiUI.initialize();
@@ -512,6 +520,13 @@ export class RunRealmApp {
     if (!this.ai) return;
 
     try {
+      // Check if AI service is properly initialized before using it
+      if (!this.ai.getIsInitialized() || !this.ai.isAIEnabled()) {
+        console.warn('AI service not enabled or not properly initialized');
+        this.ui.showToast('AI features not available', { type: 'warning' });
+        return;
+      }
+
       const currentPosition = this.map.getCenter();
       const route = await this.ai.suggestRoute(
         { lat: currentPosition.lat, lng: currentPosition.lng },
@@ -827,6 +842,18 @@ export class RunRealmApp {
   showWalletModal(): void {
     if (this.walletConnection) {
       this.walletConnection.showWalletModal();
+    }
+  }
+
+  // Refresh AI service when config is updated
+  private async refreshAIService(): Promise<void> {
+    try {
+      if (this.ai) {
+        await this.ai.refreshConfig();
+        console.log('AI service refreshed with updated configuration');
+      }
+    } catch (error) {
+      console.error('Failed to refresh AI service:', error);
     }
   }
 

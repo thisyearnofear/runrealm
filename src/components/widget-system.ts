@@ -96,42 +96,101 @@ export class WidgetSystem extends BaseService {
    * Render a widget in its zone
    */
   private renderWidget(widget: Widget): void {
-    const zone = document.querySelector(`[data-position="${widget.position}"]`);
+    const zone = this.getWidgetZone(widget.position);
     if (!zone) return;
 
-    const widgetElement = this.domService.createElement('div', {
+    const widgetElement = this.createWidgetElement(widget);
+    zone.appendChild(widgetElement);
+  }
+
+  /**
+   * Get widget zone element by position
+   */
+  private getWidgetZone(position: string): Element | null {
+    return document.querySelector(`[data-position="${position}"]`);
+  }
+
+  /**
+   * Create widget DOM element
+   */
+  private createWidgetElement(widget: Widget): HTMLElement {
+    return this.domService.createElement('div', {
       id: `widget-${widget.id}`,
       className: `widget ${widget.minimized ? 'minimized' : 'expanded'}`,
-      innerHTML: `
-        <div class="widget-header" data-widget-id="${widget.id}">
-          <span class="widget-icon">${widget.icon}</span>
-          <span class="widget-title">${widget.title}</span>
-          <button class="widget-toggle" data-widget-id="${widget.id}">
-            ${widget.minimized ? '⬆️' : '⬇️'}
-          </button>
-        </div>
-        <div class="widget-content">
-          ${widget.content}
-        </div>
-      `,
-      parent: zone as HTMLElement
+      innerHTML: this.getWidgetHTML(widget),
+      parent: undefined // We'll append manually
     });
+  }
+
+  /**
+   * Generate widget HTML content
+   */
+  private getWidgetHTML(widget: Widget): string {
+    return `
+      <div class="widget-header" data-widget-id="${widget.id}">
+        <span class="widget-icon">${widget.icon}</span>
+        <span class="widget-title">${widget.title}</span>
+        <button class="widget-toggle" data-widget-id="${widget.id}">
+          ${widget.minimized ? '⬆️' : '⬇️'}
+        </button>
+      </div>
+      <div class="widget-content">
+        ${widget.content}
+      </div>
+    `;
   }
 
   /**
    * Update widget display state
    */
   private updateWidgetDisplay(widget: Widget): void {
-    const element = document.getElementById(`widget-${widget.id}`);
+    const element = this.getWidgetElement(widget.id);
     if (!element) return;
 
-    element.className = `widget ${widget.minimized ? 'minimized' : 'expanded'}`;
+    // Add transition class for smooth animation
+    element.classList.add('widget-transitioning');
     
-    const toggle = element.querySelector('.widget-toggle');
-    if (toggle) {
-      toggle.textContent = widget.minimized ? '⬆️' : '⬇️';
-    }
+    // Update classes after a small delay to trigger animation
+    setTimeout(() => {
+      this.updateWidgetClasses(element, widget);
+      this.updateWidgetContent(element, widget);
+      this.updateWidgetToggle(element, widget);
+      
+      // Remove transition class after animation completes
+      setTimeout(() => {
+        element.classList.remove('widget-transitioning');
+      }, 300);
+    }, 10);
+  }
 
+  /**
+   * Get widget DOM element by ID
+   */
+  private getWidgetElement(widgetId: string): HTMLElement | null {
+    return document.getElementById(`widget-${widgetId}`);
+  }
+
+  /**
+   * Update widget CSS classes
+   */
+  private updateWidgetClasses(element: HTMLElement, widget: Widget): void {
+    // Remove active class from all widgets
+    document.querySelectorAll('.widget').forEach(el => {
+      el.classList.remove('active');
+    });
+    
+    // Add active class to expanded widget
+    if (!widget.minimized) {
+      element.classList.add('active');
+    }
+    
+    element.className = `widget ${widget.minimized ? 'minimized' : 'expanded'} widget-transitioning${!widget.minimized ? ' active' : ''}`;
+  }
+
+  /**
+   * Update widget content
+   */
+  private updateWidgetContent(element: HTMLElement, widget: Widget): void {
     const content = element.querySelector('.widget-content');
     if (content) {
       content.innerHTML = widget.content;
@@ -139,15 +198,37 @@ export class WidgetSystem extends BaseService {
   }
 
   /**
+   * Update widget toggle button
+   */
+  private updateWidgetToggle(element: HTMLElement, widget: Widget): void {
+    const toggle = element.querySelector('.widget-toggle');
+    if (toggle) {
+      toggle.textContent = widget.minimized ? '⬆️' : '⬇️';
+    }
+  }
+
+  /**
    * Minimize all widgets in a position except the specified one
    */
   private minimizeWidgetsInPosition(position: string, exceptId: string): void {
-    this.widgets.forEach((widget, id) => {
-      if (widget.position === position && id !== exceptId && !widget.minimized) {
-        widget.minimized = true;
-        this.updateWidgetDisplay(widget);
-      }
+    const widgetsToMinimize = this.getWidgetsToMinimize(position, exceptId);
+    
+    widgetsToMinimize.forEach(widget => {
+      widget.minimized = true;
+      this.updateWidgetDisplay(widget);
     });
+  }
+
+  /**
+   * Get widgets that should be minimized
+   */
+  private getWidgetsToMinimize(position: string, exceptId: string): Widget[] {
+    return Array.from(this.widgets.values())
+      .filter(widget => 
+        widget.position === position && 
+        widget.id !== exceptId && 
+        !widget.minimized
+      );
   }
 
   /**
@@ -157,22 +238,34 @@ export class WidgetSystem extends BaseService {
     const positions = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
     
     positions.forEach(position => {
-      const zone = document.querySelector(`[data-position="${position}"]`);
+      const zone = this.getWidgetZone(position);
       if (!zone) return;
 
       // Get widgets for this position, sorted by priority
-      const positionWidgets = Array.from(this.widgets.values())
-        .filter(w => w.position === position)
-        .sort((a, b) => b.priority - a.priority);
+      const positionWidgets = this.getWidgetsByPosition(position);
 
       // Clear and re-append in order
-      zone.innerHTML = '';
-      positionWidgets.forEach(widget => {
-        const element = document.getElementById(`widget-${widget.id}`);
-        if (element) {
-          zone.appendChild(element);
-        }
-      });
+      this.clearZone(zone);
+      this.appendWidgetsToZone(zone, positionWidgets);
+    });
+  }
+
+  /**
+   * Clear all widgets from a zone
+   */
+  private clearZone(zone: Element): void {
+    zone.innerHTML = '';
+  }
+
+  /**
+   * Append widgets to a zone in order
+   */
+  private appendWidgetsToZone(zone: Element, widgets: Widget[]): void {
+    widgets.forEach(widget => {
+      const element = this.getWidgetElement(widget.id);
+      if (element) {
+        zone.appendChild(element);
+      }
     });
   }
 
@@ -220,10 +313,54 @@ export class WidgetSystem extends BaseService {
         return;
       }
       
+      // Escape key to close expanded widget
       if (event.key === 'Escape' && this.activeWidget) {
         this.toggleWidget(this.activeWidget);
+        return;
+      }
+      
+      // Tab navigation between widgets
+      if (event.key === 'Tab') {
+        this.handleTabNavigation(event);
+        return;
+      }
+      
+      // Enter to toggle focused widget
+      if (event.key === 'Enter') {
+        const focused = document.activeElement;
+        if (focused && focused.classList.contains('widget-header')) {
+          const widgetId = focused.getAttribute('data-widget-id');
+          if (widgetId) {
+            this.toggleWidget(widgetId);
+            event.preventDefault();
+          }
+        }
       }
     });
+  }
+
+  /**
+   * Handle tab navigation between widgets
+   */
+  private handleTabNavigation(event: KeyboardEvent): void {
+    const widgets = Array.from(document.querySelectorAll('.widget-header'));
+    if (widgets.length === 0) return;
+
+    const currentIndex = widgets.findIndex(widget => 
+      widget === document.activeElement
+    );
+
+    let nextIndex;
+    if (event.shiftKey) {
+      // Shift + Tab: go to previous widget
+      nextIndex = currentIndex <= 0 ? widgets.length - 1 : currentIndex - 1;
+    } else {
+      // Tab: go to next widget
+      nextIndex = currentIndex >= widgets.length - 1 ? 0 : currentIndex + 1;
+    }
+
+    (widgets[nextIndex] as HTMLElement).focus();
+    event.preventDefault();
   }
 
   /**

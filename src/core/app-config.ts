@@ -1,4 +1,6 @@
 // Centralized application configuration
+import { EventBus } from './event-bus';
+
 export interface Web3Config {
   enabled: boolean;
   zetachain: {
@@ -52,8 +54,10 @@ export class ConfigService {
   private static instance: ConfigService;
   private config: AppConfig;
   private runtimeTokensLoaded: boolean = false;
+  private eventBus: EventBus;
 
   private constructor() {
+    this.eventBus = EventBus.getInstance();
     this.config = this.loadConfig();
   }
 
@@ -84,6 +88,9 @@ export class ConfigService {
       this.runtimeTokensLoaded = true;
       // Refresh config with new tokens
       this.refreshConfig();
+
+      // Emit event to notify services of config update
+      this.eventBus.emit('config:updated', {});
 
       // Log success without exposing token values
       const tokenCount = Object.keys(runtimeTokens).length;

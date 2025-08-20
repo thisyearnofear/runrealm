@@ -473,11 +473,9 @@ export class MainUI extends BaseService {
     `;
   }
 
-  /**
-   * Create GameFi widgets when GameFi mode is enabled
-   */
+  /**\n   * Create GameFi widgets when GameFi mode is enabled\n   */
   private createGameFiWidgets(): void {
-    // Player Stats Widget (top-left, higher priority)
+    // Player Stats Widget (top-left, highest priority)
     this.widgetSystem.registerWidget({
       id: 'player-stats',
       title: 'Player Stats',
@@ -488,34 +486,34 @@ export class MainUI extends BaseService {
       content: this.getPlayerStatsContent()
     });
 
-    // Territory Widget (top-right, higher priority)
+    // Territory Widget (top-left, high priority)
     this.widgetSystem.registerWidget({
       id: 'territory-info',
       title: 'Territory',
       icon: '🗺️',
-      position: 'top-right',
+      position: 'top-left',
       minimized: true,
-      priority: 10,
+      priority: 9,
       content: this.getTerritoryContent()
     });
 
-    // Challenges Widget (bottom-right)
+    // Challenges Widget (top-left, medium priority)
     this.widgetSystem.registerWidget({
       id: 'challenges',
       title: 'Challenges',
       icon: '⚔️',
-      position: 'bottom-right',
+      position: 'top-left',
       minimized: true,
       priority: 8,
       content: this.getChallengesContent()
     });
 
-    // AI Coach Widget (bottom-right, lower priority)
+    // AI Coach Widget (top-left, lower priority)
     this.widgetSystem.registerWidget({
       id: 'ai-coach',
       title: 'AI Coach',
       icon: '🤖',
-      position: 'bottom-right',
+      position: 'top-left',
       minimized: true,
       priority: 7,
       content: this.getAICoachContent()
