@@ -84,18 +84,10 @@ export class RunRealmApp {
       this.NavigationControl = mapboxModule.NavigationControl;
       this.GeolocateControl = mapboxModule.GeolocateControl;
 
-      // Disable telemetry to prevent token exposure in network requests
+      // Disable telemetry to prevent token exposure
       if (process.env.NODE_ENV === 'production') {
-        // Override the telemetry methods to prevent token exposure
-        const originalFetch = window.fetch;
-        window.fetch = function(input, init) {
-          const url = typeof input === 'string' ? input : input.url;
-          // Block Mapbox telemetry requests that expose tokens
-          if (url.includes('events.mapbox.com')) {
-            return Promise.resolve(new Response('', { status: 204 }));
-          }
-          return originalFetch.call(this, input, init);
-        };
+        // Set environment variable to disable Mapbox telemetry
+        (window as any).MapboxGLTelemetryDisabled = true;
       }
 
       console.log('Mapbox GL loaded successfully');
@@ -261,23 +253,38 @@ export class RunRealmApp {
     // Set Mapbox access token
     (this.mapboxgl as any).accessToken = config.mapbox.accessToken;
 
-    // Disable Mapbox telemetry to prevent token exposure in network logs
-    (this.mapboxgl as any).prewarm();
+    // Check if container exists
+    const container = document.getElementById('mapbox-container');
+    if (!container) {
+      throw new Error('Mapbox container not found');
+    }
 
-    this.map = new (this.Map as any)({
-      pitchWithRotate: false,
-      center: [initialFocus.lng, initialFocus.lat],
-      zoom: initialFocus.zoom,
-      container: 'mapbox-container',
-      style: mapStyle,
-      // Disable telemetry and analytics to prevent token exposure
-      collectResourceTiming: false
-    });
+    console.log('Initializing map with token:', config.mapbox.accessToken ? 'Token present' : 'No token');
 
-    // Wait for map to load
-    return new Promise((resolve) => {
-      this.map.on('load', () => resolve());
-    });
+    try {
+      this.map = new (this.Map as any)({
+        pitchWithRotate: false,
+        center: [initialFocus.lng, initialFocus.lat],
+        zoom: initialFocus.zoom,
+        container: 'mapbox-container',
+        style: mapStyle
+      });
+
+      // Wait for map to load
+      return new Promise((resolve, reject) => {
+        this.map.on('load', () => {
+          console.log('Map loaded successfully');
+          resolve();
+        });
+        this.map.on('error', (error) => {
+          console.error('Map error:', error);
+          reject(error);
+        });
+      });
+    } catch (error) {
+      console.error('Failed to create map:', error);
+      throw error;
+    }
   }
 
   private initializeMapServices(): void {
