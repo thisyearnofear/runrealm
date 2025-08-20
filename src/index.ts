@@ -6,6 +6,24 @@ import './styles/location-wallet.css';
 import './styles/gamefi-ui.css';
 import './styles/widget-system.css';
 
+// Filter out noisy browser extension errors in production
+if (process.env.NODE_ENV === 'production') {
+  const originalError = console.error;
+  console.error = (...args) => {
+    const message = args.join(' ');
+    // Filter out known browser extension noise
+    if (
+      message.includes('Backpack couldn\'t override') ||
+      message.includes('Could not establish connection') ||
+      message.includes('Receiving end does not exist') ||
+      message.includes('ERR_BLOCKED_BY_CLIENT')
+    ) {
+      return; // Suppress these errors
+    }
+    originalError.apply(console, args);
+  };
+}
+
 // Initialize the application
 async function initializeApp(): Promise<void> {
   try {

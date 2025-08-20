@@ -51,6 +51,7 @@ export interface AppConfig {
 export class ConfigService {
   private static instance: ConfigService;
   private config: AppConfig;
+  private runtimeTokensLoaded: boolean = false;
 
   private constructor() {
     this.config = this.loadConfig();
@@ -80,10 +81,22 @@ export class ConfigService {
         this.config.web3.ai.geminiApiKey = runtimeTokens.gemini;
       }
 
-      console.debug('Runtime tokens initialized successfully');
+      this.runtimeTokensLoaded = true;
+      // Refresh config with new tokens
+      this.refreshConfig();
+
+      // Log success without exposing token values
+      const tokenCount = Object.keys(runtimeTokens).length;
+      console.debug(`Runtime tokens initialized successfully (${tokenCount} tokens loaded)`);
     } catch (error) {
       console.debug('Runtime token initialization failed, using fallback sources');
+      this.runtimeTokensLoaded = true; // Mark as attempted
     }
+  }
+
+  private refreshConfig(): void {
+    // Reload config with updated tokens
+    this.config = this.loadConfig();
   }
 
   private loadConfig(): AppConfig {
@@ -159,13 +172,16 @@ export class ConfigService {
     const token = this.getSecureEnvVar("MAPBOX_ACCESS_TOKEN");
 
     if (!token) {
-      console.warn(
-        "🔒 Mapbox access token not found. For security, provide it via:\n" +
-        "1. src/appsettings.secrets.ts (recommended for development)\n" +
-        "2. localStorage.setItem('runrealm_mapbox_access_token', 'your_token')\n" +
-        "3. Runtime token endpoint (production)\n" +
-        "4. Environment variables are NO LONGER exposed to client for security"
-      );
+      // Only show warning if runtime tokens have been attempted
+      if (this.runtimeTokensLoaded) {
+        console.warn(
+          "🔒 Mapbox access token not found. For security, provide it via:\n" +
+          "1. src/appsettings.secrets.ts (recommended for development)\n" +
+          "2. localStorage.setItem('runrealm_mapbox_access_token', 'your_token')\n" +
+          "3. Runtime token endpoint (production)\n" +
+          "4. Environment variables are NO LONGER exposed to client for security"
+        );
+      }
       return "";
     }
 
@@ -190,13 +206,16 @@ export class ConfigService {
     const apiKey = this.getSecureEnvVar("GOOGLE_GEMINI_API_KEY");
 
     if (!apiKey) {
-      console.warn(
-        "🔒 Google Gemini API key not found. For security, provide it via:\n" +
-        "1. src/appsettings.secrets.ts (recommended for development)\n" +
-        "2. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
-        "3. Runtime token endpoint (production)\n" +
-        "4. Environment variables are NO LONGER exposed to client for security"
-      );
+      // Only show warning if runtime tokens have been attempted
+      if (this.runtimeTokensLoaded) {
+        console.warn(
+          "🔒 Google Gemini API key not found. For security, provide it via:\n" +
+          "1. src/appsettings.secrets.ts (recommended for development)\n" +
+          "2. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
+          "3. Runtime token endpoint (production)\n" +
+          "4. Environment variables are NO LONGER exposed to client for security"
+        );
+      }
       return "";
     }
 

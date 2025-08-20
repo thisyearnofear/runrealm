@@ -83,6 +83,21 @@ export class RunRealmApp {
       this.Map = mapboxModule.Map;
       this.NavigationControl = mapboxModule.NavigationControl;
       this.GeolocateControl = mapboxModule.GeolocateControl;
+
+      // Disable telemetry to prevent token exposure in network requests
+      if (process.env.NODE_ENV === 'production') {
+        // Override the telemetry methods to prevent token exposure
+        const originalFetch = window.fetch;
+        window.fetch = function(input, init) {
+          const url = typeof input === 'string' ? input : input.url;
+          // Block Mapbox telemetry requests that expose tokens
+          if (url.includes('events.mapbox.com')) {
+            return Promise.resolve(new Response('', { status: 204 }));
+          }
+          return originalFetch.call(this, input, init);
+        };
+      }
+
       console.log('Mapbox GL loaded successfully');
     } catch (error) {
       console.error('Failed to load Mapbox GL:', error);
@@ -120,6 +135,12 @@ export class RunRealmApp {
 
     // Initialize existing services
     this.preferenceService = new PreferenceService();
+    // Note: geocodingService, locationService, walletConnection, and mainUI
+    // are now initialized after runtime tokens are loaded
+  }
+
+  private initializeTokenDependentServices(): void {
+    // Initialize services that depend on API tokens
     this.geocodingService = new GeocodingService(this.config.getConfig().mapbox.accessToken);
 
     // Initialize location and wallet services
@@ -207,6 +228,9 @@ export class RunRealmApp {
       // Initialize runtime tokens first (for production)
       await this.config.initializeRuntimeTokens();
 
+      // Initialize services that depend on API tokens
+      this.initializeTokenDependentServices();
+
       await this.initializeMap();
       this.initializeMapServices();
       this.setupMapEventHandlers();
@@ -237,12 +261,17 @@ export class RunRealmApp {
     // Set Mapbox access token
     (this.mapboxgl as any).accessToken = config.mapbox.accessToken;
 
+    // Disable Mapbox telemetry to prevent token exposure in network logs
+    (this.mapboxgl as any).prewarm();
+
     this.map = new (this.Map as any)({
       pitchWithRotate: false,
       center: [initialFocus.lng, initialFocus.lat],
       zoom: initialFocus.zoom,
       container: 'mapbox-container',
-      style: mapStyle
+      style: mapStyle,
+      // Disable telemetry and analytics to prevent token exposure
+      collectResourceTiming: false
     });
 
     // Wait for map to load
