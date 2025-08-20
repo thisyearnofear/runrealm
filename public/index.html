@@ -1,1 +1,85 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RunRealm</title></head><body><div id="root"></div><script defer="defer" src="runtime.90be26c74c966bd39cad.js"></script><script defer="defer" src="google-ai.13af7bac99d33ace0115.js"></script><script defer="defer" src="mapbox.feb35cfb1d0f7b28d7a5.js"></script><script defer="defer" src="ethers.0464f3201483038abdff.js"></script><script defer="defer" src="turf.a70397a038d8777c3778.js"></script><script defer="defer" src="80.92b96c448d2010fa8ed8.js"></script><script defer="defer" src="app.4f9bd1e2597cf7967361.js"></script><script defer="defer" src="runtime.c369bf61b60e4f2f4caa.js"></script><script defer="defer" src="google-ai.0281e6c8d9575de8fc14.js"></script><script defer="defer" src="mapbox.369d72d1bc5664cd6869.js"></script><script defer="defer" src="ethers.ee404028b0295d64ce5e.js"></script><script defer="defer" src="turf.da0efc7734e028c119fd.js"></script><script defer="defer" src="995.114087de0131482d88bd.js"></script><script defer="defer" src="app.0d69c6cbe0d9efb2fa53.js"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RunRealm - Cross-Chain Running GameFi</title><meta name="description" content="Transform your runs into valuable NFT territories. Claim, trade, and defend real-world running territories on ZetaChain."><link href="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.css" rel="stylesheet"/><style>body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100%;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        #mapbox-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #00ff00;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .game-ui {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 200px;
+        }
+        
+        .run-length {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+        
+        .run-units {
+            font-size: 12px;
+            color: #ccc;
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        
+        .control-btn {
+            display: block;
+            margin: 10px 0;
+            padding: 12px 20px;
+            background: #00ff00;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }</style></head><body><div id="loading" class="loading"><div class="loading-spinner"></div><div>Loading RunRealm...</div></div><div id="mapbox-container"></div><div class="game-ui"><div id="run-length" class="run-length">0.00</div><div id="run-units" class="run-units">km</div></div><div class="controls"><button id="remove-last" class="control-btn" style="display: none;">Remove Last Point</button> <button id="clear-run" class="control-btn" style="display: none;">Clear Run</button> <button id="save-run" class="control-btn" style="display: none;">Save Run</button></div><div id="territory-dashboard-root"></div><script defer="defer" src="/runtime.c369bf61b60e4f2f4caa.js"></script><script defer="defer" src="/google-ai.0281e6c8d9575de8fc14.js"></script><script defer="defer" src="/mapbox.3a234a191be778e4ba36.js"></script><script defer="defer" src="/ethers.ee404028b0295d64ce5e.js"></script><script defer="defer" src="/turf.da0efc7734e028c119fd.js"></script><script defer="defer" src="/343.b596dbfade57cf9ade8d.js"></script><script defer="defer" src="/app.aa80a8215c4684a87567.js"></script></body></html>

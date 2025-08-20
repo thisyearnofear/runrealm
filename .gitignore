@@ -15,11 +15,17 @@ pnpm-debug.log*
 # Sensitive configuration
 /src/appsettings.secrets.ts
 config/secrets.json
+access_token*
+*.token
+*.key
 
 # Build outputs
 /public/*.js
-/public/*.map
+/public/*.js.map
+/public/*.js.LICENSE.txt
 /public/*.css
+/public/*.css.map
+/public/index.html
 /dist/
 /build/
 .next/
@@ -32,6 +38,7 @@ coverage/
 *.lcov
 test-results/
 playwright-report/
+jest-cache/
 
 # Smart contract artifacts
 /artifacts/
@@ -55,10 +62,11 @@ hardhat-logs/
 ehthumbs.db
 Thumbs.db
 
-# Logs
+# Logs and outputs
 logs/
 *.log
 nohup.out
+output.txt
 
 # Runtime data
 pids/
@@ -73,11 +81,54 @@ pids/
 .idea/
 .vscode/launch.json
 
-# Temporary files
+# Temporary files and build artifacts
 tmp/
 temp/
 .tmp/
-\n# Sensitive files\naccess_token
-access_token.json
-access_token
-nohup.out
+stats.json
+bundle-analyzer-report.html
+
+# NPM/package manager artifacts
+package-lock.json.bak
+yarn.lock.bak
+.npm
+.pnpm
+
+# OS generated files
+.DS_Store*
+Icon?
+
+# Empty files created by npm scripts
+cross-env
+npm
+runrealm@*
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Editor directories and files
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.example.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Mac specific
+.AppleDouble
+.LSOverride
+
+# Windows specific
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp

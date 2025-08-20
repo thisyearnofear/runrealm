@@ -103,8 +103,9 @@ export class ConfigService {
     }
 
     if (!token) {
+      // Use webpack DefinePlugin injected environment variable
       token =
-        (process as any).env?.MAPBOX_ACCESS_TOKEN ||
+        process.env.MAPBOX_ACCESS_TOKEN ||
         localStorage.getItem("MAPBOX_ACCESS_TOKEN") ||
         undefined;
     }
@@ -182,8 +183,9 @@ export class ConfigService {
 
   private getEnvVar(name: string): string | undefined {
     // Check multiple sources for environment variables
+    // Use webpack DefinePlugin injected environment variables
     return (
-      (process as any).env?.[name] ||
+      (process.env as any)[name] ||
       localStorage.getItem(`runrealm_${name.toLowerCase()}`) ||
       undefined
     );

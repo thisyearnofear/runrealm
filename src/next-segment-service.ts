@@ -5,7 +5,7 @@ import { LngLat } from 'mapbox-gl';
 import length from '@turf/length';
 import * as turfHelpers from '@turf/helpers';
 import { LineString } from 'geojson';
-import uuid from 'uuid';
+import { v4 as uuid } from 'uuid';
 import { RunSegment } from './current-run';
 
 /**
