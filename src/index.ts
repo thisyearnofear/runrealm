@@ -95,6 +95,11 @@ async function initializeApp(): Promise<void> {
     if (process.env.NODE_ENV === 'development') {
       (window as any).runRealmApp = app;
 
+      // Import widget debug utility
+      import('./utils/widget-debug').then(() => {
+        console.log('🔧 Widget debug utility available: WidgetDebug');
+      });
+
       // Only show debug panel if explicitly requested (URL param)
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('debug') === 'true') {

@@ -185,6 +185,9 @@ export class WidgetSystem extends BaseService {
     this.updateWidgetClasses(element, widget);
     this.updateWidgetContent(element, widget);
     
+    // Force a reflow to ensure styles are applied
+    element.offsetHeight;
+    
     // Remove animating class after animation completes
     setTimeout(() => {
       element.classList.remove('widget-animating');
@@ -232,12 +235,18 @@ export class WidgetSystem extends BaseService {
   }
 
   /**
-   * Update widget toggle button
+   * Update widget toggle button and ARIA attributes
    */
   private updateWidgetToggle(element: HTMLElement, widget: Widget): void {
     const toggle = element.querySelector('.widget-toggle');
+    const header = element.querySelector('.widget-header');
+    
     if (toggle) {
       toggle.textContent = widget.minimized ? '⬆️' : '⬇️';
+    }
+    
+    if (header) {
+      header.setAttribute('aria-expanded', (!widget.minimized).toString());
     }
   }
 

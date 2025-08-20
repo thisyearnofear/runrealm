@@ -146,46 +146,50 @@
   overflow-y: auto;
 }
 
-/* Widget States - Improved for reliability */
-.widget {
-  transition: var(--widget-transition);
+/* Widget States - Improved for reliability with higher specificity */
+.widget-system .widget {
+  transition: var(--widget-transition) !important;
 }
 
-.widget.minimized {
-  max-height: var(--widget-max-height-collapsed);
+.widget-system .widget.minimized {
+  max-height: var(--widget-max-height-collapsed) !important;
+  overflow: hidden !important;
 }
 
-.widget.minimized .widget-content {
-  display: none;
-  opacity: 0;
-  transform: translateY(-10px);
+.widget-system .widget.minimized .widget-content {
+  display: none !important;
+  opacity: 0 !important;
+  transform: translateY(-10px) !important;
+  pointer-events: none !important;
 }
 
-.widget.expanded {
-  max-height: var(--widget-max-height-expanded);
-  z-index: 103;
-  box-shadow: var(--widget-shadow-active);
+.widget-system .widget.expanded {
+  max-height: var(--widget-max-height-expanded) !important;
+  z-index: 103 !important;
+  box-shadow: var(--widget-shadow-active) !important;
+  overflow: visible !important;
 }
 
-.widget.expanded .widget-content {
-  display: block;
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s;
+.widget-system .widget.expanded .widget-content {
+  display: block !important;
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s !important;
+  pointer-events: auto !important;
 }
 
-.widget.expanded .widget-header {
-  border-bottom-color: var(--widget-border-color-active);
-  background: var(--widget-header-bg-active);
+.widget-system .widget.expanded .widget-header {
+  border-bottom-color: var(--widget-border-color-active) !important;
+  background: var(--widget-header-bg-active) !important;
 }
 
-/* Prevent interaction during animation */
-.widget.widget-animating {
-  pointer-events: none;
+/* Prevent interaction during animation with higher specificity */
+.widget-system .widget.widget-animating {
+  pointer-events: none !important;
 }
 
-.widget.widget-animating .widget-header {
-  pointer-events: auto; /* Allow header clicks during animation */
+.widget-system .widget.widget-animating .widget-header {
+  pointer-events: auto !important; /* Allow header clicks during animation */
 }
 
 /* Removed conflicting keyframe animations - using CSS transitions instead */
