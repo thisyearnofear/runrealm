@@ -91,6 +91,32 @@ export class AnimationService {
     source.setData(this.activeGeo);
   }
 
+  // Minimal hook to render a planned route layer (dashed)
+  public setPlannedRoute(geojson: FeatureCollection<LineString> | any) {
+    const sourceId = 'planned-route';
+    const layerId = 'planned-route-line';
+
+    const hasSource = !!this.map.getSource(sourceId);
+    if (!hasSource) {
+      this.map.addSource(sourceId, { type: 'geojson', data: geojson });
+      this.map.addLayer({
+        id: layerId,
+        type: 'line',
+        source: sourceId,
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#ff00aa',
+          'line-width': 3,
+          'line-opacity': 0.9,
+          'line-dasharray': [2, 2]
+        }
+      } as any);
+    } else {
+      const src = this.map.getSource(sourceId) as GeoJSONSource;
+      src.setData(geojson);
+    }
+  }
+
   private getLineLayer(id: string, coordinates: number[][] = []): LineLayer {
     return {
       id: id,

@@ -36,9 +36,7 @@ export class DebugUI {
     const gameElements = [
       '.game-ui',
       '.controls',
-      '.control-btn',
-      '.hud-panel',
-      '.stats-panel'
+      '.control-btn'
     ];
 
     gameElements.forEach(selector => {

@@ -181,6 +181,23 @@ export class RunRealmApp {
       this.handleAIRouteRequest(data);
     });
 
+    // Planned route rendering hook -> AnimationService
+    this.eventBus.on('run:plannedRouteChanged', (data: { geojson: any }) => {
+      try {
+        const feature = data.geojson && data.geojson.type === 'Feature' ? data.geojson : null;
+        const featureCollection = feature ? { type: 'FeatureCollection', features: [feature] } : data.geojson;
+        // Access the map AnimationService; assume it is exposed on window or via this.services
+        const anim = (window as any)?.RunRealm?.mapAnimationService || (this as any).animationService || (this as any).services?.animationService;
+        if (anim && typeof anim.setPlannedRoute === 'function') {
+          anim.setPlannedRoute(featureCollection);
+        } else {
+          console.warn('AnimationService not available to render planned route');
+        }
+      } catch (e) {
+        console.error('Failed to render planned route via AnimationService', e);
+      }
+    });
+
     this.eventBus.on('web3:walletConnected', (data) => {
       this.handleWalletConnected(data);
     });

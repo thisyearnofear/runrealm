@@ -126,7 +126,63 @@ export class AIService extends BaseService {
   }
 
   protected async onInitialize(): Promise<void> {
-    // Initialization is now handled in init() method with dynamic imports
+    // Wire EventBus listeners for AI triggers
+    // Listen for route requests
+    this.on('ai:routeRequested', async (data: { distance?: number; difficulty?: number; goals?: string[] }) => {
+      try {
+        // Initialize if needed
+        if (!this.isInitialized) {
+          await this.init();
+        }
+        const goals: AIGoals = {};
+        if (Array.isArray(data?.goals) && data.goals.length) {
+          // If goals provided as strings, map a couple of simple flags
+          goals.exploration = data.goals.includes('exploration');
+          goals.training = data.goals.includes('training');
+        }
+        if (typeof data?.distance === 'number') goals.distance = data.distance;
+        if (typeof data?.difficulty === 'number') goals.difficulty = data.difficulty;
+
+        // Best effort current location from LocationService event cache if available on window
+        const currentLocation = (window as any)?.RunRealm?.currentLocation || { lat: 40.7128, lng: -74.0060 };
+
+        // If AI disabled or init failed, synthesize a fallback route and emit failure for UI
+        if (!this.isAIEnabled()) {
+          const fallback = this.parseRouteOptimization(JSON.stringify({}), currentLocation, goals);
+          const waypoints = fallback.suggestedRoute.coordinates.map(([lng, lat]) => ({ lat, lng }));
+          if (waypoints.length < 2) {
+            this.safeEmit('ai:routeFailed', { message: 'AI is disabled and no fallback route available.' });
+            return;
+          }
+          this.safeEmit('ai:routeReady', {
+            waypoints,
+            totalDistance: fallback.suggestedRoute.distance,
+            difficulty: fallback.suggestedRoute.difficulty,
+            estimatedTime: Math.round((fallback.suggestedRoute.distance || 0) * 5) // naive 5s/m
+          });
+          return;
+        }
+
+        const optimization = await this.suggestRoute(currentLocation, goals, []);
+        const coords = optimization.suggestedRoute.coordinates || [];
+        const waypoints = coords.map(([lng, lat]) => ({ lat, lng }));
+
+        if (waypoints.length < 2) {
+          this.safeEmit('ai:routeFailed', { message: 'Not enough route data returned by AI.' });
+          return;
+        }
+
+        this.safeEmit('ai:routeReady', {
+          waypoints,
+          totalDistance: optimization.suggestedRoute.distance,
+          difficulty: optimization.suggestedRoute.difficulty,
+          estimatedTime: Math.round((optimization.suggestedRoute.distance || 0) * 5)
+        });
+      } catch (err) {
+        console.error('AI route request failed', err);
+        this.safeEmit('ai:routeFailed', { message: 'Failed to generate route. Please try again.' });
+      }
+    });
   }
 
   protected ensureInitialized(): void {

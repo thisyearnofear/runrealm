@@ -20,6 +20,10 @@ export class MainUI extends BaseService {
   private widgetSystem: WidgetSystem;
   private isGameFiMode: boolean = false;
 
+  // Run tracking state
+  private isRecording: boolean = false;
+  private lastRenderTs: number = 0;
+
   constructor(
     domService: DOMService,
     locationService: LocationService,
@@ -43,6 +47,16 @@ export class MainUI extends BaseService {
     this.createMainInterface();
     this.createWidgets();
     this.setupEventHandlers();
+    // URL param onboarding=reset support for QA/support
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('onboarding') === 'reset') {
+      localStorage.removeItem('runrealm_onboarding_complete');
+      localStorage.removeItem('runrealm_welcomed');
+    }
+
+    // Create Settings widget (top-right)
+    this.createSettingsWidget();
+
     this.showWelcomeExperience();
 
     this.safeEmit('service:initialized', { service: 'MainUI', success: true });
@@ -69,7 +83,7 @@ export class MainUI extends BaseService {
       title: 'Run Controls',
       icon: '🏃‍♂️',
       position: 'bottom-left',
-      minimized: false, // Start expanded for main functionality
+      minimized: true, // Start minimized for cleaner default UX
       priority: 10,
       content: this.getRunControlsContent()
     });
@@ -189,6 +203,13 @@ export class MainUI extends BaseService {
     });
 
     // Widget button handlers
+    // Run control buttons
+    this.domService.delegate(document.body, '#start-run-btn', 'click', () => this.handleStartRun());
+    this.domService.delegate(document.body, '#save-btn', 'click', () => this.handleStopRun());
+    this.domService.delegate(document.body, '#add-point-btn', 'click', () => this.handleAddPoint());
+    this.domService.delegate(document.body, '#undo-btn', 'click', () => this.handleUndo());
+    this.domService.delegate(document.body, '#clear-btn', 'click', () => this.handleClearRun());
+
     this.domService.delegate(document.body, '#set-location-btn', 'click', () => {
       this.locationService.getCurrentLocation();
     });
@@ -204,15 +225,145 @@ export class MainUI extends BaseService {
     // Listen for service events
     this.subscribe('location:changed', (locationInfo) => {
       this.updateLocationWidget(locationInfo);
+      // If recording, add point to the current run and update map
+      if (this.isRecording) {
+        this.appendRunPoint(locationInfo.lat, locationInfo.lng, locationInfo.timestamp);
+      }
+      // Expose last location for AIService fallback access
+      (window as any).RunRealm = (window as any).RunRealm || {};
+      (window as any).RunRealm.currentLocation = { lat: locationInfo.lat, lng: locationInfo.lng };
     });
 
     this.subscribe('web3:walletConnected', (walletInfo) => {
       this.updateWalletWidget(walletInfo);
     });
 
+    // GameFiUI -> MainUI integration events
+    this.subscribe('ui:gamefiEnabled', () => {
+      // Ensure GameFi widgets are present (idempotent if already created)
+      this.createGameFiWidgets();
+    });
+
+    this.subscribe('ui:territoryPreview', (data) => {
+      // Update territory-info widget with preview details
+      this.updateTerritoryWidget(data);
+    });
+
     this.subscribe('web3:walletDisconnected', () => {
       this.updateWalletWidget(null);
     });
+
+    // AI route events -> render planned route and update widget
+    this.subscribe('ai:routeReady', (data: { waypoints: { lat: number; lng: number }[]; totalDistance?: number; estimatedTime?: number; difficulty?: number }) => {
+      try {
+        const coordinates = data.waypoints.map(p => [p.lng, p.lat]);
+        const geojson = {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates }
+        };
+        this.safeEmit('run:plannedRouteChanged', { geojson });
+
+        const km = (data.totalDistance || 0) / 1000;
+        const etaMin = data.estimatedTime ? Math.round(data.estimatedTime / 60) : undefined;
+        const diffLabel = typeof data.difficulty === 'number' ? (data.difficulty < 33 ? 'Easy' : data.difficulty < 67 ? 'Medium' : 'Hard') : '—';
+        const statsHtml = `
+          <div class="widget-stat"><span class="widget-stat-label">Planned Distance</span><span class="widget-stat-value">${km.toFixed(2)} km</span></div>
+          <div class="widget-stat"><span class="widget-stat-label">Difficulty</span><span class="widget-stat-value">${diffLabel}</span></div>
+          ${etaMin !== undefined ? `<div class="widget-stat"><span class="widget-stat-label">ETA</span><span class="widget-stat-value">~${etaMin} min</span></div>` : ''}
+          <div class="widget-buttons">
+            <button class="widget-button" id="start-run-btn">▶️ Start Run</button>
+            <button class="widget-button secondary" id="ghost-start-btn">👻 Start Ghost Runner</button>
+          </div>`;
+
+        this.widgetSystem.updateWidget('territory-info', statsHtml);
+        const w = this.widgetSystem.getWidget('territory-info');
+        if (w && w.minimized) this.widgetSystem.toggleWidget('territory-info');
+      } catch (e) {
+        console.error('Failed to render planned route', e);
+      }
+    });
+
+    this.subscribe('ai:routeFailed', (data: { message: string }) => {
+      this.uiService.showToast(`AI route failed: ${data?.message || 'Unknown error'}`, { type: 'error' });
+      const tip = `<div class="widget-tip">🤖 Could not generate a route. Try again in a moment or adjust your goals.</div>`;
+      this.widgetSystem.updateWidget('territory-info', tip);
+    });
+  }
+
+  /**
+   * Create a Settings widget with useful actions
+   */
+  private createSettingsWidget(): void {
+    this.widgetSystem.registerWidget({
+      id: 'settings',
+      title: 'Settings',
+      icon: '⚙️',
+      position: 'top-right',
+      minimized: true,
+      priority: 10,
+      content: this.getSettingsContent(),
+    });
+
+    // Wire actions
+    this.domService.delegate(document.body, '#restart-onboarding-widget', 'click', () => {
+      localStorage.removeItem('runrealm_onboarding_complete');
+      localStorage.removeItem('runrealm_welcomed');
+      this.showWelcomeTooltips();
+    });
+  }
+
+  private getSettingsContent(): string {
+    return `
+      <div class="widget-buttons">
+        <button class="widget-button" id="restart-onboarding-widget">🔁 Restart Onboarding</button>
+      </div>
+      <div class="widget-tip">Manage basic settings here. More options coming soon.</div>
+    `;
+  }
+
+  /**
+   * Update the territory-info widget based on preview data
+   */
+  private territoryPreviewDebounce?: number;
+  private updateTerritoryWidget(data: any): void {
+    const { point, totalDistance, difficulty = 50, estimatedReward = Math.floor((totalDistance || 0) * 0.01 + Math.random() * 20), rarity = 'Common', landmarks = [] } = data || {};
+
+    const difficultyLabel = difficulty < 33 ? 'Easy' : difficulty < 67 ? 'Medium' : 'Hard';
+    const rarityClass = String(rarity).toLowerCase();
+
+    const landmarksHtml = Array.isArray(landmarks) && landmarks.length
+      ? `<ul class="widget-list">${landmarks.map((l: string) => `<li class=\"widget-list-item\"><span class=\"widget-list-icon\">📍</span><span class=\"widget-list-content\">${l}</span></li>`).join('')}</ul>`
+      : '<div class="widget-tip">No notable landmarks</div>';
+
+    const content = `
+      <div class="widget-stat">
+        <span class="widget-stat-label">Difficulty</span>
+        <span class="widget-stat-value">${difficultyLabel}</span>
+      </div>
+      <div class="widget-stat">
+        <span class="widget-stat-label">Est. Reward</span>
+        <span class="widget-stat-value">+${estimatedReward} $REALM</span>
+      </div>
+      <div class="widget-list-title">Features</div>
+      <div class="widget-list-item"><span class="widget-list-icon">🏅</span><span class="widget-list-content"><span class="rarity-badge ${rarityClass}">${rarity}</span></span></div>
+      ${landmarksHtml}
+      <div class="widget-tip">🗺️ Click on the map to preview territories</div>
+    `;
+
+    this.widgetSystem.updateWidget('territory-info', content);
+
+    // Debounce auto-expand to avoid flicker during frequent updates
+    if (this.territoryPreviewDebounce) {
+      window.clearTimeout(this.territoryPreviewDebounce);
+    }
+
+    this.territoryPreviewDebounce = window.setTimeout(() => {
+      const w = this.widgetSystem.getWidget('territory-info');
+      if (w && w.minimized) {
+        this.widgetSystem.toggleWidget('territory-info');
+      }
+    }, 150);
   }
 
   /**
@@ -390,6 +541,103 @@ export class MainUI extends BaseService {
   private showTooltipSequence(tooltips: any[]): void {
     // Implementation for showing sequential tooltips
     // This would create and animate tooltip elements
+  }
+
+  // === Run Flow Wiring ===
+  private handleStartRun(): void {
+    if (this.isRecording) return;
+    this.isRecording = true;
+
+    // Reset UI button states
+    const addPoint = document.getElementById('add-point-btn') as HTMLElement;
+    const undo = document.getElementById('undo-btn') as HTMLElement;
+    const clear = document.getElementById('clear-btn') as HTMLElement;
+    const save = document.getElementById('save-btn') as HTMLElement;
+    if (addPoint) addPoint.style.display = 'inline-flex';
+    if (undo) undo.style.display = 'inline-flex';
+    if (clear) clear.style.display = 'inline-flex';
+    if (save) save.style.display = 'inline-flex';
+
+    // Reset run state by emitting event or clearing via services if needed
+    this.safeEmit('run:startRequested', {});
+
+    // Provide feedback
+    this.uiService.showToast('▶️ Run started. Your path will be recorded.', { type: 'success' });
+  }
+
+  private handleStopRun(): void {
+    if (!this.isRecording) return;
+    this.isRecording = false;
+
+    // Evaluate claimability
+    const claimable = this.computeClaimableRun();
+    if (claimable) {
+      // Enable claim button in territory widget
+      const content = `
+        <div class="widget-tip">🎉 Run complete! Territory may be claimable.</div>
+        <div class="widget-buttons">
+          <button class="widget-button" id="claim-territory-btn">⚡ Claim Territory</button>
+        </div>
+      `;
+      this.widgetSystem.updateWidget('territory-info', content);
+      const w = this.widgetSystem.getWidget('territory-info');
+      if (w && w.minimized) this.widgetSystem.toggleWidget('territory-info');
+    } else {
+      this.uiService.showToast('Run saved. Create a loop or meet criteria to claim a territory.', { type: 'info' });
+    }
+
+    // Reset UI button states
+    const addPoint = document.getElementById('add-point-btn') as HTMLElement;
+    const undo = document.getElementById('undo-btn') as HTMLElement;
+    const clear = document.getElementById('clear-btn') as HTMLElement;
+    const save = document.getElementById('save-btn') as HTMLElement;
+    if (addPoint) addPoint.style.display = 'none';
+    if (undo) undo.style.display = 'none';
+    if (clear) clear.style.display = 'none';
+    if (save) save.style.display = 'none';
+  }
+
+  private handleAddPoint(): void {
+    // For desktop/testing: allow manual point add via map click flow if available
+    // Here we just emit an event; actual map click handler can append the last clicked point
+    this.safeEmit('run:addPointRequested', {});
+  }
+
+  private handleUndo(): void {
+    this.safeEmit('run:undoRequested', {});
+  }
+
+  private handleClearRun(): void {
+    this.safeEmit('run:clearRequested', {});
+    this.uiService.showToast('Run cleared.', { type: 'info' });
+  }
+
+  private appendRunPoint(lat: number, lng: number, timestamp: number): void {
+    // Throttle rendering to ~3fps for performance
+    const now = performance.now();
+    if (now - this.lastRenderTs < 300) return;
+    this.lastRenderTs = now;
+
+    // Update the map drawing via AnimationService API if exposed globally via events
+    this.safeEmit('run:pointAdded', { point: { lat, lng, timestamp } });
+  }
+
+  private computeClaimableRun(): boolean {
+    try {
+      // Minimal heuristic: distance >= 500m and end within 30m of start
+      const distanceEl = document.getElementById('current-distance');
+      const text = distanceEl?.textContent || '0';
+      const numeric = parseFloat(text);
+      const isKm = (text || '').includes('km');
+      const meters = isKm ? numeric * 1000 : numeric; // crude, adjust if needed
+
+      const meetsDistance = meters >= 500;
+      // We don’t have start/end coords readily here without tapping CurrentRun directly.
+      // As an MVP, rely on distance only; later we can add proximity check by reading CurrentRun state.
+      return meetsDistance;
+    } catch {
+      return false;
+    }
   }
 
   private showHelpModal(): void {
