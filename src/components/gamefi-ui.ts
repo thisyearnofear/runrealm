@@ -62,17 +62,7 @@ export class GameFiUI extends BaseService {
     console.log('GameFiUI initialized (service-only)');
   }
 
-  /**
-   * Set up the main gaming HUD overlay
-   */
-  // DEPRECATED: HUD rendering moved to MainUI widgets
-  private setupGameHUD(): void { /* no-op */ }
-
-  /**
-   * Add comprehensive GameFi styling
-   */
-  // DEPRECATED: Inline HUD styles removed; styling handled by widget-system
-  private addGameFiStyles(): void { /* no-op */ }
+  // Service-only: MainUI owns all UI; no HUD/styling methods here
 
   /**
    * Set up event handlers for GameFi interactions
@@ -114,15 +104,6 @@ export class GameFiUI extends BaseService {
   // DEPRECATED: MainUI controls GameFi mode and widget rendering
   public disableGameFiMode(): void { /* no-op */ }
 
-  /**
-   * Show GameFi HUD overlay
-   */
-  // DEPRECATED: HUD visibility controlled by widgets and body class in MainUI
-  private showGameFiHUD(): void { /* no-op */ }
-
-  /**
-   * Hide GameFi HUD overlay
-   */
   // DEPRECATED: HUD visibility controlled by widgets and body class in MainUI
   private hideGameFiHUD(): void { /* no-op */ }
 
@@ -154,12 +135,6 @@ export class GameFiUI extends BaseService {
       levelBadge.textContent = this.currentStats.level.toString();
     }
   }
-
-  /**
-   * Show territory preview panel
-   */
-  // DEPRECATED: MainUI updates territory widget content
-  public showTerritoryPreview(territoryData: TerritoryPreview): void { /* no-op */ }
 
   /**
    * Show reward notification
