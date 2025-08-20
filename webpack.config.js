@@ -121,3 +121,5 @@ const baseConfig = {
     maxAssetSize: 300000 // 300KB
   }
 };
+
+module.exports = baseConfig;
