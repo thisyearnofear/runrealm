@@ -32,7 +32,11 @@
     "dev": "npm run serve",
     "deploy:vercel": "vercel --prod",
     "deploy:staging": "vercel",
-    "lighthouse": "lighthouse http://localhost:9000 --output html --output json --output-path ./reports/lighthouse"
+    "lighthouse": "lighthouse http://localhost:9000 --output html --output json --output-path ./reports/lighthouse",
+    "contracts:status": "npx hardhat run scripts/check-deployment-status.js --network zetachain_testnet",
+    "contracts:check": "npx hardhat run scripts/check-deployment-status.js --network zetachain_testnet",
+    "contracts:interact": "npx hardhat run scripts/interact-with-contracts.js --network zetachain_testnet",
+    "contracts:info": "cat deployments/zetachain_testnet-deployment.json | jq"
   },
   "repository": {
     "type": "git",

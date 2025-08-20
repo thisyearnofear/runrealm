@@ -1,9 +1,16 @@
 # RunRealm Deployment Guide
 ## Production Deployment, Testing & Infrastructure Setup
 
-### 🎯 Current Status: **READY FOR SMART CONTRACT DEPLOYMENT**
+### 🎯 Current Status: **✅ DEPLOYED TO ZETACHAIN TESTNET**
 
-RunRealm has successfully built comprehensive Web3 GameFi infrastructure that enhances the existing RunMap codebase while maintaining clean, modular architecture. All components are compiled and ready for deployment.
+RunRealm has successfully deployed all smart contracts to ZetaChain Athens Testnet on August 20, 2025. The comprehensive Web3 GameFi infrastructure is live and ready for testing with all cross-chain features available.
+
+**Live Contract Addresses:**
+- **RealmToken:** `0x904a53CAB825BAe02797D806aCB985D889EaA91b`
+- **RunRealmUniversalContract:** `0x5bc467f84b220045CD815Aaa65C695794A6166E7`
+- **TerritoryNFT:** `0xCEAD616B3Cd21feA96C9DcB6742DD9D13A7C8907`
+
+See [CONTRACTS.md](../CONTRACTS.md) for complete integration details.
 
 ---
 
@@ -49,33 +56,37 @@ RunRealm has successfully built comprehensive Web3 GameFi infrastructure that en
 
 2. **Get Testnet ZETA:**
    - Visit: https://labs.zetachain.com/get-zeta
-   - Connect wallet with deployer address: `0xC2a25c80faefbB58bf11573740f1ECd91CC0Bd4B`
+   - Connect your wallet address
    - Request testnet ZETA tokens
+   - Alternative: Use Google Cloud faucet or ZetaChain Discord
 
-### Step 2: Deploy Universal Contracts (3 minutes)
+### Step 2: Use Deployed Contracts (Already Done!)
 ```bash
-cd RunMap
+cd RunRealm
 
-# Deploy to ZetaChain testnet
+# Check deployment status
+npm run contracts:status
+
+# View deployed contract information
+npm run contracts:interact
+
+# Or deploy new contracts (if needed)
 npm run contracts:deploy:testnet
 
-# Expected success output:
-# ✅ RealmToken deployed to: 0x...
-# ✅ RunRealmUniversalContract deployed to: 0x...
-# 🌍 Cross-Chain Features Available
+# ✅ Contracts are already live on ZetaChain testnet!
 ```
 
 ### Step 3: Test Integration (5 minutes)
 ```bash
-# Start the frontend
-npm start
+# Start the frontend (contracts are pre-configured)
+npm run dev
 
 # Test in browser:
 # 1. Open http://localhost:8080
 # 2. Enable Game Mode
 # 3. Click on map to generate territory
 # 4. Connect MetaMask to ZetaChain testnet
-# 5. Claim territory as NFT
+# 5. Claim territory as NFT - it should work immediately!
 ```
 
 ---

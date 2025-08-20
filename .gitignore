@@ -76,3 +76,6 @@ pids/
 tmp/
 temp/
 .tmp/
+\n# Sensitive files\naccess_token
+access_token.json
+access_token

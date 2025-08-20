@@ -16,13 +16,16 @@
       "node_modules/@types",
       "./custom_typings"
     ],
-    "jsx": "react"
+    "jsx": "react",
+    "skipLibCheck": true
   },
   "exclude": [
     "webpack.config.js",
     "webpack-build.config.js",
     "webpack-service.config.js",
     "node_modules/@types/mocha",
-    "src/legacy"
+    "src/legacy",
+    "**/*.spec.ts",
+    "**/*.test.ts"
   ]
 }

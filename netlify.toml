@@ -1,0 +1,51 @@
+[build]
+  publish = "public"
+  command = "npm run build:prod"
+  
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_VERSION = "9"
+
+# SPA routing configuration
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+# Cache static assets
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+# Environment variables for build (set these in Netlify dashboard)
+# MAPBOX_ACCESS_TOKEN = "your_mapbox_token"
+# GOOGLE_GEMINI_API_KEY = "your_gemini_key"
+# WEB3_ENABLED = "true"
+
+# Netlify Functions (if needed for API endpoints)
+[functions]
+  directory = "netlify/functions"
+
+# Forms (if using Netlify forms for feedback)
+[build.processing]
+  skip_processing = false
+[build.processing.css]
+  bundle = true
+  minify = true
+[build.processing.js]
+  bundle = true
+  minify = true
+[build.processing.html]
+  pretty_urls = true
+[build.processing.images]
+  compress = true
