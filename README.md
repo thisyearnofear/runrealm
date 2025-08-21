@@ -75,14 +75,16 @@ Deployed smart contract addresses and implementation details:
 ### 🏃‍♂️ Enhanced Running Experience
 
 - **Interactive Route Planning**: Click-to-add waypoints with distance calculation
-- **AI-Powered Coaching**: Google Gemini AI provides personalized route suggestions
+- **AI-Powered Coaching**: Google Gemini AI provides personalized route suggestions with wallet history context
+- **Smart Territory Analysis**: AI evaluates territories based on your portfolio and cross-chain activity
 - **Mobile-First Design**: Optimized for on-the-go route planning
 - **Real-Time Feedback**: Live distance updates and route optimization
 
 ### 🎮 GameFi Integration
 
-- **Territory NFTs**: Convert running routes into unique, ownable NFT territories
-- **Cross-Chain Support**: Claim territories from any blockchain via ZetaChain
+- **Territory NFTs**: Convert running routes into unique, ownable NFT territories with cross-chain metadata
+- **Cross-Chain Support**: Claim territories from any blockchain via ZetaChain with full history tracking
+- **Cross-Chain Territory Display**: Visual indicators showing origin chain and transfer history
 - **$REALM Token Rewards**: Earn tokens based on distance, difficulty, and achievements
 - **Ghost Runners**: Compete against AI-generated runners on your routes
 - **Player Progression**: Level up, unlock achievements, climb leaderboards
@@ -177,9 +179,10 @@ For full details including examples and usage instructions, see [CONTRACTS.md](C
 
 ### Innovation
 
-- **First Geospatial GameFi**: Real-world territories as NFTs
-- **Universal Contract Pioneer**: True cross-chain gaming experience
-- **AI-Enhanced Fitness**: Personalized coaching and route optimization
+- **First Geospatial GameFi**: Real-world territories as NFTs with cross-chain provenance
+- **Universal Contract Pioneer**: True cross-chain gaming experience with visual chain indicators
+- **AI-Enhanced Fitness**: Personalized coaching with wallet history and territory portfolio context
+- **Cross-Chain Territory Intelligence**: AI analyzes territories considering your multi-chain activity
 - **Seamless UX**: Web3 complexity hidden behind intuitive interface
 
 ### Real-World Impact

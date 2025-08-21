@@ -265,7 +265,46 @@ export class AIService extends BaseService {
   }
 
   /**
-   * Analyze territory strategic value
+   * Get enhanced user context for AI analysis
+   */
+  private async getUserContext(): Promise<{
+    walletHistory: any;
+    territories: any[];
+    playerStats: any;
+  }> {
+    try {
+      const web3Service = (await import('../services/web3-service')).Web3Service.getInstance();
+      const territoryDashboard = (await import('../components/territory-dashboard')).default.getInstance();
+      
+      const currentWallet = web3Service.getCurrentWallet();
+      const territories = territoryDashboard.getTerritories();
+      const playerStats = territoryDashboard.getPlayerStats();
+      
+      const walletHistory = {
+        address: currentWallet?.address,
+        chainId: currentWallet?.chainId,
+        networkName: currentWallet?.networkName,
+        balance: currentWallet?.balance,
+        connectedAt: new Date().toISOString()
+      };
+      
+      return {
+        walletHistory,
+        territories,
+        playerStats
+      };
+    } catch (error) {
+      console.warn('Failed to get user context:', error);
+      return {
+        walletHistory: null,
+        territories: [],
+        playerStats: null
+      };
+    }
+  }
+
+  /**
+   * Analyze territory strategic value with enhanced context
    */
   public async analyzeTerritory(
     geohash: string,
@@ -287,7 +326,9 @@ export class AIService extends BaseService {
       return this.createFallbackAnalysis(territoryData);
     }
 
-    const prompt = this.buildTerritoryAnalysisPrompt(territoryData, contextData);
+    // Get enhanced user context
+    const userContext = await this.getUserContext();
+    const prompt = this.buildTerritoryAnalysisPrompt(territoryData, contextData, userContext);
     
     return this.retry(async () => {
       const result = await this.model!.generateContent(prompt);
@@ -410,31 +451,44 @@ Make this character memorable and fun to compete against!
 
   private buildTerritoryAnalysisPrompt(
     territoryData: any,
-    contextData?: any
+    contextData?: any,
+    userContext?: any
   ): string {
+    const userContextStr = userContext ? `
+User Context:
+- Wallet: ${userContext.walletHistory?.address ? `${userContext.walletHistory.address.substring(0, 8)}...` : 'Not connected'}
+- Network: ${userContext.walletHistory?.networkName || 'Unknown'}
+- Territories Owned: ${userContext.territories?.length || 0}
+- Player Level: ${userContext.playerStats?.level || 1}
+- Total Distance: ${userContext.playerStats?.totalDistance || 0}m
+- REALM Balance: ${userContext.playerStats?.realmBalance || 0}
+- Cross-Chain Activity: ${userContext.territories?.filter((t: any) => t.crossChainHistory?.length > 0).length || 0} territories with cross-chain history` : '';
+
     return `
 Analyze this territory for strategic value in RunRealm GameFi app.
 Territory data: ${JSON.stringify(territoryData)}
-Context: ${contextData ? JSON.stringify(contextData) : 'Limited context'}
+Context: ${contextData ? JSON.stringify(contextData) : 'Limited context'}${userContextStr}
 
 Evaluate based on:
 - Rarity and uniqueness of the route
-- Strategic gaming value
+- Strategic gaming value considering user's current portfolio
 - Competition likelihood
+- Cross-chain potential and ZetaChain integration
 - Long-term value potential
 - Risk factors
+- Synergy with user's existing territories
 
 Respond with JSON format:
 {
   "value": strategic_value_0_to_100,
   "rarity": rarity_score_0_to_100,
   "competition": expected_competition_0_to_100,
-  "recommendations": ["actionable advice"],
+  "recommendations": ["actionable advice considering user's portfolio"],
   "threats": ["potential risks"],
-  "opportunities": ["potential advantages"]
+  "opportunities": ["potential advantages including cross-chain benefits"]
 }
 
-Provide GameFi-focused analysis that helps players make strategic decisions.
+Provide GameFi-focused analysis that helps players make strategic decisions based on their current position and ZetaChain's cross-chain capabilities.
     `.trim();
   }
 

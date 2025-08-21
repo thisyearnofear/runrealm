@@ -192,6 +192,46 @@
   color: #ccc;
 }
 
+/* Cross-Chain Info */
+.cross-chain-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+  padding: 8px;
+  background: rgba(0, 189, 255, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 189, 255, 0.3);
+}
+
+.origin-chain {
+  font-size: 12px;
+  color: #00bdff;
+  font-weight: 500;
+}
+
+.cross-chain-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  background: linear-gradient(45deg, #ff6b35, #ff8c42);
+  color: white;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.native-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  background: linear-gradient(45deg, #00ff88, #00cc66);
+  color: #000;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
 /* Action Buttons */
 .territory-actions {
   display: flex;

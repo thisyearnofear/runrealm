@@ -17,6 +17,14 @@ export interface Territory {
   estimatedReward: number;
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   landmarks: string[];
+  chainId: number;
+  originChain: string;
+  crossChainHistory: {
+    chainId: number;
+    chainName: string;
+    transferredAt: Date;
+    transactionHash: string;
+  }[];
   metadata: {
     name: string;
     description: string;
@@ -179,6 +187,13 @@ export class TerritoryDashboard {
             <span>Difficulty: ${territory.difficulty}/100</span>
             <span>Reward: ${territory.estimatedReward} $REALM</span>
           </div>
+          <div class="cross-chain-info">
+            <span class="origin-chain">🌐 Origin: ${territory.originChain}</span>
+            ${territory.crossChainHistory.length > 0 ? 
+              `<span class="cross-chain-badge">⚡ ${territory.crossChainHistory.length} Cross-Chain Transfer${territory.crossChainHistory.length > 1 ? 's' : ''}</span>` : 
+              '<span class="native-badge">🏠 Native Territory</span>'
+            }
+          </div>
           <div class="territory-landmarks">
             ${territory.landmarks.map(landmark => `<span class="landmark-tag">${landmark}</span>`).join('')}
           </div>
@@ -308,6 +323,10 @@ export class TerritoryDashboard {
     // Add or update territory
     const existingIndex = this.territories.findIndex(t => t.geohash === data.geohash);
 
+    const currentWallet = this.web3Service.getCurrentWallet();
+    const chainId = currentWallet?.chainId || 7001; // Default to ZetaChain
+    const chainName = this.getChainName(chainId);
+
     const territory: Territory = {
       geohash: data.geohash,
       owner: data.owner || 'You',
@@ -317,9 +336,12 @@ export class TerritoryDashboard {
       estimatedReward: data.estimatedReward || 25,
       rarity: this.calculateRarity(),
       landmarks: data.landmarks || ['Park', 'Street'],
+      chainId: chainId,
+      originChain: chainName,
+      crossChainHistory: [],
       metadata: {
         name: `Territory ${data.geohash.substring(0, 8)}`,
-        description: 'A strategic running territory with great potential.',
+        description: `A strategic running territory claimed on ${chainName}.`,
         imageUrl: undefined
       }
     };
@@ -341,6 +363,18 @@ export class TerritoryDashboard {
     if (rand < 0.35) return 'rare';
     if (rand < 0.65) return 'uncommon';
     return 'common';
+  }
+
+  private getChainName(chainId: number): string {
+    const chainNames: { [key: number]: string } = {
+      1: 'Ethereum Mainnet',
+      137: 'Polygon',
+      56: 'BSC',
+      7001: 'ZetaChain Athens',
+      8453: 'Base',
+      42161: 'Arbitrum'
+    };
+    return chainNames[chainId] || `Chain ${chainId}`;
   }
 
   private updateWalletStatus(data: any): void {
