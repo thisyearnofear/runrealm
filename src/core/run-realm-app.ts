@@ -177,9 +177,7 @@ export class RunRealmApp {
       this.handleTerritoryClaimRequest(data);
     });
 
-    this.eventBus.on('ai:routeRequested', (data) => {
-      this.handleAIRouteRequest(data);
-    });
+    // Note: ai:routeRequested is now handled by ActionRouter in MainUI
 
     // Planned route rendering hook -> AnimationService
     this.eventBus.on('run:plannedRouteChanged', (data: { geojson: any }) => {
@@ -545,84 +543,9 @@ export class RunRealmApp {
     }
   }
 
-  private async handleAIRouteRequest(data: any): Promise<void> {
-    if (!this.ai) return;
 
-    try {
-      // Check if AI service is properly initialized before using it
-      if (!this.ai.getIsInitialized() || !this.ai.isAIEnabled()) {
-        console.warn('AI service not enabled or not properly initialized');
-        this.ui.showToast('AI features not available', { type: 'warning' });
-        return;
-      }
 
-      const currentPosition = this.map.getCenter();
-      const route = await this.ai.suggestRoute(
-        { lat: currentPosition.lat, lng: currentPosition.lng },
-        {
-          distance: data.distance || 2000,
-          difficulty: data.difficulty || 50
-          // goals property removed as it's not in the expected type
-        }
-      );
 
-      if (route) {
-        // Visualize the suggested route on the map
-        // Cast to any to avoid type errors
-        this.visualizeAIRoute((route as any).path);
-
-        this.ui.showToast(`AI route generated: ${(route as any).path.length} waypoints`, {
-          type: 'success'
-        });
-      }
-    } catch (error) {
-      console.error('AI route generation failed:', error);
-      this.ui.showToast('Failed to generate AI route', { type: 'error' });
-    }
-  }
-
-  private visualizeAIRoute(path: Array<{lat: number, lng: number}>): void {
-    // Add the AI suggested route to the map as a temporary layer
-    if (!this.map.getSource('ai-route')) {
-      this.map.addSource('ai-route', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: path.map(p => [p.lng, p.lat])
-          }
-        }
-      });
-
-      this.map.addLayer({
-        id: 'ai-route-line',
-        type: 'line',
-        source: 'ai-route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#00ff88',
-          'line-width': 3,
-          'line-opacity': 0.8,
-          'line-dasharray': [2, 2]
-        }
-      });
-    } else {
-      // Update existing route
-      (this.map.getSource('ai-route') as any).setData({
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: path.map(p => [p.lng, p.lat])
-        }
-      });
-    }
-  }
 
   private handleWalletConnected(data: any): void {
     this.ui.showToast(`Wallet connected: ${data.address?.slice(0, 8)}...`, {
