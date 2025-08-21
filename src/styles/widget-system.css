@@ -95,6 +95,21 @@
   box-shadow: var(--widget-shadow-hover);
 }
 
+/* Visibility classes */
+.widget.visible {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition: opacity 0.3s ease, visibility 0.3s ease !important;
+}
+
+.widget.hidden {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s ease, visibility 0.3s ease !important;
+}
+
 /* Widget Header */
 .widget-header {
   display: flex;
@@ -145,7 +160,6 @@
 .widget-toggle:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  transform: rotate(180deg);
 }
 
 /* Widget Content */
@@ -354,6 +368,8 @@
   cursor: pointer;
   transition: var(--widget-transition);
   margin: 4px 4px 4px 0;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .widget-button:hover {
@@ -482,6 +498,70 @@
   }
 }
 
+/* Mobile-specific enhancements */
+.mobile-widget {
+  /* Larger touch targets */
+  min-width: 280px !important;
+}
+
+.mobile-widget .widget-header {
+  padding: 14px 16px !important;
+  min-height: 48px;
+}
+
+.mobile-widget .widget-button {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 14px;
+  padding: 10px 14px;
+}
+
+.mobile-widget .widget-toggle {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+}
+
+/* Compact mode for very small screens */
+.compact-mode .widget {
+  min-width: 240px !important;
+}
+
+.compact-mode .widget-header {
+  padding: 8px 12px !important;
+}
+
+.compact-mode .widget-content {
+  padding: 8px 12px !important;
+}
+
+.compact-mode .widget-stat-label,
+.compact-mode .widget-stat-value {
+  font-size: 11px;
+}
+
+.compact-mode .widget-button {
+  padding: 6px 10px;
+  font-size: 12px;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+/* Landscape layout optimizations */
+.landscape-layout .widget-zone.top-left,
+.landscape-layout .widget-zone.bottom-left {
+  left: 5px;
+}
+
+.landscape-layout .widget-zone.top-right,
+.landscape-layout .widget-zone.bottom-right {
+  right: 5px;
+}
+
+.landscape-layout .widget {
+  max-width: 280px !important;
+}
+
 /* Widget Themes */
 .widget.theme-stats {
   border-color: rgba(0, 255, 0, 0.4);
@@ -535,6 +615,7 @@
   padding: 8px 4px;
   border-radius: 4px;
   transition: background-color 0.2s ease;
+  min-height: 44px;
 }
 
 .widget-toggle:hover {
@@ -592,9 +673,9 @@
 /* Drag and Drop Styles */
 .widget.dragging {
   opacity: 0.8;
-  transform: rotate(2deg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   z-index: 10000 !important;
+  transition: none; /* Disable transitions during drag for better performance */
 }
 
 .widget-header {
@@ -603,6 +684,7 @@
   -moz-user-select: none;
   -ms-user-select: none;
   cursor: grab;
+  touch-action: none; /* Prevent default touch actions on mobile */
 }
 
 .widget-header:active {
@@ -735,4 +817,21 @@
 .widget-header[tabindex]:focus {
   outline: 2px solid rgba(0, 255, 0, 0.6);
   outline-offset: -2px;
+}
+
+/* Mobile improvements */
+@media (hover: none) and (pointer: coarse) {
+  .widget-header {
+    padding: 14px 16px; /* Larger touch targets on mobile */
+  }
+  
+  .widget.dragging {
+    opacity: 0.9;
+    transform: scale(1.02); /* Subtle scale instead of rotation on mobile */
+  }
+  
+  /* Reduce animations on mobile to improve performance */
+  .widget {
+    transition: all 0.2s ease-out;
+  }
 }

@@ -5,6 +5,9 @@
 
 import { BaseService } from '../core/base-service';
 import { DOMService } from '../services/dom-service';
+import { DragService } from './drag-service';
+import { AnimationService } from './animation-service';
+import { WidgetStateService, WidgetState } from './widget-state-service';
 
 export interface Widget {
   id: string;
@@ -18,22 +21,47 @@ export interface Widget {
 
 export class WidgetSystem extends BaseService {
   private domService: DOMService;
+  private dragService: DragService;
+  private animationService: AnimationService;
+  private widgetStateService: WidgetStateService;
   private widgets: Map<string, Widget> = new Map();
   private activeWidget: string | null = null;
   private widgetContainer: HTMLElement | null = null;
-  private draggedWidget: HTMLElement | null = null;
-  private dragOffset = { x: 0, y: 0 };
-  private isDragging = false;
 
-  constructor(domService: DOMService) {
+  constructor(
+    domService: DOMService, 
+    dragService: DragService,
+    animationService: AnimationService,
+    widgetStateService: WidgetStateService
+  ) {
     super();
     this.domService = domService;
+    this.dragService = dragService;
+    this.animationService = animationService;
+    this.widgetStateService = widgetStateService;
   }
 
   protected async onInitialize(): Promise<void> {
     this.createWidgetContainer();
     this.setupEventHandlers();
     this.setupDragAndDrop();
+    
+    // Subscribe to widget state changes
+    this.subscribe('widget:stateChanged', (data: { widgetId: string; state: WidgetState }) => {
+      const widget = this.widgets.get(data.widgetId);
+      if (widget) {
+        // Update widget based on state changes
+        widget.minimized = data.state.minimized;
+        widget.position = data.state.position;
+        
+        // Update UI if widget element exists
+        const element = this.getWidgetElement(data.widgetId);
+        if (element) {
+          this.updateWidgetDisplayImproved(widget);
+        }
+      }
+    });
+    
     this.safeEmit('service:initialized', { service: 'WidgetSystem', success: true });
   }
 
@@ -42,6 +70,24 @@ export class WidgetSystem extends BaseService {
    */
   public registerWidget(widget: Widget): void {
     this.widgets.set(widget.id, widget);
+    
+    // Initialize widget state
+    const existingState = this.widgetStateService.getWidgetState(widget.id);
+    if (existingState) {
+      // Restore state from previous session
+      widget.minimized = existingState.minimized;
+      widget.position = existingState.position;
+      widget.priority = existingState.priority;
+    } else {
+      // Set initial state
+      this.widgetStateService.setWidgetState(widget.id, {
+        position: widget.position,
+        minimized: widget.minimized,
+        visible: true,
+        priority: widget.priority
+      });
+    }
+    
     this.renderWidget(widget);
     // Don't call arrangeWidgets() immediately - it destroys and recreates elements
     // this.arrangeWidgets();
@@ -168,23 +214,42 @@ export class WidgetSystem extends BaseService {
       parent: undefined // We'll append manually
     });
 
-    // Make widget header draggable
+    // Apply mobile optimizations if available
+    // Note: In a full implementation, we would inject MobileWidgetService
+    // For now, we'll add basic mobile-friendly features
+    
+    // Make widget header draggable using DragService
     const header = widgetElement.querySelector('.widget-header') as HTMLElement;
     if (header) {
       header.style.cursor = 'grab';
-
-      // Mouse events
-      header.addEventListener('mousedown', (e) => {
-        if ((e.target as HTMLElement).classList.contains('widget-toggle')) return; // Don't drag when clicking toggle
-        header.style.cursor = 'grabbing';
-        this.handleDragStart(e, widgetElement);
+      this.dragService.makeDraggable(widgetElement, {
+        enableLongPress: true,
+        longPressDuration: 500,
+        onDragStart: () => {
+          header.style.cursor = 'grabbing';
+          widgetElement.classList.add('dragging');
+        },
+        onDragEnd: () => {
+          header.style.cursor = 'grab';
+          widgetElement.classList.remove('dragging');
+          // Find the best zone for the widget based on final position
+          const rect = widgetElement.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          
+          const newPosition = this.getClosestZone(centerX, centerY);
+          const widgetId = widgetElement.id.replace('widget-', '');
+          
+          // Update widget position
+          this.moveWidgetToPosition(widgetId, newPosition);
+        },
+        onLongPress: () => {
+          // On long press, expand the widget
+          if (widget.minimized) {
+            this.toggleWidget(widget.id);
+          }
+        }
       });
-
-      // Touch events
-      header.addEventListener('touchstart', (e) => {
-        if ((e.target as HTMLElement).classList.contains('widget-toggle')) return;
-        this.handleDragStart(e, widgetElement);
-      }, { passive: false });
     }
 
     return widgetElement;
@@ -597,88 +662,8 @@ export class WidgetSystem extends BaseService {
    * Setup drag and drop functionality for widgets
    */
   private setupDragAndDrop(): void {
-    if (!this.widgetContainer) return;
-
-    // Add global mouse/touch event listeners
-    document.addEventListener('mousemove', this.handleDragMove.bind(this));
-    document.addEventListener('mouseup', this.handleDragEnd.bind(this));
-    document.addEventListener('touchmove', this.handleDragMove.bind(this), { passive: false });
-    document.addEventListener('touchend', this.handleDragEnd.bind(this));
-  }
-
-  /**
-   * Handle drag start
-   */
-  private handleDragStart(e: MouseEvent | TouchEvent, widgetElement: HTMLElement): void {
-    e.preventDefault();
-
-    this.isDragging = true;
-    this.draggedWidget = widgetElement;
-
-    // Get initial position
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-    const rect = widgetElement.getBoundingClientRect();
-    this.dragOffset = {
-      x: clientX - rect.left,
-      y: clientY - rect.top
-    };
-
-    // Add dragging class for visual feedback
-    widgetElement.classList.add('dragging');
-    document.body.style.userSelect = 'none';
-  }
-
-  /**
-   * Handle drag move
-   */
-  private handleDragMove(e: MouseEvent | TouchEvent): void {
-    if (!this.isDragging || !this.draggedWidget) return;
-
-    e.preventDefault();
-
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-    // Calculate new position
-    const newX = clientX - this.dragOffset.x;
-    const newY = clientY - this.dragOffset.y;
-
-    // Apply position
-    this.draggedWidget.style.position = 'fixed';
-    this.draggedWidget.style.left = `${newX}px`;
-    this.draggedWidget.style.top = `${newY}px`;
-    this.draggedWidget.style.zIndex = '10000';
-  }
-
-  /**
-   * Handle drag end
-   */
-  private handleDragEnd(e: MouseEvent | TouchEvent): void {
-    if (!this.isDragging || !this.draggedWidget) return;
-
-    // Remove dragging state
-    this.draggedWidget.classList.remove('dragging');
-    this.draggedWidget.style.position = '';
-    this.draggedWidget.style.zIndex = '';
-    document.body.style.userSelect = '';
-
-    // Find the best zone for the widget based on final position
-    const rect = this.draggedWidget.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
-    const newPosition = this.getClosestZone(centerX, centerY);
-    const widgetId = this.draggedWidget.id.replace('widget-', '');
-
-    // Update widget position
-    this.moveWidgetToPosition(widgetId, newPosition);
-
-    // Reset drag state
-    this.isDragging = false;
-    this.draggedWidget = null;
-    this.dragOffset = { x: 0, y: 0 };
+    // Drag functionality is now handled by DragService
+    // This method is kept for compatibility but does nothing
   }
 
   /**

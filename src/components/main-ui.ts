@@ -10,6 +10,12 @@ import { WalletConnection } from './wallet-connection';
 import { UIService } from '../services/ui-service';
 import { GameFiUI } from './gamefi-ui';
 import { WidgetSystem, Widget } from './widget-system';
+import { DragService } from './drag-service';
+import { VisibilityService } from './visibility-service';
+import { AnimationService } from './animation-service';
+import { WidgetStateService } from './widget-state-service';
+import { TouchGestureService } from './touch-gesture-service';
+import { MobileWidgetService } from './mobile-widget-service';
 
 export class MainUI extends BaseService {
   private domService: DOMService;
@@ -18,6 +24,12 @@ export class MainUI extends BaseService {
   private uiService: UIService;
   private gamefiUI: GameFiUI;
   private widgetSystem: WidgetSystem;
+  private dragService: DragService;
+  private visibilityService: VisibilityService;
+  private animationService: AnimationService;
+  private widgetStateService: WidgetStateService;
+  private touchGestureService: TouchGestureService;
+  private mobileWidgetService: MobileWidgetService;
   private isGameFiMode: boolean = false;
 
   // Run tracking state
@@ -37,13 +49,42 @@ export class MainUI extends BaseService {
     this.walletConnection = walletConnection;
     this.uiService = uiService;
     this.gamefiUI = gamefiUI;
-    this.widgetSystem = new WidgetSystem(domService);
+    this.dragService = new DragService();
+    this.visibilityService = new VisibilityService();
+    this.animationService = new AnimationService();
+    this.widgetStateService = new WidgetStateService();
+    this.touchGestureService = new TouchGestureService();
+    this.mobileWidgetService = new MobileWidgetService(this.touchGestureService);
+    this.widgetSystem = new WidgetSystem(
+      domService, 
+      this.dragService, 
+      this.animationService, 
+      this.widgetStateService
+    );
   }
 
   protected async onInitialize(): Promise<void> {
     console.log('MainUI: Starting initialization...');
     
-    // Initialize widget system first
+    // Initialize services in order
+    await this.dragService.initialize();
+    console.log('MainUI: Drag service initialized');
+    
+    await this.visibilityService.initialize();
+    console.log('MainUI: Visibility service initialized');
+    
+    await this.animationService.initialize();
+    console.log('MainUI: Animation service initialized');
+    
+    await this.widgetStateService.initialize();
+    console.log('MainUI: Widget state service initialized');
+    
+    await this.touchGestureService.initialize();
+    console.log('MainUI: Touch gesture service initialized');
+    
+    await this.mobileWidgetService.initialize();
+    console.log('MainUI: Mobile widget service initialized');
+    
     await this.widgetSystem.initialize();
     console.log('MainUI: Widget system initialized');
 
@@ -915,12 +956,6 @@ export class MainUI extends BaseService {
    */
   private toggleWidgetVisibility(widgetId: string, visible: boolean): void {
     console.log(`Toggling widget ${widgetId} visibility to ${visible}`);
-    const widgetElement = document.getElementById(`widget-${widgetId}`);
-    if (widgetElement) {
-      widgetElement.style.display = visible ? 'block' : 'none';
-      console.log(`Widget ${widgetId} display set to: ${widgetElement.style.display}`);
-    } else {
-      console.error(`Widget element not found: widget-${widgetId}`);
-    }
+    this.visibilityService.setVisibility(`widget-${widgetId}`, visible);
   }
 }
