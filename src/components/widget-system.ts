@@ -723,7 +723,14 @@ export class WidgetSystem extends BaseService {
     const currentElement = document.getElementById(`widget-${widgetId}`);
     if (!currentElement) return;
 
+    // If position hasn't changed, no need to do anything
+    if (widget.position === newPosition) {
+      console.log(`Widget ${widgetId} already in ${newPosition}, preserving current position`);
+      return;
+    }
+
     // Update widget position data
+    const oldPosition = widget.position;
     widget.position = newPosition;
     
     // Update widget state
@@ -734,10 +741,20 @@ export class WidgetSystem extends BaseService {
       priority: widget.priority
     });
 
-    // Don't remove and recreate the element - just update its position data
-    // The element will maintain its current fixed positioning from the drag operation
-    // This prevents the widget from disappearing
+    // Move the element to the new zone while preserving its dragged position
+    // This allows the widget to maintain its exact position but be logically in the new zone
+    const newZone = this.getWidgetZone(newPosition);
+    const oldZone = this.getWidgetZone(oldPosition);
     
-    console.log(`Widget ${widgetId} moved to ${newPosition} (position preserved)`);
+    if (newZone && oldZone && currentElement.parentElement === oldZone) {
+      // Move element to new zone
+      newZone.appendChild(currentElement);
+      
+      // The element should maintain its fixed positioning from the drag operation
+      // This ensures it stays exactly where the user dropped it
+      console.log(`Widget ${widgetId} moved from ${oldPosition} to ${newPosition} zone (position preserved)`);
+    } else {
+      console.log(`Widget ${widgetId} position updated to ${newPosition} (element already positioned correctly)`);
+    }
   }
 }

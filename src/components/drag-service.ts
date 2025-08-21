@@ -26,6 +26,7 @@ export class DragService extends BaseService {
   private dragOffset = { x: 0, y: 0 };
   private options: DragOptions = {};
   private startPosition = { x: 0, y: 0 };
+  private currentPosition: { x: number; y: number } | null = null;
   private longPressTimer: number | null = null;
   private isLongPress = false;
   private lastUpdateTime = 0;
@@ -34,6 +35,8 @@ export class DragService extends BaseService {
   private isMobile = false;
   private touchStartTime = 0;
   private initialTouchDistance = 0;
+  private dragStarted = false; // Track whether actual dragging has begun
+  private dragThreshold = 5; // Minimum pixels to move before starting drag
 
   protected async onInitialize(): Promise<void> {
     // Detect mobile device
@@ -114,7 +117,7 @@ export class DragService extends BaseService {
   }
 
   /**
-   * Handle drag start
+   * Handle potential drag start - but don't actually start dragging until movement threshold is met
    */
   private handleDragStart(e: MouseEvent | TouchEvent, element: HTMLElement): void {
     // Don't start drag if user is interacting with form elements or specific UI controls
@@ -139,13 +142,9 @@ export class DragService extends BaseService {
       return;
     }
 
-    // Prevent default to avoid scrolling on touch devices
-    e.preventDefault();
-    
-    // Cancel long press if drag starts
-    this.cancelLongPressTimer();
-
-    this.isDragging = true;
+    // Store initial state but don't start dragging yet
+    this.isDragging = true; // Track that we're in potential drag state
+    this.dragStarted = false; // But actual dragging hasn't started
     this.draggedElement = element;
     
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -158,18 +157,15 @@ export class DragService extends BaseService {
     };
     
     this.startPosition = {
-      x: rect.left,
-      y: rect.top
+      x: clientX, // Store cursor position, not element position
+      y: clientY
     };
 
-    // Add dragging class for visual feedback
-    element.classList.add('dragging');
-    document.body.style.userSelect = 'none';
+    // Don't add visual feedback yet - wait for actual drag movement
+    // Don't prevent user selection yet - wait for actual drag movement
     
-    // Callback
-    if (this.options.onDragStart) {
-      this.options.onDragStart(element);
-    }
+    // Cancel long press if drag starts
+    this.cancelLongPressTimer();
   }
 
   /**
@@ -245,6 +241,29 @@ export class DragService extends BaseService {
   private updateDragPosition(clientX: number, clientY: number): void {
     if (!this.draggedElement) return;
     
+    // Check if we've moved enough to start actual dragging
+    if (!this.dragStarted) {
+      const deltaX = Math.abs(clientX - this.startPosition.x);
+      const deltaY = Math.abs(clientY - this.startPosition.y);
+      
+      // If movement is below threshold, don't start dragging yet
+      if (deltaX < this.dragThreshold && deltaY < this.dragThreshold) {
+        return;
+      }
+      
+      // Threshold exceeded - start actual dragging
+      this.dragStarted = true;
+      this.draggedElement.classList.add('dragging');
+      document.body.style.userSelect = 'none';
+      
+      // Call onDragStart callback now that actual dragging has begun
+      if (this.options.onDragStart) {
+        this.options.onDragStart(this.draggedElement);
+      }
+      
+      console.log('Drag threshold exceeded, starting actual drag');
+    }
+    
     // Throttle updates to improve performance (max 60fps)
     const now = performance.now();
     if (now - this.lastUpdateTime < 16.67 && this.pendingUpdate) {
@@ -257,14 +276,28 @@ export class DragService extends BaseService {
     let newX = clientX - this.dragOffset.x;
     let newY = clientY - this.dragOffset.y;
     
-    // Constrain to viewport if enabled
+    // Constrain to viewport if enabled with better error handling
     if (this.options.constrainToViewport) {
-      const rect = this.draggedElement.getBoundingClientRect();
-      const maxX = window.innerWidth - rect.width;
-      const maxY = window.innerHeight - rect.height;
-      
-      newX = Math.max(0, Math.min(newX, maxX));
-      newY = Math.max(0, Math.min(newY, maxY));
+      try {
+        const rect = this.draggedElement.getBoundingClientRect();
+        // Add safety checks for valid rect values
+        if (rect && rect.width > 0 && rect.height > 0) {
+          const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+          const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+          
+          const maxX = viewportWidth - rect.width;
+          const maxY = viewportHeight - rect.height;
+          
+          // Ensure we don't constrain to negative values
+          newX = Math.max(0, Math.min(newX, Math.max(maxX, 0)));
+          newY = Math.max(0, Math.min(newY, Math.max(maxY, 0)));
+        }
+      } catch (e) {
+        console.warn('Error constraining drag position:', e);
+        // Fall back to basic viewport constraints
+        newX = Math.max(0, Math.min(newX, (window.innerWidth || 1000) - 200));
+        newY = Math.max(0, Math.min(newY, (window.innerHeight || 800) - 50));
+      }
     }
     
     // Snap to grid if enabled
@@ -273,6 +306,9 @@ export class DragService extends BaseService {
       newY = Math.round(newY / this.options.gridSize) * this.options.gridSize;
     }
     
+    // Store current position for consistent handling
+    this.currentPosition = { x: newX, y: newY };
+    
     // Cancel previous animation frame if pending
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
@@ -280,16 +316,16 @@ export class DragService extends BaseService {
     
     // Use requestAnimationFrame for smooth updates
     this.animationFrameId = requestAnimationFrame(() => {
-      if (this.draggedElement) {
-        // Use transform for better performance than left/top
+      if (this.draggedElement && this.currentPosition) {
+        // Use transform for better performance during drag
         this.draggedElement.style.position = 'fixed';
-        this.draggedElement.style.transform = `translate3d(${newX}px, ${newY}px, 0)`;
+        this.draggedElement.style.transform = `translate3d(${this.currentPosition.x}px, ${this.currentPosition.y}px, 0)`;
         this.draggedElement.style.zIndex = '10000';
         this.draggedElement.style.willChange = 'transform';
         
         // Callback
         if (this.options.onDragMove) {
-          this.options.onDragMove(this.draggedElement, newX, newY);
+          this.options.onDragMove(this.draggedElement, this.currentPosition.x, this.currentPosition.y);
         }
         
         this.pendingUpdate = false;
@@ -343,18 +379,44 @@ export class DragService extends BaseService {
       this.animationFrameId = null;
     }
     
-    // Calculate final position
+    // Store the element reference before clearing state
+    const draggedElement = this.draggedElement;
+    
+    // Check if actual dragging ever started
+    if (!this.dragStarted) {
+      // This was just a click, not a drag - don't move the widget
+      console.log('Click detected (no drag movement), not repositioning widget');
+      
+      // Clean up state without moving the element
+      this.isDragging = false;
+      this.draggedElement = null;
+      this.dragOffset = { x: 0, y: 0 };
+      this.currentPosition = null;
+      this.dragStarted = false;
+      this.cancelLongPressTimer();
+      
+      // Don't add any dragging visual feedback since it was just a click
+      return;
+    }
+    
+    // Calculate final position for actual drag
     let finalX = clientX - this.dragOffset.x;
     let finalY = clientY - this.dragOffset.y;
     
     // Constrain to viewport if enabled
     if (this.options.constrainToViewport) {
-      const rect = this.draggedElement.getBoundingClientRect();
-      const maxX = window.innerWidth - rect.width;
-      const maxY = window.innerHeight - rect.height;
-      
-      finalX = Math.max(0, Math.min(finalX, maxX));
-      finalY = Math.max(0, Math.min(finalY, maxY));
+      try {
+        const rect = draggedElement.getBoundingClientRect();
+        if (rect && rect.width > 0 && rect.height > 0) {
+          const maxX = window.innerWidth - rect.width;
+          const maxY = window.innerHeight - rect.height;
+          
+          finalX = Math.max(0, Math.min(finalX, maxX));
+          finalY = Math.max(0, Math.min(finalY, maxY));
+        }
+      } catch (e) {
+        console.warn('Error constraining final position:', e);
+      }
     }
     
     // Snap to grid if enabled
@@ -362,9 +424,6 @@ export class DragService extends BaseService {
       finalX = Math.round(finalX / this.options.gridSize) * this.options.gridSize;
       finalY = Math.round(finalY / this.options.gridSize) * this.options.gridSize;
     }
-    
-    // Store the element reference before calling onDragEnd
-    const draggedElement = this.draggedElement;
     
     // Call onDragEnd callback first (before clearing styles)
     if (this.options.onDragEnd) {
@@ -375,13 +434,15 @@ export class DragService extends BaseService {
     this.isDragging = false;
     this.draggedElement = null;
     this.dragOffset = { x: 0, y: 0 };
+    this.currentPosition = null;
+    this.dragStarted = false;
     this.cancelLongPressTimer();
     
     // Clean up dragging state and styles
     draggedElement.classList.remove('dragging');
     document.body.style.userSelect = '';
     
-    // Set final position using absolute positioning
+    // Set final position using fixed positioning
     draggedElement.style.position = 'fixed';
     draggedElement.style.left = `${finalX}px`;
     draggedElement.style.top = `${finalY}px`;
@@ -393,6 +454,8 @@ export class DragService extends BaseService {
     if (this.options.animationDuration && this.options.animationDuration > 0) {
       this.animateToPosition(finalX, finalY);
     }
+    
+    console.log('Drag completed, widget positioned at:', finalX, finalY);
   }
 
   /**
@@ -414,10 +477,15 @@ export class DragService extends BaseService {
   }
 
   /**
-   * Cancel current drag operation
+   * Cancel current drag operation with proper restoration
    */
   private cancelDrag(): void {
     if (!this.isDragging || !this.draggedElement) return;
+    
+    console.log('Canceling drag operation, restoring widget to original position');
+    
+    // Store reference to element before clearing state
+    const draggedElement = this.draggedElement;
     
     // Cancel any pending animation frame
     if (this.animationFrameId) {
@@ -425,18 +493,59 @@ export class DragService extends BaseService {
       this.animationFrameId = null;
     }
     
-    // Reset element styles
-    this.draggedElement.classList.remove('dragging');
-    this.draggedElement.style.position = '';
-    this.draggedElement.style.zIndex = '';
-    this.draggedElement.style.willChange = '';
-    this.draggedElement.style.transform = '';
+    try {
+      // Restore element to its original position within its zone
+      // This prevents widgets from disappearing when drag is cancelled
+      draggedElement.classList.remove('dragging');
+      
+      // Clear all drag-related styles to restore normal positioning
+      draggedElement.style.position = '';
+      draggedElement.style.left = '';
+      draggedElement.style.top = '';
+      draggedElement.style.transform = '';
+      draggedElement.style.zIndex = '';
+      draggedElement.style.willChange = '';
+      
+      // Force the element back to its natural position in the widget zone
+      // This ensures it's visible and properly positioned
+      const widgetZones = document.querySelectorAll('.widget-zone');
+      let elementRestored = false;
+      
+      widgetZones.forEach(zone => {
+        if (zone.contains(draggedElement) && !elementRestored) {
+          // Element is already in a zone, ensure it's positioned correctly
+          // Trigger reflow to ensure proper positioning
+          zone.appendChild(draggedElement);
+          draggedElement.offsetHeight; // Force reflow
+          elementRestored = true;
+          console.log('Widget restored to its zone');
+        }
+      });
+      
+      if (!elementRestored) {
+        console.warn('Widget element could not be found in any zone, may need manual restoration');
+      }
+      
+    } catch (error) {
+      console.error('Error during drag cancellation:', error);
+      // Fallback: just clear the styles
+      try {
+        draggedElement.style.cssText = '';
+        draggedElement.classList.remove('dragging');
+      } catch (e) {
+        console.error('Failed to reset drag element styles:', e);
+      }
+    }
+    
+    // Clean up global state
     document.body.style.userSelect = '';
     
     // Reset drag state
     this.isDragging = false;
     this.draggedElement = null;
     this.dragOffset = { x: 0, y: 0 };
+    this.currentPosition = null;
+    this.dragStarted = false;
     this.cancelLongPressTimer();
   }
 }
