@@ -148,7 +148,7 @@ export class MobileWidgetService extends BaseService {
         const speed = Math.abs(x + y + z - lastX - lastY - lastZ) / diffTime * 10000;
         
         if (speed > shakeThreshold) {
-          this.safeEmit('mobile:shakeDetected');
+          this.safeEmit('mobile:shakeDetected', {});
         }
         
         lastX = x;
@@ -167,11 +167,11 @@ export class MobileWidgetService extends BaseService {
       document.body,
       () => {
         // Swipe right from edge - previous
-        this.safeEmit('mobile:swipeRight');
+        this.safeEmit('mobile:swipeRight', {});
       },
       () => {
         // Swipe left from edge - next
-        this.safeEmit('mobile:swipeLeft');
+        this.safeEmit('mobile:swipeLeft', {});
       }
     );
   }

@@ -21,7 +21,7 @@ export abstract class BaseService {
    * Initialize the service
    * Override in subclasses for specific initialization logic
    */
-  protected async initialize(): Promise<void> {
+  public async initialize(): Promise<void> {
     if (this.isInitialized) {
       console.warn(`${this.constructor.name} is already initialized`);
       return;

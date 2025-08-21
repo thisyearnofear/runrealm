@@ -78,7 +78,7 @@ export class GameFiUI extends BaseService {
     this.subscribe('web3:walletConnected', (data) => {
       // Let MainUI handle GameFi widgets visibility
       this.updatePlayerStats({ realmBalance: 0 } as any);
-      this.safeEmit('ui:gamefiEnabled', {});
+      this.safeEmit('ui:gamefiEnabled', { enabled: true });
     });
 
     this.subscribe('territory:claimed', (data) => {
@@ -183,6 +183,11 @@ export class GameFiUI extends BaseService {
       coachMessage.textContent = message;
       coachMessage.style.animation = 'pulse 0.5s ease-in-out';
     }
+  }
+
+  public showTerritoryPreview(preview: TerritoryPreview): void {
+    // Implementation for showing territory preview
+    console.log('Territory preview:', preview);
   }
 
   // Private helper methods

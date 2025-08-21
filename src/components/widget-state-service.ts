@@ -79,7 +79,7 @@ export class WidgetStateService extends BaseService {
     localStorage.removeItem(this.storageKey);
     
     // Emit reset event
-    this.safeEmit('widget:allStatesReset');
+    this.safeEmit('widget:allStatesReset', {});
   }
 
   /**

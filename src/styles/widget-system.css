@@ -672,10 +672,14 @@
 
 /* Drag and Drop Styles */
 .widget.dragging {
-  opacity: 0.8;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  opacity: 0.9;
+  transform: scale(1.02) !important;
+  box-shadow: 0 12px 40px rgba(0, 255, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.6);
   z-index: 10000 !important;
-  transition: none; /* Disable transitions during drag for better performance */
+  transition: none !important; /* Disable transitions during drag for better performance */
+  border-color: rgba(0, 255, 0, 0.6) !important;
+  backdrop-filter: blur(15px) !important;
+  will-change: transform !important;
 }
 
 .widget-header {
@@ -685,10 +689,18 @@
   -ms-user-select: none;
   cursor: grab;
   touch-action: none; /* Prevent default touch actions on mobile */
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .widget-header:active {
   cursor: grabbing !important;
+  background: var(--widget-header-bg-active) !important;
+  transform: translateY(1px);
+}
+
+.widget.dragging .widget-header {
+  cursor: grabbing !important;
+  background: var(--widget-header-bg-active) !important;
 }
 
 /* Active button state for GameFi toggle */

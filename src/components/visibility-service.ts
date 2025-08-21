@@ -36,7 +36,7 @@ export class VisibilityService extends BaseService {
     }
     
     // Emit event for other services to react
-    this.safeEmit('visibility:changed', { componentId, visible });
+    this.safeEmit('visibility:changed', { elementId: componentId, visible });
   }
 
   /**

@@ -12,6 +12,8 @@ export interface DragOptions {
   animationDuration?: number;
   enableLongPress?: boolean;
   longPressDuration?: number;
+  mobileOptimized?: boolean;
+  touchSensitivity?: number;
   onDragStart?: (element: HTMLElement) => void;
   onDragMove?: (element: HTMLElement, x: number, y: number) => void;
   onDragEnd?: (element: HTMLElement, x: number, y: number) => void;
@@ -26,13 +28,34 @@ export class DragService extends BaseService {
   private startPosition = { x: 0, y: 0 };
   private longPressTimer: number | null = null;
   private isLongPress = false;
+  private lastUpdateTime = 0;
+  private animationFrameId: number | null = null;
+  private pendingUpdate = false;
+  private isMobile = false;
+  private touchStartTime = 0;
+  private initialTouchDistance = 0;
 
   protected async onInitialize(): Promise<void> {
+    // Detect mobile device
+    this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                   ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0);
+    
     // Set up global event listeners
     document.addEventListener('mousemove', this.handleMouseMove.bind(this));
     document.addEventListener('mouseup', this.handleMouseUp.bind(this));
     document.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
     document.addEventListener('touchend', this.handleTouchEnd.bind(this));
+    
+    // Mobile-specific optimizations
+    if (this.isMobile) {
+      document.addEventListener('touchcancel', this.handleTouchEnd.bind(this));
+      document.addEventListener('contextmenu', (e) => {
+        if (this.isDragging) {
+          e.preventDefault();
+        }
+      });
+    }
     
     this.safeEmit('service:initialized', { service: 'DragService', success: true });
   }
@@ -48,6 +71,8 @@ export class DragService extends BaseService {
       animationDuration: 200,
       enableLongPress: false,
       longPressDuration: 500,
+      mobileOptimized: this.isMobile,
+      touchSensitivity: this.isMobile ? 10 : 5,
       ...options
     };
 
@@ -59,8 +84,16 @@ export class DragService extends BaseService {
       this.handleDragStart(e, element);
     });
 
-    // Touch events
+    // Touch events with mobile optimizations
     element.addEventListener('touchstart', (e) => {
+      this.touchStartTime = performance.now();
+      
+      // Handle multi-touch for mobile
+      if (this.options.mobileOptimized && e.touches.length > 1) {
+        this.initialTouchDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+        return; // Don't start drag on multi-touch
+      }
+      
       this.handleDragStart(e, element);
     }, { passive: false });
     
@@ -84,9 +117,21 @@ export class DragService extends BaseService {
    * Handle drag start
    */
   private handleDragStart(e: MouseEvent | TouchEvent, element: HTMLElement): void {
-    // Don't start drag if user is interacting with form elements
+    // Don't start drag if user is interacting with form elements or specific UI controls
     const target = e.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.tagName === 'SELECT') {
+    if (target.tagName === 'INPUT' || 
+        target.tagName === 'BUTTON' || 
+        target.tagName === 'SELECT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.classList.contains('widget-toggle') ||
+        target.closest('.widget-content') ||
+        target.closest('.toggle-switch') ||
+        target.closest('.widget-button')) {
+      return;
+    }
+
+    // Only allow drag from widget header
+    if (!target.closest('.widget-header')) {
       return;
     }
 
@@ -159,20 +204,51 @@ export class DragService extends BaseService {
   }
 
   /**
-   * Handle touch move
+   * Handle touch move with mobile optimizations
    */
   private handleTouchMove(e: TouchEvent): void {
     if (!this.isDragging || !this.draggedElement) return;
     
+    // Handle multi-touch gestures on mobile
+    if (this.options.mobileOptimized && e.touches.length > 1) {
+      const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+      const distanceChange = Math.abs(currentDistance - this.initialTouchDistance);
+      
+      // If significant pinch/zoom detected, cancel drag
+      if (distanceChange > 50) {
+        this.cancelDrag();
+        return;
+      }
+    }
+    
     e.preventDefault();
-    this.updateDragPosition(e.touches[0].clientX, e.touches[0].clientY);
+    
+    // Use higher sensitivity threshold for mobile
+    const touch = e.touches[0];
+    const sensitivity = this.options.touchSensitivity || 5;
+    const deltaX = Math.abs(touch.clientX - this.startPosition.x);
+    const deltaY = Math.abs(touch.clientY - this.startPosition.y);
+    
+    // Only start updating position if movement exceeds sensitivity threshold
+    if (deltaX > sensitivity || deltaY > sensitivity) {
+      this.updateDragPosition(touch.clientX, touch.clientY);
+    }
   }
 
   /**
-   * Update drag position with constraints
+   * Update drag position with constraints and throttling
    */
   private updateDragPosition(clientX: number, clientY: number): void {
     if (!this.draggedElement) return;
+    
+    // Throttle updates to improve performance (max 60fps)
+    const now = performance.now();
+    if (now - this.lastUpdateTime < 16.67 && this.pendingUpdate) {
+      return;
+    }
+    
+    this.lastUpdateTime = now;
+    this.pendingUpdate = true;
     
     let newX = clientX - this.dragOffset.x;
     let newY = clientY - this.dragOffset.y;
@@ -193,18 +269,27 @@ export class DragService extends BaseService {
       newY = Math.round(newY / this.options.gridSize) * this.options.gridSize;
     }
     
+    // Cancel previous animation frame if pending
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
+    
     // Use requestAnimationFrame for smooth updates
-    requestAnimationFrame(() => {
+    this.animationFrameId = requestAnimationFrame(() => {
       if (this.draggedElement) {
+        // Use transform for better performance than left/top
         this.draggedElement.style.position = 'fixed';
-        this.draggedElement.style.left = `${newX}px`;
-        this.draggedElement.style.top = `${newY}px`;
+        this.draggedElement.style.transform = `translate3d(${newX}px, ${newY}px, 0)`;
         this.draggedElement.style.zIndex = '10000';
+        this.draggedElement.style.willChange = 'transform';
         
         // Callback
         if (this.options.onDragMove) {
           this.options.onDragMove(this.draggedElement, newX, newY);
         }
+        
+        this.pendingUpdate = false;
+        this.animationFrameId = null;
       }
     });
   }
@@ -217,9 +302,26 @@ export class DragService extends BaseService {
   }
 
   /**
-   * Handle touch end
+   * Handle touch end with mobile optimizations
    */
   private handleTouchEnd(e: TouchEvent): void {
+    if (!this.isDragging) return;
+    
+    const touchEndTime = performance.now();
+    const touchDuration = touchEndTime - this.touchStartTime;
+    
+    // Handle quick taps on mobile (< 200ms)
+    if (this.options.mobileOptimized && touchDuration < 200) {
+      const deltaX = Math.abs(e.changedTouches[0].clientX - this.startPosition.x);
+      const deltaY = Math.abs(e.changedTouches[0].clientY - this.startPosition.y);
+      
+      // If minimal movement, treat as tap instead of drag
+      if (deltaX < 10 && deltaY < 10) {
+        this.cancelDrag();
+        return;
+      }
+    }
+    
     const clientX = e.changedTouches[0].clientX;
     const clientY = e.changedTouches[0].clientY;
     this.endDrag(clientX, clientY);
@@ -231,10 +333,18 @@ export class DragService extends BaseService {
   private endDrag(clientX: number, clientY: number): void {
     if (!this.isDragging || !this.draggedElement) return;
     
+    // Cancel any pending animation frame
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    
     // Remove dragging state
     this.draggedElement.classList.remove('dragging');
     this.draggedElement.style.position = '';
     this.draggedElement.style.zIndex = '';
+    this.draggedElement.style.willChange = '';
+    this.draggedElement.style.transform = '';
     document.body.style.userSelect = '';
     
     // Calculate final position
@@ -278,7 +388,60 @@ export class DragService extends BaseService {
    * Animate element to final position
    */
   private animateToPosition(x: number, y: number): void {
-    // Implementation for smooth animation to final position
-    // This would add a CSS transition and then remove it after animation completes
+    if (!this.draggedElement) return;
+    
+    const element = this.draggedElement;
+    const duration = this.options.animationDuration || 200;
+    
+    // Add transition for smooth animation
+    element.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0, 0.2, 1)`;
+    element.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    
+    // Remove transition after animation completes
+    setTimeout(() => {
+      if (element) {
+        element.style.transition = '';
+        element.style.willChange = '';
+        element.style.transform = '';
+        element.style.left = `${x}px`;
+        element.style.top = `${y}px`;
+      }
+    }, duration);
+  }
+
+  /**
+   * Calculate distance between two touch points
+   */
+  private getTouchDistance(touch1: Touch, touch2: Touch): number {
+    const deltaX = touch1.clientX - touch2.clientX;
+    const deltaY = touch1.clientY - touch2.clientY;
+    return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+  }
+
+  /**
+   * Cancel current drag operation
+   */
+  private cancelDrag(): void {
+    if (!this.isDragging || !this.draggedElement) return;
+    
+    // Cancel any pending animation frame
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    
+    // Reset element styles
+    this.draggedElement.classList.remove('dragging');
+    this.draggedElement.style.position = '';
+    this.draggedElement.style.zIndex = '';
+    this.draggedElement.style.willChange = '';
+    this.draggedElement.style.transform = '';
+    document.body.style.userSelect = '';
+    
+    // Reset drag state
+    this.isDragging = false;
+    this.draggedElement = null;
+    this.dragOffset = { x: 0, y: 0 };
+    this.cancelLongPressTimer();
   }
 }

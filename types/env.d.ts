@@ -13,6 +13,7 @@ declare global {
     ETHEREUM_RPC_URL: string;
     POLYGON_RPC_URL: string;
     AUTO_CONNECT_WALLET: string;
+    GOOGLE_GEMINI_API_KEY: string;
   };
 
   // Ensure __ENV__ is available at runtime

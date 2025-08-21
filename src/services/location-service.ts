@@ -125,8 +125,8 @@ export class LocationService extends BaseService {
         name: result.name,
         lat: result.center[1],
         lng: result.center[0],
-        country: result.context?.find(c => c.id.includes('country'))?.text,
-        region: result.context?.find(c => c.id.includes('region'))?.text
+        country: result.context?.find((c: any) => c.id.includes('country'))?.text,
+        region: result.context?.find((c: any) => c.id.includes('region'))?.text
       }));
     } catch (error) {
       console.error('Location search failed:', error);

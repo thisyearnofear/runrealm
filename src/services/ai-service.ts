@@ -128,7 +128,7 @@ export class AIService extends BaseService {
   protected async onInitialize(): Promise<void> {
     // Wire EventBus listeners for AI triggers
     // Listen for route requests
-    this.on('ai:routeRequested', async (data: { distance?: number; difficulty?: number; goals?: string[] }) => {
+    this.subscribe('ai:routeRequested', async (data: { distance?: number; difficulty?: number; goals?: string[] }) => {
       try {
         // Initialize if needed
         if (!this.isInitialized) {
@@ -155,6 +155,9 @@ export class AIService extends BaseService {
             return;
           }
           this.safeEmit('ai:routeReady', {
+            route: fallback.suggestedRoute.coordinates || [],
+            distance: fallback.suggestedRoute.distance,
+            duration: Math.round((fallback.suggestedRoute.distance || 0) * 5),
             waypoints,
             totalDistance: fallback.suggestedRoute.distance,
             difficulty: fallback.suggestedRoute.difficulty,
@@ -173,6 +176,9 @@ export class AIService extends BaseService {
         }
 
         this.safeEmit('ai:routeReady', {
+          route: optimization.suggestedRoute.coordinates || [],
+          distance: optimization.suggestedRoute.distance,
+          duration: Math.round((optimization.suggestedRoute.distance || 0) * 5),
           waypoints,
           totalDistance: optimization.suggestedRoute.distance,
           difficulty: optimization.suggestedRoute.difficulty,

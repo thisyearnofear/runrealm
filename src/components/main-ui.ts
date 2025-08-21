@@ -268,9 +268,9 @@ export class MainUI extends BaseService {
     });
 
     // AI route events -> render planned route and update widget
-    this.subscribe('ai:routeReady', (data: { waypoints: { lat: number; lng: number }[]; totalDistance?: number; estimatedTime?: number; difficulty?: number }) => {
+    this.subscribe('ai:routeReady', (data) => {
       try {
-        const coordinates = data.waypoints.map(p => [p.lng, p.lat]);
+        const coordinates = data.waypoints?.map(p => [p.lng, p.lat]) || [];
         const geojson = {
           type: 'Feature',
           properties: {},
@@ -347,21 +347,32 @@ export class MainUI extends BaseService {
     this.domService.delegate(document.body, '#toggle-location', 'change', (e) => {
       const target = e.target as HTMLInputElement;
       this.toggleWidgetVisibility('location-info', target.checked);
+      // Update settings widget to reflect new state
+      this.widgetSystem.updateWidget('settings', this.getSettingsContent());
     });
 
     this.domService.delegate(document.body, '#toggle-wallet', 'change', (e) => {
       const target = e.target as HTMLInputElement;
       this.toggleWidgetVisibility('wallet-info', target.checked);
+      // Update settings widget to reflect new state
+      this.widgetSystem.updateWidget('settings', this.getSettingsContent());
     });
 
     this.domService.delegate(document.body, '#toggle-run-controls', 'change', (e) => {
       const target = e.target as HTMLInputElement;
       this.toggleWidgetVisibility('run-controls', target.checked);
+      // Update settings widget to reflect new state
+      this.widgetSystem.updateWidget('settings', this.getSettingsContent());
     });
   }
 
   private getSettingsContent(): string {
     const gameFiActive = document.querySelector('.gamefi-toggle')?.classList.contains('active') || false;
+    
+    // Get actual widget visibility states from VisibilityService
+    const locationVisible = this.visibilityService.isVisible('widget-location-info');
+    const walletVisible = this.visibilityService.isVisible('widget-wallet-info');
+    const runControlsVisible = this.visibilityService.isVisible('widget-run-controls');
 
     return `
       <div class="widget-section">
@@ -378,17 +389,17 @@ export class MainUI extends BaseService {
         <div class="widget-section-title">👁️ Widget Visibility</div>
         <div class="widget-toggles">
           <label class="widget-toggle">
-            <input type="checkbox" id="toggle-location" checked>
+            <input type="checkbox" id="toggle-location" ${locationVisible ? 'checked' : ''}>
             <span class="toggle-slider"></span>
             <span class="toggle-label">📍 Location</span>
           </label>
           <label class="widget-toggle">
-            <input type="checkbox" id="toggle-wallet" checked>
+            <input type="checkbox" id="toggle-wallet" ${walletVisible ? 'checked' : ''}>
             <span class="toggle-slider"></span>
             <span class="toggle-label">🦊 Wallet</span>
           </label>
           <label class="widget-toggle">
-            <input type="checkbox" id="toggle-run-controls" checked>
+            <input type="checkbox" id="toggle-run-controls" ${runControlsVisible ? 'checked' : ''}>
             <span class="toggle-slider"></span>
             <span class="toggle-label">🏃‍♂️ Run Controls</span>
           </label>
@@ -706,7 +717,7 @@ export class MainUI extends BaseService {
     this.lastRenderTs = now;
 
     // Update the map drawing via AnimationService API if exposed globally via events
-    this.safeEmit('run:pointAdded', { point: { lat, lng, timestamp } });
+    this.safeEmit('run:pointAdded', { point: { lat, lng, timestamp }, totalDistance: 0 });
   }
 
   private computeClaimableRun(): boolean {

@@ -53,10 +53,13 @@ export interface AppEvents extends Web3Events {
   "run:pointRemoved": { totalDistance: number };
   "run:cleared": { timeSpent?: number; totalDistance?: number };
   "run:loaded": { run: any };
+  "run:plannedRouteChanged": { geojson: any };
   "ui:settingsOpened": {};
   "ui:settingsClosed": {};
   "ui:unitsToggled": { useMetric: boolean };
   "ui:toast": { message: string; type: string; duration?: number };
+  "ui:showRunControls": {};
+  "ui:hideRunControls": {};
   "map:styleChanged": { style: string };
   "mobile:gestureDetected": { type: string; data: any };
   "territory:claimRequested": { geohash?: string; estimatedReward?: number };
@@ -65,6 +68,8 @@ export interface AppEvents extends Web3Events {
     difficulty?: number;
     goals?: string[];
   };
+  'ai:routeReady': { route: any; distance: number; duration: number; waypoints?: any[]; totalDistance?: number; difficulty?: number; estimatedTime?: number };
+  "ai:routeFailed": { message: string };
   "map:focusTerritory": { geohash: string };
   "game:levelUp": { newLevel: number; player: string };
   "game:achievementUnlocked": { achievementId: string; achievement: any; player: string };
@@ -79,6 +84,20 @@ export interface AppEvents extends Web3Events {
   "run:startRequested": {};
   "location:changed": { lat: number; lng: number; accuracy?: number; address?: string; source: string; timestamp: number };
   "config:updated": {};
+  'visibility:changed': { elementId: string; visible: boolean };
+  "widget:stateChanged": { widgetId: string; state: any };
+  "widget:stateReset": { widgetId: string };
+  "widget:allStatesReset": {};
+  "mobile:swipeLeft": {};
+  "mobile:swipeRight": {};
+  "mobile:orientationChanged": { orientation: string; compactMode?: boolean };
+  "mobile:compactModeChanged": { compactMode: boolean };
+  "mobile:shakeDetected": {};
+  "run:addPointRequested": {};
+  "run:undoRequested": {};
+  "run:clearRequested": {};
+  "ui:territoryPreview": { point: any; totalDistance: number };
+  "ui:gamefiEnabled": { enabled: boolean };
 }
 
 export class EventBus {

@@ -8,6 +8,7 @@ import { DOMService } from '../services/dom-service';
 import { DragService } from './drag-service';
 import { AnimationService } from './animation-service';
 import { WidgetStateService, WidgetState } from './widget-state-service';
+import { VisibilityService } from './visibility-service';
 
 export interface Widget {
   id: string;
@@ -24,6 +25,7 @@ export class WidgetSystem extends BaseService {
   private dragService: DragService;
   private animationService: AnimationService;
   private widgetStateService: WidgetStateService;
+  private visibilityService: VisibilityService | null = null;
   private widgets: Map<string, Widget> = new Map();
   private activeWidget: string | null = null;
   private widgetContainer: HTMLElement | null = null;
@@ -39,6 +41,38 @@ export class WidgetSystem extends BaseService {
     this.dragService = dragService;
     this.animationService = animationService;
     this.widgetStateService = widgetStateService;
+  }
+
+  /**
+   * Set the visibility service for integration
+   */
+  public setVisibilityService(visibilityService: VisibilityService): void {
+    this.visibilityService = visibilityService;
+    
+    // Subscribe to visibility changes
+    this.subscribe('visibility:changed', (data: { elementId: string; visible: boolean }) => {
+      const widgetId = data.elementId.replace('widget-', '');
+      const widget = this.widgets.get(widgetId);
+      if (widget) {
+        // Update widget state based on visibility changes
+        this.widgetStateService.setWidgetState(widgetId, {
+          ...this.widgetStateService.getWidgetState(widgetId),
+          visible: data.visible
+        });
+        
+        // Update widget display
+        const element = this.getWidgetElement(widgetId);
+        if (element) {
+          if (data.visible) {
+            element.classList.remove('hidden');
+            element.classList.add('visible');
+          } else {
+            element.classList.remove('visible');
+            element.classList.add('hidden');
+          }
+        }
+      }
+    });
   }
 
   protected async onInitialize(): Promise<void> {
