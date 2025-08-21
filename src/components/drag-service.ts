@@ -36,7 +36,7 @@ export class DragService extends BaseService {
   private touchStartTime = 0;
   private initialTouchDistance = 0;
   private dragStarted = false; // Track whether actual dragging has begun
-  private dragThreshold = 5; // Minimum pixels to move before starting drag
+  private dragThreshold = 10; // Minimum pixels to move before starting drag
 
   protected async onInitialize(): Promise<void> {
     // Detect mobile device
@@ -122,30 +122,44 @@ export class DragService extends BaseService {
   private handleDragStart(e: MouseEvent | TouchEvent, element: HTMLElement): void {
     // Don't start drag if user is interacting with form elements or specific UI controls
     const target = e.target as HTMLElement;
-    
+
     // Only allow drag from widget header
     if (!target.closest('.widget-header')) {
       return;
     }
-    
+
     // Don't start drag if clicking directly on interactive elements
-    if (target.tagName === 'INPUT' || 
+    if (target.tagName === 'INPUT' ||
         target.tagName === 'SELECT' ||
         target.tagName === 'TEXTAREA' ||
         target.closest('.widget-content') ||
         target.closest('.toggle-switch')) {
       return;
     }
-    
+
     // Allow dragging from header area, but not from buttons (except widget-toggle)
     if (target.tagName === 'BUTTON' && !target.classList.contains('widget-toggle')) {
       return;
+    }
+
+    // Special handling for location widget - allow drag from anywhere in the widget
+    const widgetElement = target.closest('.widget') as HTMLElement;
+    if (widgetElement && widgetElement.id === 'widget-location') {
+      // For location widget, allow drag from header or content area
+      // This fixes the issue where location widget disappears on click
+    } else if (!target.closest('.widget-header')) {
+      return; // For other widgets, still restrict to header only
     }
 
     // Store initial state but don't start dragging yet
     this.isDragging = true; // Track that we're in potential drag state
     this.dragStarted = false; // But actual dragging hasn't started
     this.draggedElement = element;
+
+    // Special handling for location widget
+    if (this.isLocationWidget(element)) {
+      console.log('Location widget detected - allowing drag from any area');
+    }
     
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -245,11 +259,13 @@ export class DragService extends BaseService {
     if (!this.dragStarted) {
       const deltaX = Math.abs(clientX - this.startPosition.x);
       const deltaY = Math.abs(clientY - this.startPosition.y);
-      
+
       // If movement is below threshold, don't start dragging yet
       if (deltaX < this.dragThreshold && deltaY < this.dragThreshold) {
         return;
       }
+
+      console.log(`Drag threshold exceeded (${deltaX}, ${deltaY}), starting actual drag`);
       
       // Threshold exceeded - start actual dragging
       this.dragStarted = true;
@@ -442,13 +458,29 @@ export class DragService extends BaseService {
     draggedElement.classList.remove('dragging');
     document.body.style.userSelect = '';
     
-    // Set final position using fixed positioning
-    draggedElement.style.position = 'fixed';
-    draggedElement.style.left = `${finalX}px`;
-    draggedElement.style.top = `${finalY}px`;
+    // Instead of using fixed positioning, restore the element to its natural flow
+    // and let the widget system handle proper positioning within zones
+    draggedElement.style.position = '';
+    draggedElement.style.left = '';
+    draggedElement.style.top = '';
     draggedElement.style.transform = '';
     draggedElement.style.zIndex = '';
     draggedElement.style.willChange = '';
+
+    // Force the element back to its widget zone for proper positioning
+    // This prevents widgets from disappearing when drag ends
+    const widgetId = draggedElement.id.replace('widget-', '');
+    const widgetZone = this.getWidgetZoneForElement(draggedElement);
+
+    if (widgetZone) {
+      // Ensure the element is properly positioned within its zone
+      widgetZone.appendChild(draggedElement);
+      // Force reflow to ensure proper positioning
+      widgetZone.offsetHeight;
+      console.log(`Widget ${widgetId} restored to zone after drag`);
+    } else {
+      console.warn(`Could not find zone for widget ${widgetId}, element may be misplaced`);
+    }
     
     // Animate to position if needed
     if (this.options.animationDuration && this.options.animationDuration > 0) {
@@ -468,6 +500,13 @@ export class DragService extends BaseService {
   }
 
   /**
+   * Check if a widget is the location widget that needs special handling
+   */
+  private isLocationWidget(element: HTMLElement): boolean {
+    return element.id === 'widget-location';
+  }
+
+  /**
    * Calculate distance between two touch points
    */
   private getTouchDistance(touch1: Touch, touch2: Touch): number {
@@ -477,69 +516,71 @@ export class DragService extends BaseService {
   }
 
   /**
+   * Get the widget zone that contains the element
+   */
+  private getWidgetZoneForElement(element: HTMLElement): HTMLElement | null {
+    // Find the widget zone that contains this element
+    const widgetZones = document.querySelectorAll('.widget-zone');
+    for (let i = 0; i < widgetZones.length; i++) {
+      const zone = widgetZones[i];
+      if (zone.contains(element)) {
+        return zone as HTMLElement;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Cancel current drag operation with proper restoration
    */
   private cancelDrag(): void {
     if (!this.isDragging || !this.draggedElement) return;
-    
+
     console.log('Canceling drag operation, restoring widget to original position');
-    
+
     // Store reference to element before clearing state
     const draggedElement = this.draggedElement;
-    
+
     // Cancel any pending animation frame
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
-    
+
     try {
-      // Restore element to its original position within its zone
-      // This prevents widgets from disappearing when drag is cancelled
+      // Restore element to its original state
       draggedElement.classList.remove('dragging');
-      
-      // Clear all drag-related styles to restore normal positioning
-      draggedElement.style.position = '';
-      draggedElement.style.left = '';
-      draggedElement.style.top = '';
-      draggedElement.style.transform = '';
-      draggedElement.style.zIndex = '';
-      draggedElement.style.willChange = '';
-      
-      // Force the element back to its natural position in the widget zone
-      // This ensures it's visible and properly positioned
-      const widgetZones = document.querySelectorAll('.widget-zone');
-      let elementRestored = false;
-      
-      widgetZones.forEach(zone => {
-        if (zone.contains(draggedElement) && !elementRestored) {
-          // Element is already in a zone, ensure it's positioned correctly
-          // Trigger reflow to ensure proper positioning
-          zone.appendChild(draggedElement);
-          draggedElement.offsetHeight; // Force reflow
-          elementRestored = true;
-          console.log('Widget restored to its zone');
-        }
-      });
-      
-      if (!elementRestored) {
+
+      // Clear all drag-related styles completely
+      draggedElement.style.cssText = '';
+
+      // Force the element back to its widget zone for proper positioning
+      const widgetZone = this.getWidgetZoneForElement(draggedElement);
+
+      if (widgetZone) {
+        // Ensure the element is properly positioned within its zone
+        widgetZone.appendChild(draggedElement);
+        // Force reflow to ensure proper positioning
+        widgetZone.offsetHeight;
+        console.log('Widget restored to its zone after drag cancellation');
+      } else {
         console.warn('Widget element could not be found in any zone, may need manual restoration');
       }
-      
+
     } catch (error) {
       console.error('Error during drag cancellation:', error);
-      // Fallback: just clear the styles
+      // Fallback: try to reset the element
       try {
-        draggedElement.style.cssText = '';
         draggedElement.classList.remove('dragging');
+        draggedElement.style.cssText = '';
       } catch (e) {
         console.error('Failed to reset drag element styles:', e);
       }
     }
-    
+
     // Clean up global state
     document.body.style.userSelect = '';
-    
+
     // Reset drag state
     this.isDragging = false;
     this.draggedElement = null;
