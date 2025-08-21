@@ -238,6 +238,24 @@ export class MainUI extends BaseService {
       this.walletConnection.showWalletModal();
     });
 
+    // Centralized UI action routing
+    this.domService.delegate(document.body, '[data-action]', 'click', async (event) => {
+      const target = (event.target as HTMLElement).closest('[data-action]') as HTMLElement | null;
+      if (!target) return;
+      const action = target.getAttribute('data-action');
+      const payloadAttr = target.getAttribute('data-payload');
+      let payload: any = undefined;
+      if (payloadAttr) {
+        try { payload = JSON.parse(payloadAttr); } catch { payload = undefined; }
+      }
+      try {
+        const { ActionRouter } = await import('../ui/action-router');
+        ActionRouter.dispatch(action as any, payload);
+      } catch (err) {
+        console.error('Failed to dispatch UI action', action, err);
+      }
+    });
+
     // Listen for service events
     this.subscribe('location:changed', (locationInfo) => {
       this.updateLocationWidget(locationInfo);
@@ -289,7 +307,7 @@ export class MainUI extends BaseService {
           ${etaMin !== undefined ? `<div class="widget-stat"><span class="widget-stat-label">ETA</span><span class="widget-stat-value">~${etaMin} min</span></div>` : ''}
           <div class="widget-buttons">
             <button class="widget-button" id="start-run-btn">▶️ Start Run</button>
-            <button class="widget-button secondary" id="ghost-start-btn">👻 Start Ghost Runner</button>
+            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>👻 Start Ghost Runner</button>
           </div>`;
 
         this.widgetSystem.updateWidget('territory-info', statsHtml);
@@ -301,9 +319,26 @@ export class MainUI extends BaseService {
     });
 
     this.subscribe('ai:routeFailed', (data: { message: string }) => {
-      this.uiService.showToast(`AI route failed: ${data?.message || 'Unknown error'}`, { type: 'error' });
-      const tip = `<div class="widget-tip">🤖 Could not generate a route. Try again in a moment or adjust your goals.</div>`;
+      const errorMessage = data?.message || 'Unknown error occurred';
+      this.uiService.showToast(`AI route failed: ${errorMessage}`, { type: 'error' });
+      const tip = `<div class="widget-tip">🤖 Could not generate a route. ${errorMessage.includes('API key') ? 'Please check your AI configuration.' : 'Try again in a moment or adjust your goals.'}</div>`;
       this.widgetSystem.updateWidget('territory-info', tip);
+    });
+
+    // Handle service errors
+    this.subscribe('service:error', (data: { service: string; context: string; error: string }) => {
+      if (data.service === 'AIService') {
+        const widget = this.widgetSystem.getWidget('ai-coach');
+        if (widget) {
+          const errorHtml = `
+            <div class="widget-tip error">
+              🤖 AI Service Issue: ${data.error.includes('API key') ? 'API key not configured' : 'Service temporarily unavailable'}
+              <br><small>Try using fallback features or check your configuration.</small>
+            </div>
+          `;
+          this.widgetSystem.updateWidget('ai-coach', errorHtml);
+        }
+      }
     });
 
     // Handle run controls visibility events from UIService
@@ -934,10 +969,10 @@ export class MainUI extends BaseService {
         🤖 Welcome to RunRealm! Start running to claim your first territory.
       </div>
       <div class="widget-buttons">
-        <button class="widget-button" id="get-route-btn">
+        <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
           📍 Suggest Route
         </button>
-        <button class="widget-button secondary" id="ghost-runner-btn">
+        <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>
           👻 Ghost Runner
         </button>
       </div>

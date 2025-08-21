@@ -114,7 +114,7 @@ export class AIService extends BaseService {
     try {
       const { GoogleGenerativeAI } = await import('@google/generative-ai');
       this.genAI = new GoogleGenerativeAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+      this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       this.isEnabled = true;
       this.isInitialized = true; // Mark as fully initialized
       console.log('AIService: Google Generative AI initialized successfully');
@@ -187,6 +187,21 @@ export class AIService extends BaseService {
       } catch (err) {
         console.error('AI route request failed', err);
         this.safeEmit('ai:routeFailed', { message: 'Failed to generate route. Please try again.' });
+      }
+    });
+
+    // Listen for ghost runner requests
+    this.subscribe('ai:ghostRunnerRequested' as any, async (data: { difficulty?: number }) => {
+      try {
+        if (!this.isInitialized) {
+          await this.init();
+        }
+        const difficulty = typeof data?.difficulty === 'number' ? data.difficulty : 50;
+        const ghost = await this.generateGhostRunner(difficulty);
+        this.safeEmit('ai:ghostRunnerGenerated', { runner: ghost, difficulty: ghost.difficulty });
+      } catch (err) {
+        console.error('AI ghost runner request failed', err);
+        this.safeEmit('service:error', { service: 'AIService', context: 'ghostRunner', error: String(err) });
       }
     });
   }

@@ -68,6 +68,7 @@ export interface AppEvents extends Web3Events {
     difficulty?: number;
     goals?: string[];
   };
+  "ai:ghostRunnerRequested": { difficulty?: number };
   'ai:routeReady': { route: any; distance: number; duration: number; waypoints?: any[]; totalDistance?: number; difficulty?: number; estimatedTime?: number };
   "ai:routeFailed": { message: string };
   "map:focusTerritory": { geohash: string };

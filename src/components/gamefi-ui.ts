@@ -88,8 +88,7 @@ export class GameFiUI extends BaseService {
 
     // Button event handlers using event delegation
     this.dom.delegate(document.body, '#claim-territory-btn', 'click', () => this.handleClaimTerritory());
-    this.dom.delegate(document.body, '#get-ai-route', 'click', () => this.handleAIRouteRequest());
-    this.dom.delegate(document.body, '#spawn-ghost-runner', 'click', () => this.handleGhostRunnerSpawn());
+    // Note: #get-ai-route and #spawn-ghost-runner handlers removed - now handled by ActionRouter in MainUI
   }
 
   /**
@@ -222,20 +221,6 @@ export class GameFiUI extends BaseService {
   private handleClaimTerritory(): void {
     this.safeEmit('territory:claimRequested', {
       // timestamp property removed as it's not in the expected type
-    });
-  }
-
-  private handleAIRouteRequest(): void {
-    this.safeEmit('ai:routeRequested', {
-      // currentLocation property removed as it's not in the expected type
-      goals: ['exploration']
-    });
-  }
-
-  private handleGhostRunnerSpawn(): void {
-    // Using a valid event name
-    this.safeEmit('ai:routeRequested', {
-      difficulty: 50 // Default medium difficulty
     });
   }
 
