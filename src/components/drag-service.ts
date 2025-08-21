@@ -132,13 +132,19 @@ export class DragService extends BaseService {
     if (target.tagName === 'INPUT' ||
         target.tagName === 'SELECT' ||
         target.tagName === 'TEXTAREA' ||
-        target.closest('.widget-content') ||
-        target.closest('.toggle-switch')) {
+        target.tagName === 'BUTTON' ||
+        target.closest('.widget-button') ||
+        target.closest('.widget-buttons') ||
+        target.closest('.widget-chat-input') ||
+        target.closest('.toggle-switch') ||
+        target.hasAttribute('data-action')) {
+      console.log('DragService: Ignoring drag on interactive element:', target.tagName, target.className);
       return;
     }
 
-    // Allow dragging from header area, but not from buttons (except widget-toggle)
-    if (target.tagName === 'BUTTON' && !target.classList.contains('widget-toggle')) {
+    // Don't drag from widget content area - only from header
+    if (target.closest('.widget-content') && !target.closest('.widget-header')) {
+      console.log('DragService: Ignoring drag from widget content area');
       return;
     }
 

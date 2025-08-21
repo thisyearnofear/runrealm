@@ -393,6 +393,9 @@ export class RunRealmApp {
     this.map.on('style.load', () => {
       this.animationService.readdRunToMap(this.currentRun);
     });
+
+    // Set up AI route visualization event handlers
+    this.setupAIRouteHandlers();
   }
 
   private handleMapClick(e: any): void {
@@ -772,9 +775,81 @@ export class RunRealmApp {
     return this.map;
   }
 
+  /**
+   * Set up AI route visualization event handlers
+   * Connects AI service events to map visualization
+   */
+  private setupAIRouteHandlers(): void {
+    // Handle AI route visualization requests
+    this.eventBus.subscribe('ai:routeVisualize', (data: {
+      coordinates: number[][];
+      type: string;
+      style: any;
+      metadata: any;
+    }) => {
+      console.log('RunRealmApp: Visualizing AI route with', data.coordinates.length, 'coordinates');
+
+      // Clear any existing AI route
+      this.animationService.clearAIRoute();
+
+      // Visualize the new AI route
+      if (data.coordinates && data.coordinates.length > 1) {
+        this.animationService.setAIRoute(data.coordinates, data.style, data.metadata);
+
+        // Optionally fit map to show the entire route
+        this.fitMapToRoute(data.coordinates);
+      }
+    });
+
+    // Handle route clearing
+    this.eventBus.subscribe('ai:routeClear', () => {
+      console.log('RunRealmApp: Clearing AI route');
+      this.animationService.clearAIRoute();
+    });
+
+    // Handle waypoint visualization
+    this.eventBus.subscribe('ai:waypointsVisualize', (data: {
+      waypoints: any[];
+      routeMetadata: any;
+    }) => {
+      console.log('RunRealmApp: Visualizing', data.waypoints.length, 'AI waypoints');
+      this.animationService.setAIWaypoints(data.waypoints, data.routeMetadata);
+    });
+  }
+
+  /**
+   * Fit map view to show the entire AI route
+   */
+  private fitMapToRoute(coordinates: number[][]): void {
+    if (!coordinates || coordinates.length < 2) return;
+
+    try {
+      // Calculate bounds from coordinates
+      const bounds = coordinates.reduce((bounds, coord) => {
+        return bounds.extend(coord as [number, number]);
+      }, new (this.mapboxgl as any).LngLatBounds());
+
+      // Fit map to bounds with padding
+      this.map.fitBounds(bounds, {
+        padding: { top: 50, bottom: 50, left: 50, right: 50 },
+        maxZoom: 16,
+        duration: 1000 // Smooth animation
+      });
+
+      console.log('RunRealmApp: Map fitted to AI route bounds');
+    } catch (error) {
+      console.warn('RunRealmApp: Failed to fit map to route:', error);
+    }
+  }
+
   // Debug API (development only)
   getMainUI(): MainUI {
     return this.mainUI;
+  }
+
+  // Public API for onboarding
+  getOnboardingService() {
+    return this.onboarding;
   }
 
   toggleUnits(): void {

@@ -47,6 +47,13 @@ export interface AIGoals {
   territories?: number;
   exploration?: boolean;
   training?: boolean;
+  // Quick prompt enhancements
+  quickPromptType?: string;
+  contextPrompt?: string;
+  timeOfDay?: string;
+  timeConstraint?: string;
+  focus?: string;
+  priority?: string;
 }
 
 export class AIService extends BaseService {
@@ -77,58 +84,119 @@ export class AIService extends BaseService {
    * Initialize AI service with Google Gemini
    */
   public async init(): Promise<void> {
+    console.log('AIService: Starting initialization...');
+
     // Always try to get the latest config which should have runtime tokens
     const web3Config = this.config.getWeb3Config();
-    
+    console.log('AIService: Web3 config loaded:', {
+      enabled: web3Config?.enabled,
+      aiEnabled: web3Config?.ai?.enabled,
+      hasApiKey: !!web3Config?.ai?.geminiApiKey
+    });
+
     // Check if AI features are enabled
     const aiEnabled = web3Config?.ai?.enabled;
     if (!aiEnabled) {
-      console.log('AIService: AI features disabled');
+      console.warn('AIService: AI features disabled in configuration');
       this.isEnabled = false;
+      this.safeEmit('service:error', {
+        service: 'AIService',
+        context: 'initialization',
+        error: 'AI features disabled in configuration. Set ENABLE_AI_FEATURES=true in .env'
+      });
       return;
     }
-    
-    // Get API key, prioritizing runtime-injected tokens
-    let apiKey = '';
-    
-    // 1. Check runtime-injected tokens (highest priority for production)
-    if (web3Config?.ai?.geminiApiKey) {
-      apiKey = web3Config.ai.geminiApiKey;
-      console.log('AIService: Using runtime-injected Gemini API key');
-    } 
-    // 2. Fallback to localStorage (for development)
-    else if (typeof localStorage !== 'undefined') {
-      apiKey = localStorage.getItem('runrealm_google_gemini_api_key') || '';
-      if (apiKey) {
-        console.log('AIService: Using localStorage Gemini API key');
-      }
-    }
-    
+
+    // Get API key with improved fallback logic
+    let apiKey = this.getApiKey(web3Config);
+
     if (!apiKey) {
-      console.log('AIService: No API key available for Google Gemini');
+      const errorMsg = 'No valid Gemini API key found. Check your .env file or appsettings.secrets.ts';
+      console.error('AIService:', errorMsg);
       this.isEnabled = false;
+      this.safeEmit('service:error', {
+        service: 'AIService',
+        context: 'initialization',
+        error: errorMsg
+      });
+      return;
+    }
+
+    // Test API key validity before proceeding
+    if (!this.isValidApiKey(apiKey)) {
+      const errorMsg = 'Invalid Gemini API key format. Please check your API key.';
+      console.error('AIService:', errorMsg);
+      this.isEnabled = false;
+      this.safeEmit('service:error', {
+        service: 'AIService',
+        context: 'initialization',
+        error: errorMsg
+      });
       return;
     }
 
     // Dynamically import Google Generative AI only when needed
     try {
+      console.log('AIService: Loading Google Generative AI library...');
       const { GoogleGenerativeAI } = await import('@google/generative-ai');
+
+      console.log('AIService: Initializing Gemini client...');
       this.genAI = new GoogleGenerativeAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      this.model = this.genAI.getGenerativeModel({
+        model: 'gemini-1.5-flash',
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+        ],
+      });
+
+      // Test the connection with a simple request
+      await this.testConnection();
+
       this.isEnabled = true;
-      this.isInitialized = true; // Mark as fully initialized
+      this.isInitialized = true;
       console.log('AIService: Google Generative AI initialized successfully');
+
+      // Set up event listeners after successful initialization
+      this.setupEventListeners();
+
+      this.safeEmit('service:initialized', { service: 'AIService', success: true });
+
     } catch (error) {
-      console.error('AIService: Failed to initialize Google Generative AI:', error);
+      const errorMsg = `Failed to initialize Google Generative AI: ${error.message}`;
+      console.error('AIService:', errorMsg, error);
       this.isEnabled = false;
       this.isInitialized = false;
+      this.safeEmit('service:error', {
+        service: 'AIService',
+        context: 'initialization',
+        error: errorMsg
+      });
     }
   }
 
-  protected async onInitialize(): Promise<void> {
+  /**
+   * Set up event listeners for AI service
+   */
+  private setupEventListeners(): void {
+    console.log('AIService: Setting up event listeners');
+
     // Wire EventBus listeners for AI triggers
     // Listen for route requests
-    this.subscribe('ai:routeRequested', async (data: { distance?: number; difficulty?: number; goals?: string[] }) => {
+    this.subscribe('ai:routeRequested', async (data: { distance?: number; difficulty?: number; goals?: string[]; quickPromptType?: string; contextPrompt?: string; [key: string]: any }) => {
+      console.log('AIService: Received ai:routeRequested event:', data);
       try {
         // Initialize if needed
         if (!this.isInitialized) {
@@ -142,6 +210,16 @@ export class AIService extends BaseService {
         }
         if (typeof data?.distance === 'number') goals.distance = data.distance;
         if (typeof data?.difficulty === 'number') goals.difficulty = data.difficulty;
+
+        // Add quick prompt context if available
+        if (data?.quickPromptType && data?.contextPrompt) {
+          goals.quickPromptType = data.quickPromptType;
+          goals.contextPrompt = data.contextPrompt;
+          goals.timeOfDay = data.timeOfDay;
+          goals.timeConstraint = data.timeConstraint;
+          goals.focus = data.focus;
+          goals.priority = data.priority;
+        }
 
         // Best effort current location from LocationService event cache if available on window
         const currentLocation = (window as any)?.RunRealm?.currentLocation || { lat: 40.7128, lng: -74.0060 };
@@ -175,6 +253,7 @@ export class AIService extends BaseService {
           return;
         }
 
+        // Emit route ready event with enhanced data for visualization
         this.safeEmit('ai:routeReady', {
           route: optimization.suggestedRoute.coordinates || [],
           distance: optimization.suggestedRoute.distance,
@@ -182,8 +261,39 @@ export class AIService extends BaseService {
           waypoints,
           totalDistance: optimization.suggestedRoute.distance,
           difficulty: optimization.suggestedRoute.difficulty,
-          estimatedTime: Math.round((optimization.suggestedRoute.distance || 0) * 5)
+          estimatedTime: Math.round((optimization.suggestedRoute.distance || 0) * 5),
+          reasoning: optimization.suggestedRoute.reasoning,
+          confidence: optimization.confidence
         });
+
+        // Emit route visualization event for map integration
+        this.safeEmit('ai:routeVisualize', {
+          coordinates: optimization.suggestedRoute.coordinates,
+          type: 'ai-suggested',
+          style: {
+            color: '#00ff88',
+            width: 4,
+            opacity: 0.8,
+            dashArray: [5, 5]
+          },
+          metadata: {
+            distance: optimization.suggestedRoute.distance,
+            difficulty: optimization.suggestedRoute.difficulty,
+            confidence: optimization.confidence
+          }
+        });
+
+        // Emit waypoint visualization event if waypoints exist
+        if (optimization.suggestedRoute.waypoints && optimization.suggestedRoute.waypoints.length > 0) {
+          this.safeEmit('ai:waypointsVisualize', {
+            waypoints: optimization.suggestedRoute.waypoints,
+            routeMetadata: {
+              distance: optimization.suggestedRoute.distance,
+              difficulty: optimization.suggestedRoute.difficulty,
+              totalEstimatedRewards: optimization.territories.totalEstimatedRewards || 0
+            }
+          });
+        }
       } catch (err) {
         console.error('AI route request failed', err);
         this.safeEmit('ai:routeFailed', { message: 'Failed to generate route. Please try again.' });
@@ -192,18 +302,108 @@ export class AIService extends BaseService {
 
     // Listen for ghost runner requests
     this.subscribe('ai:ghostRunnerRequested' as any, async (data: { difficulty?: number }) => {
+      console.log('AIService: Received ai:ghostRunnerRequested event:', data);
       try {
+        console.log('AIService: Ghost runner request received:', data);
+
         if (!this.isInitialized) {
+          console.log('AIService: Initializing for ghost runner request...');
           await this.init();
         }
+
         const difficulty = typeof data?.difficulty === 'number' ? data.difficulty : 50;
+        console.log('AIService: Generating ghost runner with difficulty:', difficulty);
+
         const ghost = await this.generateGhostRunner(difficulty);
-        this.safeEmit('ai:ghostRunnerGenerated', { runner: ghost, difficulty: ghost.difficulty });
+        console.log('AIService: Ghost runner generated successfully:', ghost.name);
+
+        this.safeEmit('ai:ghostRunnerGenerated', {
+          runner: ghost,
+          difficulty: ghost.difficulty,
+          success: true
+        });
+
       } catch (err) {
-        console.error('AI ghost runner request failed', err);
-        this.safeEmit('service:error', { service: 'AIService', context: 'ghostRunner', error: String(err) });
+        const errorMsg = `Ghost runner generation failed: ${err.message || err}`;
+        console.error('AIService:', errorMsg, err);
+
+        // Emit both specific error and general service error
+        this.safeEmit('ai:ghostRunnerFailed', { message: errorMsg });
+        this.safeEmit('service:error', {
+          service: 'AIService',
+          context: 'ghostRunner',
+          error: errorMsg
+        });
       }
     });
+  }
+
+  protected async onInitialize(): Promise<void> {
+    // This method is called by the base service initialize() method
+    // Event listeners are now set up in setupEventListeners() after successful init
+    console.log('AIService: onInitialize() called - event listeners will be set up after init()');
+  }
+
+  /**
+   * Get API key with improved fallback logic
+   */
+  private getApiKey(web3Config: any): string {
+    // 1. Check runtime-injected tokens (highest priority for production)
+    if (web3Config?.ai?.geminiApiKey) {
+      console.log('AIService: Using runtime-injected Gemini API key');
+      return web3Config.ai.geminiApiKey;
+    }
+
+    // 2. Check localStorage (for development)
+    if (typeof localStorage !== 'undefined') {
+      const localKey = localStorage.getItem('runrealm_google_gemini_api_key');
+      if (localKey) {
+        console.log('AIService: Using localStorage Gemini API key');
+        return localKey;
+      }
+    }
+
+    // 3. Try to load from secrets file (development fallback)
+    try {
+      // This will be handled by webpack at build time
+      const secrets = require('../appsettings.secrets');
+      if (secrets.GOOGLE_GEMINI_API_KEY) {
+        console.log('AIService: Using secrets file Gemini API key');
+        return secrets.GOOGLE_GEMINI_API_KEY;
+      }
+    } catch (error) {
+      console.log('AIService: Could not load from secrets file (this is normal in production)');
+    }
+
+    return '';
+  }
+
+  /**
+   * Validate API key format
+   */
+  private isValidApiKey(apiKey: string): boolean {
+    // Gemini API keys start with 'AIza' and are typically 39 characters long
+    return apiKey.startsWith('AIza') && apiKey.length >= 35;
+  }
+
+  /**
+   * Test connection to Gemini API
+   */
+  private async testConnection(): Promise<void> {
+    if (!this.model) {
+      throw new Error('Model not initialized');
+    }
+
+    try {
+      console.log('AIService: Testing connection to Gemini API...');
+      const result = await this.model.generateContent('Hello');
+      const response = await result.response;
+      const text = response.text();
+      console.log('AIService: Connection test successful, response length:', text.length);
+    } catch (error) {
+      console.error('AIService: Connection test failed:', error);
+      throw new Error(`API connection test failed: ${error.message}`);
+    }
   }
 
   protected ensureInitialized(): void {
@@ -223,29 +423,53 @@ export class AIService extends BaseService {
     goals: AIGoals,
     existingTerritories?: string[]
   ): Promise<RouteOptimization> {
-    this.ensureInitialized();
+    console.log('AIService: Generating route suggestion for location:', currentLocation);
+
+    // Always try to initialize if not already done
+    if (!this.isInitialized) {
+      console.log('AIService: Not initialized, attempting to initialize...');
+      await this.init();
+    }
 
     if (!this.isEnabled) {
-      throw new Error('AI service not enabled');
+      const errorMsg = 'AI service not enabled - check configuration';
+      console.error('AIService:', errorMsg);
+      this.safeEmit('ai:routeFailed', { message: errorMsg });
+      throw new Error(errorMsg);
     }
 
     const prompt = this.buildRoutePrompt(currentLocation, goals, existingTerritories);
-    
-    return this.retry(async () => {
-      const result = await this.model!.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const optimization = this.parseRouteOptimization(text, currentLocation, goals);
-      
+    console.log('AIService: Route prompt prepared');
+
+    try {
+      const optimization = await this.retry(async () => {
+        console.log('AIService: Sending request to Gemini for route suggestion...');
+        const result = await this.model!.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        console.log('AIService: Received response from Gemini:', text.substring(0, 100) + '...');
+
+        const optimization = this.parseRouteOptimization(text, currentLocation, goals);
+        console.log('AIService: Route optimization parsed successfully');
+
+        return optimization;
+      }, 3, 1000, 'route suggestion');
+
       this.safeEmit('ai:routeSuggested', {
         route: optimization.suggestedRoute,
         confidence: optimization.confidence,
         reasoning: optimization.suggestedRoute.reasoning
       });
 
+      console.log('AIService: Route suggestion completed successfully');
       return optimization;
-    }, 3, 1000, 'route suggestion');
+
+    } catch (error) {
+      const errorMsg = `Route suggestion failed: ${error.message}`;
+      console.error('AIService:', errorMsg, error);
+      this.safeEmit('ai:routeFailed', { message: errorMsg });
+      throw error;
+    }
   }
 
   /**
@@ -255,28 +479,56 @@ export class AIService extends BaseService {
     difficulty: number,
     userStats?: { averagePace: number; totalDistance: number }
   ): Promise<GhostRunner> {
-    this.ensureInitialized();
+    console.log(`AIService: Generating ghost runner with difficulty ${difficulty}`);
+
+    // Always try to initialize if not already done
+    if (!this.isInitialized) {
+      console.log('AIService: Not initialized, attempting to initialize...');
+      await this.init();
+    }
 
     if (!this.isEnabled) {
+      console.log('AIService: AI disabled, using fallback ghost runner');
       return this.createFallbackGhostRunner(difficulty);
     }
 
     const prompt = this.buildGhostRunnerPrompt(difficulty, userStats);
-    
-    return this.retry(async () => {
-      const result = await this.model!.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const ghostRunner = this.parseGhostRunner(text, difficulty);
-      
+    console.log('AIService: Ghost runner prompt prepared');
+
+    try {
+      const ghostRunner = await this.retry(async () => {
+        console.log('AIService: Sending request to Gemini for ghost runner...');
+        const result = await this.model!.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        console.log('AIService: Received response from Gemini:', text.substring(0, 100) + '...');
+
+        const ghostRunner = this.parseGhostRunner(text, difficulty);
+        console.log('AIService: Ghost runner parsed successfully:', ghostRunner.name);
+
+        return ghostRunner;
+      }, 3, 1000, 'ghost runner generation');
+
       this.safeEmit('ai:ghostRunnerGenerated', {
         runner: ghostRunner,
         difficulty
       });
 
+      console.log('AIService: Ghost runner generation completed successfully');
       return ghostRunner;
-    }, 3, 1000, 'ghost runner generation');
+
+    } catch (error) {
+      console.error('AIService: Ghost runner generation failed, using fallback:', error);
+      const fallbackRunner = this.createFallbackGhostRunner(difficulty);
+
+      this.safeEmit('ai:ghostRunnerGenerated', {
+        runner: fallbackRunner,
+        difficulty,
+        fallback: true
+      });
+
+      return fallbackRunner;
+    }
   }
 
   /**
@@ -398,20 +650,26 @@ export class AIService extends BaseService {
     goals: AIGoals,
     existingTerritories?: string[]
   ): string {
+    const territoryContext = this.buildTerritoryContext(existingTerritories);
+    const quickPromptContext = this.buildQuickPromptContext(goals);
+
     return `
-You are an AI running coach and territory strategist for RunRealm, a fitness GameFi app. 
-Generate an optimal running route that helps the user claim valuable territory NFTs.
+You are an AI running coach and territory strategist for RunRealm, a fitness GameFi app.
+Generate an optimal running route with strategic waypoints that helps the user claim valuable territory NFTs.
 
 Current location: ${location.lat}, ${location.lng}
 Goals: ${JSON.stringify(goals)}
-Existing territories nearby: ${existingTerritories?.length || 0}
+${territoryContext}
+${quickPromptContext}
 
 Consider:
 - Route safety and attractiveness for running
-- Strategic territory value (landmarks, uniqueness)
+- Strategic territory value (landmarks, uniqueness, parks, intersections)
 - Distance and difficulty preferences
-- Avoiding oversaturated areas
+- Avoiding oversaturated areas with existing territories
 - Connecting valuable points of interest
+- Creating 4-6 strategic waypoints for territory claiming
+- Time constraints and user context from quick prompt
 
 Respond with JSON format:
 {
@@ -419,17 +677,69 @@ Respond with JSON format:
     "coordinates": [[lng, lat], ...],
     "distance": number_in_meters,
     "difficulty": number_0_to_100,
-    "reasoning": "explanation of route strategy"
+    "reasoning": "explanation of route strategy tailored to the specific scenario",
+    "waypoints": [
+      {
+        "coordinates": [lng, lat],
+        "type": "territory_claim|rest_stop|landmark|strategic",
+        "name": "descriptive_waypoint_name",
+        "description": "why_this_location_is_strategically_valuable",
+        "territoryValue": number_0_to_100,
+        "estimatedReward": estimated_realm_tokens,
+        "claimPriority": "high|medium|low"
+      }
+    ]
   },
   "territories": {
     "claimable": estimated_new_territories,
-    "strategic": strategic_value_score
+    "strategic": strategic_value_score,
+    "totalEstimatedRewards": total_realm_tokens_from_route
   },
   "confidence": confidence_0_to_100
 }
 
-Focus on creating engaging, gamified suggestions that make running feel like an adventure.
+Focus on creating engaging, gamified suggestions with strategic waypoints that make running feel like a territory conquest adventure.
     `.trim();
+  }
+
+  /**
+   * Build quick prompt context for enhanced AI responses
+   */
+  private buildQuickPromptContext(goals: AIGoals): string {
+    if (!goals.quickPromptType || !goals.contextPrompt) {
+      return '';
+    }
+
+    let context = `\nQuick Prompt Context: ${goals.contextPrompt}`;
+
+    if (goals.timeOfDay) {
+      context += `\nTime of Day: ${goals.timeOfDay} - optimize for lighting and safety`;
+    }
+
+    if (goals.timeConstraint) {
+      context += `\nTime Constraint: ${goals.timeConstraint} - prioritize efficiency`;
+    }
+
+    if (goals.focus) {
+      context += `\nFocus: ${goals.focus} - tailor route accordingly`;
+    }
+
+    if (goals.priority) {
+      context += `\nPriority: ${goals.priority} - emphasize this aspect`;
+    }
+
+    return context;
+  }
+
+  /**
+   * Build territory context for AI prompts
+   */
+  private buildTerritoryContext(existingTerritories?: string[]): string {
+    if (!existingTerritories || existingTerritories.length === 0) {
+      return 'Territory Context: This is a fresh area with no existing territories. Focus on identifying high-value claiming opportunities at landmarks, parks, and strategic intersections.';
+    }
+
+    return `Territory Context: There are ${existingTerritories.length} existing territories in this area. Avoid these claimed zones and focus on unclaimed strategic locations with high territory value.`;
   }
 
   private buildGhostRunnerPrompt(
@@ -539,29 +849,102 @@ Make this feel like a personal AI running coach in a game world!
   // Response parsers
   private parseRouteOptimization(text: string, location: any, goals: AIGoals): RouteOptimization {
     try {
-      return JSON.parse(text);
-    } catch {
+      // Try to extract JSON from the response
+      let jsonText = text.trim();
+
+      // Look for JSON block markers
+      const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1] || jsonMatch[0];
+      }
+
+      // Clean up common AI response artifacts
+      jsonText = jsonText
+        .replace(/^[^{]*/, '') // Remove text before first {
+        .replace(/[^}]*$/, '') // Remove text after last }
+        .trim();
+
+      const parsed = JSON.parse(jsonText);
+
+      // Validate the parsed response has required structure
+      if (!parsed.suggestedRoute || !parsed.suggestedRoute.coordinates) {
+        throw new Error('Invalid route structure');
+      }
+
+      // Ensure coordinates are valid
+      if (!Array.isArray(parsed.suggestedRoute.coordinates) || parsed.suggestedRoute.coordinates.length < 2) {
+        console.warn('AIService: Invalid coordinates in response, generating fallback');
+        parsed.suggestedRoute.coordinates = this.generateFallbackRoute(location, goals.distance || 2000);
+      }
+
+      console.log('AIService: Successfully parsed route optimization:', {
+        coordinateCount: parsed.suggestedRoute.coordinates.length,
+        distance: parsed.suggestedRoute.distance,
+        confidence: parsed.confidence
+      });
+
+      return parsed;
+
+    } catch (error) {
+      console.warn('AIService: Failed to parse route optimization, using fallback:', error.message);
+
       // Fallback if JSON parsing fails
       return {
         suggestedRoute: {
           coordinates: this.generateFallbackRoute(location, goals.distance || 2000),
           distance: goals.distance || 2000,
           difficulty: goals.difficulty || 50,
-          reasoning: 'AI-generated route optimized for territory claiming'
+          reasoning: 'AI-generated fallback route optimized for territory claiming'
         },
         territories: {
           claimable: Math.floor(Math.random() * 3) + 1,
           strategic: Math.floor(Math.random() * 50) + 25
         },
-        confidence: 75
+        confidence: 65 // Lower confidence for fallback
       };
     }
   }
 
   private parseGhostRunner(text: string, difficulty: number): GhostRunner {
     try {
-      return JSON.parse(text);
-    } catch {
+      // Try to extract JSON from the response
+      let jsonText = text.trim();
+
+      // Look for JSON block markers
+      const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1] || jsonMatch[0];
+      }
+
+      // Clean up common AI response artifacts
+      jsonText = jsonText
+        .replace(/^[^{]*/, '') // Remove text before first {
+        .replace(/[^}]*$/, '') // Remove text after last }
+        .trim();
+
+      const parsed = JSON.parse(jsonText);
+
+      // Validate required fields
+      if (!parsed.name || !parsed.id) {
+        throw new Error('Missing required ghost runner fields');
+      }
+
+      // Ensure all required fields are present with defaults
+      const ghostRunner: GhostRunner = {
+        id: parsed.id || `ghost_${Date.now()}_${difficulty}`,
+        name: parsed.name || 'Mystery Runner',
+        difficulty: parsed.difficulty || difficulty,
+        avatar: parsed.avatar || 'Athletic runner with standard gear',
+        pace: parsed.pace || this.calculatePaceFromDifficulty(difficulty),
+        specialAbility: parsed.specialAbility || 'Steady Pace',
+        backstory: parsed.backstory || 'A determined runner ready for competition.'
+      };
+
+      console.log('AIService: Successfully parsed ghost runner:', ghostRunner.name);
+      return ghostRunner;
+
+    } catch (error) {
+      console.warn('AIService: Failed to parse ghost runner, using fallback:', error.message);
       return this.createFallbackGhostRunner(difficulty);
     }
   }

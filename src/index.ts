@@ -94,6 +94,7 @@ async function initializeApp(): Promise<void> {
     // Expose app instance globally for debugging (development only)
     if (process.env.NODE_ENV === 'development') {
       (window as any).runRealmApp = app;
+      (window as any).RunRealm = app; // Also expose as RunRealm for consistency
 
       // Expose widget system debug utilities
       (window as any).debugWidgets = () => {

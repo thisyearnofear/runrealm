@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RunRealm AI Features Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .test-section {
+            background: rgba(0, 25, 50, 0.9);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-button {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        .test-button:hover {
+            background: linear-gradient(135deg, #0056b3, #004085);
+            transform: translateY(-1px);
+        }
+        .result {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .success { border-color: rgba(40, 167, 69, 0.5); }
+        .error { border-color: rgba(220, 53, 69, 0.5); }
+    </style>
+</head>
+<body>
+    <h1>🤖 RunRealm AI Features Test</h1>
+    
+    <div class="test-section">
+        <h2>🔧 Configuration Test</h2>
+        <button class="test-button" onclick="testConfiguration()">Test AI Configuration</button>
+        <div id="config-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>👻 Ghost Runner Test</h2>
+        <button class="test-button" onclick="testGhostRunner()">Generate Ghost Runner</button>
+        <div id="ghost-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📍 Route Suggestion Test</h2>
+        <button class="test-button" onclick="testRouteGeneration()">Generate Route</button>
+        <div id="route-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎮 Widget Integration Test</h2>
+        <button class="test-button" onclick="testWidgetIntegration()">Test Widget Events</button>
+        <div id="widget-result" class="result"></div>
+    </div>
+
+    <script>
+        // Test functions
+        function testConfiguration() {
+            const result = document.getElementById('config-result');
+            result.textContent = 'Testing AI configuration...\n';
+            
+            // Check environment variables
+            const hasGeminiKey = typeof __ENV__ !== 'undefined' && __ENV__.GOOGLE_GEMINI_API_KEY;
+            const aiEnabled = typeof __ENV__ !== 'undefined' && __ENV__.ENABLE_AI_FEATURES === 'true';
+            
+            result.textContent += `Environment Variables:\n`;
+            result.textContent += `- ENABLE_AI_FEATURES: ${aiEnabled}\n`;
+            result.textContent += `- GOOGLE_GEMINI_API_KEY: ${hasGeminiKey ? 'Present' : 'Missing'}\n`;
+            
+            // Check localStorage
+            const localKey = localStorage.getItem('runrealm_google_gemini_api_key');
+            result.textContent += `- localStorage API key: ${localKey ? 'Present' : 'Missing'}\n`;
+            
+            if (aiEnabled && (hasGeminiKey || localKey)) {
+                result.className = 'result success';
+                result.textContent += '\n✅ AI Configuration looks good!';
+            } else {
+                result.className = 'result error';
+                result.textContent += '\n❌ AI Configuration issues detected';
+            }
+        }
+        
+        function testGhostRunner() {
+            const result = document.getElementById('ghost-result');
+            result.textContent = 'Testing ghost runner generation...\n';
+            result.className = 'result';
+            
+            // Simulate ghost runner request
+            if (window.RunRealm && window.RunRealm.mainUI) {
+                try {
+                    // Trigger ghost runner generation
+                    const event = new CustomEvent('ai:ghostRunnerRequested', {
+                        detail: { difficulty: 50 }
+                    });
+                    
+                    // Listen for response
+                    const handleGhostGenerated = (e) => {
+                        result.textContent += `✅ Ghost runner generated: ${e.detail.runner.name}\n`;
+                        result.textContent += `- Difficulty: ${e.detail.runner.difficulty}\n`;
+                        result.textContent += `- Special Ability: ${e.detail.runner.specialAbility}\n`;
+                        result.textContent += `- Backstory: ${e.detail.runner.backstory}\n`;
+                        result.className = 'result success';
+                        document.removeEventListener('ai:ghostRunnerGenerated', handleGhostGenerated);
+                    };
+                    
+                    const handleGhostFailed = (e) => {
+                        result.textContent += `❌ Ghost runner generation failed: ${e.detail.message}\n`;
+                        result.className = 'result error';
+                        document.removeEventListener('ai:ghostRunnerFailed', handleGhostFailed);
+                    };
+                    
+                    document.addEventListener('ai:ghostRunnerGenerated', handleGhostGenerated);
+                    document.addEventListener('ai:ghostRunnerFailed', handleGhostFailed);
+                    
+                    document.dispatchEvent(event);
+                    
+                    setTimeout(() => {
+                        if (!result.textContent.includes('✅') && !result.textContent.includes('❌')) {
+                            result.textContent += '⏱️ Request timed out - check console for details\n';
+                            result.className = 'result error';
+                        }
+                    }, 10000);
+                    
+                } catch (error) {
+                    result.textContent += `❌ Error: ${error.message}\n`;
+                    result.className = 'result error';
+                }
+            } else {
+                result.textContent += '❌ RunRealm app not found - make sure you\'re testing on the main app\n';
+                result.className = 'result error';
+            }
+        }
+        
+        function testRouteGeneration() {
+            const result = document.getElementById('route-result');
+            result.textContent = 'Testing route generation...\n';
+            result.className = 'result';
+            
+            if (window.RunRealm && window.RunRealm.mainUI) {
+                try {
+                    const event = new CustomEvent('ai:routeRequested', {
+                        detail: { 
+                            goals: ['exploration'],
+                            distance: 2000,
+                            difficulty: 50
+                        }
+                    });
+                    
+                    const handleRouteReady = (e) => {
+                        result.textContent += `✅ Route generated successfully\n`;
+                        result.textContent += `- Waypoints: ${e.detail.waypoints ? e.detail.waypoints.length : 0}\n`;
+                        result.textContent += `- Distance: ${e.detail.distance || 'Unknown'} meters\n`;
+                        result.textContent += `- Difficulty: ${e.detail.difficulty || 'Unknown'}\n`;
+                        result.className = 'result success';
+                        document.removeEventListener('ai:routeReady', handleRouteReady);
+                    };
+                    
+                    const handleRouteFailed = (e) => {
+                        result.textContent += `❌ Route generation failed: ${e.detail.message}\n`;
+                        result.className = 'result error';
+                        document.removeEventListener('ai:routeFailed', handleRouteFailed);
+                    };
+                    
+                    document.addEventListener('ai:routeReady', handleRouteReady);
+                    document.addEventListener('ai:routeFailed', handleRouteFailed);
+                    
+                    document.dispatchEvent(event);
+                    
+                    setTimeout(() => {
+                        if (!result.textContent.includes('✅') && !result.textContent.includes('❌')) {
+                            result.textContent += '⏱️ Request timed out - check console for details\n';
+                            result.className = 'result error';
+                        }
+                    }, 10000);
+                    
+                } catch (error) {
+                    result.textContent += `❌ Error: ${error.message}\n`;
+                    result.className = 'result error';
+                }
+            } else {
+                result.textContent += '❌ RunRealm app not found - make sure you\'re testing on the main app\n';
+                result.className = 'result error';
+            }
+        }
+        
+        function testWidgetIntegration() {
+            const result = document.getElementById('widget-result');
+            result.textContent = 'Testing widget integration...\n';
+            result.className = 'result';
+            
+            // Check if widgets are present
+            const widgets = document.querySelectorAll('.widget');
+            const aiCoachWidget = document.querySelector('[data-widget-id="ai-coach"]');
+            
+            result.textContent += `Widgets found: ${widgets.length}\n`;
+            result.textContent += `AI Coach widget: ${aiCoachWidget ? 'Present' : 'Missing'}\n`;
+            
+            if (aiCoachWidget) {
+                const buttons = aiCoachWidget.querySelectorAll('[data-action]');
+                result.textContent += `Action buttons: ${buttons.length}\n`;
+                
+                buttons.forEach(button => {
+                    const action = button.getAttribute('data-action');
+                    result.textContent += `- ${action}\n`;
+                });
+                
+                result.className = 'result success';
+                result.textContent += '\n✅ Widget integration looks good!';
+            } else {
+                result.className = 'result error';
+                result.textContent += '\n❌ AI Coach widget not found';
+            }
+        }
+        
+        // Auto-run configuration test on load
+        window.addEventListener('load', () => {
+            setTimeout(testConfiguration, 1000);
+        });
+    </script>
+</body>
+</html>

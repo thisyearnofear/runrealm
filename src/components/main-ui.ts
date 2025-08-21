@@ -238,21 +238,39 @@ export class MainUI extends BaseService {
       this.walletConnection.showWalletModal();
     });
 
-    // Centralized UI action routing
+    // Centralized UI action routing with enhanced UX
     this.domService.delegate(document.body, '[data-action]', 'click', async (event) => {
+      console.log('MainUI: Click detected on element with data-action:', event.target);
+
       const target = (event.target as HTMLElement).closest('[data-action]') as HTMLElement | null;
-      if (!target) return;
+      if (!target) {
+        console.log('MainUI: No data-action target found');
+        return;
+      }
+
       const action = target.getAttribute('data-action');
       const payloadAttr = target.getAttribute('data-payload');
       let payload: any = undefined;
       if (payloadAttr) {
         try { payload = JSON.parse(payloadAttr); } catch { payload = undefined; }
       }
+
+      // Add immediate visual feedback
+      this.addButtonFeedback(target);
+
+      // Show loading state for AI actions
+      if (action?.startsWith('ai.')) {
+        this.showAILoadingState(action, target);
+      }
+
+      console.log('MainUI: Dispatching action:', action, 'with payload:', payload);
+
       try {
         const { ActionRouter } = await import('../ui/action-router');
         ActionRouter.dispatch(action as any, payload);
       } catch (err) {
         console.error('Failed to dispatch UI action', action, err);
+        this.hideAILoadingState();
       }
     });
 
@@ -325,15 +343,146 @@ export class MainUI extends BaseService {
       this.widgetSystem.updateWidget('territory-info', tip);
     });
 
+    // Handle AI service events
+    this.subscribe('ai:ghostRunnerGenerated', (data: { runner: any; difficulty: number; success?: boolean; fallback?: boolean }) => {
+      console.log('MainUI: Ghost runner generated:', data.runner.name);
+      const widget = this.widgetSystem.getWidget('ai-coach');
+      if (widget) {
+        const fallbackText = data.fallback ? ' (Fallback)' : '';
+        const successHtml = `
+          <div class="widget-tip success animate-in">
+            👻 ${data.runner.name}${fallbackText} is ready to race!
+            <br><small>Difficulty: ${data.difficulty}% • ${data.runner.specialAbility}</small>
+            <br><small class="ghost-backstory">${data.runner.backstory}</small>
+          </div>
+          <div class="widget-buttons">
+            <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
+              📍 Suggest Route
+            </button>
+            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${Math.min(data.difficulty + 10, 100)}}'>
+              👻 Harder Ghost
+            </button>
+            <button class="widget-button tertiary" onclick="this.closest('.widget').querySelector('.widget-tip').classList.toggle('expanded')">
+              📜 Details
+            </button>
+          </div>
+        `;
+        this.widgetSystem.updateWidget('ai-coach', successHtml, { success: true });
+
+        // Add celebration effect
+        this.addCelebrationEffect();
+        this.triggerHapticFeedback('medium');
+      }
+    });
+
+    this.subscribe('ai:ghostRunnerFailed', (data: { message: string }) => {
+      console.log('MainUI: Ghost runner generation failed:', data.message);
+      this.hideAILoadingState();
+      const widget = this.widgetSystem.getWidget('ai-coach');
+      if (widget) {
+        const errorHtml = `
+          <div class="widget-tip error animate-in">
+            👻 Ghost runner creation failed: ${data.message}
+            <br><small>Try again or check your AI configuration.</small>
+          </div>
+          <div class="widget-buttons">
+            <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
+              📍 Suggest Route
+            </button>
+            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>
+              👻 Try Again
+            </button>
+          </div>
+        `;
+        this.widgetSystem.updateWidget('ai-coach', errorHtml);
+      }
+    });
+
+    // Handle route generation success
+    this.subscribe('ai:routeReady', (data: { waypoints: any[]; distance: number; difficulty: number; reasoning?: string }) => {
+      console.log('MainUI: Route generated successfully:', data);
+      this.hideAILoadingState();
+      const widget = this.widgetSystem.getWidget('ai-coach');
+      if (widget) {
+        const waypointSummary = data.waypoints && data.waypoints.length > 0
+          ? `${data.waypoints.length} strategic waypoints`
+          : `${data.waypoints ? data.waypoints.length : 0} waypoints`;
+
+        const successHtml = `
+          <div class="widget-tip success animate-in">
+            📍 Perfect route found! ${waypointSummary}, ${Math.round(data.distance)}m
+            <br><small>Difficulty: ${data.difficulty}% • Territory opportunities along route</small>
+            ${data.reasoning ? `<br><small class="route-reasoning">${data.reasoning}</small>` : ''}
+          </div>
+          <div class="widget-buttons">
+            <button class="widget-button primary" data-action="ai.showRoute" data-payload='{"coordinates":${JSON.stringify(data.route)}}'>
+              🗺️ Show on Map
+            </button>
+            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${data.difficulty}}'>
+              👻 Add Ghost
+            </button>
+            <button class="widget-button tertiary" onclick="this.closest('.widget').querySelector('.widget-tip').classList.toggle('expanded')">
+              📜 Details
+            </button>
+          </div>
+        `;
+        this.widgetSystem.updateWidget('ai-coach', successHtml, { success: true });
+
+        // Add celebration effect
+        this.addCelebrationEffect();
+        this.triggerHapticFeedback('medium');
+      }
+    });
+
+    // Handle route generation failure
+    this.subscribe('ai:routeFailed', (data: { message: string }) => {
+      console.log('MainUI: Route generation failed:', data.message);
+      this.hideAILoadingState();
+      const widget = this.widgetSystem.getWidget('ai-coach');
+      if (widget) {
+        const errorHtml = `
+          <div class="widget-tip error animate-in">
+            📍 Route generation failed: ${data.message}
+            <br><small>Try adjusting your goals or check your connection.</small>
+          </div>
+          <div class="widget-buttons">
+            <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
+              📍 Try Again
+            </button>
+            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>
+              👻 Ghost Runner
+            </button>
+          </div>
+        `;
+        this.widgetSystem.updateWidget('ai-coach', errorHtml);
+      }
+    });
+
     // Handle service errors
     this.subscribe('service:error', (data: { service: string; context: string; error: string }) => {
       if (data.service === 'AIService') {
+        console.log('MainUI: AI Service error:', data.error);
         const widget = this.widgetSystem.getWidget('ai-coach');
         if (widget) {
+          let errorMessage = 'Service temporarily unavailable';
+          if (data.error.includes('API key')) {
+            errorMessage = 'API key not configured properly';
+          } else if (data.error.includes('disabled')) {
+            errorMessage = 'AI features are disabled';
+          } else if (data.error.includes('connection')) {
+            errorMessage = 'Cannot connect to AI service';
+          }
+
           const errorHtml = `
             <div class="widget-tip error">
-              🤖 AI Service Issue: ${data.error.includes('API key') ? 'API key not configured' : 'Service temporarily unavailable'}
+              🤖 AI Service Issue: ${errorMessage}
+              <br><small>Context: ${data.context}</small>
               <br><small>Try using fallback features or check your configuration.</small>
+            </div>
+            <div class="widget-buttons">
+              <button class="widget-button secondary" onclick="location.reload()">
+                🔄 Reload App
+              </button>
             </div>
           `;
           this.widgetSystem.updateWidget('ai-coach', errorHtml);
@@ -366,10 +515,104 @@ export class MainUI extends BaseService {
     });
 
     // Wire actions
-    this.domService.delegate(document.body, '#restart-onboarding-widget', 'click', () => {
+    this.domService.delegate(document.body, '#restart-onboarding-widget', 'click', async () => {
+      console.log('MainUI: Restarting onboarding...');
+
+      // Clear all onboarding-related localStorage
       localStorage.removeItem('runrealm_onboarding_complete');
+      localStorage.removeItem('runrealm_onboarding_in_progress');
+      localStorage.removeItem('runrealm_onboarding_step');
       localStorage.removeItem('runrealm_welcomed');
-      this.showWelcomeTooltips();
+
+      // Add visual feedback
+      const button = document.getElementById('restart-onboarding-widget');
+      if (button) {
+        const originalText = button.textContent;
+        button.textContent = '🔄 Restarting...';
+        button.style.opacity = '0.6';
+
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.opacity = '1';
+        }, 1000);
+      }
+
+      // Restart the onboarding service
+      try {
+        const onboardingConfig = {
+          steps: [
+            {
+              id: 'welcome',
+              title: 'Welcome to RunRealm!',
+              description: 'Claim, trade, and defend real-world running territories as NFTs. Let\'s get you started!',
+              targetElement: '#mapbox-container',
+              position: 'bottom' as const
+            },
+            {
+              id: 'location-setup',
+              title: 'Set Your Location',
+              description: 'Click the location button to set your current position and see nearby territories.',
+              targetElement: '#location-btn',
+              position: 'bottom' as const
+            },
+            {
+              id: 'gamefi-intro',
+              title: 'Enable GameFi Mode',
+              description: 'Toggle GameFi mode to start earning rewards and claiming territories as NFTs.',
+              targetElement: '#gamefi-toggle',
+              position: 'bottom' as const
+            },
+            {
+              id: 'ai-coach-intro',
+              title: 'Meet Your AI Coach',
+              description: 'Get personalized route suggestions and running tips from our AI coach.',
+              targetElement: '.widget[data-widget-id="ai-coach"]',
+              position: 'right' as const
+            },
+            {
+              id: 'map-interaction',
+              title: 'Plan Your Route',
+              description: 'Click on the map to add waypoints and plan your running route.',
+              targetElement: '#mapbox-container',
+              position: 'top' as const
+            }
+          ],
+          allowSkip: true,
+          showProgress: true
+        };
+
+        // Try multiple ways to access the onboarding service
+        let onboardingService = null;
+
+        // Method 1: Try the global RunRealm object
+        const app = (window as any).RunRealm || (window as any).runRealmApp;
+        if (app && app.getOnboardingService) {
+          onboardingService = app.getOnboardingService();
+        }
+
+        // Method 2: Try direct property access
+        if (!onboardingService && app && app.onboarding) {
+          onboardingService = app.onboarding;
+        }
+
+        // Method 3: Create a simple onboarding experience if service not available
+        if (onboardingService) {
+          try {
+            await onboardingService.start(onboardingConfig);
+            console.log('MainUI: Onboarding restarted successfully');
+            this.showToast('🎓 Tutorial started! Follow the guided tour.', 'success');
+          } catch (error) {
+            console.error('MainUI: Failed to start onboarding service:', error);
+            this.createSimpleOnboarding();
+          }
+        } else {
+          console.log('MainUI: Onboarding service not available, creating simple tutorial');
+          this.createSimpleOnboarding();
+        }
+      } catch (error) {
+        console.error('MainUI: Failed to restart onboarding:', error);
+        this.showWelcomeTooltips();
+      }
     });
 
     // GameFi toggle from settings
@@ -446,7 +689,10 @@ export class MainUI extends BaseService {
       <div class="widget-section">
         <div class="widget-section-title">🔧 App Settings</div>
         <div class="widget-buttons">
-          <button class="widget-button secondary" id="restart-onboarding-widget">🔁 Restart Onboarding</button>
+          <button class="widget-button secondary" id="restart-onboarding-widget">🔁 Restart Tutorial</button>
+        </div>
+        <div class="widget-tip">
+          <small>Restart the interactive tutorial to learn RunRealm features again.</small>
         </div>
       </div>
 
@@ -963,14 +1209,417 @@ export class MainUI extends BaseService {
     `;
   }
 
-  private getAICoachContent(): string {
-    return `
-      <div class="widget-tip">
-        🤖 Welcome to RunRealm! Start running to claim your first territory.
+  /**
+   * Add immediate visual feedback to button clicks
+   */
+  private addButtonFeedback(button: HTMLElement): void {
+    // Visual feedback
+    button.style.transform = 'scale(0.95)';
+    button.style.transition = 'transform 0.1s ease';
+
+    // Haptic feedback for mobile
+    this.triggerHapticFeedback('light');
+
+    setTimeout(() => {
+      button.style.transform = 'scale(1)';
+    }, 100);
+  }
+
+  /**
+   * Trigger haptic feedback on supported devices
+   */
+  private triggerHapticFeedback(type: 'light' | 'medium' | 'heavy' = 'light'): void {
+    try {
+      // Modern browsers with Vibration API
+      if ('vibrate' in navigator) {
+        const patterns = {
+          light: [10],
+          medium: [20],
+          heavy: [30]
+        };
+        navigator.vibrate(patterns[type]);
+      }
+
+      // iOS Safari haptic feedback (if available)
+      if ('hapticFeedback' in window) {
+        (window as any).hapticFeedback(type);
+      }
+    } catch (error) {
+      // Haptic feedback not supported, silently continue
+    }
+  }
+
+  /**
+   * Create a simple onboarding experience when the service isn't available
+   */
+  private createSimpleOnboarding(): void {
+    this.showToast('🎓 Starting tutorial...', 'success');
+
+    // Use a simpler approach that doesn't interfere with the widget system
+    this.showSequentialTooltips();
+  }
+
+  /**
+   * Show sequential tooltips without overlays
+   */
+  private showSequentialTooltips(): void {
+    const tooltips = [
+      {
+        message: '🏃‍♂️ Welcome to RunRealm! Transform your runs into an adventure.',
+        duration: 3000
+      },
+      {
+        message: '📍 Set your location using the location button to see nearby territories.',
+        duration: 3000
+      },
+      {
+        message: '🎮 Enable GameFi mode to start earning rewards and claiming territories.',
+        duration: 3000
+      },
+      {
+        message: '🤖 Try the AI Coach for personalized route suggestions and tips.',
+        duration: 3000
+      },
+      {
+        message: '🗺️ Click on the map to plan your perfect running route.',
+        duration: 3000
+      },
+      {
+        message: '🎉 Tutorial complete! Start exploring and claiming territories!',
+        duration: 4000
+      }
+    ];
+
+    let currentIndex = 0;
+
+    const showNextTooltip = () => {
+      if (currentIndex >= tooltips.length) return;
+
+      const tooltip = tooltips[currentIndex];
+      this.showCenteredToast(tooltip.message, currentIndex === 0 ? 'success' : currentIndex === tooltips.length - 1 ? 'success' : 'tutorial');
+
+      currentIndex++;
+      if (currentIndex < tooltips.length) {
+        setTimeout(showNextTooltip, tooltip.duration);
+      }
+    };
+
+    // Start the sequence
+    setTimeout(showNextTooltip, 500);
+  }
+
+
+
+  /**
+   * Show a centered toast for tutorial messages
+   */
+  private showCenteredToast(message: string, type: 'success' | 'error' | 'info' | 'tutorial' = 'tutorial'): void {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type} toast-centered`;
+
+    const backgroundColor = {
+      success: '#28a745',
+      error: '#dc3545',
+      info: '#007bff',
+      tutorial: 'linear-gradient(135deg, #6f42c1, #007bff)'
+    }[type];
+
+    toast.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: ${backgroundColor};
+      color: white;
+      padding: 20px 32px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      z-index: 10000;
+      font-size: 16px;
+      font-weight: 500;
+      max-width: 400px;
+      text-align: center;
+      line-height: 1.4;
+      animation: tutorialSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      pointer-events: auto;
+      cursor: pointer;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    `;
+
+    toast.textContent = message;
+
+    // Add click to dismiss
+    toast.addEventListener('click', () => {
+      toast.style.animation = 'tutorialSlideOut 0.3s ease-in';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    });
+
+    document.body.appendChild(toast);
+
+    // Auto-dismiss after 4 seconds for tutorial messages
+    const dismissTime = type === 'tutorial' ? 4000 : 3000;
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.style.animation = 'tutorialSlideOut 0.3s ease-in';
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+          }
+        }, 300);
+      }
+    }, dismissTime);
+
+    // Add tutorial-specific CSS animations
+    if (!document.querySelector('#tutorial-toast-animations')) {
+      const style = document.createElement('style');
+      style.id = 'tutorial-toast-animations';
+      style.textContent = `
+        @keyframes tutorialSlideIn {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.8) translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1) translateY(0);
+          }
+        }
+        @keyframes tutorialSlideOut {
+          from {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1) translateY(0);
+          }
+          to {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.9) translateY(-10px);
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  /**
+   * Show a toast notification (regular, top-right)
+   */
+  private showToast(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#007bff'};
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 10000;
+      font-size: 14px;
+      max-width: 300px;
+      animation: slideInRight 0.3s ease-out;
+      pointer-events: auto;
+      cursor: pointer;
+    `;
+
+    toast.textContent = message;
+
+    // Add click to dismiss
+    toast.addEventListener('click', () => {
+      toast.style.animation = 'slideOutRight 0.3s ease-in';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    });
+
+    document.body.appendChild(toast);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+          }
+        }, 300);
+      }
+    }, 5000);
+
+    // Add CSS animations if not already present
+    if (!document.querySelector('#toast-animations')) {
+      const style = document.createElement('style');
+      style.id = 'toast-animations';
+      style.textContent = `
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        @keyframes slideOutRight {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  /**
+   * Show loading state for AI actions
+   */
+  private showAILoadingState(action: string, button: HTMLElement): void {
+    const widget = this.widgetSystem.getWidget('ai-coach');
+    if (!widget) return;
+
+    const actionName = action === 'ai.requestRoute' ? 'route' : 'ghost runner';
+    const loadingHtml = `
+      <div class="widget-tip widget-loading">
+        🤖 Generating ${actionName}...
+        <br><small>This may take a few seconds</small>
+        <div class="loading-dots">
+          <span></span><span></span><span></span>
+        </div>
       </div>
       <div class="widget-buttons">
-        <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
+        <button class="widget-button" disabled style="opacity: 0.6; cursor: not-allowed;">
           📍 Suggest Route
+        </button>
+        <button class="widget-button secondary" disabled style="opacity: 0.6; cursor: not-allowed;">
+          👻 Ghost Runner
+        </button>
+      </div>
+    `;
+
+    this.widgetSystem.updateWidget('ai-coach', loadingHtml);
+  }
+
+  /**
+   * Hide loading state
+   */
+  private hideAILoadingState(): void {
+    const widget = this.widgetSystem.getWidget('ai-coach');
+    if (!widget) return;
+
+    // Don't restore content here - let the success/error handlers manage it
+  }
+
+  /**
+   * Add celebration effect for successful AI actions
+   */
+  private addCelebrationEffect(): void {
+    const widget = this.widgetSystem.getWidget('ai-coach');
+    if (!widget) return;
+
+    const widgetElement = widget.element;
+
+    // Prevent multiple celebrations
+    if (widgetElement.classList.contains('celebrating')) return;
+
+    // Add celebration class
+    widgetElement.classList.add('celebrating');
+
+    // Use requestAnimationFrame for better performance
+    requestAnimationFrame(() => {
+      // Create floating particles
+      const particleCount = window.innerWidth < 768 ? 3 : 6; // Fewer particles on mobile
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'celebration-particle';
+        particle.style.cssText = `
+          position: absolute;
+          width: 6px;
+          height: 6px;
+          background: linear-gradient(45deg, #00ff00, #00aa00);
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 1000;
+          left: ${Math.random() * 100}%;
+          top: 50%;
+          animation: celebrationFloat 1.5s ease-out forwards;
+        `;
+
+        widgetElement.appendChild(particle);
+
+        // Remove particle after animation
+        setTimeout(() => {
+          if (particle.parentNode) {
+            particle.parentNode.removeChild(particle);
+          }
+        }, 1500);
+      }
+    });
+
+    // Remove celebration class
+    setTimeout(() => {
+      widgetElement.classList.remove('celebrating');
+    }, 1500);
+  }
+
+  private getAICoachContent(): string {
+    const timeOfDay = new Date().getHours();
+    let greeting = '🌅 Good morning';
+    if (timeOfDay >= 12 && timeOfDay < 17) greeting = '☀️ Good afternoon';
+    else if (timeOfDay >= 17) greeting = '🌆 Good evening';
+
+    return `
+      <div class="widget-tip">
+        🤖 ${greeting}, runner! Ready to explore and claim territories?
+        <br><small>Choose a quick scenario or create a custom route.</small>
+      </div>
+
+      <div class="quick-prompts">
+        <div class="prompt-section">
+          <div class="prompt-title">🏃‍♂️ Quick Routes</div>
+          <div class="widget-buttons compact">
+            <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"morning_run","distance":2000,"goals":["exploration"],"difficulty":30}'>
+              🌅 Morning Jog
+            </button>
+            <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"territory_hunt","distance":3000,"goals":["exploration","territory"],"difficulty":50}'>
+              🏆 Territory Hunt
+            </button>
+            <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"training_session","distance":4000,"goals":["training"],"difficulty":70}'>
+              💪 Training Run
+            </button>
+          </div>
+        </div>
+
+        <div class="prompt-section">
+          <div class="prompt-title">⏱️ Time-Based</div>
+          <div class="widget-buttons compact">
+            <button class="widget-button quick-prompt secondary" data-action="ai.quickPrompt" data-payload='{"type":"quick_15min","distance":1500,"goals":["exploration"],"difficulty":40}'>
+              15min Quick
+            </button>
+            <button class="widget-button quick-prompt secondary" data-action="ai.quickPrompt" data-payload='{"type":"lunch_break","distance":2500,"goals":["exploration"],"difficulty":45}'>
+              30min Lunch
+            </button>
+            <button class="widget-button quick-prompt secondary" data-action="ai.quickPrompt" data-payload='{"type":"evening_adventure","distance":5000,"goals":["exploration","territory"],"difficulty":60}'>
+              1hr Adventure
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="widget-buttons">
+        <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
+          📍 Custom Route
         </button>
         <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>
           👻 Ghost Runner
