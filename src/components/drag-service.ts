@@ -119,19 +119,23 @@ export class DragService extends BaseService {
   private handleDragStart(e: MouseEvent | TouchEvent, element: HTMLElement): void {
     // Don't start drag if user is interacting with form elements or specific UI controls
     const target = e.target as HTMLElement;
-    if (target.tagName === 'INPUT' || 
-        target.tagName === 'BUTTON' || 
-        target.tagName === 'SELECT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.classList.contains('widget-toggle') ||
-        target.closest('.widget-content') ||
-        target.closest('.toggle-switch') ||
-        target.closest('.widget-button')) {
-      return;
-    }
-
+    
     // Only allow drag from widget header
     if (!target.closest('.widget-header')) {
+      return;
+    }
+    
+    // Don't start drag if clicking directly on interactive elements
+    if (target.tagName === 'INPUT' || 
+        target.tagName === 'SELECT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.closest('.widget-content') ||
+        target.closest('.toggle-switch')) {
+      return;
+    }
+    
+    // Allow dragging from header area, but not from buttons (except widget-toggle)
+    if (target.tagName === 'BUTTON' && !target.classList.contains('widget-toggle')) {
       return;
     }
 
@@ -339,14 +343,6 @@ export class DragService extends BaseService {
       this.animationFrameId = null;
     }
     
-    // Remove dragging state
-    this.draggedElement.classList.remove('dragging');
-    this.draggedElement.style.position = '';
-    this.draggedElement.style.zIndex = '';
-    this.draggedElement.style.willChange = '';
-    this.draggedElement.style.transform = '';
-    document.body.style.userSelect = '';
-    
     // Calculate final position
     let finalX = clientX - this.dragOffset.x;
     let finalY = clientY - this.dragOffset.y;
@@ -367,14 +363,12 @@ export class DragService extends BaseService {
       finalY = Math.round(finalY / this.options.gridSize) * this.options.gridSize;
     }
     
-    // Animate back to position if needed
-    if (this.options.animationDuration && this.options.animationDuration > 0) {
-      this.animateToPosition(finalX, finalY);
-    }
+    // Store the element reference before calling onDragEnd
+    const draggedElement = this.draggedElement;
     
-    // Callback
+    // Call onDragEnd callback first (before clearing styles)
     if (this.options.onDragEnd) {
-      this.options.onDragEnd(this.draggedElement, finalX, finalY);
+      this.options.onDragEnd(draggedElement, finalX, finalY);
     }
     
     // Reset drag state
@@ -382,31 +376,32 @@ export class DragService extends BaseService {
     this.draggedElement = null;
     this.dragOffset = { x: 0, y: 0 };
     this.cancelLongPressTimer();
+    
+    // Clean up dragging state and styles
+    draggedElement.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    
+    // Set final position using absolute positioning
+    draggedElement.style.position = 'fixed';
+    draggedElement.style.left = `${finalX}px`;
+    draggedElement.style.top = `${finalY}px`;
+    draggedElement.style.transform = '';
+    draggedElement.style.zIndex = '';
+    draggedElement.style.willChange = '';
+    
+    // Animate to position if needed
+    if (this.options.animationDuration && this.options.animationDuration > 0) {
+      this.animateToPosition(finalX, finalY);
+    }
   }
 
   /**
    * Animate element to final position
    */
   private animateToPosition(x: number, y: number): void {
-    if (!this.draggedElement) return;
-    
-    const element = this.draggedElement;
-    const duration = this.options.animationDuration || 200;
-    
-    // Add transition for smooth animation
-    element.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0, 0.2, 1)`;
-    element.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-    
-    // Remove transition after animation completes
-    setTimeout(() => {
-      if (element) {
-        element.style.transition = '';
-        element.style.willChange = '';
-        element.style.transform = '';
-        element.style.left = `${x}px`;
-        element.style.top = `${y}px`;
-      }
-    }, duration);
+    // Note: This method is called after endDrag, so we don't have draggedElement anymore
+    // The element positioning is now handled directly in endDrag method
+    // This method is kept for compatibility but doesn't need to do anything
   }
 
   /**

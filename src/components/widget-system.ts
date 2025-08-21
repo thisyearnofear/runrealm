@@ -720,18 +720,24 @@ export class WidgetSystem extends BaseService {
     const widget = this.widgets.get(widgetId);
     if (!widget) return;
 
-    // Update widget position
-    widget.position = newPosition;
-
-    // Remove widget from current zone
     const currentElement = document.getElementById(`widget-${widgetId}`);
-    if (currentElement) {
-      currentElement.remove();
-    }
+    if (!currentElement) return;
 
-    // Re-render widget in new position
-    this.renderWidget(widget);
+    // Update widget position data
+    widget.position = newPosition;
+    
+    // Update widget state
+    this.widgetStateService.setWidgetState(widgetId, {
+      position: newPosition,
+      minimized: widget.minimized,
+      visible: true,
+      priority: widget.priority
+    });
 
-    console.log(`Widget ${widgetId} moved to ${newPosition}`);
+    // Don't remove and recreate the element - just update its position data
+    // The element will maintain its current fixed positioning from the drag operation
+    // This prevents the widget from disappearing
+    
+    console.log(`Widget ${widgetId} moved to ${newPosition} (position preserved)`);
   }
 }

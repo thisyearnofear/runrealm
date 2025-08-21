@@ -201,6 +201,8 @@ export class MainUI extends BaseService {
       this.trackUserAction('gamefi_toggle_clicked');
     });
 
+
+
     // Action panel
     this.domService.delegate(document.body, '#panel-toggle', 'click', () => {
       this.toggleActionPanel();
