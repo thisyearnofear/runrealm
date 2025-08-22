@@ -153,18 +153,42 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+  min-height: 48px;
+}
+
+.control-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s ease;
+}
+
+.control-btn:hover::before {
+  left: 100%;
 }
 
 .control-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
 .control-btn:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.98);
+  transition: all 0.1s ease;
+}
+
+.control-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.3);
 }
 
 .control-btn.primary {
@@ -209,39 +233,104 @@
   font-size: 12px;
 }
 
-/* Feedback */
+/* Enhanced Feedback */
 .run-feedback {
   margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
+  padding: 0;
+  border-radius: 12px;
+  font-size: 13px;
   text-align: center;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 16px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
-.run-feedback.info {
-  background: rgba(23, 162, 184, 0.2);
+.run-feedback.feedback-show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.run-feedback.feedback-hide {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.feedback-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.feedback-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.run-feedback.feedback-show .feedback-content::before {
+  left: 100%;
+}
+
+.feedback-icon {
+  font-size: 16px;
+  animation: feedbackIconBounce 0.4s ease;
+}
+
+.feedback-text {
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.run-feedback.info .feedback-content {
+  background: linear-gradient(135deg, rgba(23, 162, 184, 0.2), rgba(13, 202, 240, 0.15));
   color: #17a2b8;
   border: 1px solid rgba(23, 162, 184, 0.3);
+  box-shadow: 0 2px 8px rgba(23, 162, 184, 0.1);
 }
 
-.run-feedback.success {
-  background: rgba(40, 167, 69, 0.2);
+.run-feedback.success .feedback-content {
+  background: linear-gradient(135deg, rgba(40, 167, 69, 0.2), rgba(32, 201, 151, 0.15));
   color: #28a745;
   border: 1px solid rgba(40, 167, 69, 0.3);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.1);
 }
 
-.run-feedback.warning {
-  background: rgba(255, 193, 7, 0.2);
+.run-feedback.warning .feedback-content {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(253, 126, 20, 0.15));
   color: #ffc107;
   border: 1px solid rgba(255, 193, 7, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.1);
 }
 
-.run-feedback.error {
-  background: rgba(220, 53, 69, 0.2);
+.run-feedback.error .feedback-content {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.2), rgba(231, 76, 60, 0.15));
   color: #dc3545;
   border: 1px solid rgba(220, 53, 69, 0.3);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1);
+}
+
+@keyframes feedbackIconBounce {
+  0% {
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* Point Added Animation */
@@ -255,13 +344,15 @@
   100% { transform: scale(1); }
 }
 
-/* Mobile Responsiveness */
+/* Enhanced Mobile Experience */
 @media (max-width: 768px) {
   .run-controls-widget {
     left: 10px;
     right: 10px;
     width: auto;
     bottom: 10px;
+    padding: 16px;
+    border-radius: 20px;
   }
 
   .stat-group {
@@ -271,19 +362,106 @@
 
   .stat-item {
     text-align: left;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .stat-item:active {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(0.98);
   }
 
   .stat-item.primary {
     flex: 1;
+    background: rgba(0, 255, 136, 0.1);
   }
 
   .control-btn {
-    padding: 14px 20px;
+    padding: 16px 24px;
     font-size: 16px;
+    min-height: 56px;
+    border-radius: 16px;
+    font-weight: 700;
   }
 
   .btn-text {
+    font-size: 15px;
+  }
+
+  .btn-icon {
+    font-size: 20px;
+  }
+
+  /* Enhanced touch feedback */
+  .control-btn:active {
+    transform: scale(0.95);
+    transition: all 0.1s ease;
+  }
+
+  /* Larger touch targets for mobile */
+  .feedback-content {
+    padding: 12px 16px;
     font-size: 14px;
+  }
+
+  .territory-indicator {
+    padding: 12px 20px;
+    font-size: 15px;
+    border-radius: 16px;
+  }
+
+  /* Swipe gesture hint */
+  .run-controls-widget::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    opacity: 0.6;
+  }
+
+  /* Stats expansion for mobile */
+  .run-controls-widget.stats-expanded {
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .run-controls-widget.stats-expanded .stat-item {
+    margin-bottom: 8px;
+    padding: 12px 16px;
+  }
+
+  .run-controls-widget.stats-expanded .stat-value {
+    font-size: 20px;
+  }
+
+  .run-controls-widget.stats-expanded .stat-label {
+    font-size: 13px;
+  }
+
+  /* Touch ripple effect */
+  .control-btn,
+  .stat-item {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Tooltip fade in animation */
+  @keyframes tooltipFadeIn {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
   }
 }
 

@@ -68,6 +68,9 @@ export class EnhancedRunControls extends BaseService {
     this.subscribe('territory:eligible', (data) => {
       this.showTerritoryEligibleNotification(data);
     });
+
+    // Setup mobile-specific interactions
+    this.setupMobileInteractions();
   }
 
   private createWidget(): void {
@@ -402,14 +405,236 @@ export class EnhancedRunControls extends BaseService {
     const feedbackEl = this.container?.querySelector('#run-feedback');
     if (!feedbackEl) return;
 
-    feedbackEl.className = `run-feedback ${type}`;
-    feedbackEl.textContent = message;
+    // Enhanced feedback with animation and icon
+    feedbackEl.innerHTML = `
+      <div class="feedback-content">
+        <span class="feedback-icon">${this.getFeedbackIcon(type)}</span>
+        <span class="feedback-text">${message}</span>
+      </div>
+    `;
+    feedbackEl.className = `run-feedback ${type} feedback-show`;
 
-    // Auto-hide after 3 seconds
+    // Add haptic feedback for mobile
+    if (type === 'success') {
+      this.hapticFeedback('light');
+    } else if (type === 'error') {
+      this.hapticFeedback('medium');
+    }
+
+    // Auto-hide after 3 seconds with fade out
     setTimeout(() => {
-      feedbackEl.textContent = '';
-      feedbackEl.className = 'run-feedback';
+      feedbackEl.classList.add('feedback-hide');
+      setTimeout(() => {
+        feedbackEl.innerHTML = '';
+        feedbackEl.className = 'run-feedback';
+      }, 300);
     }, 3000);
+  }
+
+  private getFeedbackIcon(type: string): string {
+    const icons = {
+      success: '✅',
+      error: '❌',
+      warning: '⚠️',
+      info: 'ℹ️'
+    };
+    return icons[type as keyof typeof icons] || icons.info;
+  }
+
+  private hapticFeedback(type: 'light' | 'medium' | 'heavy' = 'light'): void {
+    if (!navigator.vibrate) return;
+
+    switch (type) {
+      case 'light':
+        navigator.vibrate(10);
+        break;
+      case 'medium':
+        navigator.vibrate([15, 10, 15]);
+        break;
+      case 'heavy':
+        navigator.vibrate([20, 20, 20]);
+        break;
+    }
+  }
+
+  /**
+   * Setup mobile-specific interactions and gestures
+   */
+  private setupMobileInteractions(): void {
+    if (!this.isMobile()) return;
+
+    // Add swipe gestures for mobile
+    this.setupSwipeGestures();
+
+    // Add long press interactions
+    this.setupLongPressActions();
+
+    // Add visual feedback for touch
+    this.setupTouchFeedback();
+  }
+
+  private isMobile(): boolean {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           window.innerWidth <= 768;
+  }
+
+  private setupSwipeGestures(): void {
+    if (!this.container) return;
+
+    let startY = 0;
+    let startTime = 0;
+
+    this.container.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      startTime = Date.now();
+    }, { passive: true });
+
+    this.container.addEventListener('touchend', (e) => {
+      const endY = e.changedTouches[0].clientY;
+      const endTime = Date.now();
+      const deltaY = startY - endY;
+      const deltaTime = endTime - startTime;
+
+      // Swipe up to expand stats
+      if (deltaY > 50 && deltaTime < 300) {
+        this.expandStats();
+        this.hapticFeedback('light');
+      }
+      // Swipe down to minimize
+      else if (deltaY < -50 && deltaTime < 300) {
+        this.minimizeStats();
+        this.hapticFeedback('light');
+      }
+    }, { passive: true });
+  }
+
+  private setupLongPressActions(): void {
+    if (!this.container) return;
+
+    const buttons = this.container.querySelectorAll('.control-btn');
+
+    buttons.forEach(button => {
+      let pressTimer: number | null = null;
+
+      button.addEventListener('touchstart', () => {
+        pressTimer = window.setTimeout(() => {
+          this.showButtonTooltip(button as HTMLElement);
+          this.hapticFeedback('medium');
+        }, 500);
+      });
+
+      button.addEventListener('touchend', () => {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+      });
+
+      button.addEventListener('touchcancel', () => {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+      });
+    });
+  }
+
+  private setupTouchFeedback(): void {
+    if (!this.container) return;
+
+    // Add ripple effect on touch
+    this.container.addEventListener('touchstart', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('control-btn') || target.classList.contains('stat-item')) {
+        this.createRippleEffect(target, e.touches[0]);
+      }
+    });
+  }
+
+  private createRippleEffect(element: HTMLElement, touch: Touch): void {
+    const rect = element.getBoundingClientRect();
+    const ripple = document.createElement('div');
+    const size = Math.max(rect.width, rect.height);
+    const x = touch.clientX - rect.left - size / 2;
+    const y = touch.clientY - rect.top - size / 2;
+
+    ripple.style.cssText = `
+      position: absolute;
+      width: ${size}px;
+      height: ${size}px;
+      left: ${x}px;
+      top: ${y}px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      transform: scale(0);
+      animation: ripple 0.6s ease-out;
+      pointer-events: none;
+      z-index: 1;
+    `;
+
+    // Add ripple animation if not already present
+    if (!document.querySelector('#ripple-animation-styles')) {
+      const style = document.createElement('style');
+      style.id = 'ripple-animation-styles';
+      style.textContent = `
+        @keyframes ripple {
+          to {
+            transform: scale(2);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    element.style.position = 'relative';
+    element.style.overflow = 'hidden';
+    element.appendChild(ripple);
+
+    setTimeout(() => {
+      ripple.remove();
+    }, 600);
+  }
+
+  private expandStats(): void {
+    if (!this.container) return;
+    this.container.classList.add('stats-expanded');
+    this.showFeedback('📊 Stats expanded', 'info');
+  }
+
+  private minimizeStats(): void {
+    if (!this.container) return;
+    this.container.classList.remove('stats-expanded');
+    this.showFeedback('📊 Stats minimized', 'info');
+  }
+
+  private showButtonTooltip(button: HTMLElement): void {
+    const buttonText = button.querySelector('.btn-text')?.textContent || 'Action';
+    const tooltip = document.createElement('div');
+
+    tooltip.style.cssText = `
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 1000;
+      margin-bottom: 8px;
+      animation: tooltipFadeIn 0.2s ease;
+    `;
+
+    tooltip.textContent = buttonText;
+    button.style.position = 'relative';
+    button.appendChild(tooltip);
+
+    setTimeout(() => {
+      tooltip.remove();
+    }, 2000);
   }
 
   private getStatusClass(): string {

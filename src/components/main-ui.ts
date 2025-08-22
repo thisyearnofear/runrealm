@@ -16,6 +16,9 @@ import { AnimationService } from '../services/animation-service';
 import { WidgetStateService } from './widget-state-service';
 import { TouchGestureService } from './touch-gesture-service';
 import { MobileWidgetService } from './mobile-widget-service';
+import { StatusIndicator } from './status-indicator';
+import { EnhancedOnboarding } from './enhanced-onboarding';
+import { AccessibilityEnhancer } from './accessibility-enhancer';
 
 export class MainUI extends BaseService {
   private domService: DOMService;
@@ -30,6 +33,9 @@ export class MainUI extends BaseService {
   private widgetStateService: WidgetStateService;
   private touchGestureService: TouchGestureService;
   private mobileWidgetService: MobileWidgetService;
+  private statusIndicator: StatusIndicator;
+  private enhancedOnboarding: EnhancedOnboarding;
+  private accessibilityEnhancer: AccessibilityEnhancer;
   private isGameFiMode: boolean = false;
 
   // Old run tracking state removed - now handled by RunTrackingService
@@ -82,7 +88,45 @@ export class MainUI extends BaseService {
     
     await this.mobileWidgetService.initialize();
     console.log('MainUI: Mobile widget service initialized');
-    
+
+    // Initialize status indicator
+    this.statusIndicator = new StatusIndicator(this.domService, {
+      position: 'top-left',
+      showGPS: true,
+      showConnectivity: true,
+      showBattery: false,
+      autoHide: true,
+      autoHideDelay: 4000
+    });
+    await this.statusIndicator.initialize();
+    console.log('MainUI: Status indicator initialized');
+
+    // Initialize enhanced onboarding
+    this.enhancedOnboarding = new EnhancedOnboarding(
+      this.domService,
+      this.animationService,
+      this.uiService,
+      {
+        showProgress: true,
+        allowSkip: true,
+        autoAdvance: false,
+        hapticFeedback: true
+      }
+    );
+    await this.enhancedOnboarding.initialize();
+    console.log('MainUI: Enhanced onboarding initialized');
+
+    // Initialize accessibility enhancer
+    this.accessibilityEnhancer = new AccessibilityEnhancer(this.domService, {
+      enableKeyboardNavigation: true,
+      enableScreenReaderSupport: true,
+      enableHighContrastMode: true,
+      enableFocusIndicators: true,
+      announceChanges: true
+    });
+    await this.accessibilityEnhancer.initialize();
+    console.log('MainUI: Accessibility enhancer initialized');
+
     await this.widgetSystem.initialize();
     console.log('MainUI: Widget system initialized');
 
@@ -520,17 +564,11 @@ export class MainUI extends BaseService {
     this.domService.delegate(document.body, '#restart-onboarding-widget', 'click', async () => {
       console.log('MainUI: Restarting onboarding...');
 
-      // Clear all onboarding-related localStorage
-      localStorage.removeItem('runrealm_onboarding_complete');
-      localStorage.removeItem('runrealm_onboarding_in_progress');
-      localStorage.removeItem('runrealm_onboarding_step');
-      localStorage.removeItem('runrealm_welcomed');
-
       // Add visual feedback
       const button = document.getElementById('restart-onboarding-widget');
       if (button) {
         const originalText = button.textContent;
-        button.textContent = '🔄 Restarting...';
+        button.textContent = '🔄 Starting...';
         button.style.opacity = '0.6';
 
         setTimeout(() => {
@@ -539,82 +577,8 @@ export class MainUI extends BaseService {
         }, 1000);
       }
 
-      // Restart the onboarding service
-      try {
-        const onboardingConfig = {
-          steps: [
-            {
-              id: 'welcome',
-              title: 'Welcome to RunRealm!',
-              description: 'Claim, trade, and defend real-world running territories as NFTs. Let\'s get you started!',
-              targetElement: '#mapbox-container',
-              position: 'bottom' as const
-            },
-            {
-              id: 'location-setup',
-              title: 'Set Your Location',
-              description: 'Click the location button to set your current position and see nearby territories.',
-              targetElement: '#location-btn',
-              position: 'bottom' as const
-            },
-            {
-              id: 'gamefi-intro',
-              title: 'Enable GameFi Mode',
-              description: 'Toggle GameFi mode to start earning rewards and claiming territories as NFTs.',
-              targetElement: '#gamefi-toggle',
-              position: 'bottom' as const
-            },
-            {
-              id: 'ai-coach-intro',
-              title: 'Meet Your AI Coach',
-              description: 'Get personalized route suggestions and running tips from our AI coach.',
-              targetElement: '.widget[data-widget-id="ai-coach"]',
-              position: 'right' as const
-            },
-            {
-              id: 'map-interaction',
-              title: 'Plan Your Route',
-              description: 'Click on the map to add waypoints and plan your running route.',
-              targetElement: '#mapbox-container',
-              position: 'top' as const
-            }
-          ],
-          allowSkip: true,
-          showProgress: true
-        };
-
-        // Try multiple ways to access the onboarding service
-        let onboardingService = null;
-
-        // Method 1: Try the global RunRealm object
-        const app = (window as any).RunRealm || (window as any).runRealmApp;
-        if (app && app.getOnboardingService) {
-          onboardingService = app.getOnboardingService();
-        }
-
-        // Method 2: Try direct property access
-        if (!onboardingService && app && app.onboarding) {
-          onboardingService = app.onboarding;
-        }
-
-        // Method 3: Create a simple onboarding experience if service not available
-        if (onboardingService) {
-          try {
-            await onboardingService.start(onboardingConfig);
-            console.log('MainUI: Onboarding restarted successfully');
-            this.showToast('🎓 Tutorial started! Follow the guided tour.', 'success');
-          } catch (error) {
-            console.error('MainUI: Failed to start onboarding service:', error);
-            this.createSimpleOnboarding();
-          }
-        } else {
-          console.log('MainUI: Onboarding service not available, creating simple tutorial');
-          this.createSimpleOnboarding();
-        }
-      } catch (error) {
-        console.error('MainUI: Failed to restart onboarding:', error);
-        this.showWelcomeTooltips();
-      }
+      // Use enhanced onboarding restart method
+      this.enhancedOnboarding.restartOnboarding();
     });
 
     // GameFi toggle from settings
@@ -741,13 +705,17 @@ export class MainUI extends BaseService {
    * Show welcome experience for new users
    */
   private showWelcomeExperience(): void {
-    // Check if user is new
+    // Check if user is new or wants to see onboarding
     const isNewUser = !localStorage.getItem('runrealm_welcomed');
-    
-    if (isNewUser) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceOnboarding = urlParams.get('onboarding') === 'true' || urlParams.get('onboarding') === 'reset';
+
+    if (isNewUser || forceOnboarding) {
       setTimeout(() => {
-        this.showWelcomeTooltips();
-        localStorage.setItem('runrealm_welcomed', 'true');
+        this.enhancedOnboarding.startOnboarding();
+        if (isNewUser) {
+          localStorage.setItem('runrealm_welcomed', 'true');
+        }
       }, 1500);
     }
   }
