@@ -399,10 +399,33 @@ export class TerritoryService extends BaseService {
    * Submit territory to blockchain
    */
   private async submitTerritoryToBlockchain(territoryData: any): Promise<string> {
-    // This would make a real blockchain transaction
-    // For now, return a mock transaction hash
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
-    return `0x${Math.random().toString(16).substr(2, 64)}`;
+    try {
+      // Use the enhanced ZetaChain service for cross-chain territory claiming
+      const enhancedZetaChainService = (window as any).runRealmApp?.enhancedZetaChainService;
+
+      if (!enhancedZetaChainService) {
+        throw new Error('ZetaChain service not available');
+      }
+
+      // Prepare territory claim request
+      const claimRequest = {
+        geohash: territoryData.geohash,
+        difficulty: territoryData.difficulty || 1,
+        distance: territoryData.distance || 0,
+        landmarks: territoryData.landmarks || [],
+        sourceChain: territoryData.sourceChain || 7001 // Default to ZetaChain testnet
+      };
+
+      // Submit the territory claim to blockchain
+      const txHash = await enhancedZetaChainService.claimTerritoryAcrossChains(claimRequest);
+
+      console.log('Territory submitted to blockchain successfully:', txHash);
+      return txHash;
+
+    } catch (error) {
+      console.error('Failed to submit territory to blockchain:', error);
+      throw new Error(`Blockchain submission failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**

@@ -218,28 +218,8 @@ export class PerformanceService {
     }
   }
 
-  // Bundle splitting helpers
-  async loadChunk(chunkName: string): Promise<any> {
-    try {
-      switch (chunkName) {
-        case 'mobile':
-          // return await import('../mobile-optimizations');
-          throw new Error('Mobile optimizations not implemented');
-        case 'onboarding':
-          // return await import('../mobile-onboarding');
-          throw new Error('Mobile onboarding not implemented');
-        case 'advanced-features':
-          // Load advanced features only when needed
-          // return await import('../advanced-features');
-          throw new Error('Advanced features not implemented');
-        default:
-          throw new Error(`Unknown chunk: ${chunkName}`);
-      }
-    } catch (error) {
-      console.error(`Failed to load chunk ${chunkName}:`, error);
-      throw error;
-    }
-  }
+  // Bundle splitting helpers - removed unimplemented chunk loading
+  // Dynamic imports are handled by webpack automatically
 
   // Performance metrics reporting
   getMetrics(): Record<string, number> {

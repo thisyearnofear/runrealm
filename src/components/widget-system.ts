@@ -87,13 +87,21 @@ export class WidgetSystem extends BaseService {
         // Update widget based on state changes
         widget.minimized = data.state.minimized;
         widget.position = data.state.position;
-        
+
         // Update UI if widget element exists
         const element = this.getWidgetElement(data.widgetId);
         if (element) {
           this.updateWidgetDisplayImproved(widget);
         }
       }
+    });
+
+    // Subscribe to widget content updates
+    this.subscribe('widget:updateContent', (data: { widgetId: string; content: string; loading?: boolean; success?: boolean }) => {
+      this.updateWidget(data.widgetId, data.content, {
+        loading: data.loading,
+        success: data.success
+      });
     });
     
     this.safeEmit('service:initialized', { service: 'WidgetSystem', success: true });

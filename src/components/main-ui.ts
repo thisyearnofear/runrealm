@@ -6,7 +6,7 @@
 import { BaseService } from '../core/base-service';
 import { DOMService } from '../services/dom-service';
 import { LocationService } from '../services/location-service';
-import { WalletConnection } from './wallet-connection';
+
 import { UIService } from '../services/ui-service';
 import { GameFiUI } from './gamefi-ui';
 import { WidgetSystem, Widget } from './widget-system';
@@ -19,11 +19,18 @@ import { MobileWidgetService } from './mobile-widget-service';
 import { StatusIndicator } from './status-indicator';
 import { EnhancedOnboarding } from './enhanced-onboarding';
 import { AccessibilityEnhancer } from './accessibility-enhancer';
+import { WalletWidget } from './wallet-widget';
+import { TransactionStatus } from './transaction-status';
+import { RewardSystemUI } from './reward-system-ui';
+import { EnhancedZetaChainService } from '../services/enhanced-zetachain-service';
+import { Web3Service } from '../services/web3-service';
+import { ConfigService } from '../services/config-service';
+import { ContractService } from '../services/contract-service';
 
 export class MainUI extends BaseService {
   private domService: DOMService;
   private locationService: LocationService;
-  private walletConnection: WalletConnection;
+
   private uiService: UIService;
   private gamefiUI: GameFiUI;
   private widgetSystem: WidgetSystem;
@@ -36,6 +43,13 @@ export class MainUI extends BaseService {
   private statusIndicator: StatusIndicator;
   private enhancedOnboarding: EnhancedOnboarding;
   private accessibilityEnhancer: AccessibilityEnhancer;
+  private walletWidget: WalletWidget;
+  private transactionStatus: TransactionStatus;
+  private rewardSystemUI: RewardSystemUI;
+  private enhancedZetaChainService: EnhancedZetaChainService;
+  private contractService: ContractService;
+  private web3Service: Web3Service;
+  private configService: ConfigService;
   private isGameFiMode: boolean = false;
 
   // Old run tracking state removed - now handled by RunTrackingService
@@ -43,16 +57,20 @@ export class MainUI extends BaseService {
   constructor(
     domService: DOMService,
     locationService: LocationService,
-    walletConnection: WalletConnection,
+    walletWidget: WalletWidget,
     uiService: UIService,
-    gamefiUI: GameFiUI
+    gamefiUI: GameFiUI,
+    web3Service: Web3Service,
+    configService: ConfigService
   ) {
     super();
     this.domService = domService;
     this.locationService = locationService;
-    this.walletConnection = walletConnection;
+    this.walletWidget = walletWidget;
     this.uiService = uiService;
     this.gamefiUI = gamefiUI;
+    this.web3Service = web3Service;
+    this.configService = configService;
     this.dragService = new DragService();
     this.visibilityService = new VisibilityService();
     this.animationService = new AnimationService();
@@ -127,6 +145,66 @@ export class MainUI extends BaseService {
     await this.accessibilityEnhancer.initialize();
     console.log('MainUI: Accessibility enhancer initialized');
 
+    // Initialize wallet widget
+    this.walletWidget = new WalletWidget(
+      this.domService,
+      this.uiService,
+      this.animationService,
+      this.web3Service
+    );
+    await this.walletWidget.initialize();
+    console.log('MainUI: Wallet widget initialized');
+
+    // Initialize transaction status tracker
+    this.transactionStatus = new TransactionStatus(
+      this.domService,
+      this.uiService,
+      this.animationService,
+      {
+        showInToast: true,
+        showInModal: false,
+        autoHide: true,
+        autoHideDelay: 8000,
+        showGasInfo: true
+      }
+    );
+    await this.transactionStatus.initialize();
+    console.log('MainUI: Transaction status tracker initialized');
+
+    // Initialize reward system UI
+    this.rewardSystemUI = new RewardSystemUI(
+      this.domService,
+      this.uiService,
+      this.animationService,
+      this.web3Service
+    );
+    await this.rewardSystemUI.initialize();
+    console.log('MainUI: Reward system UI initialized');
+
+    // Initialize contract service
+    this.contractService = new ContractService(
+      this.web3Service,
+      this.configService
+    );
+    await this.contractService.initialize();
+    console.log('MainUI: Contract service initialized');
+
+    // Initialize enhanced ZetaChain service
+    this.enhancedZetaChainService = new EnhancedZetaChainService(
+      this.web3Service,
+      this.uiService,
+      this.configService,
+      this.contractService
+    );
+    await this.enhancedZetaChainService.initialize();
+    console.log('MainUI: Enhanced ZetaChain service initialized');
+
+    // Make enhanced ZetaChain service available globally for territory service
+    if (typeof window !== 'undefined') {
+      (window as any).runRealmApp = (window as any).runRealmApp || {};
+      (window as any).runRealmApp.enhancedZetaChainService = this.enhancedZetaChainService;
+    }
+
     await this.widgetSystem.initialize();
     console.log('MainUI: Widget system initialized');
 
@@ -195,7 +273,7 @@ export class MainUI extends BaseService {
       position: 'top-right',
       minimized: true, // Start minimized
       priority: 9,
-      content: this.getWalletContent()
+      content: this.walletWidget.getWidgetContent()
     });
   }
 
@@ -821,7 +899,7 @@ export class MainUI extends BaseService {
         </div>
       `;
     } else {
-      content = this.getWalletContent();
+      content = this.walletWidget.getWidgetContent();
     }
 
     this.widgetSystem.updateWidget('wallet-info', content);
@@ -939,25 +1017,7 @@ export class MainUI extends BaseService {
     `;
   }
 
-  /**
-   * Generate content for wallet widget
-   */
-  private getWalletContent(): string {
-    return `
-      <div class="widget-stat">
-        <span class="widget-stat-label">Status</span>
-        <span class="widget-stat-value" id="wallet-status-text">Not Connected</span>
-      </div>
-      <div class="widget-buttons">
-        <button class="widget-button" id="connect-wallet-btn">
-          🔗 Connect Wallet
-        </button>
-      </div>
-      <div class="widget-tip">
-        💰 Connect to earn $REALM tokens and claim territories
-      </div>
-    `;
-  }
+
 
   /**\n   * Create GameFi widgets when GameFi mode is enabled\n   */
   private createGameFiWidgets(): void {

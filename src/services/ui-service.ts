@@ -39,19 +39,17 @@ export class UIService {
   private setupEventListeners(): void {
     // Listen to app events and update UI accordingly
     this.eventBus.on('run:pointAdded', (data) => {
-      this.updateDistanceDisplay(data.totalDistance);
-      // Run controls are now handled by MainUI component
+      // Distance display is now handled by MainUI component
       this.eventBus.emit('ui:showRunControls', {});
     });
 
     this.eventBus.on('run:cleared', () => {
-      // Run controls are now handled by MainUI component
+      // Run controls and distance display are now handled by MainUI component
       this.eventBus.emit('ui:hideRunControls', {});
-      this.updateDistanceDisplay(0);
     });
 
     this.eventBus.on('ui:unitsToggled', (data) => {
-      this.updateUnitsDisplay(data.useMetric);
+      // Units display is now handled by MainUI component
     });
   }
 
@@ -84,95 +82,19 @@ export class UIService {
 
   private setupMobileOptimizations(): void {
     const { isMobile, enableHaptics } = this.config.getConfig().ui;
-    
+
     if (!isMobile) return;
 
-    // Add haptic feedback
+    // Add haptic feedback - this is the only mobile optimization UIService should handle
     if (enableHaptics) {
       const cleanup = this.dom.delegate(document.body, 'button, .map-overlay', 'click', () => {
         this.hapticFeedback('light');
       });
       this.cleanupFunctions.push(cleanup);
     }
-
-    // Mobile UI is now handled by MainUI component
   }
 
-  // Removed setupMobileUI and createMobileActionBar - now handled by MainUI
 
-  private handleMobileAction(action: string): void {
-    switch (action) {
-      case 'undo':
-        this.eventBus.emit('run:pointRemoved', { totalDistance: 0 });
-        break;
-      case 'clear':
-        if (confirm('Clear the entire route?')) {
-          this.eventBus.emit('run:cleared', {});
-        }
-        break;
-      case 'share':
-        this.shareRoute();
-        break;
-    }
-  }
-
-  private optimizeForMobile(): void {
-    // Add mobile-specific styles
-    const style = this.dom.createElement('style', {
-      textContent: `
-        .mobile-action-bar {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
-          padding: 12px 16px;
-          display: flex;
-          justify-content: space-around;
-          align-items: center;
-          box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-          z-index: 100;
-          border-radius: 20px 20px 0 0;
-        }
-
-        .mobile-action-btn {
-          background: var(--primary-green);
-          border: none;
-          border-radius: 50%;
-          width: 56px;
-          height: 56px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 20px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-          transition: all 0.2s ease;
-          cursor: pointer;
-        }
-
-        .mobile-action-btn.secondary {
-          background: rgba(255, 255, 255, 0.9);
-          color: #333;
-          width: 48px;
-          height: 48px;
-          font-size: 18px;
-        }
-
-        .mobile-action-btn:active {
-          transform: scale(0.95);
-        }
-
-        @media (min-width: 769px) {
-          .mobile-action-bar {
-            display: none;
-          }
-        }
-      `,
-      parent: document.head
-    });
-  }
 
   // Enhanced toast system with better UX and animations
   showToast(message: string, options: Partial<ToastOptions> = {}): void {
@@ -599,23 +521,7 @@ export class UIService {
     }, 300);
   }
 
-  // Distance display
-  updateDistanceDisplay(distance: number): void {
-    const useMetric = this.getCurrentUnits();
-    // This would use the existing distance formatter
-    // Implementation depends on existing distance formatting logic
-  }
-
-  private getCurrentUnits(): boolean {
-    // Get from preferences service
-    return true; // placeholder
-  }
-
-  updateUnitsDisplay(useMetric: boolean): void {
-    // Update units in the UI
-  }
-
-  // Run controls are now handled by MainUI component
+  // Distance display and run controls are now handled by MainUI component
 
   // Modal management
   closeAllModals(): void {

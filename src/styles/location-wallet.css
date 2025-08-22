@@ -251,99 +251,11 @@
   gap: 8px;
 }
 
-.wallet-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 900;
-  padding: 20px;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
+/* Wallet modal styles moved to wallet-widget.ts to avoid duplication */
 
-.wallet-modal {
-  background: white;
-  border-radius: 20px;
-  padding: 32px;
-  max-width: 480px;
-  width: 100%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
-  z-index: 1000;
-}
+/* Duplicate wallet modal styles removed - now handled by wallet-widget.ts */
 
-.wallet-modal .modal-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.wallet-modal .modal-header h3 {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-
-.wallet-modal .modal-header p {
-  color: #666;
-  margin: 0;
-}
-
-.wallet-providers {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.wallet-provider {
-  display: flex;
-  align-items: center;
-  padding: 16px;
-  border: 2px solid #f0f0f0;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.wallet-provider:hover {
-  border-color: #2196F3;
-  background-color: #f8f9fa;
-}
-
-.wallet-provider.not-installed {
-  opacity: 0.6;
-}
-
-.provider-icon {
-  font-size: 32px;
-  margin-right: 16px;
-}
-
-.provider-info {
-  flex: 1;
-}
-
-.provider-name {
-  font-weight: 600;
-  font-size: 16px;
-  color: #333;
-}
-
-.provider-description {
-  font-size: 14px;
-  color: #666;
-  margin-top: 4px;
-}
-
-.provider-action {
-  margin-left: 16px;
-}
+/* Wallet provider styles removed - duplicated in wallet-widget.ts */
 
 .connect-provider-btn,
 .install-provider-btn {

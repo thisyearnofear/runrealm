@@ -26,7 +26,7 @@ import { NextSegmentService } from '../next-segment-service';
 import { getStyleById } from '../utils/map-style';
 import { GeocodingService } from '../geocoding-service';
 import { LocationService } from '../services/location-service';
-import { WalletConnection } from '../components/wallet-connection';
+import { WalletWidget } from '../components/wallet-widget';
 import { MainUI } from '../components/main-ui';
 
 // Type definitions for Mapbox
@@ -54,7 +54,7 @@ export class RunRealmApp {
   private web3: Web3Service;
   private gamefiUI: GameFiUI;
   private locationService: LocationService;
-  private walletConnection: WalletConnection;
+  private walletWidget: WalletWidget;
   private geocodingService: GeocodingService;
   private mainUI: MainUI;
 
@@ -135,7 +135,7 @@ export class RunRealmApp {
 
     // Initialize existing services
     this.preferenceService = new PreferenceService();
-    // Note: geocodingService, locationService, walletConnection, and mainUI
+    // Note: geocodingService, locationService, walletWidget, and mainUI
     // are now initialized after runtime tokens are loaded
   }
 
@@ -149,15 +149,17 @@ export class RunRealmApp {
       this.preferenceService,
       this.dom
     );
-    this.walletConnection = new WalletConnection(this.dom, this.web3);
+    this.walletWidget = new WalletWidget(this.dom, this.ui, this.animationService, this.web3);
 
     // Initialize main UI (replaces fragmented UI systems)
     this.mainUI = new MainUI(
       this.dom,
       this.locationService,
-      this.walletConnection,
+      this.walletWidget,
       this.ui,
-      this.gamefiUI
+      this.gamefiUI,
+      this.web3,
+      this.configService
     );
   }
 
@@ -401,7 +403,7 @@ export class RunRealmApp {
       // Initialize Web3 Service (if enabled)
       if (this.config.isWeb3Enabled()) {
         await this.web3.initialize();
-        await this.walletConnection.initialize();
+        await this.walletWidget.initialize();
       }
 
       // Initialize AI service AFTER web3/config is fully loaded
@@ -910,8 +912,8 @@ export class RunRealmApp {
 
   // Wallet connection methods
   showWalletModal(): void {
-    if (this.walletConnection) {
-      this.walletConnection.showWalletModal();
+    if (this.walletWidget) {
+      this.walletWidget.showWalletModal();
     }
   }
 
