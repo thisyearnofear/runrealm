@@ -122,6 +122,12 @@ export class AnimationService {
    * Leverages existing infrastructure while providing AI-specific visualization
    */
   public setAIRoute(coordinates: number[][], style: any = {}, metadata: any = {}) {
+    // Safety check: ensure map is ready
+    if (!this.map || !this.map.isStyleLoaded()) {
+      console.warn('AnimationService: Map not ready for AI route visualization');
+      return;
+    }
+
     const sourceId = 'ai-route';
     const layerId = 'ai-route-line';
 
@@ -226,6 +232,12 @@ export class AnimationService {
    * Leverages existing marker infrastructure
    */
   public setAIWaypoints(waypoints: any[], routeMetadata: any = {}) {
+    // Safety check: ensure map is ready
+    if (!this.map || !this.map.isStyleLoaded()) {
+      console.warn('AnimationService: Map not ready for AI waypoint visualization');
+      return;
+    }
+
     // Clear existing waypoints first
     this.clearAIWaypoints();
 
@@ -266,7 +278,14 @@ export class AnimationService {
       });
 
       // Create and add marker to map
-      const marker = new (this.mapboxgl as any).Marker(markerElement)
+      // Use the global mapboxgl from the map instance
+      const mapboxgl = (window as any).mapboxgl || (this.map as any).mapboxgl;
+      if (!mapboxgl) {
+        console.warn('AnimationService: Mapbox GL not available for marker creation');
+        return;
+      }
+
+      const marker = new mapboxgl.Marker(markerElement)
         .setLngLat(waypoint.coordinates)
         .addTo(this.map);
 

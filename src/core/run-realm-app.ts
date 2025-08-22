@@ -118,6 +118,9 @@ export class RunRealmApp {
     // Initialize new services
     this.animationService = AnimationService.getInstance();
     this.onboardingService = OnboardingService.getInstance();
+
+    // Defer AI route handlers setup until after full initialization
+    // This will be called from the main initialization flow
     this.navigationService = NavigationService.getInstance();
     this.progressionService = ProgressionService.getInstance();
 
@@ -258,11 +261,75 @@ export class RunRealmApp {
         (window as any).RunRealm = (window as any).RunRealm || {};
         (window as any).RunRealm.mainUI = this.mainUI;
         (window as any).RunRealm.map = this.map;
+        (window as any).RunRealm.animationService = this.animationService;
+        (window as any).RunRealm.eventBus = this.eventBus;
+
+        // Add debug method for testing route visualization
+        (window as any).testRouteVisualization = () => {
+          console.log('🧪 Testing route visualization...');
+          const testCoordinates = [
+            [36.8219, -1.2921], // Nairobi center
+            [36.8250, -1.2900], // Northeast
+            [36.8280, -1.2880], // Further northeast
+            [36.8250, -1.2850], // North
+            [36.8219, -1.2921]  // Back to start
+          ];
+
+          console.log('🧪 Test coordinates:', testCoordinates);
+
+          // Test direct AnimationService call
+          if (this.animationService && this.animationService.setAIRoute) {
+            console.log('🧪 Calling AnimationService.setAIRoute directly...');
+            this.animationService.setAIRoute(testCoordinates, {
+              color: '#ff0000',
+              width: 6,
+              opacity: 1.0,
+              dashArray: [10, 5]
+            }, { test: true });
+          } else {
+            console.error('🧪 AnimationService not available');
+          }
+
+          // Test EventBus emission
+          if (this.eventBus && this.eventBus.emit) {
+            console.log('🧪 Emitting ai:routeVisualize event...');
+            this.eventBus.emit('ai:routeVisualize', {
+              coordinates: testCoordinates,
+              type: 'test',
+              style: {
+                color: '#0000ff',
+                width: 4,
+                opacity: 0.8,
+                dashArray: [5, 5]
+              },
+              metadata: { test: true }
+            });
+          } else {
+            console.error('🧪 EventBus not available');
+          }
+        };
+
+        console.log('🧪 Debug method available: testRouteVisualization()');
       }
 
       this.loadSavedRun();
       this.initializeNavigation();
       this.initializeOnboarding();
+
+      // Ensure AnimationService has map reference
+      if (this.animationService && this.map) {
+        this.animationService.map = this.map;
+        console.log('RunRealmApp: AnimationService map reference set');
+      }
+
+      // Set up AI route visualization handlers now that everything is ready
+      try {
+        this.setupAIRouteHandlers();
+      } catch (error) {
+        console.error('RunRealmApp: Failed to setup AI route handlers:', error);
+        // Try alternative setup
+        this.setupAIRouteHandlersFallback();
+      }
 
       console.log('RunRealm application initialized successfully');
     } catch (error) {
@@ -393,9 +460,6 @@ export class RunRealmApp {
     this.map.on('style.load', () => {
       this.animationService.readdRunToMap(this.currentRun);
     });
-
-    // Set up AI route visualization event handlers
-    this.setupAIRouteHandlers();
   }
 
   private handleMapClick(e: any): void {
@@ -574,8 +638,7 @@ export class RunRealmApp {
       });
 
       // Show toast notification
-      const locationName = locationInfo.address || `${locationInfo.lat.toFixed(4)}, ${locationInfo.lng.toFixed(4)}`;
-      this.ui.showToast(`📍 Location set to: ${locationName}`, {
+      this.ui.showToast('📍 Location updated', {
         type: 'success'
       });
 
@@ -780,14 +843,32 @@ export class RunRealmApp {
    * Connects AI service events to map visualization
    */
   private setupAIRouteHandlers(): void {
+    // Safety check: ensure EventBus is properly initialized
+    if (!this.eventBus || typeof this.eventBus.on !== 'function') {
+      console.warn('RunRealmApp: EventBus not ready, skipping AI route handlers setup');
+      console.log('RunRealmApp: EventBus state:', {
+        exists: !!this.eventBus,
+        hasOn: this.eventBus && typeof this.eventBus.on,
+        eventBusType: this.eventBus && this.eventBus.constructor.name
+      });
+      return;
+    }
+
+    console.log('RunRealmApp: Setting up AI route handlers...');
+
     // Handle AI route visualization requests
-    this.eventBus.subscribe('ai:routeVisualize', (data: {
+    this.eventBus.on('ai:routeVisualize', (data: {
       coordinates: number[][];
       type: string;
       style: any;
       metadata: any;
     }) => {
       console.log('RunRealmApp: Visualizing AI route with', data.coordinates.length, 'coordinates');
+
+      // Safety check: ensure AnimationService has map reference
+      if (!this.animationService.map) {
+        this.animationService.map = this.map;
+      }
 
       // Clear any existing AI route
       this.animationService.clearAIRoute();
@@ -802,19 +883,80 @@ export class RunRealmApp {
     });
 
     // Handle route clearing
-    this.eventBus.subscribe('ai:routeClear', () => {
+    this.eventBus.on('ai:routeClear', () => {
       console.log('RunRealmApp: Clearing AI route');
       this.animationService.clearAIRoute();
     });
 
     // Handle waypoint visualization
-    this.eventBus.subscribe('ai:waypointsVisualize', (data: {
+    this.eventBus.on('ai:waypointsVisualize', (data: {
       waypoints: any[];
       routeMetadata: any;
     }) => {
       console.log('RunRealmApp: Visualizing', data.waypoints.length, 'AI waypoints');
+
+      // Safety check: ensure AnimationService has map reference
+      if (!this.animationService.map) {
+        this.animationService.map = this.map;
+      }
+
       this.animationService.setAIWaypoints(data.waypoints, data.routeMetadata);
     });
+  }
+
+  /**
+   * Fallback method to set up AI route handlers without EventBus checks
+   */
+  private setupAIRouteHandlersFallback(): void {
+    console.log('RunRealmApp: Setting up AI route handlers (fallback mode)...');
+
+    // Direct event subscription without safety checks
+    try {
+      // Handle AI route visualization requests
+      this.eventBus.on('ai:routeVisualize', (data: {
+        coordinates: number[][];
+        type: string;
+        style: any;
+        metadata: any;
+      }) => {
+        console.log('RunRealmApp: [Fallback] Visualizing AI route with', data.coordinates?.length || 0, 'coordinates');
+
+        // Safety check: ensure AnimationService has map reference
+        if (!this.animationService.map) {
+          this.animationService.map = this.map;
+        }
+
+        // Clear any existing AI route
+        this.animationService.clearAIRoute();
+
+        // Visualize the new AI route
+        if (data.coordinates && data.coordinates.length > 1) {
+          this.animationService.setAIRoute(data.coordinates, data.style, data.metadata);
+
+          // Optionally fit map to show the entire route
+          this.fitMapToRoute(data.coordinates);
+        }
+      });
+
+      // Handle waypoint visualization
+      this.eventBus.on('ai:waypointsVisualize', (data: {
+        waypoints: any[];
+        routeMetadata: any;
+      }) => {
+        console.log('RunRealmApp: [Fallback] Visualizing', data.waypoints?.length || 0, 'AI waypoints');
+
+        // Safety check: ensure AnimationService has map reference
+        if (!this.animationService.map) {
+          this.animationService.map = this.map;
+        }
+
+        this.animationService.setAIWaypoints(data.waypoints, data.routeMetadata);
+      });
+
+      console.log('RunRealmApp: AI route handlers set up successfully (fallback)');
+    } catch (error) {
+      console.error('RunRealmApp: Fallback setup also failed:', error);
+    }
   }
 
   /**

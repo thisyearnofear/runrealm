@@ -221,8 +221,37 @@ export class AIService extends BaseService {
           goals.priority = data.priority;
         }
 
-        // Best effort current location from LocationService event cache if available on window
-        const currentLocation = (window as any)?.RunRealm?.currentLocation || { lat: 40.7128, lng: -74.0060 };
+        // Get current location from multiple sources
+        let currentLocation = { lat: 40.7128, lng: -74.0060 }; // Default to NYC
+
+        // Try to get from window.RunRealm first
+        if ((window as any)?.RunRealm?.currentLocation) {
+          currentLocation = (window as any).RunRealm.currentLocation;
+        }
+        // Try to get from LocationService
+        else if ((window as any)?.RunRealm?.locationService?.getCurrentLocation) {
+          try {
+            const locationInfo = await (window as any).RunRealm.locationService.getCurrentLocation();
+            if (locationInfo && locationInfo.lat && locationInfo.lng) {
+              currentLocation = { lat: locationInfo.lat, lng: locationInfo.lng };
+            }
+          } catch (error) {
+            console.warn('AIService: Failed to get current location, using default');
+          }
+        }
+        // Try to get from map center as fallback
+        else if ((window as any)?.RunRealm?.map?.getCenter) {
+          try {
+            const center = (window as any).RunRealm.map.getCenter();
+            if (center && center.lat && center.lng) {
+              currentLocation = { lat: center.lat, lng: center.lng };
+            }
+          } catch (error) {
+            console.warn('AIService: Failed to get map center, using default');
+          }
+        }
+
+        console.log('AIService: Using location for route generation:', currentLocation);
 
         // If AI disabled or init failed, synthesize a fallback route and emit failure for UI
         if (!this.isAIEnabled()) {
@@ -254,21 +283,31 @@ export class AIService extends BaseService {
         }
 
         // Emit route ready event with enhanced data for visualization
-        this.safeEmit('ai:routeReady', {
+        const routeData = {
           route: optimization.suggestedRoute.coordinates || [],
           distance: optimization.suggestedRoute.distance,
           duration: Math.round((optimization.suggestedRoute.distance || 0) * 5),
-          waypoints,
+          waypoints: waypoints.map(wp => ({ lat: wp.lat, lng: wp.lng })), // Ensure clean waypoint data
           totalDistance: optimization.suggestedRoute.distance,
           difficulty: optimization.suggestedRoute.difficulty,
           estimatedTime: Math.round((optimization.suggestedRoute.distance || 0) * 5),
           reasoning: optimization.suggestedRoute.reasoning,
           confidence: optimization.confidence
+        };
+        this.safeEmit('ai:routeReady', routeData);
+
+        // Fix coordinate format: AI returns [lat, lng] but Mapbox needs [lng, lat]
+        const mapboxCoordinates = optimization.suggestedRoute.coordinates.map(coord => {
+          if (Array.isArray(coord) && coord.length === 2) {
+            // Swap from [lat, lng] to [lng, lat]
+            return [coord[1], coord[0]];
+          }
+          return coord;
         });
 
         // Emit route visualization event for map integration
         this.safeEmit('ai:routeVisualize', {
-          coordinates: optimization.suggestedRoute.coordinates,
+          coordinates: mapboxCoordinates,
           type: 'ai-suggested',
           style: {
             color: '#00ff88',
@@ -285,8 +324,28 @@ export class AIService extends BaseService {
 
         // Emit waypoint visualization event if waypoints exist
         if (optimization.suggestedRoute.waypoints && optimization.suggestedRoute.waypoints.length > 0) {
+          // Clean waypoint data to avoid circular references and fix coordinates
+          const cleanWaypoints = optimization.suggestedRoute.waypoints.map(wp => {
+            // Fix coordinate format for waypoints too
+            let coordinates = wp.coordinates;
+            if (Array.isArray(coordinates) && coordinates.length === 2) {
+              // Swap from [lat, lng] to [lng, lat]
+              coordinates = [coordinates[1], coordinates[0]];
+            }
+
+            return {
+              coordinates: coordinates,
+              type: wp.type,
+              name: wp.name,
+              description: wp.description,
+              territoryValue: wp.territoryValue,
+              estimatedReward: wp.estimatedReward,
+              claimPriority: wp.claimPriority
+            };
+          });
+
           this.safeEmit('ai:waypointsVisualize', {
-            waypoints: optimization.suggestedRoute.waypoints,
+            waypoints: cleanWaypoints,
             routeMetadata: {
               distance: optimization.suggestedRoute.distance,
               difficulty: optimization.suggestedRoute.difficulty,
@@ -671,16 +730,18 @@ Consider:
 - Creating 4-6 strategic waypoints for territory claiming
 - Time constraints and user context from quick prompt
 
+IMPORTANT: Return coordinates in [latitude, longitude] format (NOT [lng, lat]).
+
 Respond with JSON format:
 {
   "suggestedRoute": {
-    "coordinates": [[lng, lat], ...],
+    "coordinates": [[lat, lng], [lat, lng], ...],
     "distance": number_in_meters,
     "difficulty": number_0_to_100,
     "reasoning": "explanation of route strategy tailored to the specific scenario",
     "waypoints": [
       {
-        "coordinates": [lng, lat],
+        "coordinates": [lat, lng],
         "type": "territory_claim|rest_stop|landmark|strategic",
         "name": "descriptive_waypoint_name",
         "description": "why_this_location_is_strategically_valuable",

@@ -338,9 +338,37 @@ export class MainUI extends BaseService {
 
     this.subscribe('ai:routeFailed', (data: { message: string }) => {
       const errorMessage = data?.message || 'Unknown error occurred';
-      this.uiService.showToast(`AI route failed: ${errorMessage}`, { type: 'error' });
+      this.uiService.showToast('🤖 AI route failed', { type: 'error' });
       const tip = `<div class="widget-tip">🤖 Could not generate a route. ${errorMessage.includes('API key') ? 'Please check your AI configuration.' : 'Try again in a moment or adjust your goals.'}</div>`;
       this.widgetSystem.updateWidget('territory-info', tip);
+    });
+
+    // Handle AI service initialization errors
+    this.subscribe('service:error', (data: { service: string; context: string; error: string }) => {
+      if (data.service === 'AIService') {
+        console.log('MainUI: AI Service error:', data.error);
+        this.hideAILoadingState();
+
+        // Show user-friendly error in AI coach widget
+        const widget = this.widgetSystem.getWidget('ai-coach');
+        if (widget) {
+          const errorHtml = `
+            <div class="widget-tip error animate-in">
+              🤖 AI service unavailable
+              <br><small>Check your API configuration or try again later.</small>
+            </div>
+            <div class="widget-buttons">
+              <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
+                📍 Suggest Route
+              </button>
+              <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>
+                👻 Ghost Runner
+              </button>
+            </div>
+          `;
+          this.widgetSystem.updateWidget('ai-coach', errorHtml);
+        }
+      }
     });
 
     // Handle AI service events
@@ -796,14 +824,14 @@ export class MainUI extends BaseService {
       document.body.classList.add('gamefi-mode');
       this.createGameFiWidgets();
       this.updateGameFiToggle(true);
-      this.uiService.showToast('🎮 GameFi mode enabled! Connect wallet to start earning rewards.', { type: 'success' });
+      this.uiService.showToast('🎮 GameFi enabled', { type: 'success' });
       console.log('MainUI: GameFi widgets created:', this.widgetSystem.getDebugInfo());
     } else {
       // Disable GameFi mode and remove widgets
       document.body.classList.remove('gamefi-mode');
       this.removeGameFiWidgets();
       this.updateGameFiToggle(false);
-      this.uiService.showToast('GameFi mode disabled', { type: 'info' });
+      this.uiService.showToast('🎮 GameFi disabled', { type: 'info' });
       console.log('MainUI: GameFi widgets removed');
     }
   }
@@ -943,7 +971,7 @@ export class MainUI extends BaseService {
     this.safeEmit('run:startRequested', {});
 
     // Provide feedback
-    this.uiService.showToast('▶️ Run started. Your path will be recorded.', { type: 'success' });
+    this.uiService.showToast('▶️ Run started', { type: 'success' });
   }
 
   private handleStopRun(): void {
@@ -964,7 +992,7 @@ export class MainUI extends BaseService {
       const w = this.widgetSystem.getWidget('territory-info');
       if (w && w.minimized) this.widgetSystem.toggleWidget('territory-info');
     } else {
-      this.uiService.showToast('Run saved. Create a loop or meet criteria to claim a territory.', { type: 'info' });
+      this.uiService.showToast('🏁 Run saved', { type: 'info' });
     }
 
     // Reset UI button states
@@ -1296,7 +1324,7 @@ export class MainUI extends BaseService {
       if (currentIndex >= tooltips.length) return;
 
       const tooltip = tooltips[currentIndex];
-      this.showCenteredToast(tooltip.message, currentIndex === 0 ? 'success' : currentIndex === tooltips.length - 1 ? 'success' : 'tutorial');
+      this.uiService.showToast(tooltip.message, { type: currentIndex === 0 ? 'success' : currentIndex === tooltips.length - 1 ? 'success' : 'info' });
 
       currentIndex++;
       if (currentIndex < tooltips.length) {
@@ -1310,177 +1338,9 @@ export class MainUI extends BaseService {
 
 
 
-  /**
-   * Show a centered toast for tutorial messages
-   */
-  private showCenteredToast(message: string, type: 'success' | 'error' | 'info' | 'tutorial' = 'tutorial'): void {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type} toast-centered`;
 
-    const backgroundColor = {
-      success: '#28a745',
-      error: '#dc3545',
-      info: '#007bff',
-      tutorial: 'linear-gradient(135deg, #6f42c1, #007bff)'
-    }[type];
 
-    toast.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: ${backgroundColor};
-      color: white;
-      padding: 20px 32px;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-      z-index: 10000;
-      font-size: 16px;
-      font-weight: 500;
-      max-width: 400px;
-      text-align: center;
-      line-height: 1.4;
-      animation: tutorialSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      pointer-events: auto;
-      cursor: pointer;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-    `;
 
-    toast.textContent = message;
-
-    // Add click to dismiss
-    toast.addEventListener('click', () => {
-      toast.style.animation = 'tutorialSlideOut 0.3s ease-in';
-      setTimeout(() => {
-        if (toast.parentNode) {
-          toast.parentNode.removeChild(toast);
-        }
-      }, 300);
-    });
-
-    document.body.appendChild(toast);
-
-    // Auto-dismiss after 4 seconds for tutorial messages
-    const dismissTime = type === 'tutorial' ? 4000 : 3000;
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.style.animation = 'tutorialSlideOut 0.3s ease-in';
-        setTimeout(() => {
-          if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-          }
-        }, 300);
-      }
-    }, dismissTime);
-
-    // Add tutorial-specific CSS animations
-    if (!document.querySelector('#tutorial-toast-animations')) {
-      const style = document.createElement('style');
-      style.id = 'tutorial-toast-animations';
-      style.textContent = `
-        @keyframes tutorialSlideIn {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(0.8) translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1) translateY(0);
-          }
-        }
-        @keyframes tutorialSlideOut {
-          from {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1) translateY(0);
-          }
-          to {
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(0.9) translateY(-10px);
-          }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  }
-
-  /**
-   * Show a toast notification (regular, top-right)
-   */
-  private showToast(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#007bff'};
-      color: white;
-      padding: 12px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      z-index: 10000;
-      font-size: 14px;
-      max-width: 300px;
-      animation: slideInRight 0.3s ease-out;
-      pointer-events: auto;
-      cursor: pointer;
-    `;
-
-    toast.textContent = message;
-
-    // Add click to dismiss
-    toast.addEventListener('click', () => {
-      toast.style.animation = 'slideOutRight 0.3s ease-in';
-      setTimeout(() => {
-        if (toast.parentNode) {
-          toast.parentNode.removeChild(toast);
-        }
-      }, 300);
-    });
-
-    document.body.appendChild(toast);
-
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.style.animation = 'slideOutRight 0.3s ease-in';
-        setTimeout(() => {
-          if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-          }
-        }, 300);
-      }
-    }, 5000);
-
-    // Add CSS animations if not already present
-    if (!document.querySelector('#toast-animations')) {
-      const style = document.createElement('style');
-      style.id = 'toast-animations';
-      style.textContent = `
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @keyframes slideOutRight {
-          from {
-            transform: translateX(0);
-            opacity: 1;
-          }
-          to {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  }
 
   /**
    * Show loading state for AI actions
@@ -1509,6 +1369,11 @@ export class MainUI extends BaseService {
     `;
 
     this.widgetSystem.updateWidget('ai-coach', loadingHtml);
+
+    // Set a timeout to clear loading state if no response comes back
+    setTimeout(() => {
+      this.clearStuckLoadingState();
+    }, 10000); // 10 second timeout
   }
 
   /**
@@ -1522,13 +1387,49 @@ export class MainUI extends BaseService {
   }
 
   /**
+   * Clear stuck loading state and restore default AI coach content
+   */
+  private clearStuckLoadingState(): void {
+    const widget = this.widgetSystem.getWidget('ai-coach');
+    if (!widget) return;
+
+    // Check if still showing loading state
+    const content = widget.element?.innerHTML || '';
+    if (content.includes('widget-loading')) {
+      console.log('MainUI: Clearing stuck AI loading state');
+      const defaultHtml = `
+        <div class="widget-tip">
+          🤖 AI Coach ready to help!
+          <br><small>Generate routes or compete with ghost runners.</small>
+        </div>
+        <div class="widget-buttons">
+          <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
+            📍 Suggest Route
+          </button>
+          <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>
+            👻 Ghost Runner
+          </button>
+        </div>
+      `;
+      this.widgetSystem.updateWidget('ai-coach', defaultHtml);
+    }
+  }
+
+  /**
    * Add celebration effect for successful AI actions
    */
   private addCelebrationEffect(): void {
     const widget = this.widgetSystem.getWidget('ai-coach');
-    if (!widget) return;
+    if (!widget) {
+      console.warn('MainUI: AI coach widget not found for celebration');
+      return;
+    }
 
     const widgetElement = widget.element;
+    if (!widgetElement || !widgetElement.classList) {
+      console.warn('MainUI: Widget element not found or invalid for celebration');
+      return;
+    }
 
     // Prevent multiple celebrations
     if (widgetElement.classList.contains('celebrating')) return;
@@ -1569,7 +1470,9 @@ export class MainUI extends BaseService {
 
     // Remove celebration class
     setTimeout(() => {
-      widgetElement.classList.remove('celebrating');
+      if (widgetElement && widgetElement.classList) {
+        widgetElement.classList.remove('celebrating');
+      }
     }, 1500);
   }
 

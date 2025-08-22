@@ -1,5 +1,6 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 const webpack = require("webpack");
 require("dotenv").config();
 
@@ -162,6 +163,15 @@ module.exports = (env, argv) => {
               minifyURLs: true,
             }
           : false,
+      }),
+      new CopyWebpackPlugin({
+        patterns: [
+          {
+            from: path.resolve(__dirname, "static"),
+            to: path.resolve(__dirname, "public"),
+            noErrorOnMissing: true,
+          },
+        ],
       }),
       new webpack.DefinePlugin({
         __ENV__: JSON.stringify(exposedEnvVariables),

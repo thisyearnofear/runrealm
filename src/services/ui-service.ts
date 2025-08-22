@@ -174,7 +174,7 @@ export class UIService {
     });
   }
 
-  // Toast system
+  // Toast system - now uses centered notifications for better UX
   showToast(message: string, options: Partial<ToastOptions> = {}): void {
     const defaultOptions: ToastOptions = {
       type: 'info',
@@ -183,27 +183,71 @@ export class UIService {
     };
 
     const finalOptions = { ...defaultOptions, ...options };
-    
+
+    // Use centered toast style for consistency with onboarding
+    this.showCenteredToast(message, finalOptions.type, finalOptions.duration);
+  }
+
+  /**
+   * Show a centered toast notification (consistent with onboarding style)
+   */
+  private showCenteredToast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', duration: number = 3000): void {
     const toast = this.dom.createElement('div', {
-      className: `toast toast-${finalOptions.type}`,
+      className: `toast toast-${type} toast-centered`,
+      style: {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        background: this.getToastBackground(type),
+        color: 'white',
+        padding: '16px 24px',
+        borderRadius: '12px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        zIndex: '2100',
+        fontSize: '14px',
+        fontWeight: '500',
+        maxWidth: '320px',
+        textAlign: 'center',
+        lineHeight: '1.4',
+        animation: 'toastSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        pointerEvents: 'auto',
+        cursor: 'pointer',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        backdropFilter: 'blur(10px)'
+      },
       innerHTML: `
-        <span class="toast-icon">${this.getToastIcon(finalOptions.type)}</span>
-        <span class="toast-message">${message}</span>
-        ${finalOptions.dismissible ? '<button class="toast-close">×</button>' : ''}
+        <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
+          <span class="toast-icon">${this.getToastIcon(type)}</span>
+          <span class="toast-message">${message}</span>
+        </div>
       `,
-      parent: this.getToastContainer()
+      parent: document.body
+    });
+
+    // Add click to dismiss
+    toast.addEventListener('click', () => {
+      this.removeToast(toast);
     });
 
     // Auto-dismiss
-    if (finalOptions.duration > 0) {
-      setTimeout(() => this.removeToast(toast), finalOptions.duration);
+    if (duration > 0) {
+      setTimeout(() => {
+        if (toast.parentNode) {
+          this.removeToast(toast);
+        }
+      }, duration);
     }
+  }
 
-    // Manual dismiss
-    if (finalOptions.dismissible) {
-      const closeBtn = toast.querySelector('.toast-close');
-      closeBtn?.addEventListener('click', () => this.removeToast(toast));
-    }
+  private getToastBackground(type: string): string {
+    const backgrounds = {
+      success: 'linear-gradient(135deg, #28a745, #20c997)',
+      error: 'linear-gradient(135deg, #dc3545, #e74c3c)',
+      warning: 'linear-gradient(135deg, #ffc107, #fd7e14)',
+      info: 'linear-gradient(135deg, #007bff, #6f42c1)'
+    };
+    return backgrounds[type as keyof typeof backgrounds] || backgrounds.info;
   }
 
   private getToastIcon(type: string): string {
@@ -216,30 +260,13 @@ export class UIService {
     return icons[type as keyof typeof icons] || icons.info;
   }
 
-  private getToastContainer(): HTMLElement {
-    let container = this.dom.getElement('toast-container');
-    if (!container) {
-      container = this.dom.createElement('div', {
-        id: 'toast-container',
-        style: {
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: '1000',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          pointerEvents: 'none'
-        },
-        parent: document.body
-      });
-    }
-    return container;
-  }
-
   private removeToast(toast: HTMLElement): void {
-    toast.style.animation = 'slideOutRight 0.3s ease-out';
-    setTimeout(() => toast.remove(), 300);
+    toast.style.animation = 'toastSlideOut 0.3s ease-in';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 300);
   }
 
   // Distance display
@@ -304,9 +331,9 @@ export class UIService {
   private async fallbackShare(url: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(url);
-      this.showToast('Route link copied to clipboard!', { type: 'success' });
+      this.showToast('📋 Link copied', { type: 'success' });
     } catch (error) {
-      this.showToast('Unable to copy link', { type: 'error' });
+      this.showToast('❌ Copy failed', { type: 'error' });
     }
   }
 

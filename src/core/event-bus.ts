@@ -71,6 +71,9 @@ export interface AppEvents extends Web3Events {
   "ai:ghostRunnerRequested": { difficulty?: number };
   'ai:routeReady': { route: any; distance: number; duration: number; waypoints?: any[]; totalDistance?: number; difficulty?: number; estimatedTime?: number };
   "ai:routeFailed": { message: string };
+  "ai:routeVisualize": { coordinates: number[][]; type: string; style: any; metadata: any };
+  "ai:waypointsVisualize": { waypoints: any[]; routeMetadata: any };
+  "ai:routeClear": {};
   "map:focusTerritory": { geohash: string };
   "game:levelUp": { newLevel: number; player: string };
   "game:achievementUnlocked": { achievementId: string; achievement: any; player: string };

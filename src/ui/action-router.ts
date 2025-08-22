@@ -108,9 +108,10 @@ export const ActionRouter = {
         bus.emit('ai:ghostRunnerRequested' as any, normalizeGhostPayload(payload) as any);
         break;
       case 'ai.showRoute':
-        console.log('ActionRouter: Emitting ai:routeVisualize event');
+        console.log('ActionRouter: Emitting ai:routeVisualize event with coordinates:', payload?.coordinates?.length || 0);
+        console.log('ActionRouter: Route coordinates:', payload?.coordinates);
         // Trigger route visualization on map
-        bus.emit('ai:routeVisualize', {
+        const visualizeData = {
           coordinates: payload?.coordinates || [],
           type: 'ai-suggested',
           style: {
@@ -122,7 +123,9 @@ export const ActionRouter = {
           metadata: {
             source: 'user-requested'
           }
-        });
+        };
+        console.log('ActionRouter: Emitting visualization data:', visualizeData);
+        bus.emit('ai:routeVisualize', visualizeData);
         break;
       case 'ai.quickPrompt':
         console.log('ActionRouter: Processing quick prompt:', payload?.type);
