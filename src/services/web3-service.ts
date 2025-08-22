@@ -356,6 +356,13 @@ export class Web3Service extends BaseService {
   }
 
   /**
+   * Check if Web3 service is connected (alias for isWalletConnected)
+   */
+  public isConnected(): boolean {
+    return this.isWalletConnected();
+  }
+
+  /**
    * Check if Web3 wallet is available
    */
   public isWalletAvailable(): boolean {
