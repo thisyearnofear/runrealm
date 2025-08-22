@@ -7,6 +7,9 @@ import { UIService } from '../services/ui-service';
 import { DOMService } from '../services/dom-service';
 import { AIService } from '../services/ai-service';
 import { Web3Service } from '../services/web3-service';
+import { RunTrackingService } from '../services/run-tracking-service';
+import { TerritoryService } from '../services/territory-service';
+import { EnhancedRunControls } from '../components/enhanced-run-controls';
 import { GameFiUI } from '../components/gamefi-ui';
 import TerritoryDashboard from '../components/territory-dashboard';
 
@@ -19,7 +22,7 @@ import { ProgressionService } from '../services/progression-service';
 // Import existing services
 import { PreferenceService } from '../preference-service';
 import { NextSegmentService } from '../next-segment-service';
-import { CurrentRun, RunStart } from '../current-run';
+// Old run model imports removed - now using RunTrackingService
 import { getStyleById } from '../utils/map-style';
 import { GeocodingService } from '../geocoding-service';
 import { LocationService } from '../services/location-service';
@@ -60,6 +63,9 @@ export class RunRealmApp {
   private onboardingService: OnboardingService;
   private navigationService: NavigationService;
   private progressionService: ProgressionService;
+  private runTrackingService: RunTrackingService;
+  private territoryService: TerritoryService;
+  private enhancedRunControls: EnhancedRunControls;
 
   // Existing services (to be gradually refactored)
   private preferenceService: PreferenceService;
@@ -67,7 +73,7 @@ export class RunRealmApp {
 
   // Application state
   private map: Map;
-  private currentRun: CurrentRun | undefined;
+  // currentRun removed - now handled by RunTrackingService
   private isWaiting = false;
   private useMetric: boolean;
   private followRoads: boolean;
@@ -118,6 +124,9 @@ export class RunRealmApp {
     // Initialize new services
     this.animationService = AnimationService.getInstance();
     this.onboardingService = OnboardingService.getInstance();
+    this.runTrackingService = new RunTrackingService();
+    this.territoryService = new TerritoryService();
+    this.enhancedRunControls = new EnhancedRunControls();
 
     // Defer AI route handlers setup until after full initialization
     // This will be called from the main initialization flow
@@ -158,29 +167,17 @@ export class RunRealmApp {
   }
 
   private setupEventHandlers(): void {
-    // Listen to internal events
-    this.eventBus.on('run:pointAdded', (data) => {
-      this.handlePointAdded(data);
-    });
-
-    this.eventBus.on('run:pointRemoved', () => {
-      this.handlePointRemoved();
-    });
-
-    this.eventBus.on('run:cleared', (data) => {
-      this.handleRunCleared(data);
+    // GameFi event handlers
+    this.eventBus.on('territory:claimRequested', (data) => {
+      this.handleTerritoryClaimRequest(data);
     });
 
     this.eventBus.on('ui:unitsToggled', (data) => {
       this.handleUnitsToggled(data.useMetric);
     });
 
-    // GameFi event handlers
-    this.eventBus.on('territory:claimRequested', (data) => {
-      this.handleTerritoryClaimRequest(data);
-    });
-
     // Note: ai:routeRequested is now handled by ActionRouter in MainUI
+    // Note: run events are now handled by RunTrackingService
 
     // Planned route rendering hook -> AnimationService
     this.eventBus.on('run:plannedRouteChanged', (data: { geojson: any }) => {
@@ -208,13 +205,14 @@ export class RunRealmApp {
       this.handleLocationChanged(locationInfo);
     });
 
-    // Progression events
-    this.eventBus.on('run:cleared', (data) => {
-      // Add distance and time to progression
-      if (this.currentRun) {
-        this.progressionService.addDistance(this.currentRun.distance);
-        // Time would be calculated based on actual run time
-        this.progressionService.addTime((data as any).timeSpent || 0);
+    // Progression events - now handled by RunTrackingService
+    this.eventBus.on('run:completed', (data) => {
+      // Add distance and time to progression from RunTrackingService data
+      if (data.distance) {
+        this.progressionService.addDistance(data.distance);
+      }
+      if (data.duration) {
+        this.progressionService.addTime(data.duration);
       }
     });
 
@@ -392,13 +390,20 @@ export class RunRealmApp {
     try {
       // Initialize core services first
       await this.locationService.initialize();
-      
+
+      // Initialize run tracking and territory services
+      await this.runTrackingService.initialize();
+      await this.territoryService.initialize();
+
+      // Initialize enhanced run controls
+      await this.enhancedRunControls.initialize();
+
       // Initialize Web3 Service (if enabled)
       if (this.config.isWeb3Enabled()) {
         await this.web3.initialize();
         await this.walletConnection.initialize();
       }
-      
+
       // Initialize AI service AFTER web3/config is fully loaded
       await this.ai.initializeService();
 
@@ -408,12 +413,40 @@ export class RunRealmApp {
       // Create Territory Dashboard container
       this.initializeTerritoryDashboard();
 
+      // Register services in global registry for cross-service access
+      this.registerServicesGlobally();
+
       console.log('GameFi services initialized');
     } catch (error) {
       console.error('Failed to initialize GameFi services:', error);
       // Continue without GameFi features but show error
       this.ui.showToast('Some GameFi features may not be available', { type: 'warning' });
     }
+  }
+
+  /**
+   * Register services in global registry for cross-service communication
+   */
+  private registerServicesGlobally(): void {
+    // Create global RunRealm namespace if it doesn't exist
+    if (!(window as any).RunRealm) {
+      (window as any).RunRealm = {};
+    }
+
+    // Register services
+    (window as any).RunRealm.services = {
+      LocationService: this.locationService,
+      RunTrackingService: this.runTrackingService,
+      TerritoryService: this.territoryService,
+      EnhancedRunControls: this.enhancedRunControls,
+      Web3Service: this.web3,
+      PreferenceService: this.preferenceService,
+      AIService: this.ai,
+      UIService: this.ui,
+      GameFiUI: this.gamefiUI
+    };
+
+    console.log('Services registered globally for cross-service access');
   }
 
   private initializeTerritoryDashboard(): void {
@@ -458,68 +491,17 @@ export class RunRealmApp {
 
     // Handle style changes
     this.map.on('style.load', () => {
-      this.animationService.readdRunToMap(this.currentRun);
+      // Run re-rendering now handled by RunTrackingService
+      this.animationService.readdRunToMap(null);
     });
   }
 
   private handleMapClick(e: any): void {
-    if (this.isWaiting) return;
+    // Map clicks now handled by RunTrackingService for active runs
+    // This can be used for other map interactions like AI route planning
 
-    this.isWaiting = true;
-
-    try {
-      if (!this.currentRun) {
-        this.startNewRun(e.lngLat);
-      } else {
-        this.addPointToRun(e.lngLat);
-      }
-    } catch (error) {
-      console.error('Error handling map click:', error);
-      this.ui.showToast('Error adding point', { type: 'error' });
-    } finally {
-      this.isWaiting = false;
-    }
-
-    // Save current focus
+    // Save current focus for map state
     this.saveFocus();
-  }
-
-  private startNewRun(lngLat: any): void {
-    const start = new RunStart(lngLat);
-    start.setMarker(this.createMarker(lngLat, true));
-    this.currentRun = new CurrentRun(start);
-
-    this.eventBus.emit('run:started', { startPoint: lngLat });
-    this.eventBus.emit('run:pointAdded', {
-      point: lngLat,
-      totalDistance: this.currentRun.distance
-    });
-
-    this.saveRun();
-  }
-
-  private async addPointToRun(lngLat: any): Promise<void> {
-    if (!this.currentRun) return;
-
-    const previousLngLat = this.currentRun.getLastPosition();
-
-    try {
-      if (this.followRoads) {
-        await this.addSegmentFromDirections(previousLngLat, lngLat);
-      } else {
-        this.addStraightLineSegment(previousLngLat, lngLat);
-      }
-
-      this.eventBus.emit('run:pointAdded', {
-        point: lngLat,
-        totalDistance: this.currentRun.distance
-      });
-
-      this.saveRun();
-    } catch (error) {
-      console.error('Error adding segment:', error);
-      this.ui.showToast('Error calculating route', { type: 'error' });
-    }
   }
 
   private async addSegmentFromDirections(previousLngLat: any, lngLat: any): Promise<void> {
@@ -533,68 +515,15 @@ export class RunRealmApp {
     const segmentEnd = coordinates[coordinates.length - 1];
     const marker = this.createMarker({ lng: segmentEnd[0], lat: segmentEnd[1] }, false);
 
-    this.currentRun!.addSegment(newSegment, marker);
+    // Segment addition now handled by RunTrackingService
   }
 
-  private addStraightLineSegment(previousLngLat: any, lngLat: any): void {
-    const newSegment = this.nextSegmentService.segmentFromStraightLine(previousLngLat, lngLat);
+  // Old run creation methods removed - now handled by RunTrackingService
 
-    if (this.config.getConfig().ui.enableAnimations) {
-      this.animationService.animateSegment(newSegment);
-    }
-
-    const marker = this.createMarker(lngLat, false);
-    this.currentRun!.addSegment(newSegment, marker);
-  }
-
-  private createMarker(position: any, isStart: boolean): any {
-    // This would use the existing marker creation logic
-    // For now, return a placeholder
-    return {
-      position,
-      isStart,
-      remove: () => {} // placeholder
-    };
-  }
-
-  private handlePointAdded(data: any): void {
-    // Update UI through the UI service
-    // The UI service will handle the actual DOM updates
-
-    // GameFi integration: check for nearby territories
-    if (this.gameMode) {
-      this.checkForNearbyTerritories(data.point);
-    }
-  }
-
-  private checkForNearbyTerritories(point: any): void {
-    // Simple mock territory detection based on point location
-    const mockTerritories = this.generateMockTerritories(point);
-
-    if (mockTerritories.length > 0) {
-      // Emit event with nearby territory data
-      this.eventBus.emit('run:pointAdded', {
-        ...point,
-        nearTerritory: mockTerritories[0],
-        totalDistance: this.currentRun?.distance || 0
-      });
-    }
-  }
-
-  private generateMockTerritories(point: any): any[] {
-    // Generate mock territories for demo purposes
-    // In a real app, this would query a backend service
-    if (Math.random() > 0.7) { // 30% chance of finding a territory
-      return [{
-        geohash: `${point.lat.toFixed(4)}_${point.lng.toFixed(4)}`,
-        landmarks: ['Park', 'Bridge', 'Monument'][Math.floor(Math.random() * 3)]
-      }];
-    }
-    return [];
-  }
+  // Old run tracking methods removed - now handled by RunTrackingService and TerritoryService
 
   private async handleTerritoryClaimRequest(data: any): Promise<void> {
-    if (!this.web3 || !this.currentRun) return;
+    if (!this.web3) return;
 
     try {
       // Mock territory claiming - replace with actual contract interaction
@@ -652,41 +581,7 @@ export class RunRealmApp {
     }
   }
 
-  private handlePointRemoved(): void {
-    if (!this.currentRun || this.currentRun.segments.length === 0) return;
-
-    try {
-      this.currentRun.removeLastSegment();
-      this.saveRun();
-
-      this.ui.showToast('Point removed', { type: 'info' });
-    } catch (error) {
-      console.error('Error removing point:', error);
-      this.ui.showToast('Error removing point', { type: 'error' });
-    }
-  }
-
-  private handleRunCleared(data: any): void {
-    if (!this.currentRun) return;
-
-    try {
-      // Clear markers and segments
-      // Clear all segments and markers
-      while (this.currentRun.segments.length > 0) {
-        this.currentRun.removeLastSegment();
-      }
-      // Clear start marker
-      if (this.currentRun.start?.marker) {
-        this.currentRun.start.marker.remove();
-      }
-      this.currentRun = undefined;
-
-      this.preferenceService.saveLastRun('{}');
-      this.ui.showToast('Route cleared', { type: 'info' });
-    } catch (error) {
-      console.error('Error clearing run:', error);
-    }
-  }
+  // Old run event handlers removed - now handled by RunTrackingService
 
   private handleUnitsToggled(useMetric: boolean): void {
     this.useMetric = useMetric;
@@ -708,27 +603,9 @@ export class RunRealmApp {
     }
   }
 
-  private saveRun(): void {
-    if (!this.currentRun) return;
+  // Old saveRun method removed - now handled by RunTrackingService
 
-    try {
-      // This would use existing runToJson logic
-      const runJson = this.serializeRun(this.currentRun);
-      this.preferenceService.saveLastRun(runJson);
-    } catch (error) {
-      console.error('Error saving run:', error);
-    }
-  }
-
-  private serializeRun(run: CurrentRun): string {
-    // This would use the existing runToJson logic
-    // Placeholder implementation
-    return JSON.stringify({
-      start: { lng: 0, lat: 0 },
-      segments: [],
-      distance: run.distance
-    });
-  }
+  // Old run serialization removed - now handled by RunTrackingService
 
   private saveFocus(): void {
     const center = this.map.getCenter();
@@ -829,10 +706,7 @@ export class RunRealmApp {
     }
   }
 
-  // Public API methods
-  getCurrentRun(): CurrentRun | undefined {
-    return this.currentRun;
-  }
+  // Old getCurrentRun method removed - use RunTrackingService.getCurrentRun() instead
 
   getMap(): Map {
     return this.map;
@@ -998,13 +872,7 @@ export class RunRealmApp {
     this.eventBus.emit('ui:unitsToggled', { useMetric: !this.useMetric });
   }
 
-  clearRun(): void {
-    this.eventBus.emit('run:cleared', {});
-  }
-
-  removeLastPoint(): void {
-    this.eventBus.emit('run:pointRemoved', { totalDistance: this.currentRun?.distance || 0 });
-  }
+  // Old run control methods removed - now handled by RunTrackingService via EnhancedRunControls
 
   // Public GameFi API methods
   enableGameMode(): void {

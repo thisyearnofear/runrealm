@@ -5,6 +5,7 @@ import './styles/z-index-system.css';
 import './styles/location-wallet.css';
 import './styles/gamefi-ui.css';
 import './styles/widget-system.css';
+import './styles/enhanced-run-controls.css';
 
 // Filter out noisy browser extension errors and token exposure in production
 if (process.env.NODE_ENV === 'production') {

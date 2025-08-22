@@ -1,3 +1,5 @@
+import * as turf from '@turf/turf';
+
 export class DistanceResult {
   public distance: number;
   public units: string;
@@ -5,10 +7,29 @@ export class DistanceResult {
   public roundedDistance: string;
 }
 
-export function getFormattedDistance(lengthInMeters: number, useMetric: boolean) {
+/**
+ * Calculate distance between two geographic points using Turf.js
+ * @param point1 First point {lat, lng}
+ * @param point2 Second point {lat, lng}
+ * @returns Distance in meters
+ */
+export function calculateDistance(point1: {lat: number, lng: number}, point2: {lat: number, lng: number}): number {
+  const from = turf.point([point1.lng, point1.lat]);
+  const to = turf.point([point2.lng, point2.lat]);
+  return turf.distance(from, to, { units: 'meters' });
+}
+
+/**
+ * Format distance for display
+ * @param lengthInMeters Distance in meters
+ * @param useMetric Whether to use metric units
+ * @returns Formatted distance result
+ */
+export function getFormattedDistance(lengthInMeters: number, useMetric: boolean): DistanceResult {
   let rounded = '';
   let units = '';
   let distance = useMetric ? lengthInMeters : lengthInMeters * .000621371;
+
   if (useMetric) {
     if (distance < 1000) {
       rounded = '' + Math.round(distance);
@@ -29,4 +50,55 @@ export function getFormattedDistance(lengthInMeters: number, useMetric: boolean)
     units: units,
     formatted: `${rounded}${units}`
   } as DistanceResult;
+}
+
+/**
+ * Format speed for display
+ * @param metersPerSecond Speed in m/s
+ * @param useMetric Whether to use metric units
+ * @returns Formatted speed string
+ */
+export function formatSpeed(metersPerSecond: number, useMetric: boolean = true): string {
+  if (useMetric) {
+    const kmh = metersPerSecond * 3.6;
+    return `${kmh.toFixed(1)} km/h`;
+  } else {
+    const mph = metersPerSecond * 2.237;
+    return `${mph.toFixed(1)} mph`;
+  }
+}
+
+/**
+ * Format pace for display
+ * @param metersPerSecond Speed in m/s
+ * @param useMetric Whether to use metric units
+ * @returns Formatted pace string
+ */
+export function formatPace(metersPerSecond: number, useMetric: boolean = true): string {
+  if (metersPerSecond === 0) return '--:--';
+
+  const distanceUnit = useMetric ? 1000 : 1609.344; // meters per km or mile
+  const secondsPerUnit = distanceUnit / metersPerSecond;
+  const minutes = Math.floor(secondsPerUnit / 60);
+  const seconds = Math.floor(secondsPerUnit % 60);
+  const unit = useMetric ? 'km' : 'mi';
+
+  return `${minutes}:${seconds.toString().padStart(2, '0')}/${unit}`;
+}
+
+/**
+ * Format duration for display
+ * @param milliseconds Duration in milliseconds
+ * @returns Formatted duration string (HH:MM:SS or MM:SS)
+ */
+export function formatDuration(milliseconds: number): string {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }

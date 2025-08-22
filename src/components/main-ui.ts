@@ -12,7 +12,7 @@ import { GameFiUI } from './gamefi-ui';
 import { WidgetSystem, Widget } from './widget-system';
 import { DragService } from './drag-service';
 import { VisibilityService } from './visibility-service';
-import { AnimationService } from './animation-service';
+import { AnimationService } from '../services/animation-service';
 import { WidgetStateService } from './widget-state-service';
 import { TouchGestureService } from './touch-gesture-service';
 import { MobileWidgetService } from './mobile-widget-service';
@@ -32,9 +32,7 @@ export class MainUI extends BaseService {
   private mobileWidgetService: MobileWidgetService;
   private isGameFiMode: boolean = false;
 
-  // Run tracking state
-  private isRecording: boolean = false;
-  private lastRenderTs: number = 0;
+  // Old run tracking state removed - now handled by RunTrackingService
 
   constructor(
     domService: DOMService,
@@ -131,16 +129,8 @@ export class MainUI extends BaseService {
    * Create widgets using the widget system
    */
   private createWidgets(): void {
-    // Run Controls Widget (bottom-left)
-    this.widgetSystem.registerWidget({
-      id: 'run-controls',
-      title: 'Run Controls',
-      icon: '🏃‍♂️',
-      position: 'bottom-left',
-      minimized: true, // Start minimized for cleaner default UX
-      priority: 10,
-      content: this.getRunControlsContent()
-    });
+    // Run Controls are now handled by EnhancedRunControls service
+    // (Removed old widget-based run controls to avoid duplication)
 
     // Location Widget (top-left)
     this.widgetSystem.registerWidget({
@@ -218,13 +208,7 @@ export class MainUI extends BaseService {
       this.handleFabAction(action!);
     });
 
-    // Widget button handlers
-    // Run control buttons
-    this.domService.delegate(document.body, '#start-run-btn', 'click', () => this.handleStartRun());
-    this.domService.delegate(document.body, '#save-btn', 'click', () => this.handleStopRun());
-    this.domService.delegate(document.body, '#add-point-btn', 'click', () => this.handleAddPoint());
-    this.domService.delegate(document.body, '#undo-btn', 'click', () => this.handleUndo());
-    this.domService.delegate(document.body, '#clear-btn', 'click', () => this.handleClearRun());
+    // Old run control button handlers removed - now handled by EnhancedRunControls
 
     this.domService.delegate(document.body, '#set-location-btn', 'click', () => {
       this.locationService.getCurrentLocation();
@@ -277,10 +261,7 @@ export class MainUI extends BaseService {
     // Listen for service events
     this.subscribe('location:changed', (locationInfo) => {
       this.updateLocationWidget(locationInfo);
-      // If recording, add point to the current run and update map
-      if (this.isRecording) {
-        this.appendRunPoint(locationInfo.lat, locationInfo.lng, locationInfo.timestamp);
-      }
+      // Location updates now handled by RunTrackingService during active runs
       // Expose last location for AIService fallback access
       (window as any).RunRealm = (window as any).RunRealm || {};
       (window as any).RunRealm.currentLocation = { lat: locationInfo.lat, lng: locationInfo.lng };
@@ -518,14 +499,7 @@ export class MainUI extends BaseService {
       }
     });
 
-    // Handle run controls visibility events from UIService
-    this.subscribe('ui:showRunControls', () => {
-      this.showRunControls();
-    });
-
-    this.subscribe('ui:hideRunControls', () => {
-      this.hideRunControls();
-    });
+    // Run controls visibility events removed - now handled by EnhancedRunControls
   }
 
   /**
@@ -666,12 +640,7 @@ export class MainUI extends BaseService {
       this.widgetSystem.updateWidget('settings', this.getSettingsContent());
     });
 
-    this.domService.delegate(document.body, '#toggle-run-controls', 'change', (e) => {
-      const target = e.target as HTMLInputElement;
-      this.toggleWidgetVisibility('run-controls', target.checked);
-      // Update settings widget to reflect new state
-      this.widgetSystem.updateWidget('settings', this.getSettingsContent());
-    });
+    // Run controls toggle handler removed - now handled by EnhancedRunControls
   }
 
   private getSettingsContent(): string {
@@ -706,11 +675,7 @@ export class MainUI extends BaseService {
             <span class="toggle-slider"></span>
             <span class="toggle-label">🦊 Wallet</span>
           </label>
-          <label class="widget-toggle">
-            <input type="checkbox" id="toggle-run-controls" ${runControlsVisible ? 'checked' : ''}>
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">🏃‍♂️ Run Controls</span>
-          </label>
+          <!-- Run Controls toggle removed - now handled by EnhancedRunControls -->
         </div>
       </div>
 
@@ -952,85 +917,11 @@ export class MainUI extends BaseService {
     // This would create and animate tooltip elements
   }
 
-  // === Run Flow Wiring ===
-  private handleStartRun(): void {
-    if (this.isRecording) return;
-    this.isRecording = true;
+  // Old run flow methods removed - now handled by RunTrackingService and EnhancedRunControls
 
-    // Reset UI button states
-    const addPoint = document.getElementById('add-point-btn') as HTMLElement;
-    const undo = document.getElementById('undo-btn') as HTMLElement;
-    const clear = document.getElementById('clear-btn') as HTMLElement;
-    const save = document.getElementById('save-btn') as HTMLElement;
-    if (addPoint) addPoint.style.display = 'inline-flex';
-    if (undo) undo.style.display = 'inline-flex';
-    if (clear) clear.style.display = 'inline-flex';
-    if (save) save.style.display = 'inline-flex';
 
-    // Reset run state by emitting event or clearing via services if needed
-    this.safeEmit('run:startRequested', {});
 
-    // Provide feedback
-    this.uiService.showToast('▶️ Run started', { type: 'success' });
-  }
-
-  private handleStopRun(): void {
-    if (!this.isRecording) return;
-    this.isRecording = false;
-
-    // Evaluate claimability
-    const claimable = this.computeClaimableRun();
-    if (claimable) {
-      // Enable claim button in territory widget
-      const content = `
-        <div class="widget-tip">🎉 Run complete! Territory may be claimable.</div>
-        <div class="widget-buttons">
-          <button class="widget-button" id="claim-territory-btn">⚡ Claim Territory</button>
-        </div>
-      `;
-      this.widgetSystem.updateWidget('territory-info', content);
-      const w = this.widgetSystem.getWidget('territory-info');
-      if (w && w.minimized) this.widgetSystem.toggleWidget('territory-info');
-    } else {
-      this.uiService.showToast('🏁 Run saved', { type: 'info' });
-    }
-
-    // Reset UI button states
-    const addPoint = document.getElementById('add-point-btn') as HTMLElement;
-    const undo = document.getElementById('undo-btn') as HTMLElement;
-    const clear = document.getElementById('clear-btn') as HTMLElement;
-    const save = document.getElementById('save-btn') as HTMLElement;
-    if (addPoint) addPoint.style.display = 'none';
-    if (undo) undo.style.display = 'none';
-    if (clear) clear.style.display = 'none';
-    if (save) save.style.display = 'none';
-  }
-
-  private handleAddPoint(): void {
-    // For desktop/testing: allow manual point add via map click flow if available
-    // Here we just emit an event; actual map click handler can append the last clicked point
-    this.safeEmit('run:addPointRequested', {});
-  }
-
-  private handleUndo(): void {
-    this.safeEmit('run:undoRequested', {});
-  }
-
-  private handleClearRun(): void {
-    this.safeEmit('run:clearRequested', {});
-    this.uiService.showToast('Run cleared.', { type: 'info' });
-  }
-
-  private appendRunPoint(lat: number, lng: number, timestamp: number): void {
-    // Throttle rendering to ~3fps for performance
-    const now = performance.now();
-    if (now - this.lastRenderTs < 300) return;
-    this.lastRenderTs = now;
-
-    // Update the map drawing via AnimationService API if exposed globally via events
-    this.safeEmit('run:pointAdded', { point: { lat, lng, timestamp }, totalDistance: 0 });
-  }
-
+  // Old computeClaimableRun method - now handled by TerritoryService
   private computeClaimableRun(): boolean {
     try {
       // Minimal heuristic: distance >= 500m and end within 30m of start
@@ -1058,37 +949,7 @@ export class MainUI extends BaseService {
     console.log(`User action: ${action}`);
   }
 
-  /**
-   * Generate content for run controls widget
-   */
-  private getRunControlsContent(): string {
-    return `
-      <div class="widget-buttons">
-        <button class="widget-button" id="start-run-btn">
-          ▶️ Start Run
-        </button>
-        <button class="widget-button secondary" id="add-point-btn" style="display: none;">
-          📍 Add Point
-        </button>
-        <button class="widget-button secondary" id="undo-btn" style="display: none;">
-          ↶ Undo
-        </button>
-        <button class="widget-button secondary" id="clear-btn" style="display: none;">
-          🗑️ Clear
-        </button>
-        <button class="widget-button" id="save-btn" style="display: none;">
-          💾 Save Run
-        </button>
-      </div>
-      <div class="widget-stat">
-        <span class="widget-stat-label">Current Distance</span>
-        <span class="widget-stat-value" id="current-distance">0.00 km</span>
-      </div>
-      <div class="widget-tip">
-        💡 Click on the map to start planning your route
-      </div>
-    `;
-  }
+  // Old run controls content method removed - now handled by EnhancedRunControls
 
   /**
    * Generate content for location widget
@@ -1531,25 +1392,7 @@ export class MainUI extends BaseService {
     `;
   }
 
-  /**
-   * Show run controls by expanding the run-controls widget
-   */
-  private showRunControls(): void {
-    const widget = this.widgetSystem.getWidget('run-controls');
-    if (widget && widget.minimized) {
-      this.widgetSystem.toggleWidget('run-controls');
-    }
-  }
-
-  /**
-   * Hide run controls by minimizing the run-controls widget
-   */
-  private hideRunControls(): void {
-    const widget = this.widgetSystem.getWidget('run-controls');
-    if (widget && !widget.minimized) {
-      this.widgetSystem.toggleWidget('run-controls');
-    }
-  }
+  // Old run controls show/hide methods removed - now handled by EnhancedRunControls
 
   /**
    * Toggle widget visibility (show/hide completely)

@@ -5,32 +5,11 @@
 
 import { AIService } from '../services/ai-service';
 import { Web3Service } from '../services/web3-service';
+import { TerritoryService, Territory } from '../services/territory-service';
 import { EventBus } from '../core/event-bus';
 import { DOMService } from '../services/dom-service';
 
-export interface Territory {
-  geohash: string;
-  owner: string;
-  claimedAt: Date;
-  lastActivity: Date;
-  difficulty: number;
-  estimatedReward: number;
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-  landmarks: string[];
-  chainId: number;
-  originChain: string;
-  crossChainHistory: {
-    chainId: number;
-    chainName: string;
-    transferredAt: Date;
-    transactionHash: string;
-  }[];
-  metadata: {
-    name: string;
-    description: string;
-    imageUrl?: string;
-  };
-}
+// Territory interface is now imported from TerritoryService
 
 export interface PlayerStats {
   realmBalance: number;
@@ -47,6 +26,7 @@ export class TerritoryDashboard {
   private eventBus: EventBus;
   private aiService: AIService;
   private web3Service: Web3Service;
+  private territoryService: TerritoryService | null = null;
   private domService: DOMService;
   private isVisible: boolean = false;
   private territories: Territory[] = [];
@@ -82,12 +62,31 @@ export class TerritoryDashboard {
       parent: parentElement
     });
 
+    // Get TerritoryService from global registry
+    this.territoryService = this.getTerritoryService();
+
+    // Load existing territories
+    this.loadTerritories();
+
     this.render();
   }
 
   private setupEventListeners(): void {
+    // Real TerritoryService events
+    this.eventBus.on('territory:eligible', (data) => {
+      this.handleTerritoryEligible(data);
+    });
+
     this.eventBus.on('territory:claimed', (data) => {
       this.handleTerritoryUpdate(data);
+    });
+
+    this.eventBus.on('territory:preview', (data) => {
+      this.handleTerritoryPreview(data);
+    });
+
+    this.eventBus.on('territory:nearbyUpdated', (data) => {
+      this.handleNearbyTerritories(data);
     });
 
     this.eventBus.on('web3:walletConnected', (data) => {
@@ -248,9 +247,19 @@ export class TerritoryDashboard {
   }
 
   private handleClaimTerritory(): void {
+    // This will be triggered by the TerritoryService when a run is eligible
+    // The actual claiming is handled by the TerritoryService
     this.eventBus.emit('territory:claimRequested', {
-      geohash: `territory_${Date.now()}`,
-      estimatedReward: 25
+      runId: 'current_run' // This should be the actual run ID
+    });
+  }
+
+  /**
+   * Claim a specific territory by ID
+   */
+  public claimTerritory(territoryId: string): void {
+    this.eventBus.emit('territory:claimRequested', {
+      runId: territoryId
     });
   }
 
@@ -319,41 +328,94 @@ export class TerritoryDashboard {
     }
   }
 
-  private handleTerritoryUpdate(data: any): void {
-    // Add or update territory
-    const existingIndex = this.territories.findIndex(t => t.geohash === data.geohash);
+  /**
+   * Get TerritoryService from global registry
+   */
+  private getTerritoryService(): TerritoryService | null {
+    const services = (window as any).RunRealm?.services;
+    return services?.TerritoryService || null;
+  }
 
-    const currentWallet = this.web3Service.getCurrentWallet();
-    const chainId = currentWallet?.chainId || 7001; // Default to ZetaChain
-    const chainName = this.getChainName(chainId);
-
-    const territory: Territory = {
-      geohash: data.geohash,
-      owner: data.owner || 'You',
-      claimedAt: new Date(),
-      lastActivity: new Date(),
-      difficulty: Math.floor(Math.random() * 100),
-      estimatedReward: data.estimatedReward || 25,
-      rarity: this.calculateRarity(),
-      landmarks: data.landmarks || ['Park', 'Street'],
-      chainId: chainId,
-      originChain: chainName,
-      crossChainHistory: [],
-      metadata: {
-        name: `Territory ${data.geohash.substring(0, 8)}`,
-        description: `A strategic running territory claimed on ${chainName}.`,
-        imageUrl: undefined
-      }
-    };
-
-    if (existingIndex >= 0) {
-      this.territories[existingIndex] = territory;
-    } else {
-      this.territories.push(territory);
+  /**
+   * Load territories from TerritoryService
+   */
+  private loadTerritories(): void {
+    if (this.territoryService) {
+      this.territories = this.territoryService.getClaimedTerritories();
+      this.playerStats.territoriesOwned = this.territories.length;
     }
+  }
 
-    this.playerStats.territoriesOwned = this.territories.length;
+  /**
+   * Handle territory eligible event from TerritoryService
+   */
+  private handleTerritoryEligible(data: any): void {
+    // Show territory eligibility notification
+    this.updateAIInsights(`
+      <div class="territory-eligible">
+        <h4>🏆 Territory Eligible!</h4>
+        <p>Your run qualifies for territory claiming.</p>
+        <div class="territory-preview">
+          <strong>${data.territory.metadata.name}</strong><br>
+          Difficulty: ${data.territory.metadata.difficulty}/100<br>
+          Rarity: ${data.territory.metadata.rarity}<br>
+          Estimated Reward: ${data.territory.metadata.estimatedReward} REALM
+        </div>
+        <button onclick="this.claimTerritory('${data.territory.id}')" class="claim-btn">
+          Claim Territory
+        </button>
+      </div>
+    `);
+  }
+
+  /**
+   * Handle territory preview event
+   */
+  private handleTerritoryPreview(data: any): void {
+    // Update the display with territory preview
     this.updateDisplay();
+  }
+
+  /**
+   * Handle nearby territories update
+   */
+  private handleNearbyTerritories(data: any): void {
+    if (data.territories && data.territories.length > 0) {
+      const nearest = data.closest;
+      this.updateAIInsights(`
+        <div class="nearby-territory">
+          <h4>📍 Nearby Territory</h4>
+          <p><strong>${nearest.territory.metadata.name}</strong></p>
+          <p>Distance: ${Math.round(nearest.distance)}m ${nearest.direction}</p>
+          <p>Owner: ${nearest.territory.owner || 'Unclaimed'}</p>
+        </div>
+      `);
+    }
+  }
+
+  private handleTerritoryUpdate(data: any): void {
+    // Territory was successfully claimed
+    if (data.territory) {
+      const existingIndex = this.territories.findIndex(t => t.id === data.territory.id);
+
+      if (existingIndex >= 0) {
+        this.territories[existingIndex] = data.territory;
+      } else {
+        this.territories.push(data.territory);
+      }
+
+      this.playerStats.territoriesOwned = this.territories.length;
+      this.updateDisplay();
+
+      // Show success notification
+      this.updateAIInsights(`
+        <div class="territory-claimed">
+          <h4>🎉 Territory Claimed!</h4>
+          <p><strong>${data.territory.metadata.name}</strong> is now yours!</p>
+          <p>Transaction: ${data.transactionHash?.substring(0, 10)}...</p>
+        </div>
+      `);
+    }
   }
 
   private calculateRarity(): Territory['rarity'] {

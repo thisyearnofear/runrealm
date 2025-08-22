@@ -6,7 +6,15 @@ import length from '@turf/length';
 import * as turfHelpers from '@turf/helpers';
 import { LineString } from 'geojson';
 import { v4 as uuid } from 'uuid';
-import { RunSegment } from './current-run';
+
+// Legacy RunSegment interface for route planning (not GPS tracking)
+export interface RunSegment {
+  id: string;
+  endPoint: LngLat;
+  distance: number;
+  geometry: LineString;
+  fromDirections: boolean;
+}
 
 /**
  * Abstracts out the two means of adding a new segment to a run:

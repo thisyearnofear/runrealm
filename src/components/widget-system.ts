@@ -6,7 +6,7 @@
 import { BaseService } from '../core/base-service';
 import { DOMService } from '../services/dom-service';
 import { DragService } from './drag-service';
-import { AnimationService } from './animation-service';
+import { AnimationService } from '../services/animation-service';
 import { WidgetStateService, WidgetState } from './widget-state-service';
 import { VisibilityService } from './visibility-service';
 
