@@ -153,7 +153,7 @@ export class EnhancedZetaChainService extends BaseService {
   }
 
   private loadUniversalContractAddress(): void {
-    const web3Config = this.configService.getWeb3Config();
+    const web3Config = this.config.getWeb3Config();
     if (web3Config?.zetachain?.contracts?.universalManager) {
       this.universalContractAddress = web3Config.zetachain.contracts.universalManager;
     } else {
