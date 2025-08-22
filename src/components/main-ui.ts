@@ -1032,34 +1032,34 @@ export class MainUI extends BaseService {
       content: this.getPlayerStatsContent()
     });
 
-    // Territory Widget (top-left, high priority)
+    // Territory Widget (bottom-right, high priority)
     this.widgetSystem.registerWidget({
       id: 'territory-info',
       title: 'Territory',
       icon: '🗺️',
-      position: 'top-left',
+      position: 'bottom-right',
       minimized: true,
       priority: 9,
       content: this.getTerritoryContent()
     });
 
-    // Challenges Widget (top-left, medium priority)
+    // Challenges Widget (bottom-left, medium priority)
     this.widgetSystem.registerWidget({
       id: 'challenges',
       title: 'Challenges',
       icon: '⚔️',
-      position: 'top-left',
+      position: 'bottom-left',
       minimized: true,
       priority: 8,
       content: this.getChallengesContent()
     });
 
-    // AI Coach Widget (top-left, lower priority)
+    // AI Coach Widget (bottom-right, lower priority)
     this.widgetSystem.registerWidget({
       id: 'ai-coach',
       title: 'AI Coach',
       icon: '🤖',
-      position: 'top-left',
+      position: 'bottom-right',
       minimized: true,
       priority: 7,
       content: this.getAICoachContent()

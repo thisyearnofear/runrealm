@@ -656,9 +656,10 @@ export class RunRealmApp {
       }
     ]);
 
-    // Create navigation UI
-    this.navigationService.createNavigationUI('navigation-container');
-    this.navigationService.createQuickActions('quick-actions-container');
+    // Create navigation UI (optional - only if containers exist)
+    // Note: Navigation UI is now handled by the widget system
+    // this.navigationService.createNavigationUI('navigation-container');
+    // this.navigationService.createQuickActions('quick-actions-container');
   }
 
   private initializeOnboarding(): void {

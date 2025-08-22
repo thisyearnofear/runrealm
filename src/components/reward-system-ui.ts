@@ -134,7 +134,7 @@ export class RewardSystemUI extends BaseService {
         ${!isConnected ? `
           <div class="reward-connect-prompt">
             <p>Connect your wallet to view and claim rewards</p>
-            <button class="connect-wallet-btn">Connect Wallet</button>
+            <p class="connect-hint">Use the wallet widget in the top-right corner</p>
           </div>
         ` : `
           <div class="reward-stats">

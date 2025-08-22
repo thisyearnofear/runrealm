@@ -74,7 +74,32 @@ export class EnhancedRunControls extends BaseService {
   }
 
   private createWidget(): void {
-    // Find or create widget container
+    // Register with the widget system instead of creating a standalone widget
+    const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
+    if (widgetSystem) {
+      widgetSystem.registerWidget({
+        id: 'run-tracker',
+        title: 'Run Tracker',
+        icon: '🏃‍♂️',
+        position: 'bottom-left',
+        minimized: false, // Start expanded since it's the main feature
+        priority: 10,
+        content: this.getWidgetContent()
+      });
+
+      // Listen for widget updates
+      this.subscribe('widget:toggled', (data) => {
+        if (data.widgetId === 'run-tracker') {
+          this.handleWidgetToggle(data.minimized);
+        }
+      });
+    } else {
+      // Fallback to standalone widget if widget system not available
+      this.createStandaloneWidget();
+    }
+  }
+
+  private createStandaloneWidget(): void {
     this.container = document.getElementById('enhanced-run-controls');
     if (!this.container) {
       this.container = document.createElement('div');
@@ -85,6 +110,77 @@ export class EnhancedRunControls extends BaseService {
 
     this.renderWidget();
     this.attachEventHandlers();
+  }
+
+  private getWidgetContent(): string {
+    const stats = this.currentStats;
+    const distance = stats ? this.formatDistance(stats.distance) : '0.00 km';
+    const duration = stats ? this.formatDuration(stats.duration) : '00:00';
+    const speed = stats ? this.formatSpeed(stats.averageSpeed) : '0.0 km/h';
+    const pace = stats ? this.formatPace(stats.averageSpeed) : '--:--';
+
+    return `
+      <div class="run-status ${this.getStatusClass()}">
+        ${this.getStatusText()}
+      </div>
+
+      <div class="run-stats">
+        <div class="stat-group">
+          <div class="stat-item primary">
+            <span class="stat-label">Distance</span>
+            <span class="stat-value">${distance}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Time</span>
+            <span class="stat-value">${duration}</span>
+          </div>
+        </div>
+
+        <div class="stat-group">
+          <div class="stat-item">
+            <span class="stat-label">Speed</span>
+            <span class="stat-value">${speed}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Pace</span>
+            <span class="stat-value">${pace}</span>
+          </div>
+        </div>
+
+        ${stats?.territoryEligible ? `
+          <div class="territory-indicator">
+            <span class="territory-icon">🏆</span>
+            <span class="territory-text">Territory Eligible!</span>
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="run-controls">
+        ${this.renderControlButtons()}
+      </div>
+
+      <div class="run-feedback" id="run-feedback"></div>
+    `;
+  }
+
+  private handleWidgetToggle(minimized: boolean): void {
+    // Update widget content when toggled
+    this.updateWidgetContent();
+  }
+
+  private updateWidgetContent(): void {
+    const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
+    if (widgetSystem) {
+      widgetSystem.updateWidget('run-tracker', this.getWidgetContent());
+      // Re-attach event handlers after content update
+      setTimeout(() => this.attachEventHandlers(), 100);
+    }
+  }
+
+  private updateDisplay(): void {
+    // Update both widget system and standalone widget
+    this.updateWidgetContent();
+    this.renderWidget();
   }
 
   private renderWidget(): void {
@@ -299,7 +395,7 @@ export class EnhancedRunControls extends BaseService {
     this.isPaused = false;
     this.startTime = Date.now();
     this.startRealTimeUpdates();
-    this.renderWidget();
+    this.updateDisplay();
     this.showFeedback('🏃‍♂️ Run started! GPS tracking active.', 'success');
   }
 
@@ -307,7 +403,7 @@ export class EnhancedRunControls extends BaseService {
     this.isRecording = false;
     this.isPaused = true;
     this.stopRealTimeUpdates();
-    this.renderWidget();
+    this.updateDisplay();
     this.showFeedback('⏸️ Run paused', 'info');
   }
 
@@ -315,7 +411,7 @@ export class EnhancedRunControls extends BaseService {
     this.isRecording = true;
     this.isPaused = false;
     this.startRealTimeUpdates();
-    this.renderWidget();
+    this.updateDisplay();
     this.showFeedback('▶️ Run resumed', 'success');
   }
 
@@ -323,11 +419,11 @@ export class EnhancedRunControls extends BaseService {
     this.isRecording = false;
     this.isPaused = false;
     this.stopRealTimeUpdates();
-    this.renderWidget();
-    
+    this.updateDisplay();
+
     const distance = this.formatDistance(data.run.totalDistance);
     const duration = this.formatDuration(data.run.totalDuration);
-    
+
     if (data.territoryEligible) {
       this.showFeedback(`🏆 Run completed! ${distance} in ${duration}. Territory eligible!`, 'success');
     } else {
@@ -340,13 +436,13 @@ export class EnhancedRunControls extends BaseService {
     this.isPaused = false;
     this.currentStats = null;
     this.stopRealTimeUpdates();
-    this.renderWidget();
+    this.updateDisplay();
     this.showFeedback('❌ Run cancelled', 'warning');
   }
 
   private updateStats(stats: RunStats): void {
     this.currentStats = stats;
-    this.updateStatsDisplay();
+    this.updateDisplay();
   }
 
   private updateStatsDisplay(): void {
