@@ -208,12 +208,35 @@ export class MobileWidgetService extends BaseService {
    */
   public optimizeLayout(widgetElement: HTMLElement): void {
     if (!this.isMobile) return;
-    
+
+    // Ensure widget stays within viewport bounds
+    this.constrainToViewport(widgetElement);
+
     // In landscape mode, rearrange widgets to better use space
     if (this.orientation === 'landscape') {
       widgetElement.classList.add('landscape-layout');
     } else {
       widgetElement.classList.remove('landscape-layout');
+    }
+  }
+
+  /**
+   * Constrain widget to viewport bounds
+   */
+  private constrainToViewport(widgetElement: HTMLElement): void {
+    const widget = widgetElement.closest('.widget') as HTMLElement;
+    if (!widget) return;
+
+    // Set max dimensions to prevent viewport overflow
+    widget.style.maxWidth = 'calc(100vw - 40px)';
+    widget.style.maxHeight = 'calc(100vh - 40px)';
+
+    // Ensure proper positioning
+    const widgetZone = widget.closest('.widget-zone') as HTMLElement;
+    if (widgetZone) {
+      widgetZone.style.position = 'fixed';
+      widgetZone.style.pointerEvents = 'none';
+      widget.style.pointerEvents = 'auto';
     }
     
     // In compact mode, simplify content
