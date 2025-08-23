@@ -463,48 +463,125 @@
   margin-top: 2px;
 }
 
-/* Mobile Responsiveness */
+/* Mobile Responsiveness - Optimized for touch and map visibility */
 @media (max-width: 768px) {
   .widget-zone {
-    gap: 6px;
+    gap: 4px;
+    max-width: none !important;
   }
-  
-  .widget-zone.top-left,
-  .widget-zone.top-right {
-    top: 10px; /* No header on mobile */
+
+  /* Top zones - minimal footprint, only essential widgets */
+  .widget-zone.top-left {
+    top: 10px;
     left: 10px;
-    right: 10px;
-    align-items: stretch;
+    max-width: 160px; /* Compact width */
   }
-  
-  .widget-zone.bottom-left,
-  .widget-zone.bottom-right {
+
+  .widget-zone.top-right {
+    top: 10px;
+    right: 10px;
+    max-width: 160px; /* Compact width */
+  }
+
+  /* Bottom zones - more space for interactive widgets */
+  .widget-zone.bottom-left {
     bottom: 10px;
     left: 10px;
+    max-width: 180px;
+  }
+
+  .widget-zone.bottom-right {
+    bottom: 10px;
     right: 10px;
-    align-items: stretch;
+    max-width: 180px;
   }
-  
+
+  /* Mobile widget styling */
   .widget {
-    max-width: none;
-    min-width: auto;
+    max-width: 100% !important;
+    min-width: 140px !important;
+    border-radius: 8px;
+    backdrop-filter: blur(8px);
   }
-  
+
+  /* Minimized widgets are very compact on mobile */
+  .widget.minimized {
+    max-height: 40px !important;
+    min-height: 40px !important;
+  }
+
+  .widget.minimized .widget-header {
+    padding: 8px 10px !important;
+    min-height: 40px;
+  }
+
+  .widget.minimized .widget-title {
+    font-size: 11px !important;
+    font-weight: 500;
+  }
+
+  .widget.minimized .widget-icon {
+    font-size: 14px !important;
+  }
+
+  /* Expanded widgets have reasonable max height */
+  .widget.expanded {
+    max-height: 60vh !important;
+    overflow-y: auto;
+  }
+
   .widget-header {
     padding: 10px 12px;
+    min-height: 44px; /* Touch-friendly */
   }
-  
+
   .widget-content {
-    padding: 12px;
-    max-height: 300px;
+    padding: 10px;
+    max-height: 50vh;
+    overflow-y: auto;
   }
-  
+
   .widget-title {
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 600;
   }
-  
+
   .widget-icon {
     font-size: 16px;
+  }
+
+  /* Mobile-specific widget behaviors */
+  .widget-toggle {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Ensure widgets don't block map interactions */
+  .widget {
+    pointer-events: auto;
+  }
+
+  .widget.minimized {
+    pointer-events: auto;
+    z-index: 1000;
+  }
+
+  /* Map container should be accessible */
+  #mapbox-container {
+    pointer-events: auto !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+
+  /* Widget zones should not block map */
+  .widget-zone {
+    pointer-events: none;
+  }
+
+  .widget-zone > * {
+    pointer-events: auto;
   }
 }
 

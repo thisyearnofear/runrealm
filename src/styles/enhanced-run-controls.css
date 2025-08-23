@@ -344,15 +344,18 @@
   100% { transform: scale(1); }
 }
 
-/* Enhanced Mobile Experience */
+/* Enhanced Mobile Experience - Optimized for widget system */
 @media (max-width: 768px) {
   .run-controls-widget {
-    left: 10px;
-    right: 10px;
-    width: auto;
-    bottom: 10px;
-    padding: 16px;
-    border-radius: 20px;
+    /* Widget system handles positioning, so remove fixed positioning */
+    position: relative;
+    left: auto;
+    right: auto;
+    width: 100%;
+    bottom: auto;
+    padding: 12px;
+    border-radius: 12px;
+    margin: 0;
   }
 
   .stat-group {

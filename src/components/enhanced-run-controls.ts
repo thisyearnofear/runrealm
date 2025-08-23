@@ -77,12 +77,15 @@ export class EnhancedRunControls extends BaseService {
     // Register with the widget system instead of creating a standalone widget
     const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
     if (widgetSystem) {
+      // Check if mobile for initial state
+      const isMobile = window.innerWidth <= 768;
+
       widgetSystem.registerWidget({
         id: 'run-tracker',
         title: 'Run Tracker',
         icon: '🏃‍♂️',
         position: 'bottom-left',
-        minimized: false, // Start expanded since it's the main feature
+        minimized: isMobile, // Start minimized on mobile for map visibility
         priority: 10,
         content: this.getWidgetContent()
       });

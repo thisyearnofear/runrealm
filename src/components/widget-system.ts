@@ -103,7 +103,8 @@ export class WidgetSystem extends BaseService {
         success: data.success
       });
     });
-    
+
+    this.setupMobileOptimizations();
     this.safeEmit('service:initialized', { service: 'WidgetSystem', success: true });
   }
 
@@ -719,6 +720,58 @@ export class WidgetSystem extends BaseService {
     if (x >= centerX && y < centerY) return 'top-right';
     if (x < centerX && y >= centerY) return 'bottom-left';
     return 'bottom-right';
+  }
+
+  /**
+   * Setup mobile-specific optimizations
+   */
+  private setupMobileOptimizations(): void {
+    // Only apply on mobile devices
+    if (window.innerWidth > 768) return;
+
+    // Auto-minimize widgets when map is tapped (mobile optimization)
+    document.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+
+      // Check if click is on map container (not on widgets)
+      if (target.id === 'mapbox-container' || target.closest('#mapbox-container')) {
+        // Minimize all expanded widgets except run tracker when it's active
+        this.widgets.forEach((widget, widgetId) => {
+          if (!widget.minimized && widgetId !== 'run-tracker') {
+            this.toggleWidget(widgetId);
+          }
+        });
+      }
+    });
+
+    // Add swipe gesture to minimize widgets
+    let startY = 0;
+    let startX = 0;
+
+    document.addEventListener('touchstart', (event) => {
+      startY = event.touches[0].clientY;
+      startX = event.touches[0].clientX;
+    });
+
+    document.addEventListener('touchend', (event) => {
+      const endY = event.changedTouches[0].clientY;
+      const endX = event.changedTouches[0].clientX;
+      const deltaY = startY - endY;
+      const deltaX = Math.abs(startX - endX);
+
+      // Swipe up gesture to minimize widgets (mobile UX)
+      if (deltaY > 50 && deltaX < 100) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.widget')) {
+          // Minimize all expanded widgets
+          this.widgets.forEach((widget, widgetId) => {
+            if (!widget.minimized) {
+              this.toggleWidget(widgetId);
+            }
+          });
+        }
+      }
+    });
   }
 
   /**

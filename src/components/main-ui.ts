@@ -254,24 +254,26 @@ export class MainUI extends BaseService {
     // Run Controls are now handled by EnhancedRunControls service
     // (Removed old widget-based run controls to avoid duplication)
 
-    // Location Widget (top-left)
+    const isMobile = this.config.getConfig().ui.isMobile;
+
+    // Location Widget (top-left) - minimized on mobile for map visibility
     this.widgetSystem.registerWidget({
       id: 'location-info',
       title: 'Location',
       icon: '📍',
       position: 'top-left',
-      minimized: true, // Start minimized
+      minimized: true, // Always start minimized
       priority: 9,
       content: this.getLocationContent()
     });
 
-    // Wallet Widget (top-right)
+    // Wallet Widget (top-right) - minimized on mobile
     this.widgetSystem.registerWidget({
       id: 'wallet-info',
       title: 'Wallet',
       icon: '🦊',
       position: 'top-right',
-      minimized: true, // Start minimized
+      minimized: true, // Always start minimized
       priority: 9,
       content: this.walletWidget.getWidgetContent()
     });
@@ -1021,13 +1023,15 @@ export class MainUI extends BaseService {
 
   /**\n   * Create GameFi widgets when GameFi mode is enabled\n   */
   private createGameFiWidgets(): void {
-    // Player Stats Widget (top-left, highest priority)
+    const isMobile = this.config.getConfig().ui.isMobile;
+
+    // Player Stats Widget (top-left, highest priority) - always minimized on mobile
     this.widgetSystem.registerWidget({
       id: 'player-stats',
       title: 'Player Stats',
       icon: '🏆',
       position: 'top-left',
-      minimized: true,
+      minimized: true, // Always minimized for mobile map visibility
       priority: 10,
       content: this.getPlayerStatsContent()
     });
