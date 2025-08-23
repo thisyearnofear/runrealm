@@ -16,7 +16,6 @@ import { AnimationService } from '../services/animation-service';
 import { WidgetStateService } from './widget-state-service';
 import { TouchGestureService } from './touch-gesture-service';
 import { MobileWidgetService } from './mobile-widget-service';
-import { StatusIndicator } from './status-indicator';
 import { EnhancedOnboarding } from './enhanced-onboarding';
 import { AccessibilityEnhancer } from './accessibility-enhancer';
 import { WalletWidget } from './wallet-widget';
@@ -24,7 +23,7 @@ import { TransactionStatus } from './transaction-status';
 import { RewardSystemUI } from './reward-system-ui';
 import { EnhancedZetaChainService } from '../services/enhanced-zetachain-service';
 import { Web3Service } from '../services/web3-service';
-import { ConfigService } from '../services/config-service';
+import { ConfigService } from '../core/app-config';
 import { ContractService } from '../services/contract-service';
 
 export class MainUI extends BaseService {
@@ -40,7 +39,6 @@ export class MainUI extends BaseService {
   private widgetStateService: WidgetStateService;
   private touchGestureService: TouchGestureService;
   private mobileWidgetService: MobileWidgetService;
-  private statusIndicator: StatusIndicator;
   private enhancedOnboarding: EnhancedOnboarding;
   private accessibilityEnhancer: AccessibilityEnhancer;
   private walletWidget: WalletWidget;
@@ -51,6 +49,18 @@ export class MainUI extends BaseService {
   private web3Service: Web3Service;
   private configService: ConfigService;
   private isGameFiMode: boolean = false;
+
+  // GPS and Network status for location widget
+  private gpsStatus: {
+    available: boolean;
+    accuracy?: number;
+    signal?: 'excellent' | 'good' | 'fair' | 'poor';
+  } = { available: false };
+  
+  private networkStatus: {
+    online: boolean;
+    type?: string;
+  } = { online: navigator.onLine };
 
   // Old run tracking state removed - now handled by RunTrackingService
 
@@ -106,18 +116,6 @@ export class MainUI extends BaseService {
     
     await this.mobileWidgetService.initialize();
     console.log('MainUI: Mobile widget service initialized');
-
-    // Initialize status indicator
-    this.statusIndicator = new StatusIndicator(this.domService, {
-      position: 'top-left',
-      showGPS: true,
-      showConnectivity: true,
-      showBattery: false,
-      autoHide: true,
-      autoHideDelay: 4000
-    });
-    await this.statusIndicator.initialize();
-    console.log('MainUI: Status indicator initialized');
 
     // Initialize enhanced onboarding
     this.enhancedOnboarding = new EnhancedOnboarding(
@@ -234,6 +232,9 @@ export class MainUI extends BaseService {
 
     // Force widget system debug info
     console.log('MainUI: Widget system debug info:', this.widgetSystem.getDebugInfo());
+    
+    // Initial GPS and network status check
+    this.initializeStatusChecks();
 
     this.showWelcomeExperience();
 
@@ -394,6 +395,56 @@ export class MainUI extends BaseService {
       (window as any).RunRealm = (window as any).RunRealm || {};
       (window as any).RunRealm.currentLocation = { lat: locationInfo.lat, lng: locationInfo.lng };
     });
+
+    // Listen for GPS status updates from actual location usage
+    this.subscribe('location:updated' as any, (data: any) => {
+      if (data.accuracy) {
+        this.gpsStatus = {
+          available: true,
+          accuracy: data.accuracy,
+          signal: this.getSignalQuality(data.accuracy)
+        };
+        this.updateLocationWidget();
+      }
+    });
+
+    this.subscribe('location:error' as any, () => {
+      this.gpsStatus = { available: false };
+      this.updateLocationWidget();
+    });
+
+    // Check GPS status when it actually matters
+    this.subscribe('run:startRequested' as any, () => {
+      // GPS accuracy is critical for runs
+      this.checkGPSStatus();
+    });
+
+    // GPS button clicks should update status
+    this.domService.delegate(document.body, '#set-location-btn', 'click', () => {
+      this.checkGPSStatus(); // Check status before attempting to use GPS
+    });
+
+    // Manual GPS status refresh
+    this.domService.delegate(document.body, '#refresh-status-btn', 'click', () => {
+      this.checkGPSStatus();
+    });
+
+    // Monitor network status changes
+    window.addEventListener('online', () => {
+      this.networkStatus.online = true;
+      this.updateLocationWidget();
+    });
+
+    window.addEventListener('offline', () => {
+      this.networkStatus.online = false;
+      this.updateLocationWidget();
+    });
+
+    // Initial network status check
+    this.networkStatus = {
+      online: navigator.onLine,
+      type: this.getConnectionType()
+    };
 
     this.subscribe('web3:walletConnected', (walletInfo) => {
       this.updateWalletWidget(walletInfo);
@@ -870,27 +921,20 @@ export class MainUI extends BaseService {
   }
 
   /**
-   * Update location widget display
+   * Update location widget display with current location and status
    */
-  private updateLocationWidget(locationInfo: any): void {
-    const displayText = locationInfo.address ||
-      `${locationInfo.lat.toFixed(4)}, ${locationInfo.lng.toFixed(4)}`;
-
-    const newContent = `
-      <div class="widget-stat">
-        <span class="widget-stat-label">Current Location</span>
-        <span class="widget-stat-value">${displayText}</span>
-      </div>
-      <div class="widget-buttons">
-        <button class="widget-button" id="set-location-btn">
-          🛰️ Use GPS
-        </button>
-        <button class="widget-button secondary" id="search-location-btn">
-          🔍 Search
-        </button>
-      </div>
-    `;
-
+  private updateLocationWidget(locationInfo?: any): void {
+    // Update GPS status if location info is provided
+    if (locationInfo && locationInfo.accuracy) {
+      this.gpsStatus = {
+        available: true,
+        accuracy: locationInfo.accuracy,
+        signal: this.getSignalQuality(locationInfo.accuracy)
+      };
+    }
+    
+    // Regenerate and update the entire widget content
+    const newContent = this.getLocationContent();
     this.widgetSystem.updateWidget('location-info', newContent);
   }
 
@@ -1017,17 +1061,165 @@ export class MainUI extends BaseService {
     console.log(`User action: ${action}`);
   }
 
+  /**
+   * Get GPS status icon based on signal quality
+   */
+  private getGPSIcon(gpsStatus: { available: boolean; signal?: string }): string {
+    if (!gpsStatus.available) return '📍❌';
+    
+    switch (gpsStatus.signal) {
+      case 'excellent': return '📍✨';
+      case 'good': return '📍✅';
+      case 'fair': return '📍⚠️';
+      case 'poor': return '📍❌';
+      default: return '📍';
+    }
+  }
+
+  /**
+   * Get network status icon
+   */
+  private getNetworkIcon(networkStatus: { online: boolean; type?: string }): string {
+    if (!networkStatus.online) return '📶❌';
+    
+    // Basic network status - can be enhanced with speed detection later
+    return '📶✅';
+  }
+
+  /**
+   * Get GPS signal quality based on accuracy
+   */
+  private getSignalQuality(accuracy: number): 'excellent' | 'good' | 'fair' | 'poor' {
+    if (accuracy <= 5) return 'excellent';
+    if (accuracy <= 10) return 'good';
+    if (accuracy <= 20) return 'fair';
+    return 'poor';
+  }
+
+  /**
+   * Get network connection type if available
+   */
+  private getConnectionType(): string {
+    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    return connection?.effectiveType || 'unknown';
+  }
+
+  /**
+   * Initialize GPS and network status checks with user-driven approach
+   */
+  private initializeStatusChecks(): void {
+    // Initial network status (lightweight)
+    this.networkStatus = {
+      online: navigator.onLine,
+      type: this.getConnectionType()
+    };
+
+    // Initial GPS check (one-time on startup)
+    this.checkGPSStatus();
+    
+    // No automatic polling - GPS checks will be triggered by:
+    // 1. User clicking "Use GPS" button
+    // 2. Starting a run (when GPS accuracy matters)
+    // 3. Manual refresh via location widget interaction
+  }
+
+  /**
+   * Check current GPS status with user feedback
+   */
+  private checkGPSStatus(): void {
+    if (!navigator.geolocation) {
+      this.gpsStatus = { available: false };
+      this.updateLocationWidget();
+      return;
+    }
+
+    // Show checking state
+    const refreshBtn = document.getElementById('refresh-status-btn');
+    if (refreshBtn) {
+      refreshBtn.textContent = '🔄 Checking...';
+      refreshBtn.setAttribute('disabled', 'true');
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.gpsStatus = {
+          available: true,
+          accuracy: position.coords.accuracy,
+          signal: this.getSignalQuality(position.coords.accuracy)
+        };
+        this.updateLocationWidget();
+        this.restoreRefreshButton();
+      },
+      () => {
+        this.gpsStatus = { available: false };
+        this.updateLocationWidget();
+        this.restoreRefreshButton();
+      },
+      { 
+        timeout: 8000, // Reasonable timeout
+        maximumAge: 30000, // Use cached position if recent
+        enableHighAccuracy: false // Faster response for status check
+      }
+    );
+  }
+
+  /**
+   * Restore refresh button to normal state
+   */
+  private restoreRefreshButton(): void {
+    const refreshBtn = document.getElementById('refresh-status-btn');
+    if (refreshBtn) {
+      refreshBtn.textContent = '🔄 Check GPS';
+      refreshBtn.removeAttribute('disabled');
+    }
+  }
+
   // Old run controls content method removed - now handled by EnhancedRunControls
 
   /**
-   * Generate content for location widget
+   * Generate content for location widget with GPS and network status
    */
   private getLocationContent(): string {
+    const currentLocation = this.locationService.getCurrentLocationInfo();
+    const displayText = currentLocation?.address ||
+      (currentLocation ? `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}` : 'Default (NYC)');
+    
+    // GPS status
+    const gpsIcon = this.getGPSIcon(this.gpsStatus);
+    const gpsText = this.gpsStatus.available ? 
+      (this.gpsStatus.accuracy ? `${Math.round(this.gpsStatus.accuracy)}m` : 'Active') : 
+      'Unavailable';
+    
+    // Network status
+    const networkIcon = this.getNetworkIcon(this.networkStatus);
+    const networkText = this.networkStatus.online ? 
+      (this.networkStatus.type || 'Connected') : 
+      'Offline';
+
     return `
       <div class="widget-stat">
         <span class="widget-stat-label">Current Location</span>
-        <span class="widget-stat-value" id="location-display">Default (NYC)</span>
+        <span class="widget-stat-value" id="location-display">${displayText}</span>
       </div>
+      
+      <div class="location-status">
+        <div class="status-row">
+          <div class="status-item gps-status ${this.gpsStatus.available ? 'active' : 'inactive'}">
+            <span class="status-icon">${gpsIcon}</span>
+            <span class="status-label">GPS</span>
+            <span class="status-detail">${gpsText}</span>
+          </div>
+          <div class="status-item network-status ${this.networkStatus.online ? 'active' : 'inactive'}">
+            <span class="status-icon">${networkIcon}</span>
+            <span class="status-label">Network</span>
+            <span class="status-detail">${networkText}</span>
+          </div>
+        </div>
+        <button class="status-refresh-btn" id="refresh-status-btn" title="Refresh GPS status">
+          🔄 Check GPS
+        </button>
+      </div>
+      
       <div class="widget-buttons">
         <button class="widget-button" id="set-location-btn">
           🛰️ Use GPS

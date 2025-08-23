@@ -23,9 +23,11 @@ export class EnhancedRunControls extends BaseService {
   private isPaused = false;
   private startTime: number = 0;
   private updateInterval: number | null = null;
+  private boundClickHandler: (event: Event) => void;
 
   constructor() {
-    super('EnhancedRunControls');
+    super();
+    this.boundClickHandler = this.handleRunTrackerClick.bind(this);
   }
 
   protected async onInitialize(): Promise<void> {
@@ -43,36 +45,36 @@ export class EnhancedRunControls extends BaseService {
 
   private setupEventListeners(): void {
     // Listen for run tracking events
-    this.subscribe('run:started', (data) => {
+    this.subscribe('run:started' as any, (data: any) => {
       this.handleRunStarted(data);
     });
 
-    this.subscribe('run:paused', (data) => {
+    this.subscribe('run:paused' as any, (data: any) => {
       this.handleRunPaused(data);
     });
 
-    this.subscribe('run:resumed', (data) => {
+    this.subscribe('run:resumed' as any, (data: any) => {
       this.handleRunResumed(data);
     });
 
-    this.subscribe('run:completed', (data) => {
+    this.subscribe('run:completed' as any, (data: any) => {
       this.handleRunCompleted(data);
     });
 
-    this.subscribe('run:cancelled', (data) => {
+    this.subscribe('run:cancelled' as any, (data: any) => {
       this.handleRunCancelled(data);
     });
 
-    this.subscribe('run:statsUpdated', (data) => {
+    this.subscribe('run:statsUpdated' as any, (data: any) => {
       this.updateStats(data.stats);
     });
 
-    this.subscribe('run:pointAdded', (data) => {
+    this.subscribe('run:pointAdded' as any, (data: any) => {
       this.updateStats(data.stats);
       this.showPointAddedFeedback();
     });
 
-    this.subscribe('territory:eligible', (data) => {
+    this.subscribe('territory:eligible' as any, (data: any) => {
       this.showTerritoryEligibleNotification(data);
     });
 
@@ -96,7 +98,7 @@ export class EnhancedRunControls extends BaseService {
       });
 
       // Listen for widget updates
-      this.subscribe('widget:toggled', (data) => {
+      this.subscribe('widget:toggled' as any, (data: any) => {
         if (data.widgetId === 'run-tracker') {
           this.handleWidgetToggle(data.minimized);
         }
@@ -180,8 +182,12 @@ export class EnhancedRunControls extends BaseService {
     const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
     if (widgetSystem) {
       widgetSystem.updateWidget('run-tracker', this.getWidgetContent());
-      // Re-attach event handlers after content update
-      setTimeout(() => this.attachEventHandlers(), 100);
+      // Listen for content update completion to reattach handlers reliably
+      this.subscribe('widget:contentUpdated' as any, (data: any) => {
+        if (data.widgetId === 'run-tracker') {
+          this.attachEventHandlers();
+        }
+      });
     }
   }
 
@@ -299,31 +305,46 @@ export class EnhancedRunControls extends BaseService {
   }
 
   private attachEventHandlers(): void {
-    if (!this.container) return;
+    // Use event delegation instead of direct element binding for reliability
+    // Remove any existing handlers first to prevent duplication
+    this.removeEventHandlers();
+    
+    // Use document-level event delegation for run tracker buttons
+    document.addEventListener('click', this.boundClickHandler);
+  }
 
-    // Start run
-    const startBtn = this.container.querySelector('#start-run-btn');
-    startBtn?.addEventListener('click', () => this.startRun());
+  private removeEventHandlers(): void {
+    document.removeEventListener('click', this.boundClickHandler);
+  }
 
-    // Pause run
-    const pauseBtn = this.container.querySelector('#pause-run-btn');
-    pauseBtn?.addEventListener('click', () => this.pauseRun());
-
-    // Resume run
-    const resumeBtn = this.container.querySelector('#resume-run-btn');
-    resumeBtn?.addEventListener('click', () => this.resumeRun());
-
-    // Stop run
-    const stopBtn = this.container.querySelector('#stop-run-btn');
-    stopBtn?.addEventListener('click', () => this.stopRun());
-
-    // Cancel run
-    const cancelBtn = this.container.querySelector('#cancel-run-btn');
-    cancelBtn?.addEventListener('click', () => this.cancelRun());
-
-    // GPS check
-    const gpsBtn = this.container.querySelector('#gps-check-btn');
-    gpsBtn?.addEventListener('click', () => this.checkGPS());
+  private handleRunTrackerClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    
+    // Only handle clicks within the run tracker widget
+    if (!target.closest('#widget-run-tracker')) {
+      return;
+    }
+    
+    // Handle different button clicks
+    if (target.id === 'start-run-btn' || target.closest('#start-run-btn')) {
+      event.preventDefault();
+      this.startRun();
+    } else if (target.id === 'pause-run-btn' || target.closest('#pause-run-btn')) {
+      event.preventDefault();
+      this.pauseRun();
+    } else if (target.id === 'resume-run-btn' || target.closest('#resume-run-btn')) {
+      event.preventDefault();
+      this.resumeRun();
+    } else if (target.id === 'stop-run-btn' || target.closest('#stop-run-btn')) {
+      event.preventDefault();
+      this.stopRun();
+    } else if (target.id === 'cancel-run-btn' || target.closest('#cancel-run-btn')) {
+      event.preventDefault();
+      this.cancelRun();
+    } else if (target.id === 'gps-check-btn' || target.closest('#gps-check-btn')) {
+      event.preventDefault();
+      this.checkGPS();
+    }
   }
 
   private async startRun(): Promise<void> {
@@ -345,11 +366,11 @@ export class EnhancedRunControls extends BaseService {
   }
 
   private pauseRun(): void {
-    this.safeEmit('run:pauseRequested', {});
+    this.safeEmit('run:pauseRequested' as any, {});
   }
 
   private resumeRun(): void {
-    this.safeEmit('run:resumeRequested', {});
+    this.safeEmit('run:resumeRequested' as any, {});
   }
 
   private stopRun(): void {
@@ -358,13 +379,13 @@ export class EnhancedRunControls extends BaseService {
       if (!confirmed) return;
     }
 
-    this.safeEmit('run:stopRequested', {});
+    this.safeEmit('run:stopRequested' as any, {});
   }
 
   private cancelRun(): void {
     const confirmed = confirm('Are you sure you want to cancel this run? All progress will be lost.');
     if (confirmed) {
-      this.safeEmit('run:cancelRequested', {});
+      this.safeEmit('run:cancelRequested' as any, {});
     }
   }
 
@@ -768,5 +789,10 @@ export class EnhancedRunControls extends BaseService {
 
   private formatPace(metersPerSecond: number): string {
     return formatPace(metersPerSecond, true); // Always use metric for now
+  }
+
+  protected async onDestroy(): Promise<void> {
+    this.removeEventHandlers();
+    this.stopRealTimeUpdates();
   }
 }

@@ -34,7 +34,7 @@
   right: 0 !important;
   bottom: 0 !important;
   pointer-events: none !important;
-  z-index: 100 !important;
+  z-index: var(--z-widgets) !important;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
   /* Ensure visibility */
   display: block !important;
@@ -49,7 +49,7 @@
   flex-direction: column !important;
   gap: 8px !important;
   pointer-events: none !important;
-  z-index: 101 !important;
+  z-index: calc(var(--z-widgets) + 1) !important;
   max-width: 320px !important;
   /* Ensure zones are visible */
   visibility: visible !important;
@@ -92,7 +92,7 @@
   overflow: hidden !important;
   max-width: 320px !important;
   min-width: 200px !important;
-  z-index: 102 !important;
+  z-index: calc(var(--z-widgets) + 2) !important;
   /* Ensure widgets are visible */
   display: block !important;
   visibility: visible !important;
@@ -201,7 +201,7 @@
 
 .widget-system .widget.expanded {
   max-height: var(--widget-max-height-expanded) !important;
-  z-index: 103 !important;
+  z-index: calc(var(--z-widgets) + 3) !important;
   box-shadow: var(--widget-shadow-active) !important;
   overflow: visible !important;
 }
@@ -399,6 +399,116 @@
   transform: translateY(-1px);
 }
 
+/* Location Widget Status Styles */
+.location-status {
+  margin: 12px 0;
+}
+
+.status-row {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.status-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.status-item.active {
+  background: rgba(0, 255, 0, 0.1);
+  border-color: rgba(0, 255, 0, 0.3);
+}
+
+.status-item.inactive {
+  background: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 0, 0, 0.3);
+}
+
+.status-item .status-icon {
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.status-item .status-label {
+  font-size: 10px;
+  color: #ccc;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.status-item .status-detail {
+  font-size: 11px;
+  color: #fff;
+  font-weight: 500;
+}
+
+.status-item.active .status-detail {
+  color: #00ff88;
+}
+
+.status-item.inactive .status-detail {
+  color: #ff6b6b;
+}
+
+/* Manual GPS refresh button */
+.status-refresh-btn {
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.status-refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.status-refresh-btn:active {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Mobile responsive status */
+@media (max-width: 768px) {
+  .status-row {
+    gap: 6px;
+  }
+  
+  .status-item {
+    padding: 6px 4px;
+  }
+  
+  .status-item .status-icon {
+    font-size: 12px;
+  }
+  
+  .status-item .status-label {
+    font-size: 9px;
+  }
+  
+  .status-item .status-detail {
+    font-size: 10px;
+  }
+}
+
 /* Widget Progress Bars */
 .widget-progress {
   margin: 8px 0;
@@ -570,29 +680,31 @@
     justify-content: center;
   }
 
-  /* Ensure widgets don't block map interactions */
+  /* Ensure widgets don't block map interactions but stay above it */
   .widget {
     pointer-events: auto;
+    /* Use centralized z-index system - no override needed */
   }
 
   .widget.minimized {
     pointer-events: auto;
-    z-index: 1000;
+    /* Maintain consistent z-index hierarchy */
   }
 
-  /* Map container should be accessible */
+  /* Map container maintains proper z-index from centralized system */
   #mapbox-container {
     pointer-events: auto !important;
     touch-action: pan-x pan-y pinch-zoom !important;
+    /* z-index handled by centralized system */
   }
 
-  /* Widget zones should not block map */
+  /* Widget zones must not block map but allow widget interaction */
   .widget-zone {
-    pointer-events: none;
+    pointer-events: none !important;
   }
 
-  .widget-zone > * {
-    pointer-events: auto;
+  .widget-zone > .widget {
+    pointer-events: auto !important;
   }
 }
 

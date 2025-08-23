@@ -107,7 +107,7 @@ export class WidgetSystem extends BaseService {
     });
 
     // Subscribe to widget content updates
-    this.subscribe('widget:updateContent', (data: { widgetId: string; content: string; loading?: boolean; success?: boolean }) => {
+    this.subscribe('widget:updateContent' as any, (data: any) => {
       this.updateWidget(data.widgetId, data.content, {
         loading: data.loading,
         success: data.success
@@ -176,7 +176,7 @@ export class WidgetSystem extends BaseService {
   }
 
   /**
-   * Update widget content with optional loading state
+   * Update widget content with improved event handling
    */
   public updateWidget(widgetId: string, content: string, options?: { loading?: boolean; success?: boolean }): void {
     const widget = this.widgets.get(widgetId);
@@ -199,8 +199,24 @@ export class WidgetSystem extends BaseService {
       setTimeout(() => element.classList.remove('widget-success'), 400);
     }
 
+    // Update content while preserving event delegation
     widget.content = content;
-    this.updateWidgetContent(element, widget);
+    
+    // Use a more reliable content update that preserves widget structure
+    const contentElement = element.querySelector('.widget-content');
+    if (contentElement) {
+      // Preserve scroll position
+      const scrollTop = contentElement.scrollTop;
+      
+      // Update content
+      contentElement.innerHTML = content;
+      
+      // Restore scroll position
+      contentElement.scrollTop = scrollTop;
+      
+      // Emit event for components that need to reattach specific handlers
+      this.safeEmit('widget:contentUpdated' as any, { widgetId, element });
+    }
   }
 
   /**
@@ -474,23 +490,46 @@ export class WidgetSystem extends BaseService {
   }
 
   /**
-   * Setup event handlers
+   * Setup event handlers with improved reliability
    */
   private setupEventHandlers(): void {
-    // Widget toggle clicks
+    // Enhanced widget toggle clicks with better event delegation
     this.domService.delegate(document.body, '.widget-toggle', 'click', (event) => {
-      const widgetId = (event.target as HTMLElement).dataset.widgetId;
+      event.preventDefault();
+      event.stopPropagation();
+      
+      const target = event.target as HTMLElement;
+      const widgetId = target.dataset.widgetId || target.closest('[data-widget-id]')?.getAttribute('data-widget-id');
+      
       if (widgetId) {
-        this.toggleWidget(widgetId);
+        // Prevent rapid clicking during animation
+        const widget = this.getWidgetElement(widgetId);
+        if (widget && !widget.classList.contains('widget-animating')) {
+          this.toggleWidget(widgetId);
+        }
       }
     });
 
-    // Widget header clicks (also toggle)
+    // Enhanced widget header clicks with better delegation
     this.domService.delegate(document.body, '.widget-header', 'click', (event) => {
       const target = event.target as HTMLElement;
-      const widgetId = target.dataset.widgetId;
-      if (widgetId && !target.classList.contains('widget-toggle')) {
-        this.toggleWidget(widgetId);
+      
+      // Don't trigger on toggle button clicks
+      if (target.classList.contains('widget-toggle') || target.closest('.widget-toggle')) {
+        return;
+      }
+      
+      event.preventDefault();
+      event.stopPropagation();
+      
+      const widgetId = target.dataset.widgetId || target.closest('[data-widget-id]')?.getAttribute('data-widget-id');
+      
+      if (widgetId) {
+        // Prevent rapid clicking during animation
+        const widget = this.getWidgetElement(widgetId);
+        if (widget && !widget.classList.contains('widget-animating')) {
+          this.toggleWidget(widgetId);
+        }
       }
     });
 
