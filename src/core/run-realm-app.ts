@@ -256,14 +256,15 @@ export class RunRealmApp {
       // Initialize main UI (replaces old fragmented UI)
       await this.mainUI.initialize();
       
-      // Expose mainUI for debugging
-      if (process.env.NODE_ENV === 'development') {
-        (window as any).RunRealm = (window as any).RunRealm || {};
-        (window as any).RunRealm.mainUI = this.mainUI;
-        (window as any).RunRealm.map = this.map;
-        (window as any).RunRealm.animationService = this.animationService;
-        (window as any).RunRealm.eventBus = this.eventBus;
+      // Expose mainUI globally (also in production) for cross-service access
+      (window as any).RunRealm = (window as any).RunRealm || {};
+      (window as any).RunRealm.mainUI = this.mainUI;
+      (window as any).RunRealm.map = this.map;
+      (window as any).RunRealm.animationService = this.animationService;
+      (window as any).RunRealm.eventBus = this.eventBus;
 
+      // Development-only extras
+      if (process.env.NODE_ENV === 'development') {
         // Add debug method for testing route visualization
         (window as any).testRouteVisualization = () => {
           console.log('🧪 Testing route visualization...');

@@ -24,6 +24,10 @@ export class EnhancedRunControls extends BaseService {
   private startTime: number = 0;
   private updateInterval: number | null = null;
   private boundClickHandler: (event: Event) => void;
+  
+  // Guards to avoid duplicate rendering and ensure idempotency
+  private widgetInitialized = false;
+  private standaloneActive = false;
 
   constructor() {
     super();
@@ -41,6 +45,13 @@ export class EnhancedRunControls extends BaseService {
    */
   public initializeWidget(): void {
     this.createWidget();
+  }
+
+  private getWidgetSystem(): any {
+    return (
+      (window as any).runRealmApp?.mainUI?.widgetSystem ||
+      (window as any).RunRealm?.mainUI?.widgetSystem
+    );
   }
 
   private setupEventListeners(): void {
@@ -83,8 +94,10 @@ export class EnhancedRunControls extends BaseService {
   }
 
   private createWidget(): void {
+    if (this.widgetInitialized) return;
+
     // Register with the widget system instead of creating a standalone widget
-    const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
+    const widgetSystem = this.getWidgetSystem();
 
     if (widgetSystem) {
       widgetSystem.registerWidget({
@@ -103,9 +116,27 @@ export class EnhancedRunControls extends BaseService {
           this.handleWidgetToggle(data.minimized);
         }
       });
+
+      this.widgetInitialized = true;
+      this.standaloneActive = false;
     } else {
-      // Fallback to standalone widget if widget system not available
+      // Guard: avoid duplicate fallback rendering
+      const alreadyPresent =
+        document.getElementById('widget-run-tracker') ||
+        document.getElementById('enhanced-run-controls');
+
+      if (alreadyPresent) {
+        console.warn('[RunTracker] WidgetSystem not ready; existing element detected. Suppressing standalone.');
+        return;
+      }
+
+      console.warn('[RunTracker] WidgetSystem not found. Creating standalone fallback.');
       this.createStandaloneWidget();
+      this.widgetInitialized = true;
+      this.standaloneActive = true;
+
+      // Try to migrate to widget system shortly after if it becomes available
+      setTimeout(() => this.tryMigrateToWidgetSystem(), 500);
     }
   }
 
@@ -179,7 +210,7 @@ export class EnhancedRunControls extends BaseService {
   }
 
   private updateWidgetContent(): void {
-    const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
+    const widgetSystem = this.getWidgetSystem();
     if (widgetSystem) {
       widgetSystem.updateWidget('run-tracker', this.getWidgetContent());
       // Listen for content update completion to reattach handlers reliably
@@ -189,6 +220,28 @@ export class EnhancedRunControls extends BaseService {
         }
       });
     }
+  }
+
+  private tryMigrateToWidgetSystem(): void {
+    if (!this.standaloneActive) return;
+
+    const widgetSystem = this.getWidgetSystem();
+    if (!widgetSystem) return;
+
+    widgetSystem.registerWidget({
+      id: 'run-tracker',
+      title: 'Run Tracker',
+      icon: '🏃‍♂️',
+      position: 'bottom-left',
+      minimized: true,
+      priority: 10,
+      content: this.getWidgetContent(),
+    });
+
+    // Remove fallback DOM and update flags
+    document.getElementById('enhanced-run-controls')?.remove();
+    this.standaloneActive = false;
+    this.widgetInitialized = true;
   }
 
   private updateDisplay(): void {
