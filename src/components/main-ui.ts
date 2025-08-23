@@ -689,6 +689,17 @@ export class MainUI extends BaseService {
     });
 
     // Run controls toggle handler removed - now handled by EnhancedRunControls
+
+    // Rewards visibility preference toggle
+    this.domService.delegate(document.body, '#toggle-rewards-hide-until-connected', 'change', (e) => {
+      const target = e.target as HTMLInputElement;
+      // Store preference: checked means hide until connected
+      localStorage.setItem('runrealm_rewards_hide_until_connected', target.checked ? 'true' : 'false');
+      // Notify rewards UI to react immediately
+      this.safeEmit('rewards:settingsChanged', {});
+      // Update settings widget to reflect any state change
+      this.widgetSystem.updateWidget('settings', this.getSettingsContent());
+    });
   }
 
   private getSettingsContent(): string {
@@ -728,16 +739,21 @@ export class MainUI extends BaseService {
       </div>
 
       <div class="widget-section">
-        <div class="widget-section-title">🔧 App Settings</div>
-        <div class="widget-buttons">
-          <button class="widget-button secondary" id="restart-onboarding-widget">🔁 Restart Tutorial</button>
-        </div>
-        <div class="widget-tip">
-          <small>Restart the interactive tutorial to learn RunRealm features again.</small>
+        <div class="widget-section-title">💰 Rewards</div>
+        <div class="widget-toggles">
+          <label class="widget-toggle">
+            <input type="checkbox" id="toggle-rewards-hide-until-connected" ${localStorage.getItem('runrealm_rewards_hide_until_connected') === 'false' ? '' : 'checked'}>
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Show Rewards only when wallet connected</span>
+          </label>
         </div>
       </div>
 
-      <div class="widget-tip">💡 Drag widgets to move them around!</div>
+      <div class="widget-section centered">
+        <div class="widget-buttons">
+          <button class="widget-button secondary" id="restart-onboarding-widget">🔁 Restart Tutorial</button>
+        </div>
+      </div>
     `;
   }
 

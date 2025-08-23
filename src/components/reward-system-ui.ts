@@ -58,11 +58,42 @@ export class RewardSystemUI extends BaseService {
   }
 
   protected async onInitialize(): Promise<void> {
-    this.createRewardWidget();
     this.setupEventListeners();
     this.addRewardStyles();
-    this.loadRewardData();
+
+    // Respect user preference: hide rewards widget until wallet is connected (default: true)
+    if (this.shouldShowRewardsWidget()) {
+      this.createRewardWidget();
+      this.loadRewardData();
+    }
+
     this.safeEmit('service:initialized', { service: 'RewardSystemUI', success: true });
+  }
+
+  /**
+   * Whether the rewards widget should be hidden until a wallet is connected
+   * Default is true when preference not set
+   */
+  private shouldHideUntilConnected(): boolean {
+    const pref = localStorage.getItem('runrealm_rewards_hide_until_connected');
+    return pref === null ? true : pref === 'true';
+  }
+
+  /**
+   * Determine if rewards widget should be shown right now
+   */
+  private shouldShowRewardsWidget(): boolean {
+    return !this.shouldHideUntilConnected() || this.web3Service.isWalletConnected();
+  }
+
+  /**
+   * Remove the rewards widget from DOM if present
+   */
+  private removeRewardWidget(): void {
+    if (this.rewardWidget) {
+      this.rewardWidget.remove();
+      this.rewardWidget = null;
+    }
   }
 
   private setupEventListeners(): void {
@@ -81,12 +112,34 @@ export class RewardSystemUI extends BaseService {
     });
 
     this.subscribe('web3:walletConnected', () => {
+      if (!this.rewardWidget) {
+        // Create widget on connect if preference requires it
+        if (this.shouldShowRewardsWidget()) {
+          this.createRewardWidget();
+        }
+      }
       this.loadRewardData();
       this.updateRewardDisplay();
     });
 
     this.subscribe('web3:walletDisconnected', () => {
       this.resetRewardData();
+      if (this.shouldHideUntilConnected()) {
+        this.removeRewardWidget();
+      }
+    });
+
+    // React to settings changes for rewards visibility
+    this.subscribe('rewards:settingsChanged', () => {
+      if (this.shouldShowRewardsWidget()) {
+        if (!this.rewardWidget) {
+          this.createRewardWidget();
+        } else {
+          this.updateRewardDisplay();
+        }
+      } else {
+        this.removeRewardWidget();
+      }
     });
 
     // Widget interactions
