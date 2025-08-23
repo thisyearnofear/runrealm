@@ -352,10 +352,26 @@
     left: auto;
     right: auto;
     width: 100%;
+    max-width: 100%;
     bottom: auto;
     padding: 12px;
     border-radius: 12px;
     margin: 0;
+    /* Prevent viewport domination */
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+
+  /* When widget is minimized in widget system, ensure compact display */
+  .widget.minimized .run-controls-widget {
+    max-height: 60px;
+    overflow: hidden;
+  }
+
+  /* When widget is expanded, limit height but allow scrolling */
+  .widget.expanded .run-controls-widget {
+    max-height: 50vh;
+    overflow-y: auto;
   }
 
   .stat-group {

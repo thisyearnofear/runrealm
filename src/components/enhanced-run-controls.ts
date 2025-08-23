@@ -30,8 +30,15 @@ export class EnhancedRunControls extends BaseService {
 
   protected async onInitialize(): Promise<void> {
     this.setupEventListeners();
-    this.createWidget();
+    // Don't create widget immediately - wait for MainUI to be ready
     this.safeEmit('service:initialized', { service: 'EnhancedRunControls', success: true });
+  }
+
+  /**
+   * Initialize widget after MainUI is ready
+   */
+  public initializeWidget(): void {
+    this.createWidget();
   }
 
   private setupEventListeners(): void {
@@ -76,16 +83,14 @@ export class EnhancedRunControls extends BaseService {
   private createWidget(): void {
     // Register with the widget system instead of creating a standalone widget
     const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
-    if (widgetSystem) {
-      // Check if mobile for initial state
-      const isMobile = window.innerWidth <= 768;
 
+    if (widgetSystem) {
       widgetSystem.registerWidget({
         id: 'run-tracker',
         title: 'Run Tracker',
         icon: '🏃‍♂️',
         position: 'bottom-left',
-        minimized: isMobile, // Start minimized on mobile for map visibility
+        minimized: true, // Always start minimized to prevent viewport domination
         priority: 10,
         content: this.getWidgetContent()
       });

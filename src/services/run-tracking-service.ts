@@ -56,10 +56,11 @@ export class RunTrackingService extends BaseService {
   private lastPoint: RunPoint | null = null;
   private config: RunTrackingConfig;
   private updateInterval: number | null = null;
+  private locationService: any = null; // Direct reference to avoid registry dependency
 
   constructor() {
     super('RunTrackingService');
-    
+
     this.config = {
       minAccuracy: 20, // 20 meters
       maxTimeBetweenPoints: 30000, // 30 seconds
@@ -68,6 +69,13 @@ export class RunTrackingService extends BaseService {
       territoryMinDistance: 500, // 500 meters minimum
       territoryMaxDeviation: 50 // 50 meters from start point
     };
+  }
+
+  /**
+   * Set the location service reference directly
+   */
+  public setLocationService(locationService: any): void {
+    this.locationService = locationService;
   }
 
   protected async onInitialize(): Promise<void> {
@@ -100,13 +108,12 @@ export class RunTrackingService extends BaseService {
     }
 
     // Get current location to start
-    const locationService = this.getService('LocationService');
-    if (!locationService) {
-      throw new Error('LocationService not available');
+    if (!this.locationService) {
+      throw new Error('LocationService not available - make sure setLocationService() was called');
     }
 
     try {
-      const currentLocation = await locationService.getCurrentLocation(true);
+      const currentLocation = await this.locationService.getCurrentLocation(true);
       
       const runId = this.generateRunId();
       const startPoint: RunPoint = {

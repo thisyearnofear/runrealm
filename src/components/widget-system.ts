@@ -9,6 +9,8 @@ import { DragService } from './drag-service';
 import { AnimationService } from '../services/animation-service';
 import { WidgetStateService, WidgetState } from './widget-state-service';
 import { VisibilityService } from './visibility-service';
+import { MobileWidgetService } from './mobile-widget-service';
+import { TouchGestureService } from './touch-gesture-service';
 
 export interface Widget {
   id: string;
@@ -26,6 +28,7 @@ export class WidgetSystem extends BaseService {
   private animationService: AnimationService;
   private widgetStateService: WidgetStateService;
   private visibilityService: VisibilityService | null = null;
+  private mobileWidgetService: MobileWidgetService | null = null;
   private widgets: Map<string, Widget> = new Map();
   private activeWidget: string | null = null;
   private widgetContainer: HTMLElement | null = null;
@@ -48,7 +51,7 @@ export class WidgetSystem extends BaseService {
    */
   public setVisibilityService(visibilityService: VisibilityService): void {
     this.visibilityService = visibilityService;
-    
+
     // Subscribe to visibility changes
     this.subscribe('visibility:changed', (data: { elementId: string; visible: boolean }) => {
       const widgetId = data.elementId.replace('widget-', '');
@@ -73,6 +76,13 @@ export class WidgetSystem extends BaseService {
         }
       }
     });
+  }
+
+  /**
+   * Set the mobile widget service for mobile optimizations
+   */
+  public setMobileWidgetService(mobileWidgetService: MobileWidgetService): void {
+    this.mobileWidgetService = mobileWidgetService;
   }
 
   protected async onInitialize(): Promise<void> {
@@ -257,9 +267,11 @@ export class WidgetSystem extends BaseService {
       parent: undefined // We'll append manually
     });
 
-    // Apply mobile optimizations if available
-    // Note: In a full implementation, we would inject MobileWidgetService
-    // For now, we'll add basic mobile-friendly features
+    // Apply mobile optimizations using existing service
+    if (this.mobileWidgetService) {
+      this.mobileWidgetService.applyMobileStyling(widgetElement);
+      this.mobileWidgetService.optimizeLayout(widgetElement);
+    }
     
     // Make widget header draggable using DragService
     const header = widgetElement.querySelector('.widget-header') as HTMLElement;

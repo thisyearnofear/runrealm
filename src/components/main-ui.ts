@@ -228,6 +228,10 @@ export class MainUI extends BaseService {
     this.createSettingsWidget();
     console.log('MainUI: Settings widget created');
 
+    // Initialize run tracker widget now that widget system is ready
+    // Use setTimeout to ensure services are fully registered
+    setTimeout(() => this.initializeRunTrackerWidget(), 100);
+
     // Force widget system debug info
     console.log('MainUI: Widget system debug info:', this.widgetSystem.getDebugInfo());
 
@@ -1077,6 +1081,26 @@ export class MainUI extends BaseService {
     ['player-stats', 'territory-info', 'challenges', 'ai-coach'].forEach(id => {
       this.widgetSystem.removeWidget(id);
     });
+  }
+
+  /**
+   * Initialize run tracker widget after MainUI is ready
+   */
+  private initializeRunTrackerWidget(): void {
+    // Get the enhanced run controls service from global registry
+    const services = (window as any).RunRealm?.services;
+
+    if (services && services.EnhancedRunControls) {
+      services.EnhancedRunControls.initializeWidget();
+    } else {
+      // Fallback: access directly from app instance
+      const app = (window as any).runRealmApp;
+      if (app && app.enhancedRunControls) {
+        app.enhancedRunControls.initializeWidget();
+      } else {
+        console.error('MainUI: Could not find EnhancedRunControls service');
+      }
+    }
   }
 
   // GameFi widget content generators

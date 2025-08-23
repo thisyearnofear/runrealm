@@ -526,8 +526,19 @@
 
   /* Expanded widgets have reasonable max height */
   .widget.expanded {
-    max-height: 60vh !important;
+    max-height: 45vh !important;
     overflow-y: auto;
+  }
+
+  /* Special handling for run tracker widget on mobile */
+  .widget.expanded#run-tracker-widget {
+    max-height: 40vh !important;
+  }
+
+  /* Ensure widgets don't exceed viewport width */
+  .widget {
+    max-width: calc(100vw - 20px) !important;
+    margin: 0 10px !important;
   }
 
   .widget-header {

@@ -178,12 +178,15 @@ export class EnhancedOnboarding extends BaseService {
       this.tooltip.remove();
     }
 
+    // Handle mobile-specific step preparation
+    await this.prepareMobileStep(step);
+
     // Highlight target element
     this.highlightTarget(step.target);
 
     // Create and show tooltip
     await this.createTooltip(step);
-    
+
     // Handle step action
     if (step.action) {
       this.handleStepAction(step);
@@ -631,29 +634,72 @@ export class EnhancedOnboarding extends BaseService {
         /* Mobile responsiveness */
         @media (max-width: 768px) {
           .onboarding-tooltip {
-            max-width: 90vw;
+            max-width: calc(100vw - 40px);
             min-width: 280px;
             margin: 20px;
+            /* Ensure tooltip doesn't go off-screen */
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            position: fixed !important;
           }
 
           .tooltip-content {
             padding: 20px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
           }
 
           .tooltip-title {
             font-size: 18px;
+            line-height: 1.3;
           }
 
           .tooltip-description {
             font-size: 14px;
+            line-height: 1.4;
           }
 
           .tooltip-footer {
             flex-direction: column;
+            gap: 8px;
+            margin-top: 16px;
           }
 
           .tooltip-btn {
             width: 100%;
+            min-height: 48px;
+            font-size: 16px;
+          }
+
+          /* Better mobile overlay */
+          .onboarding-overlay {
+            backdrop-filter: blur(8px);
+          }
+
+          /* Adjust highlight for mobile */
+          .onboarding-highlight {
+            box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.6), 0 0 15px rgba(0, 255, 136, 0.4) !important;
+          }
+        }
+
+        /* Small mobile devices */
+        @media (max-width: 480px) {
+          .onboarding-tooltip {
+            max-width: calc(100vw - 20px);
+            margin: 10px;
+          }
+
+          .tooltip-content {
+            padding: 16px;
+          }
+
+          .tooltip-title {
+            font-size: 16px;
+          }
+
+          .tooltip-description {
+            font-size: 13px;
           }
         }
 
@@ -674,6 +720,52 @@ export class EnhancedOnboarding extends BaseService {
       `,
       parent: document.head
     });
+  }
+
+  /**
+   * Prepare mobile-specific step handling
+   */
+  private async prepareMobileStep(step: OnboardingStep): Promise<void> {
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) return;
+
+    // For steps that target widgets, ensure they're expanded and visible
+    if (step.target && (step.id === 'wallet-connect' || step.id === 'run-controls')) {
+      await this.ensureWidgetVisible(step);
+    }
+
+    // For mobile, adjust tooltip positioning to prevent viewport issues
+    if (step.position && (step.position === 'top' || step.position === 'bottom')) {
+      // On mobile, center tooltips to avoid viewport edge issues
+      step.position = 'center';
+    }
+  }
+
+  /**
+   * Ensure target widget is visible and expanded for onboarding
+   */
+  private async ensureWidgetVisible(step: OnboardingStep): Promise<void> {
+    const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
+    if (!widgetSystem) return;
+
+    let widgetId: string | null = null;
+
+    // Map step targets to widget IDs
+    if (step.target === '#wallet-info' || step.target === '#connect-wallet-btn') {
+      widgetId = 'wallet-info';
+    } else if (step.target === '.run-controls-widget') {
+      widgetId = 'run-tracker';
+    }
+
+    if (widgetId) {
+      // Expand the widget if it's minimized
+      const widget = widgetSystem.widgets?.get(widgetId);
+      if (widget && widget.minimized) {
+        widgetSystem.toggleWidget(widgetId);
+        // Wait a bit for the animation to complete
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
   }
 
   public restartOnboarding(): void {

@@ -393,6 +393,9 @@ export class RunRealmApp {
       // Initialize core services first
       await this.locationService.initialize();
 
+      // Set location service reference on run tracking service
+      this.runTrackingService.setLocationService(this.locationService);
+
       // Initialize run tracking and territory services
       await this.runTrackingService.initialize();
       await this.territoryService.initialize();
