@@ -1,6 +1,7 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
+const TerserPlugin = require("terser-webpack-plugin");
 const webpack = require("webpack");
 require("dotenv").config();
 
@@ -87,6 +88,27 @@ module.exports = (env, argv) => {
 
     optimization: {
       minimize: isProduction,
+      minimizer: isProduction
+        ? [
+            new TerserPlugin({
+              terserOptions: {
+                mangle: {
+                  keep_classnames: true,
+                  keep_fnames: true,
+                },
+                compress: {
+                  passes: 2,
+                },
+                format: {
+                  comments: false,
+                },
+                keep_classnames: true,
+                keep_fnames: true,
+              },
+              extractComments: false,
+            }),
+          ]
+        : [],
       splitChunks: {
         chunks: "all",
         cacheGroups: {
