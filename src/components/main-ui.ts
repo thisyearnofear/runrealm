@@ -205,6 +205,14 @@ export class MainUI extends BaseService {
 
     await this.widgetSystem.initialize();
     console.log('MainUI: Widget system initialized');
+    
+    // Connect mobile widget service to widget system for mobile optimizations
+    this.widgetSystem.setMobileWidgetService(this.mobileWidgetService);
+    console.log('MainUI: Mobile widget service connected to widget system');
+    
+    // Connect visibility service to widget system
+    this.widgetSystem.setVisibilityService(this.visibilityService);
+    console.log('MainUI: Visibility service connected to widget system');
 
     this.createMainInterface();
     console.log('MainUI: Main interface created');
@@ -311,7 +319,7 @@ export class MainUI extends BaseService {
     });
 
     this.domService.delegate(document.body, '#wallet-btn', 'click', () => {
-      this.walletConnection.showWalletModal();
+      this.walletWidget.showWalletModal();
       this.trackUserAction('wallet_button_clicked');
     });
 
@@ -348,7 +356,7 @@ export class MainUI extends BaseService {
     });
 
     this.domService.delegate(document.body, '#connect-wallet-btn', 'click', () => {
-      this.walletConnection.showWalletModal();
+      this.walletWidget.showWalletModal();
     });
 
     // Centralized UI action routing with enhanced UX
@@ -563,7 +571,7 @@ export class MainUI extends BaseService {
       }
     });
 
-    this.subscribe('ai:ghostRunnerFailed', (data: { message: string }) => {
+    this.subscribe('ai:ghostRunnerFailed' as any, (data: { message: string }) => {
       console.log('MainUI: Ghost runner generation failed:', data.message);
       this.hideAILoadingState();
       const widget = this.widgetSystem.getWidget('ai-coach');
@@ -587,7 +595,7 @@ export class MainUI extends BaseService {
     });
 
     // Handle route generation success
-    this.subscribe('ai:routeReady', (data: { waypoints: any[]; distance: number; difficulty: number; reasoning?: string }) => {
+    this.subscribe('ai:routeReady' as any, (data: { route: any; distance: number; duration: number; waypoints?: any[]; totalDistance?: number; difficulty?: number; estimatedTime?: number; }) => {
       console.log('MainUI: Route generated successfully:', data);
       this.hideAILoadingState();
       const widget = this.widgetSystem.getWidget('ai-coach');
@@ -599,14 +607,13 @@ export class MainUI extends BaseService {
         const successHtml = `
           <div class="widget-tip success animate-in">
             📍 Perfect route found! ${waypointSummary}, ${Math.round(data.distance)}m
-            <br><small>Difficulty: ${data.difficulty}% • Territory opportunities along route</small>
-            ${data.reasoning ? `<br><small class="route-reasoning">${data.reasoning}</small>` : ''}
+            <br><small>Difficulty: ${data.difficulty || 50}% • Territory opportunities along route</small>
           </div>
           <div class="widget-buttons">
             <button class="widget-button primary" data-action="ai.showRoute" data-payload='{"coordinates":${JSON.stringify(data.route)}}'>
               🗺️ Show on Map
             </button>
-            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${data.difficulty}}'>
+            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${data.difficulty || 50}}'>
               👻 Add Ghost
             </button>
             <button class="widget-button tertiary" onclick="this.closest('.widget').querySelector('.widget-tip').classList.toggle('expanded')">
@@ -747,7 +754,7 @@ export class MainUI extends BaseService {
       // Store preference: checked means hide until connected
       localStorage.setItem('runrealm_rewards_hide_until_connected', target.checked ? 'true' : 'false');
       // Notify rewards UI to react immediately
-      this.safeEmit('rewards:settingsChanged', {});
+      this.safeEmit('rewards:settingsChanged' as any, {});
       // Update settings widget to reflect any state change
       this.widgetSystem.updateWidget('settings', this.getSettingsContent());
     });
@@ -1015,7 +1022,7 @@ export class MainUI extends BaseService {
         this.locationService.showLocationModal();
         break;
       case 'wallet':
-        this.walletConnection.showWalletModal();
+        this.walletWidget.showWalletModal();
         break;
       case 'help':
         this.showHelpModal();
@@ -1406,7 +1413,7 @@ export class MainUI extends BaseService {
    * Create a simple onboarding experience when the service isn't available
    */
   private createSimpleOnboarding(): void {
-    this.showToast('🎓 Starting tutorial...', 'success');
+    this.uiService.showToast('🎓 Starting tutorial...', { type: 'success' });
 
     // Use a simpler approach that doesn't interfere with the widget system
     this.showSequentialTooltips();
@@ -1519,7 +1526,8 @@ export class MainUI extends BaseService {
     if (!widget) return;
 
     // Check if still showing loading state
-    const content = widget.element?.innerHTML || '';
+    const widgetElement = this.widgetSystem.getWidgetElement('ai-coach');
+    const content = widgetElement?.innerHTML || '';
     if (content.includes('widget-loading')) {
       console.log('MainUI: Clearing stuck AI loading state');
       const defaultHtml = `
@@ -1550,9 +1558,14 @@ export class MainUI extends BaseService {
       return;
     }
 
-    const widgetElement = widget.element;
-    if (!widgetElement || !widgetElement.classList) {
-      console.warn('MainUI: Widget element not found or invalid for celebration');
+    const widgetElement = this.widgetSystem.getWidgetElement('ai-coach');
+    if (!widgetElement) {
+      console.warn('MainUI: AI coach widget element not found for celebration');
+      return;
+    }
+
+    if (!widgetElement.classList) {
+      console.warn('MainUI: Widget element invalid for celebration');
       return;
     }
 

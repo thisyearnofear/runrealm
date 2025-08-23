@@ -190,6 +190,9 @@ export class MobileWidgetService extends BaseService {
       widgetElement.classList.add('compact-mode');
     }
     
+    // Remove mobile-inappropriate content
+    this.removeMobileInappropriateContent(widgetElement);
+    
     // Adjust touch targets for better usability
     const buttons = widgetElement.querySelectorAll('button, .widget-toggle');
     buttons.forEach(button => {
@@ -204,6 +207,61 @@ export class MobileWidgetService extends BaseService {
   }
 
   /**
+   * Remove content that doesn't make sense on mobile devices
+   */
+  private removeMobileInappropriateContent(widgetElement: HTMLElement): void {
+    // Remove "Press enter to toggle" and similar desktop-only instructions
+    const textNodes = this.getAllTextNodes(widgetElement);
+    textNodes.forEach(node => {
+      const text = node.textContent || '';
+      if (text.toLowerCase().includes('press enter') ||
+          text.toLowerCase().includes('click to') ||
+          text.toLowerCase().includes('keyboard shortcut') ||
+          text.toLowerCase().includes('use arrow keys')) {
+        // Replace with mobile-appropriate text or remove
+        if (text.toLowerCase().includes('press enter to toggle')) {
+          node.textContent = text.replace(/press enter to toggle/gi, 'tap to toggle');
+        } else if (text.toLowerCase().includes('click to')) {
+          node.textContent = text.replace(/click to/gi, 'tap to');
+        } else {
+          // Remove entirely if it's purely desktop instruction
+          const parent = node.parentElement;
+          if (parent && parent.classList.contains('help-text')) {
+            parent.style.display = 'none';
+          }
+        }
+      }
+    });
+
+    // Hide desktop-only help sections
+    const helpSections = widgetElement.querySelectorAll('.desktop-help, .keyboard-help');
+    helpSections.forEach(section => {
+      (section as HTMLElement).style.display = 'none';
+    });
+  }
+
+  /**
+   * Get all text nodes in element for content modification
+   */
+  private getAllTextNodes(element: HTMLElement): Text[] {
+    const textNodes: Text[] = [];
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+    
+    let node;
+    while (node = walker.nextNode()) {
+      if (node.textContent && node.textContent.trim()) {
+        textNodes.push(node as Text);
+      }
+    }
+    
+    return textNodes;
+  }
+
+  /**
    * Optimize widget layout for mobile
    */
   public optimizeLayout(widgetElement: HTMLElement): void {
@@ -211,6 +269,9 @@ export class MobileWidgetService extends BaseService {
 
     // Ensure widget stays within viewport bounds
     this.constrainToViewport(widgetElement);
+    
+    // Apply ultra-compact layout optimizations
+    this.applyCompactLayoutOptimizations(widgetElement);
 
     // In landscape mode, rearrange widgets to better use space
     if (this.orientation === 'landscape') {
@@ -221,17 +282,160 @@ export class MobileWidgetService extends BaseService {
   }
 
   /**
-   * Constrain widget to viewport bounds
+   * Apply compact layout optimizations for mobile
+   */
+  private applyCompactLayoutOptimizations(widgetElement: HTMLElement): void {
+    // Consolidate redundant information
+    this.consolidateWidgetContent(widgetElement);
+    
+    // Minimize white space
+    this.minimizeWhitespace(widgetElement);
+    
+    // Optimize button layouts
+    this.optimizeButtonLayouts(widgetElement);
+    
+    // Apply ultra-compact styling
+    if (this.compactMode) {
+      widgetElement.classList.add('compact-layout');
+    }
+  }
+
+  /**
+   * Consolidate widget content to reduce redundancy
+   */
+  private consolidateWidgetContent(widgetElement: HTMLElement): void {
+    // Combine similar stats into single lines
+    const statElements = widgetElement.querySelectorAll('.widget-stat');
+    this.combineRelatedStats(statElements);
+    
+    // Hide secondary information in compact mode
+    if (this.compactMode) {
+      const secondaryInfo = widgetElement.querySelectorAll('.secondary-info, .help-text, .description');
+      secondaryInfo.forEach(el => {
+        (el as HTMLElement).style.display = 'none';
+      });
+    }
+    
+    // Simplify button text for mobile
+    const buttons = widgetElement.querySelectorAll('button');
+    buttons.forEach(button => {
+      const btn = button as HTMLElement;
+      if (btn.textContent) {
+        // Shorten common button texts
+        btn.textContent = btn.textContent
+          .replace('Start Location Tracking', 'Track')
+          .replace('Connect Wallet', 'Connect')
+          .replace('Disconnect', 'Disconnect')
+          .replace('View Details', 'Details')
+          .replace('Settings', 'Settings');
+      }
+    });
+  }
+
+  /**
+   * Combine related stats for more compact display
+   */
+  private combineRelatedStats(statElements: NodeListOf<Element>): void {
+    // Group stats by category and combine when possible
+    const statGroups = new Map<string, Element[]>();
+    
+    statElements.forEach(stat => {
+      const label = stat.querySelector('.widget-stat-label')?.textContent?.toLowerCase() || '';
+      if (label.includes('distance') || label.includes('time') || label.includes('pace')) {
+        const group = statGroups.get('running') || [];
+        group.push(stat);
+        statGroups.set('running', group);
+      }
+    });
+    
+    // Combine running stats into single compact display
+    statGroups.forEach((stats, groupName) => {
+      if (stats.length > 1 && groupName === 'running') {
+        this.createCompactStatDisplay(stats);
+      }
+    });
+  }
+
+  /**
+   * Create compact stat display for related stats
+   */
+  private createCompactStatDisplay(stats: Element[]): void {
+    if (stats.length === 0) return;
+    
+    const firstStat = stats[0] as HTMLElement;
+    const parent = firstStat.parentElement;
+    if (!parent) return;
+    
+    // Create compact combined stat element
+    const compactStat = document.createElement('div');
+    compactStat.className = 'widget-stat compact-combined';
+    
+    let combinedValue = '';
+    stats.forEach((stat, index) => {
+      const label = stat.querySelector('.widget-stat-label')?.textContent || '';
+      const value = stat.querySelector('.widget-stat-value')?.textContent || '';
+      
+      if (index > 0) combinedValue += ' • ';
+      combinedValue += `${value}`;
+      
+      // Hide original stat
+      (stat as HTMLElement).style.display = 'none';
+    });
+    
+    compactStat.innerHTML = `
+      <div class="widget-stat-label">Run Stats</div>
+      <div class="widget-stat-value">${combinedValue}</div>
+    `;
+    
+    parent.insertBefore(compactStat, firstStat);
+  }
+
+  /**
+   * Minimize whitespace in widget content
+   */
+  private minimizeWhitespace(widgetElement: HTMLElement): void {
+    // Reduce margins on paragraphs and divs
+    const textElements = widgetElement.querySelectorAll('p, div, span');
+    textElements.forEach(el => {
+      const element = el as HTMLElement;
+      if (element.style.margin) {
+        element.style.margin = '2px 0';
+      }
+    });
+  }
+
+  /**
+   * Optimize button layouts for mobile
+   */
+  private optimizeButtonLayouts(widgetElement: HTMLElement): void {
+    const buttonContainers = widgetElement.querySelectorAll('.widget-buttons, .button-group');
+    buttonContainers.forEach(container => {
+      const containerEl = container as HTMLElement;
+      containerEl.style.gap = '2px';
+      containerEl.style.flexWrap = 'wrap';
+      
+      // Make buttons more compact
+      const buttons = container.querySelectorAll('button');
+      buttons.forEach(btn => {
+        const button = btn as HTMLElement;
+        button.style.flex = '1';
+        button.style.minWidth = '32px';
+      });
+    });
+  }
+
+  /**
+   * Constrain widget to viewport bounds with aggressive mobile optimization
    */
   private constrainToViewport(widgetElement: HTMLElement): void {
     const widget = widgetElement.closest('.widget') as HTMLElement;
     if (!widget) return;
 
-    // Set max dimensions to prevent viewport overflow
-    widget.style.maxWidth = 'calc(100vw - 40px)';
-    widget.style.maxHeight = 'calc(100vh - 40px)';
+    // Set ultra-compact max dimensions for mobile
+    widget.style.maxWidth = 'calc(100vw - 16px)'; // Reduced margins
+    widget.style.maxHeight = 'calc(100vh - 16px)';
 
-    // Ensure proper positioning
+    // Ensure proper positioning with minimal spacing
     const widgetZone = widget.closest('.widget-zone') as HTMLElement;
     if (widgetZone) {
       widgetZone.style.position = 'fixed';
@@ -239,17 +443,34 @@ export class MobileWidgetService extends BaseService {
       widget.style.pointerEvents = 'auto';
     }
     
-    // In compact mode, simplify content
+    // In compact mode, aggressively simplify content
     if (this.compactMode) {
       widgetElement.classList.add('compact-layout');
-      // Hide secondary information
-      const secondaryInfo = widgetElement.querySelectorAll('.secondary-info');
-      secondaryInfo.forEach(el => (el as HTMLElement).style.display = 'none');
-    } else {
-      widgetElement.classList.remove('compact-layout');
-      // Show secondary information
-      const secondaryInfo = widgetElement.querySelectorAll('.secondary-info');
-      secondaryInfo.forEach(el => (el as HTMLElement).style.display = '');
+      
+      // Hide all non-essential elements
+      const nonEssential = widgetElement.querySelectorAll(
+        '.secondary-info, .help-text, .description, .widget-tip, .debug-info'
+      );
+      nonEssential.forEach(el => (el as HTMLElement).style.display = 'none');
+      
+      // Minimize all spacing
+      widget.style.margin = '0';
+      widget.style.padding = '0';
+    }
+    
+    // Ultra-compact mode for very small screens
+    if (window.innerWidth < 400) {
+      widget.classList.add('ultra-compact');
+      
+      // Further reduce font sizes
+      const textElements = widget.querySelectorAll('*');
+      textElements.forEach(el => {
+        const element = el as HTMLElement;
+        const currentSize = parseInt(window.getComputedStyle(element).fontSize);
+        if (currentSize > 10) {
+          element.style.fontSize = Math.max(9, currentSize - 2) + 'px';
+        }
+      });
     }
   }
 

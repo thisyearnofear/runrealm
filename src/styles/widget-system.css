@@ -576,108 +576,155 @@
 /* Mobile Responsiveness - Optimized for touch and map visibility */
 @media (max-width: 768px) {
   .widget-zone {
-    gap: 4px;
+    gap: 2px; /* Reduced from 4px */
     max-width: none !important;
   }
 
-  /* Top zones - minimal footprint, only essential widgets */
+  /* Top zones - ultra minimal footprint */
   .widget-zone.top-left {
-    top: 10px;
-    left: 10px;
-    max-width: 160px; /* Compact width */
+    top: 8px;
+    left: 8px;
+    max-width: 140px; /* Reduced from 160px */
   }
 
   .widget-zone.top-right {
-    top: 10px;
-    right: 10px;
-    max-width: 160px; /* Compact width */
+    top: 8px;
+    right: 8px;
+    max-width: 140px; /* Reduced from 160px */
   }
 
-  /* Bottom zones - more space for interactive widgets */
+  /* Bottom zones - compact but functional */
   .widget-zone.bottom-left {
-    bottom: 10px;
-    left: 10px;
-    max-width: 180px;
+    bottom: 8px;
+    left: 8px;
+    max-width: 160px; /* Reduced from 180px */
   }
 
   .widget-zone.bottom-right {
-    bottom: 10px;
-    right: 10px;
-    max-width: 180px;
+    bottom: 8px;
+    right: 8px;
+    max-width: 160px; /* Reduced from 180px */
   }
 
-  /* Mobile widget styling */
+  /* Mobile widget styling - ultra compact */
   .widget {
     max-width: 100% !important;
-    min-width: 140px !important;
-    border-radius: 8px;
-    backdrop-filter: blur(8px);
+    min-width: 120px !important; /* Reduced from 140px */
+    border-radius: 6px; /* Reduced from 8px */
+    backdrop-filter: blur(6px); /* Reduced blur */
   }
 
-  /* Minimized widgets are very compact on mobile */
+  /* Minimized widgets are extremely compact on mobile */
   .widget.minimized {
-    max-height: 40px !important;
-    min-height: 40px !important;
+    max-height: 32px !important; /* Reduced from 40px */
+    min-height: 32px !important;
   }
 
   .widget.minimized .widget-header {
-    padding: 8px 10px !important;
-    min-height: 40px;
+    padding: 4px 8px !important; /* Reduced from 8px 10px */
+    min-height: 32px; /* Reduced from 40px */
   }
 
   .widget.minimized .widget-title {
-    font-size: 11px !important;
+    font-size: 10px !important; /* Reduced from 11px */
     font-weight: 500;
   }
 
   .widget.minimized .widget-icon {
-    font-size: 14px !important;
+    font-size: 12px !important; /* Reduced from 14px */
   }
 
-  /* Expanded widgets have reasonable max height */
+  /* Expanded widgets have very constrained max height */
   .widget.expanded {
-    max-height: 45vh !important;
+    max-height: 35vh !important; /* Reduced from 45vh */
     overflow-y: auto;
   }
 
   /* Special handling for run tracker widget on mobile */
   .widget.expanded#run-tracker-widget {
-    max-height: 40vh !important;
+    max-height: 30vh !important; /* Reduced from 40vh */
   }
 
   /* Ensure widgets don't exceed viewport width */
   .widget {
-    max-width: calc(100vw - 20px) !important;
-    margin: 0 10px !important;
+    max-width: calc(100vw - 16px) !important; /* Reduced margins */
+    margin: 0 8px !important; /* Reduced from 10px */
   }
 
   .widget-header {
-    padding: 10px 12px;
-    min-height: 44px; /* Touch-friendly */
+    padding: 6px 8px; /* Reduced from 10px 12px */
+    min-height: 32px; /* Reduced from 44px - still touch-friendly */
   }
 
   .widget-content {
-    padding: 10px;
-    max-height: 50vh;
+    padding: 6px 8px; /* Reduced from 10px */
+    max-height: 35vh; /* Reduced from 50vh */
     overflow-y: auto;
+    font-size: 12px; /* Reduced from 14px */
+    line-height: 1.3; /* Tighter line height */
   }
 
   .widget-title {
-    font-size: 12px;
+    font-size: 11px; /* Reduced from 12px */
     font-weight: 600;
   }
 
   .widget-icon {
-    font-size: 16px;
+    font-size: 14px; /* Reduced from 16px */
   }
 
   /* Mobile-specific widget behaviors */
   .widget-toggle {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 32px; /* Reduced from 44px but still usable */
+    min-height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 12px; /* Smaller toggle icons */
+  }
+
+  /* Mobile widget buttons - more compact */
+  .widget-button {
+    padding: 4px 8px; /* Reduced padding */
+    font-size: 11px; /* Smaller text */
+    min-width: 32px; /* Reduced but still touchable */
+    min-height: 32px;
+    margin: 2px; /* Reduced spacing */
+  }
+
+  /* Mobile widget stats - more compact layout */
+  .widget-stat {
+    padding: 2px 0; /* Reduced from 4px */
+  }
+
+  .widget-stat-label {
+    font-size: 9px; /* Reduced from 10px */
+  }
+
+  .widget-stat-value {
+    font-size: 11px; /* Reduced from 12px */
+  }
+
+  /* Compact progress bars */
+  .widget-progress {
+    margin: 4px 0; /* Reduced from 8px */
+  }
+
+  .widget-progress-bar {
+    height: 4px; /* Reduced from 6px */
+  }
+
+  /* Compact lists */
+  .widget-list-item {
+    padding: 4px 0; /* Reduced from 8px */
+  }
+
+  .widget-list-title {
+    font-size: 11px; /* Reduced from 13px */
+  }
+
+  .widget-list-subtitle {
+    font-size: 9px; /* Reduced from 11px */
   }
 
   /* Ensure widgets don't block map interactions but stay above it */
@@ -708,53 +755,177 @@
   }
 }
 
-/* Mobile-specific enhancements */
+/* Mobile-specific enhancements - ultra compact */
 .mobile-widget {
-  /* Larger touch targets */
-  min-width: 280px !important;
+  /* Compact touch targets while maintaining usability */
+  min-width: 240px !important; /* Reduced from 280px */
 }
 
 .mobile-widget .widget-header {
-  padding: 14px 16px !important;
-  min-height: 48px;
+  padding: 8px 10px !important; /* Reduced from 14px 16px */
+  min-height: 36px; /* Reduced from 48px */
 }
 
 .mobile-widget .widget-button {
-  min-width: 44px;
-  min-height: 44px;
-  font-size: 14px;
-  padding: 10px 14px;
+  min-width: 32px; /* Reduced from 44px */
+  min-height: 32px;
+  font-size: 11px; /* Reduced from 14px */
+  padding: 6px 10px; /* Reduced from 10px 14px */
 }
 
 .mobile-widget .widget-toggle {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 8px;
+  min-width: 32px; /* Reduced from 44px */
+  min-height: 32px;
+  padding: 4px; /* Reduced from 8px */
 }
 
-/* Compact mode for very small screens */
+/* Ultra compact mode for very small screens */
 .compact-mode .widget {
-  min-width: 240px !important;
+  min-width: 200px !important; /* Reduced from 240px */
 }
 
 .compact-mode .widget-header {
-  padding: 8px 12px !important;
+  padding: 4px 8px !important; /* Further reduced */
 }
 
 .compact-mode .widget-content {
-  padding: 8px 12px !important;
+  padding: 4px 8px !important; /* Further reduced */
 }
 
 .compact-mode .widget-stat-label,
 .compact-mode .widget-stat-value {
-  font-size: 11px;
+  font-size: 9px; /* Reduced from 11px */
 }
 
 .compact-mode .widget-button {
-  padding: 6px 10px;
-  font-size: 12px;
-  min-width: 36px;
-  min-height: 36px;
+  padding: 4px 6px; /* Reduced from 6px 10px */
+  font-size: 10px; /* Reduced from 12px */
+  min-width: 28px; /* Reduced from 36px */
+  min-height: 28px;
+}
+
+/* Compact layout specific optimizations */
+.compact-layout .widget-content {
+  line-height: 1.2 !important;
+}
+
+.compact-layout .widget-stat {
+  margin: 1px 0 !important;
+}
+
+.compact-layout .widget-progress {
+  margin: 2px 0 !important;
+}
+
+.compact-layout .widget-list-item {
+  padding: 2px 0 !important;
+}
+
+/* Ultra compact mode for very small screens */
+.ultra-compact {
+  min-width: 100px !important;
+  max-width: calc(100vw - 8px) !important;
+}
+
+.ultra-compact .widget-header {
+  padding: 2px 4px !important;
+  min-height: 24px !important;
+}
+
+.ultra-compact .widget-content {
+  padding: 2px 4px !important;
+  font-size: 9px !important;
+}
+
+.ultra-compact .widget-title {
+  font-size: 8px !important;
+}
+
+.ultra-compact .widget-icon {
+  font-size: 10px !important;
+}
+
+.ultra-compact .widget-toggle {
+  min-width: 24px !important;
+  min-height: 24px !important;
+  font-size: 10px !important;
+}
+
+.ultra-compact .widget-button {
+  min-width: 24px !important;
+  min-height: 24px !important;
+  font-size: 8px !important;
+  padding: 2px 4px !important;
+}
+
+/* Combined stats styling */
+.compact-combined {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: 1px 0;
+}
+
+.compact-combined .widget-stat-label {
+  font-size: 8px !important;
+  color: #ccc;
+}
+
+.compact-combined .widget-stat-value {
+  font-size: 10px !important;
+  font-weight: 500;
+}
+
+/* Mobile-optimized widget styling */
+.mobile-optimized {
+  transition: all 0.15s ease-out !important; /* Faster transitions on mobile */
+}
+
+.mobile-optimized .widget-content {
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  overscroll-behavior: contain; /* Prevent scroll chaining */
+}
+
+.mobile-optimized .widget-button {
+  touch-action: manipulation; /* Prevent double-tap zoom on buttons */
+  user-select: none;
+}
+
+.mobile-optimized .widget-header {
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
+}
+
+/* Responsive font scaling for mobile */
+@media (max-width: 480px) {
+  .widget {
+    font-size: 12px !important;
+  }
+  
+  .widget-title {
+    font-size: 10px !important;
+  }
+  
+  .widget-stat-value {
+    font-size: 11px !important;
+  }
+  
+  .widget-stat-label {
+    font-size: 8px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .widget {
+    font-size: 11px !important;
+  }
+  
+  .widget-title {
+    font-size: 9px !important;
+  }
+  
+  .widget-content {
+    font-size: 10px !important;
+  }
 }
 
 /* Landscape layout optimizations */

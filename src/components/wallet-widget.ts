@@ -194,7 +194,7 @@ export class WalletWidget extends BaseService {
     this.walletState = { ...this.walletState, ...newState };
 
     // Emit state change for other components
-    this.safeEmit('wallet:stateChanged', this.walletState);
+    this.safeEmit('wallet:stateChanged' as any, this.walletState);
 
     // Update widget content through the widget system
     this.updateWidgetContent();
@@ -205,7 +205,7 @@ export class WalletWidget extends BaseService {
    */
   private updateWidgetContent(): void {
     // Emit widget update event that the widget system listens for
-    this.safeEmit('widget:updateContent', {
+    this.safeEmit('widget:updateContent' as any, {
       widgetId: 'wallet-info',
       content: this.getWidgetContent(),
       loading: this.walletState.status === 'connecting' || this.walletState.status === 'switching',
@@ -248,7 +248,7 @@ export class WalletWidget extends BaseService {
     }
   }
 
-  private showWalletModal(): void {
+  public showWalletModal(): void {
     const modal = this.domService.createElement('div', {
       id: 'wallet-modal-overlay',
       className: 'wallet-modal-overlay',
@@ -313,13 +313,13 @@ export class WalletWidget extends BaseService {
       parent: document.body
     });
 
-    this.animationService.fadeIn(modal, 200);
+    this.animationService.fadeIn(modal, { duration: 200 });
   }
 
   private hideWalletModal(): void {
     const modal = document.querySelector('#wallet-modal-overlay');
     if (modal) {
-      this.animationService.fadeOut(modal as HTMLElement, 200).then(() => {
+      this.animationService.fadeOut(modal as HTMLElement, { duration: 200 }).then(() => {
         modal.remove();
       });
     }

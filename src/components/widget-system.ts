@@ -163,9 +163,17 @@ export class WidgetSystem extends BaseService {
     // Prevent rapid clicking during animation
     if (element.classList.contains('widget-animating')) return;
 
-    // If expanding this widget, minimize others in same position
+    const isMobile = window.innerWidth <= 768;
+    
+    // If expanding this widget
     if (widget.minimized) {
-      this.minimizeWidgetsInPosition(widget.position, widgetId);
+      // On mobile: minimize ALL other widgets for maximum map visibility
+      // On desktop: minimize only widgets in same position
+      if (isMobile) {
+        this.minimizeAllOtherWidgets(widgetId);
+      } else {
+        this.minimizeWidgetsInPosition(widget.position, widgetId);
+      }
       this.activeWidget = widgetId;
     } else {
       this.activeWidget = null;
@@ -287,6 +295,15 @@ export class WidgetSystem extends BaseService {
     if (this.mobileWidgetService) {
       this.mobileWidgetService.applyMobileStyling(widgetElement);
       this.mobileWidgetService.optimizeLayout(widgetElement);
+      
+      // Apply mobile-specific content optimizations
+      this.applyMobileContentOptimizations(widgetElement);
+    }
+    
+    // Ensure mobile responsiveness
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      this.applyMobileWidgetBehavior(widgetElement, widget);
     }
     
     // Make widget header draggable using DragService
@@ -374,7 +391,7 @@ export class WidgetSystem extends BaseService {
   /**
    * Get widget DOM element by ID
    */
-  private getWidgetElement(widgetId: string): HTMLElement | null {
+  public getWidgetElement(widgetId: string): HTMLElement | null {
     return document.getElementById(`widget-${widgetId}`);
   }
 
@@ -436,6 +453,18 @@ export class WidgetSystem extends BaseService {
     widgetsToMinimize.forEach(widget => {
       widget.minimized = true;
       this.updateWidgetDisplay(widget);
+    });
+  }
+
+  /**
+   * Minimize all widgets except the specified one (mobile optimization)
+   */
+  private minimizeAllOtherWidgets(exceptId: string): void {
+    this.widgets.forEach((widget, widgetId) => {
+      if (widgetId !== exceptId && !widget.minimized) {
+        widget.minimized = true;
+        this.updateWidgetDisplay(widget);
+      }
     });
   }
 
@@ -826,8 +855,117 @@ export class WidgetSystem extends BaseService {
   }
 
   /**
-   * Move widget to a new position
+   * Apply mobile-specific content optimizations
    */
+  private applyMobileContentOptimizations(widgetElement: HTMLElement): void {
+    // Remove excessive spacing
+    this.reduceSpacing(widgetElement);
+    
+    // Compact button groups
+    this.compactButtonGroups(widgetElement);
+    
+    // Optimize text content
+    this.optimizeTextContent(widgetElement);
+  }
+
+  /**
+   * Apply mobile widget behavior
+   */
+  private applyMobileWidgetBehavior(widgetElement: HTMLElement, widget: Widget): void {
+    // Add mobile-specific classes
+    widgetElement.classList.add('mobile-optimized');
+    
+    // Ensure proper touch handling
+    const header = widgetElement.querySelector('.widget-header') as HTMLElement;
+    if (header) {
+      header.style.touchAction = 'manipulation';
+      header.style.userSelect = 'none';
+    }
+    
+    // Auto-apply compact mode for small screens
+    if (window.innerWidth < 400) {
+      widgetElement.classList.add('ultra-compact');
+    }
+  }
+
+  /**
+   * Reduce spacing in widget content for mobile
+   */
+  private reduceSpacing(widgetElement: HTMLElement): void {
+    // Reduce margins and padding on all child elements
+    const allElements = widgetElement.querySelectorAll('*');
+    allElements.forEach(el => {
+      const element = el as HTMLElement;
+      const tagName = element.tagName.toLowerCase();
+      
+      // Apply compact spacing to common elements
+      if (['div', 'p', 'span', 'section'].includes(tagName)) {
+        element.style.margin = '1px 0';
+        if (element.style.padding) {
+          element.style.padding = '1px 2px';
+        }
+      }
+    });
+  }
+
+  /**
+   * Compact button groups for mobile
+   */
+  private compactButtonGroups(widgetElement: HTMLElement): void {
+    const buttonGroups = widgetElement.querySelectorAll('.widget-buttons, .button-group');
+    buttonGroups.forEach(group => {
+      const groupEl = group as HTMLElement;
+      groupEl.style.display = 'flex';
+      groupEl.style.flexWrap = 'wrap';
+      groupEl.style.gap = '2px';
+      groupEl.style.justifyContent = 'space-between';
+      
+      // Make buttons fill available space efficiently
+      const buttons = group.querySelectorAll('button');
+      if (buttons.length > 0) {
+        const buttonsPerRow = Math.min(3, buttons.length);
+        const buttonWidth = `calc(${100 / buttonsPerRow}% - 2px)`;
+        
+        buttons.forEach(btn => {
+          const button = btn as HTMLElement;
+          button.style.flex = '1';
+          button.style.minWidth = '32px';
+          button.style.maxWidth = buttonWidth;
+        });
+      }
+    });
+  }
+
+  /**
+   * Optimize text content for mobile display
+   */
+  private optimizeTextContent(widgetElement: HTMLElement): void {
+    // Shorten common labels for mobile
+    const labels = widgetElement.querySelectorAll('.widget-stat-label, .label, .form-label');
+    labels.forEach(label => {
+      const labelEl = label as HTMLElement;
+      if (labelEl.textContent) {
+        labelEl.textContent = labelEl.textContent
+          .replace('Current Location', 'Location')
+          .replace('Distance Traveled', 'Distance')
+          .replace('Time Elapsed', 'Time')
+          .replace('Average Pace', 'Pace')
+          .replace('Calories Burned', 'Calories')
+          .replace('Connected Wallet', 'Wallet')
+          .replace('Territory Claimed', 'Territory');
+      }
+    });
+    
+    // Compact descriptions and help text
+    const descriptions = widgetElement.querySelectorAll('.description, .help-text');
+    descriptions.forEach(desc => {
+      const descEl = desc as HTMLElement;
+      if (descEl.textContent && descEl.textContent.length > 50) {
+        // Truncate long descriptions on mobile
+        descEl.textContent = descEl.textContent.substring(0, 40) + '...';
+      }
+    });
+  }
   private moveWidgetToPosition(widgetId: string, newPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'): void {
     const widget = this.widgets.get(widgetId);
     if (!widget) return;

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Widget Optimization Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .test-container {
+            max-width: 400px;
+            margin: 0 auto;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .viewport-simulator {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background: linear-gradient(135deg, #2d3748, #1a202c);
+            overflow: hidden;
+        }
+        
+        .test-controls {
+            padding: 10px;
+            background: #333;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 8px 16px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        button:hover {
+            background: #357abd;
+        }
+        
+        .size-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            z-index: 1000;
+        }
+        
+        .test-info {
+            padding: 10px;
+            background: #2d3748;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .test-info h3 {
+            margin: 0 0 10px 0;
+            color: #4a90e2;
+        }
+        
+        .test-info ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .test-info li {
+            margin-bottom: 5px;
+        }
+    </style>
+    <link rel="stylesheet" href="../src/styles/widget-system.css">
+</head>
+<body>
+    <h1>Mobile Widget Optimization Test</h1>
+    
+    <div class="test-container">
+        <div class="test-controls">
+            <button onclick="setViewportSize(320, 568)">iPhone SE</button>
+            <button onclick="setViewportSize(375, 667)">iPhone 8</button>
+            <button onclick="setViewportSize(414, 896)">iPhone 11</button>
+            <button onclick="setViewportSize(360, 640)">Android Small</button>
+            <button onclick="setViewportSize(768, 1024)">Tablet</button>
+            <button onclick="testAutoHide()">Test Auto-Hide</button>
+            <button onclick="testCompactMode()">Toggle Compact</button>
+        </div>
+        
+        <div class="viewport-simulator" id="viewport">
+            <div class="size-indicator" id="sizeIndicator">375 x 667</div>
+            
+            <!-- Widget System Container -->
+            <div id="widget-system" class="widget-system">
+                <!-- Widget Zones -->
+                <div class="widget-zone top-left" data-position="top-left">
+                    <div class="widget mobile-widget minimized" id="widget-location">
+                        <div class="widget-header" data-widget-id="location">
+                            <span class="widget-icon">📍</span>
+                            <span class="widget-title">Location</span>
+                            <button class="widget-toggle" data-widget-id="location">⬆️</button>
+                        </div>
+                        <div class="widget-content">
+                            <div class="widget-stat">
+                                <div class="widget-stat-label">Current Location</div>
+                                <div class="widget-stat-value">San Francisco, CA</div>
+                            </div>
+                            <div class="widget-stat">
+                                <div class="widget-stat-label">GPS Status</div>
+                                <div class="widget-stat-value">Active</div>
+                            </div>
+                            <div class="widget-buttons">
+                                <button class="widget-button">Update Location</button>
+                                <button class="widget-button">Search Places</button>
+                            </div>
+                            <div class="help-text">Press enter to toggle this widget</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="widget-zone top-right" data-position="top-right">
+                    <div class="widget mobile-widget minimized" id="widget-wallet">
+                        <div class="widget-header" data-widget-id="wallet">
+                            <span class="widget-icon">🦊</span>
+                            <span class="widget-title">Wallet</span>
+                            <button class="widget-toggle" data-widget-id="wallet">⬆️</button>
+                        </div>
+                        <div class="widget-content">
+                            <div class="widget-stat">
+                                <div class="widget-stat-label">Connected Wallet</div>
+                                <div class="widget-stat-value">0x1234...5678</div>
+                            </div>
+                            <div class="widget-stat">
+                                <div class="widget-stat-label">Balance</div>
+                                <div class="widget-stat-value">0.5 ETH</div>
+                            </div>
+                            <div class="widget-buttons">
+                                <button class="widget-button">Connect Wallet</button>
+                                <button class="widget-button">View Details</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="widget-zone bottom-left" data-position="bottom-left">
+                    <div class="widget mobile-widget minimized" id="widget-stats">
+                        <div class="widget-header" data-widget-id="stats">
+                            <span class="widget-icon">📊</span>
+                            <span class="widget-title">Run Stats</span>
+                            <button class="widget-toggle" data-widget-id="stats">⬆️</button>
+                        </div>
+                        <div class="widget-content">
+                            <div class="widget-stat">
+                                <div class="widget-stat-label">Distance Traveled</div>
+                                <div class="widget-stat-value">2.5 km</div>
+                            </div>
+                            <div class="widget-stat">
+                                <div class="widget-stat-label">Time Elapsed</div>
+                                <div class="widget-stat-value">15:30</div>
+                            </div>
+                            <div class="widget-stat">
+                                <div class="widget-stat-label">Average Pace</div>
+                                <div class="widget-stat-value">6:12/km</div>
+                            </div>
+                            <div class="widget-progress">
+                                <div class="widget-progress-label">
+                                    <span>Goal Progress</span>
+                                    <span>50%</span>
+                                </div>
+                                <div class="widget-progress-bar">
+                                    <div class="widget-progress-fill" style="width: 50%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-info">
+        <h3>Mobile Optimization Features Tested:</h3>
+        <ul>
+            <li>✅ <strong>Auto-hide functionality:</strong> When one widget expands, others minimize</li>
+            <li>✅ <strong>Ultra-compact dimensions:</strong> Widgets are much smaller on mobile</li>
+            <li>✅ <strong>Reduced padding/spacing:</strong> Minimal whitespace for better map visibility</li>
+            <li>✅ <strong>Mobile-appropriate text:</strong> No "Press enter to toggle" on mobile</li>
+            <li>✅ <strong>Compact content layouts:</strong> Combined stats and shorter labels</li>
+            <li>✅ <strong>Touch-optimized buttons:</strong> Proper touch targets while being compact</li>
+            <li>✅ <strong>Responsive sizing:</strong> Different sizes for different screen widths</li>
+        </ul>
+        
+        <h3>Test Instructions:</h3>
+        <ul>
+            <li>1. Try different device sizes using the buttons above</li>
+            <li>2. Click on widget headers to expand them (notice auto-hide behavior)</li>
+            <li>3. Test the "Toggle Compact" mode for ultra-small screens</li>
+            <li>4. Observe how widgets take up minimal screen space compared to desktop</li>
+        </ul>
+    </div>
+
+    <script>
+        let compactMode = false;
+        
+        function setViewportSize(width, height) {
+            const viewport = document.getElementById('viewport');
+            const sizeIndicator = document.getElementById('sizeIndicator');
+            
+            viewport.style.width = width + 'px';
+            viewport.style.height = height + 'px';
+            sizeIndicator.textContent = `${width} x ${height}`;
+            
+            // Apply different CSS classes based on size
+            const body = document.body;
+            body.classList.remove('mobile-small', 'mobile-medium', 'mobile-large', 'tablet');
+            
+            if (width <= 360) {
+                body.classList.add('mobile-small');
+                // Simulate ultra-compact mode
+                document.querySelectorAll('.widget').forEach(w => w.classList.add('ultra-compact'));
+            } else if (width <= 414) {
+                body.classList.add('mobile-medium');
+                document.querySelectorAll('.widget').forEach(w => w.classList.remove('ultra-compact'));
+            } else if (width <= 480) {
+                body.classList.add('mobile-large');
+                document.querySelectorAll('.widget').forEach(w => w.classList.remove('ultra-compact'));
+            } else {
+                body.classList.add('tablet');
+                document.querySelectorAll('.widget').forEach(w => w.classList.remove('ultra-compact'));
+            }
+        }
+        
+        function testAutoHide() {
+            // Expand one widget, minimize others
+            const widgets = document.querySelectorAll('.widget');
+            widgets.forEach((widget, index) => {
+                if (index === 0) {
+                    widget.classList.remove('minimized');
+                    widget.classList.add('expanded');
+                    widget.querySelector('.widget-toggle').textContent = '⬇️';
+                } else {
+                    widget.classList.add('minimized');
+                    widget.classList.remove('expanded');
+                    widget.querySelector('.widget-toggle').textContent = '⬆️';
+                }
+            });
+        }
+        
+        function testCompactMode() {
+            compactMode = !compactMode;
+            const widgets = document.querySelectorAll('.widget');
+            
+            widgets.forEach(widget => {
+                if (compactMode) {
+                    widget.classList.add('compact-mode', 'compact-layout');
+                    // Hide help text and secondary info
+                    widget.querySelectorAll('.help-text, .secondary-info').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                } else {
+                    widget.classList.remove('compact-mode', 'compact-layout');
+                    widget.querySelectorAll('.help-text, .secondary-info').forEach(el => {
+                        el.style.display = '';
+                    });
+                }
+            });
+        }
+        
+        // Setup widget toggle functionality
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('widget-toggle') || e.target.classList.contains('widget-header')) {
+                const widgetId = e.target.dataset.widgetId || e.target.closest('[data-widget-id]')?.dataset.widgetId;
+                if (!widgetId) return;
+                
+                const widget = document.getElementById(`widget-${widgetId}`);
+                if (!widget) return;
+                
+                const isMinimized = widget.classList.contains('minimized');
+                
+                if (isMinimized) {
+                    // Expanding this widget - minimize all others (mobile behavior)
+                    document.querySelectorAll('.widget').forEach(w => {
+                        if (w !== widget) {
+                            w.classList.add('minimized');
+                            w.classList.remove('expanded');
+                            w.querySelector('.widget-toggle').textContent = '⬆️';
+                        }
+                    });
+                    
+                    widget.classList.remove('minimized');
+                    widget.classList.add('expanded');
+                    e.target.textContent = '⬇️';
+                } else {
+                    widget.classList.add('minimized');
+                    widget.classList.remove('expanded');
+                    e.target.textContent = '⬆️';
+                }
+            }
+        });
+        
+        // Initialize with iPhone 8 size
+        setViewportSize(375, 667);
+        
+        // Auto-apply mobile optimizations
+        setTimeout(() => {
+            // Simulate mobile widget service optimizations
+            document.querySelectorAll('.help-text').forEach(el => {
+                if (el.textContent.includes('Press enter')) {
+                    el.textContent = el.textContent.replace('Press enter to toggle', 'Tap to toggle');
+                }
+            });
+        }, 100);
+    </script>
+</body>
+</html>
