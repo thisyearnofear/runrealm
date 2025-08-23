@@ -67,6 +67,7 @@ export class EnhancedOnboarding extends BaseService {
   protected async onInitialize(): Promise<void> {
     this.setupDefaultSteps();
     this.addOnboardingStyles();
+    // setupWalletConnectionListener(); // Not needed - onboarding guides without forcing connection
     this.safeEmit('service:initialized', { service: 'EnhancedOnboarding', success: true });
   }
 
@@ -94,14 +95,13 @@ export class EnhancedOnboarding extends BaseService {
       {
         id: 'wallet-connect',
         title: '🦊 Connect Your Wallet',
-        description: 'Connect your Web3 wallet to claim territories as NFTs and earn $REALM tokens.',
+        description: 'Connect your Web3 wallet to claim territories as NFTs and earn $REALM tokens. You can do this now or later.',
         target: '#wallet-info',
         position: 'bottom',
         action: {
           type: 'click',
           element: '#connect-wallet-btn'
         },
-        validation: () => this.checkWalletConnection(),
         skippable: true
       },
       {
@@ -143,7 +143,7 @@ export class EnhancedOnboarding extends BaseService {
     await this.createOverlay();
     await this.showStep(this.currentStep);
     
-    this.safeEmit('onboarding:started', {});
+    this.safeEmit('onboarding:started' as any, {});
   }
 
   private shouldShowOnboarding(): boolean {
@@ -160,7 +160,7 @@ export class EnhancedOnboarding extends BaseService {
     });
 
     // Animate overlay in
-    await this.animationService.fadeIn(this.overlay, 300);
+    await this.animationService.fadeIn(this.overlay, { duration: 300 });
   }
 
   private async showStep(stepIndex: number): Promise<void> {
@@ -174,7 +174,7 @@ export class EnhancedOnboarding extends BaseService {
 
     // Remove previous tooltip
     if (this.tooltip) {
-      await this.animationService.fadeOut(this.tooltip, 200);
+      await this.animationService.fadeOut(this.tooltip, { duration: 200 });
       this.tooltip.remove();
     }
 
@@ -192,7 +192,7 @@ export class EnhancedOnboarding extends BaseService {
       this.handleStepAction(step);
     }
 
-    this.safeEmit('onboarding:stepShown', { step: step.id, index: stepIndex });
+    this.safeEmit('onboarding:stepShown' as any, { step: step.id, index: stepIndex });
   }
 
   private highlightTarget(target?: string): void {
@@ -258,7 +258,7 @@ export class EnhancedOnboarding extends BaseService {
     this.setupTooltipEvents();
 
     // Animate tooltip in
-    await this.animationService.fadeIn(this.tooltip, 300);
+    await this.animationService.fadeIn(this.tooltip, { duration: 300 });
 
     // Add haptic feedback
     if (this.options.hapticFeedback) {
@@ -423,7 +423,7 @@ export class EnhancedOnboarding extends BaseService {
 
     // Animate out
     if (this.overlay) {
-      await this.animationService.fadeOut(this.overlay, 300);
+      await this.animationService.fadeOut(this.overlay, { duration: 300 });
       this.overlay.remove();
       this.overlay = null;
     }
@@ -442,16 +442,11 @@ export class EnhancedOnboarding extends BaseService {
       });
     }
 
-    this.safeEmit('onboarding:completed', { skipped, completedSteps: Array.from(this.completedSteps) });
+    this.safeEmit('onboarding:completed' as any, { skipped, completedSteps: Array.from(this.completedSteps) });
   }
 
   private checkLocationPermission(): boolean {
     return 'geolocation' in navigator;
-  }
-
-  private checkWalletConnection(): boolean {
-    // Check if wallet is connected (this would integrate with your wallet service)
-    return !!(window as any).ethereum;
   }
 
   private hapticFeedback(type: 'light' | 'medium' | 'heavy' = 'light'): void {
