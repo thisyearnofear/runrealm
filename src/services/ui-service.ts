@@ -73,7 +73,7 @@ export class UIService {
       // Space to toggle units (when not in input)
       if (event.key === ' ' && (event.target as HTMLElement).tagName !== 'INPUT') {
         event.preventDefault();
-        this.eventBus.emit('ui:unitsToggled', { useMetric: !this.getCurrentUnits() });
+        this.eventBus.emit('ui:unitsToggled', { useMetric: true }); // Default to metric
       }
     });
 
@@ -527,6 +527,133 @@ export class UIService {
   closeAllModals(): void {
     this.dom.removeClass('settings-pane', 'settings-open');
     this.dom.updateElement('settings-pane', { attributes: { 'aria-hidden': 'true' } });
+  }
+
+  /**
+   * Show confirmation modal with consistent styling
+   */
+  showConfirmationModal(
+    title: string,
+    message: string,
+    confirmText: string,
+    cancelText: string,
+    onConfirm: () => void,
+    variant: 'default' | 'destructive' = 'default'
+  ): void {
+    const backdrop = this.dom.createElement('div', {
+      className: 'confirmation-modal-backdrop',
+      style: {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        right: '0',
+        bottom: '0',
+        background: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 'var(--z-modals-backdrop, 1900)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        animation: 'modalBackdropFadeIn 0.3s ease-out',
+        padding: '20px'
+      },
+      parent: document.body
+    });
+
+    const modal = this.dom.createElement('div', {
+      className: `confirmation-modal confirmation-modal-${variant}`,
+      innerHTML: `
+        <div class="modal-header">
+          <div class="modal-icon">${variant === 'destructive' ? '⚠️' : '❓'}</div>
+          <h3>${title}</h3>
+          <p>${message}</p>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn modal-cancel">${cancelText}</button>
+          <button class="modal-btn modal-confirm">${confirmText}</button>
+        </div>
+      `,
+      parent: backdrop
+    });
+
+    this.addConfirmationModalStyles();
+
+    const cancelBtn = modal.querySelector('.modal-cancel') as HTMLButtonElement;
+    const confirmBtn = modal.querySelector('.modal-confirm') as HTMLButtonElement;
+
+    const closeModal = () => {
+      backdrop.style.animation = 'modalBackdropFadeIn 0.2s ease-in reverse';
+      setTimeout(() => backdrop.remove(), 200);
+    };
+
+    cancelBtn.addEventListener('click', closeModal);
+    confirmBtn.addEventListener('click', () => {
+      closeModal();
+      onConfirm();
+    });
+
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) closeModal();
+    });
+
+    document.addEventListener('keydown', function escapeHandler(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+        document.removeEventListener('keydown', escapeHandler);
+      }
+    });
+
+    setTimeout(() => confirmBtn.focus(), 100);
+    this.hapticFeedback('light');
+  }
+
+  private addConfirmationModalStyles(): void {
+    if (document.querySelector('#confirmation-modal-styles')) return;
+
+    this.dom.createElement('style', {
+      id: 'confirmation-modal-styles',
+      textContent: `
+        .confirmation-modal {
+          background: rgba(20, 20, 25, 0.95);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 20px;
+          padding: 32px;
+          max-width: 400px;
+          width: 100%;
+          backdrop-filter: blur(20px);
+          color: white;
+          animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .modal-header { text-align: center; margin-bottom: 24px; }
+        .modal-icon { font-size: 48px; margin-bottom: 16px; }
+        .modal-header h3 { margin: 0 0 8px; font-size: 24px; font-weight: 600; }
+        .modal-header p { margin: 0; font-size: 16px; opacity: 0.8; }
+        .confirmation-modal-destructive h3 { color: #ff6b6b; }
+        .modal-actions { display: flex; gap: 12px; }
+        .modal-btn {
+          flex: 1; padding: 16px 24px; border-radius: 12px;
+          font-size: 16px; cursor: pointer; transition: all 0.2s ease;
+        }
+        .modal-cancel {
+          border: 2px solid rgba(255, 255, 255, 0.2);
+          background: transparent; color: rgba(255, 255, 255, 0.9);
+        }
+        .modal-cancel:hover { background: rgba(255, 255, 255, 0.1); }
+        .modal-confirm {
+          border: none; color: white; font-weight: 600;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        .confirmation-modal-destructive .modal-confirm {
+          background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        }
+        .modal-btn:hover { transform: translateY(-2px); }
+        @keyframes modalSlideIn {
+          from { opacity: 0; transform: scale(0.9) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `,
+      parent: document.head
+    });
   }
 
   // Haptic feedback

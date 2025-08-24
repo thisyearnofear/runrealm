@@ -92,28 +92,38 @@ export class RunTrackingService extends BaseService {
     });
 
     // Listen for run control events
-    this.subscribe('run:startRequested', () => this.startRun());
-    this.subscribe('run:pauseRequested', () => this.pauseRun());
-    this.subscribe('run:resumeRequested', () => this.resumeRun());
-    this.subscribe('run:stopRequested', () => this.stopRun());
-    this.subscribe('run:cancelRequested', () => this.cancelRun());
+    this.subscribe('run:startRequested' as any, () => {
+      console.log('RunTrackingService: Received run:startRequested event');
+      this.startRun().catch(error => {
+        console.error('RunTrackingService: Error starting run:', error);
+      });
+    });
+    this.subscribe('run:pauseRequested' as any, () => this.pauseRun());
+    this.subscribe('run:resumeRequested' as any, () => this.resumeRun());
+    this.subscribe('run:stopRequested' as any, () => this.stopRun());
+    this.subscribe('run:cancelRequested' as any, () => this.cancelRun());
   }
 
   /**
    * Start a new run session
    */
   public async startRun(): Promise<string> {
+    console.log('RunTrackingService: Starting run...');
+    
     if (this.currentRun?.status === 'recording') {
       throw new Error('A run is already in progress');
     }
 
     // Get current location to start
     if (!this.locationService) {
+      console.error('RunTrackingService: LocationService not available');
       throw new Error('LocationService not available - make sure setLocationService() was called');
     }
 
     try {
+      console.log('RunTrackingService: Getting current location...');
       const currentLocation = await this.locationService.getCurrentLocation(true);
+      console.log('RunTrackingService: Got location:', currentLocation);
       
       const runId = this.generateRunId();
       const startPoint: RunPoint = {
@@ -144,13 +154,14 @@ export class RunTrackingService extends BaseService {
       // Start real-time updates
       this.startRealTimeUpdates();
 
-      this.safeEmit('run:started', {
+      console.log('RunTrackingService: Run started successfully, emitting events');
+      this.safeEmit('run:started' as any, {
         runId,
         startPoint,
         timestamp: Date.now()
       });
 
-      this.safeEmit('run:statusChanged', {
+      this.safeEmit('run:statusChanged' as any, {
         status: 'recording',
         runId,
         stats: this.getCurrentStats()
@@ -158,6 +169,7 @@ export class RunTrackingService extends BaseService {
 
       return runId;
     } catch (error) {
+      console.error('RunTrackingService: Failed to start run:', error);
       throw new Error(`Failed to start run: ${error.message}`);
     }
   }

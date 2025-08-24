@@ -44,13 +44,26 @@ export class EnhancedRunControls extends BaseService {
    * Initialize widget after MainUI is ready
    */
   public initializeWidget(): void {
+    console.log('EnhancedRunControls: Initializing widget...');
     this.createWidget();
+    // Ensure event handlers are attached after widget creation
+    setTimeout(() => {
+      this.attachEventHandlers();
+    }, 100);
   }
 
   private getWidgetSystem(): any {
     return (
       (window as any).runRealmApp?.mainUI?.widgetSystem ||
       (window as any).RunRealm?.mainUI?.widgetSystem
+    );
+  }
+
+  private getUIService(): any {
+    return (
+      (window as any).runRealmApp?.ui ||
+      (window as any).RunRealm?.ui ||
+      (window as any).UIService?.getInstance()
     );
   }
 
@@ -364,6 +377,7 @@ export class EnhancedRunControls extends BaseService {
     
     // Use document-level event delegation for run tracker buttons
     document.addEventListener('click', this.boundClickHandler);
+    console.log('Run tracker event handlers attached');
   }
 
   private removeEventHandlers(): void {
@@ -373,47 +387,68 @@ export class EnhancedRunControls extends BaseService {
   private handleRunTrackerClick(event: Event): void {
     const target = event.target as HTMLElement;
     
-    // Only handle clicks within the run tracker widget
-    if (!target.closest('#widget-run-tracker')) {
+    // Only handle clicks within the run tracker widget or enhanced run controls
+    const runTrackerWidget = target.closest('#widget-run-tracker, #enhanced-run-controls');
+    if (!runTrackerWidget) {
       return;
     }
     
-    // Handle different button clicks
-    if (target.id === 'start-run-btn' || target.closest('#start-run-btn')) {
+    // Debug logging
+    console.log('Run tracker click detected:', target.id, target.className);
+    
+    // Handle different button clicks with improved selector logic
+    if (target.matches('#start-run-btn, #start-run-btn *, .control-btn.primary') || 
+        target.closest('#start-run-btn')) {
       event.preventDefault();
+      event.stopPropagation();
+      console.log('Start run button clicked');
       this.startRun();
-    } else if (target.id === 'pause-run-btn' || target.closest('#pause-run-btn')) {
+    } else if (target.matches('#pause-run-btn, #pause-run-btn *, .control-btn.warning') || 
+               target.closest('#pause-run-btn')) {
       event.preventDefault();
+      event.stopPropagation();
       this.pauseRun();
-    } else if (target.id === 'resume-run-btn' || target.closest('#resume-run-btn')) {
+    } else if (target.matches('#resume-run-btn, #resume-run-btn *, .control-btn.primary') || 
+               target.closest('#resume-run-btn')) {
       event.preventDefault();
+      event.stopPropagation();
       this.resumeRun();
-    } else if (target.id === 'stop-run-btn' || target.closest('#stop-run-btn')) {
+    } else if (target.matches('#stop-run-btn, #stop-run-btn *, .control-btn.success') || 
+               target.closest('#stop-run-btn')) {
       event.preventDefault();
+      event.stopPropagation();
       this.stopRun();
-    } else if (target.id === 'cancel-run-btn' || target.closest('#cancel-run-btn')) {
+    } else if (target.matches('#cancel-run-btn, #cancel-run-btn *, .control-btn.danger') || 
+               target.closest('#cancel-run-btn')) {
       event.preventDefault();
+      event.stopPropagation();
       this.cancelRun();
-    } else if (target.id === 'gps-check-btn' || target.closest('#gps-check-btn')) {
+    } else if (target.matches('#gps-check-btn, #gps-check-btn *, .control-btn.secondary') || 
+               target.closest('#gps-check-btn')) {
       event.preventDefault();
+      event.stopPropagation();
       this.checkGPS();
     }
   }
 
   private async startRun(): Promise<void> {
     try {
+      console.log('EnhancedRunControls: Starting run...');
       this.showFeedback('🚀 Starting run...', 'info');
       
       // Check GPS availability first
       const hasGPS = await this.checkGPSAvailability();
       if (!hasGPS) {
+        console.log('EnhancedRunControls: GPS not available');
         this.showFeedback('❌ GPS not available. Please enable location services.', 'error');
         return;
       }
 
+      console.log('EnhancedRunControls: GPS available, emitting run:startRequested event');
       this.safeEmit('run:startRequested', {});
       
     } catch (error) {
+      console.error('EnhancedRunControls: Error starting run:', error);
       this.showFeedback(`❌ Failed to start run: ${error.message}`, 'error');
     }
   }
@@ -428,18 +463,27 @@ export class EnhancedRunControls extends BaseService {
 
   private stopRun(): void {
     if (this.currentStats && this.currentStats.distance < 100) {
-      const confirmed = confirm('Your run is very short. Are you sure you want to finish?');
-      if (!confirmed) return;
+      this.getUIService().showConfirmationModal(
+        'Short Run Detected',
+        'Your run is very short. Are you sure you want to finish?',
+        '⏹️ Finish Run',
+        '↩️ Continue',
+        () => this.safeEmit('run:stopRequested' as any, {})
+      );
+      return;
     }
-
     this.safeEmit('run:stopRequested' as any, {});
   }
 
   private cancelRun(): void {
-    const confirmed = confirm('Are you sure you want to cancel this run? All progress will be lost.');
-    if (confirmed) {
-      this.safeEmit('run:cancelRequested' as any, {});
-    }
+    this.getUIService().showConfirmationModal(
+      'Cancel Run',
+      'Are you sure you want to cancel this run? All progress will be lost.',
+      '❌ Cancel Run',
+      '↩️ Keep Running',
+      () => this.safeEmit('run:cancelRequested' as any, {}),
+      'destructive'
+    );
   }
 
   private async checkGPS(): Promise<void> {
