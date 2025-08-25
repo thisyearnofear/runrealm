@@ -96,10 +96,14 @@ export class EnhancedRunControls extends BaseService {
     this.subscribe('run:pointAdded' as any, (data: any) => {
       this.updateStats(data.stats);
       this.showPointAddedFeedback();
+      // Update real-time visualization
+      this.updateRunVisualization(data.point);
     });
 
     this.subscribe('territory:eligible' as any, (data: any) => {
       this.showTerritoryEligibleNotification(data);
+      // Add haptic feedback for territory eligibility
+      this.hapticFeedback('heavy');
     });
 
     // Setup mobile-specific interactions
@@ -132,6 +136,9 @@ export class EnhancedRunControls extends BaseService {
 
       this.widgetInitialized = true;
       this.standaloneActive = false;
+      
+      // Inject styles for the widget
+      this.injectStyles();
     } else {
       // Guard: avoid duplicate fallback rendering
       const alreadyPresent =
@@ -162,8 +169,45 @@ export class EnhancedRunControls extends BaseService {
       document.body.appendChild(this.container);
     }
 
+    // Inject CSS for animations
+    this.injectStyles();
+
     this.renderWidget();
     this.attachEventHandlers();
+  }
+
+  /**
+   * Inject necessary CSS styles for animations
+   */
+  private injectStyles(): void {
+    // Check if styles are already injected
+    if (document.getElementById('runrealm-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'runrealm-styles';
+    style.textContent = `
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+      
+      .animate-pulse {
+        animation: pulse 1s infinite;
+      }
+      
+      .run-visualization {
+        margin: 10px 0;
+        text-align: center;
+      }
+      
+      #run-path-canvas {
+        width: 100%;
+        background-color: #f0f0f0;
+        border-radius: 4px;
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   private getWidgetContent(): string {
@@ -202,11 +246,16 @@ export class EnhancedRunControls extends BaseService {
         </div>
 
         ${stats?.territoryEligible ? `
-          <div class="territory-indicator">
+          <div class="territory-indicator animate-pulse">
             <span class="territory-icon">🏆</span>
             <span class="territory-text">Territory Eligible!</span>
           </div>
         ` : ''}
+      </div>
+
+      <!-- Real-time visualization container -->
+      <div class="run-visualization" id="run-visualization">
+        <canvas id="run-path-canvas" width="200" height="100"></canvas>
       </div>
 
       <div class="run-controls">
@@ -229,6 +278,8 @@ export class EnhancedRunControls extends BaseService {
       // Listen for content update completion to reattach handlers reliably
       this.subscribe('widget:contentUpdated' as any, (data: any) => {
         if (data.widgetId === 'run-tracker') {
+          // Inject styles if not already present
+          this.injectStyles();
           this.attachEventHandlers();
         }
       });
@@ -304,11 +355,16 @@ export class EnhancedRunControls extends BaseService {
         </div>
 
         ${stats?.territoryEligible ? `
-          <div class="territory-indicator">
+          <div class="territory-indicator animate-pulse">
             <span class="territory-icon">🏆</span>
             <span class="territory-text">Territory Eligible!</span>
           </div>
         ` : ''}
+      </div>
+
+      <!-- Real-time visualization container -->
+      <div class="run-visualization" id="run-visualization">
+        <canvas id="run-path-canvas" width="200" height="100"></canvas>
       </div>
 
       <div class="run-controls">
@@ -621,6 +677,9 @@ export class EnhancedRunControls extends BaseService {
   private showTerritoryEligibleNotification(data: any): void {
     this.showFeedback('🏆 Territory eligible! Complete your run to claim.', 'success');
     this.renderWidget(); // Re-render to show territory indicator
+    
+    // Add haptic feedback for territory eligibility
+    this.hapticFeedback('heavy');
   }
 
   private showFeedback(message: string, type: 'info' | 'success' | 'warning' | 'error'): void {
@@ -674,10 +733,85 @@ export class EnhancedRunControls extends BaseService {
         navigator.vibrate([15, 10, 15]);
         break;
       case 'heavy':
-        navigator.vibrate([20, 20, 20]);
+        // Special pattern for territory eligibility
+        navigator.vibrate([100, 50, 100]);
         break;
     }
   }
+
+  /**
+   * Update the real-time run visualization with a new point
+   */
+  private updateRunVisualization(point: any): void {
+    const canvas = document.getElementById('run-path-canvas') as HTMLCanvasElement;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Initialize or get the path points array
+    if (!this.pathPoints) {
+      this.pathPoints = [];
+    }
+
+    // Add the new point to our path
+    this.pathPoints.push({
+      x: point.lat,
+      y: point.lng
+    });
+
+    // Keep only the last 50 points for performance
+    if (this.pathPoints.length > 50) {
+      this.pathPoints.shift();
+    }
+
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw the path if we have enough points
+    if (this.pathPoints.length > 1) {
+      // Normalize coordinates to fit canvas
+      const minX = Math.min(...this.pathPoints.map(p => p.x));
+      const maxX = Math.max(...this.pathPoints.map(p => p.x));
+      const minY = Math.min(...this.pathPoints.map(p => p.y));
+      const maxY = Math.max(...this.pathPoints.map(p => p.y));
+      
+      const rangeX = maxX - minX || 1; // Avoid division by zero
+      const rangeY = maxY - minY || 1; // Avoid division by zero
+      
+      ctx.beginPath();
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 2;
+      
+      this.pathPoints.forEach((point, index) => {
+        const x = ((point.x - minX) / rangeX) * canvas.width;
+        const y = ((point.y - minY) / rangeY) * canvas.height;
+        
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      
+      ctx.stroke();
+      
+      // Draw current position marker
+      if (this.pathPoints.length > 0) {
+        const lastPoint = this.pathPoints[this.pathPoints.length - 1];
+        const x = ((lastPoint.x - minX) / rangeX) * canvas.width;
+        const y = ((lastPoint.y - minY) / rangeY) * canvas.height;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = '#ff0055';
+        ctx.fill();
+      }
+    }
+  }
+
+  // Store path points for visualization
+  private pathPoints: Array<{x: number, y: number}> = [];
 
   /**
    * Setup mobile-specific interactions and gestures
