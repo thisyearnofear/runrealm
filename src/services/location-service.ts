@@ -273,6 +273,13 @@ export class LocationService extends BaseService {
   }
 
   private createLocationUI(): void {
+    if (!this.domService) {
+      console.warn(
+        "LocationService: DOMService not available, skipping UI creation"
+      );
+      return;
+    }
+
     // Create location button in the UI
     const locationButton = this.domService.createElement("button", {
       id: "location-button",
@@ -291,6 +298,13 @@ export class LocationService extends BaseService {
   }
 
   private createLocationModal(): void {
+    if (!this.domService) {
+      console.warn(
+        "LocationService: DOMService not available, cannot create modal"
+      );
+      return;
+    }
+
     this.locationModal = this.domService.createElement("div", {
       id: "location-modal",
       className: "location-modal-overlay modal-overlay",
@@ -343,15 +357,22 @@ export class LocationService extends BaseService {
   }
 
   private setupEventHandlers(): void {
+    if (!this.domService) {
+      console.warn(
+        "LocationService: DOMService not available, skipping event handlers"
+      );
+      return;
+    }
+
     // Location button click
     this.domService.delegate(document.body, "#location-button", "click", () => {
       this.showLocationModal();
     });
 
     // Modal close
-    this.domService?.delegate(
+    this.domService.delegate(
       document.body,
-      "#location-modal .close-btn",
+      "#close-location-modal",
       "click",
       () => {
         this.hideLocationModal();

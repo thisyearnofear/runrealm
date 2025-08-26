@@ -80,7 +80,6 @@ export class RunRealmApp {
   private onboardingService: OnboardingService;
   private navigationService: NavigationService;
   private progressionService: ProgressionService;
-  private runTrackingService: RunTrackingService;
   private territoryService: TerritoryService;
   private enhancedRunControls: EnhancedRunControls;
 
@@ -150,6 +149,7 @@ export class RunRealmApp {
     this.game = new GameService();
     this.contractService = new ContractService(this.web3);
     this.territory = new TerritoryService();
+    this.dom = DOMService.getInstance();
     this.progression = ProgressionService.getInstance();
     this.runTracking = new RunTrackingService();
     this.onboarding = OnboardingService.getInstance();
@@ -454,10 +454,10 @@ export class RunRealmApp {
       await this.locationService.initialize();
 
       // Set location service reference on run tracking service
-      this.runTrackingService.setLocationService(this.locationService);
+      this.runTracking.setLocationService(this.locationService);
 
       // Initialize run tracking and territory services
-      await this.runTrackingService.initialize();
+      await this.runTracking.initialize();
       await this.territoryService.initialize();
 
       // Initialize enhanced run controls
@@ -503,7 +503,7 @@ export class RunRealmApp {
     // Register services
     (window as any).RunRealm.services = {
       LocationService: this.locationService,
-      RunTrackingService: this.runTrackingService,
+      RunTrackingService: this.runTracking,
       TerritoryService: this.territoryService,
       EnhancedRunControls: this.enhancedRunControls,
       Web3Service: this.web3,
