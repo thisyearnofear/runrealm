@@ -2,6 +2,15 @@ require("@nomicfoundation/hardhat-toolbox");
 require("@nomicfoundation/hardhat-verify");
 require("dotenv").config();
 
+// Helper to get accounts array - returns empty array if no private key
+function getAccounts() {
+  const privateKey = process.env.PRIVATE_KEY;
+  if (!privateKey || privateKey.length < 64) {
+    return []; // Return empty array for read-only operations
+  }
+  return [privateKey];
+}
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -11,6 +20,7 @@ module.exports = {
         enabled: true,
         runs: 200,
       },
+      viaIR: true,
     },
   },
   networks: {
@@ -20,29 +30,29 @@ module.exports = {
     zetachain_testnet: {
       url: "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
       chainId: 7001,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      accounts: getAccounts(),
       gasPrice: 20000000000,
     },
     zetachain_mainnet: {
       url: "https://zetachain-evm.blockpi.network/v1/rpc/public",
       chainId: 7000,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      accounts: getAccounts(),
       gasPrice: 20000000000,
     },
     ethereum: {
       url: process.env.ETHEREUM_RPC_URL || "",
       chainId: 1,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      accounts: getAccounts(),
     },
     polygon: {
       url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com/",
       chainId: 137,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      accounts: getAccounts(),
     },
     bsc: {
       url: process.env.BSC_RPC_URL || "https://bsc-dataseed.binance.org/",
       chainId: 56,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      accounts: getAccounts(),
     },
   },
   etherscan: {

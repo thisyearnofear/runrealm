@@ -1,7 +1,7 @@
-import { BaseService } from '../core/base-service';
-import { LocationInfo } from '../types/location';
-import { LngLat } from 'mapbox-gl';
-import { calculateDistance } from '../utils/distance-formatter';
+import { BaseService } from "../core/base-service";
+import { LocationInfo } from "../types/location";
+import { LngLat } from "mapbox-gl";
+import { calculateDistance } from "../utils/distance-formatter";
 
 export interface RunPoint {
   lat: number;
@@ -32,7 +32,7 @@ export interface RunSession {
   totalDuration: number; // milliseconds
   averageSpeed: number; // m/s
   maxSpeed: number; // m/s
-  status: 'recording' | 'paused' | 'completed' | 'cancelled';
+  status: "recording" | "paused" | "completed" | "cancelled";
   territoryEligible: boolean;
   geohash?: string;
 }
@@ -54,20 +54,20 @@ export class RunTrackingService extends BaseService {
   private currentRun: RunSession | null = null;
   private watchId: number | null = null;
   private lastPoint: RunPoint | null = null;
-  private config: RunTrackingConfig;
+  private runConfig: RunTrackingConfig;
   private updateInterval: number | null = null;
   private locationService: any = null; // Direct reference to avoid registry dependency
 
   constructor() {
-    super('RunTrackingService');
+    super();
 
-    this.config = {
+    this.runConfig = {
       minAccuracy: 20, // 20 meters
       maxTimeBetweenPoints: 30000, // 30 seconds
       minDistanceBetweenPoints: 5, // 5 meters
       smoothingFactor: 0.3,
       territoryMinDistance: 500, // 500 meters minimum
-      territoryMaxDeviation: 50 // 50 meters from start point
+      territoryMaxDeviation: 50, // 50 meters from start point
     };
   }
 
@@ -80,57 +80,64 @@ export class RunTrackingService extends BaseService {
 
   protected async onInitialize(): Promise<void> {
     this.setupEventListeners();
-    this.safeEmit('service:initialized', { service: 'RunTrackingService', success: true });
+    this.safeEmit("service:initialized", {
+      service: "RunTrackingService",
+      success: true,
+    });
   }
 
   private setupEventListeners(): void {
     // Listen for location updates from LocationService
-    this.subscribe('location:changed', (locationInfo: LocationInfo) => {
-      if (this.currentRun?.status === 'recording') {
+    this.subscribe("location:changed", (locationInfo: LocationInfo) => {
+      if (this.currentRun?.status === "recording") {
         this.processLocationUpdate(locationInfo);
       }
     });
 
     // Listen for run control events
-    this.subscribe('run:startRequested' as any, () => {
-      console.log('RunTrackingService: Received run:startRequested event');
-      this.startRun().catch(error => {
-        console.error('RunTrackingService: Error starting run:', error);
+    this.subscribe("run:startRequested" as any, () => {
+      console.log("RunTrackingService: Received run:startRequested event");
+      this.startRun().catch((error) => {
+        console.error("RunTrackingService: Error starting run:", error);
       });
     });
-    this.subscribe('run:pauseRequested' as any, () => this.pauseRun());
-    this.subscribe('run:resumeRequested' as any, () => this.resumeRun());
-    this.subscribe('run:stopRequested' as any, () => this.stopRun());
-    this.subscribe('run:cancelRequested' as any, () => this.cancelRun());
+    this.subscribe("run:pauseRequested" as any, () => this.pauseRun());
+    this.subscribe("run:resumeRequested" as any, () => this.resumeRun());
+    this.subscribe("run:stopRequested" as any, () => this.stopRun());
+    this.subscribe("run:cancelRequested" as any, () => this.cancelRun());
   }
 
   /**
    * Start a new run session
    */
   public async startRun(): Promise<string> {
-    console.log('RunTrackingService: Starting run...');
-    
-    if (this.currentRun?.status === 'recording') {
-      throw new Error('A run is already in progress');
+    console.log("RunTrackingService: Starting run...");
+
+    if (this.currentRun?.status === "recording") {
+      throw new Error("A run is already in progress");
     }
 
     // Get current location to start
     if (!this.locationService) {
-      console.error('RunTrackingService: LocationService not available');
-      throw new Error('LocationService not available - make sure setLocationService() was called');
+      console.error("RunTrackingService: LocationService not available");
+      throw new Error(
+        "LocationService not available - make sure setLocationService() was called"
+      );
     }
 
     try {
-      console.log('RunTrackingService: Getting current location...');
-      const currentLocation = await this.locationService.getCurrentLocation(true);
-      console.log('RunTrackingService: Got location:', currentLocation);
-      
+      console.log("RunTrackingService: Getting current location...");
+      const currentLocation = await this.locationService.getCurrentLocation(
+        true
+      );
+      console.log("RunTrackingService: Got location:", currentLocation);
+
       const runId = this.generateRunId();
       const startPoint: RunPoint = {
         lat: currentLocation.lat,
         lng: currentLocation.lng,
         timestamp: Date.now(),
-        accuracy: currentLocation.accuracy
+        accuracy: currentLocation.accuracy,
       };
 
       this.currentRun = {
@@ -142,34 +149,36 @@ export class RunTrackingService extends BaseService {
         totalDuration: 0,
         averageSpeed: 0,
         maxSpeed: 0,
-        status: 'recording',
-        territoryEligible: false
+        status: "recording",
+        territoryEligible: false,
       };
 
       this.lastPoint = startPoint;
 
       // Start GPS tracking
       this.startGPSTracking();
-      
+
       // Start real-time updates
       this.startRealTimeUpdates();
 
-      console.log('RunTrackingService: Run started successfully, emitting events');
-      this.safeEmit('run:started' as any, {
+      console.log(
+        "RunTrackingService: Run started successfully, emitting events"
+      );
+      this.safeEmit("run:started" as any, {
         runId,
         startPoint,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
-      this.safeEmit('run:statusChanged' as any, {
-        status: 'recording',
+      this.safeEmit("run:statusChanged" as any, {
+        status: "recording",
         runId,
-        stats: this.getCurrentStats()
+        stats: this.getCurrentStats(),
       });
 
       return runId;
     } catch (error) {
-      console.error('RunTrackingService: Failed to start run:', error);
+      console.error("RunTrackingService: Failed to start run:", error);
       throw new Error(`Failed to start run: ${error.message}`);
     }
   }
@@ -178,24 +187,24 @@ export class RunTrackingService extends BaseService {
    * Pause the current run
    */
   public pauseRun(): void {
-    if (!this.currentRun || this.currentRun.status !== 'recording') {
+    if (!this.currentRun || this.currentRun.status !== "recording") {
       return;
     }
 
-    this.currentRun.status = 'paused';
+    this.currentRun.status = "paused";
     this.stopGPSTracking();
     this.stopRealTimeUpdates();
 
-    this.safeEmit('run:paused', {
+    this.safeEmit("run:paused", {
       runId: this.currentRun.id,
       timestamp: Date.now(),
-      stats: this.getCurrentStats()
+      stats: this.getCurrentStats(),
     });
 
-    this.safeEmit('run:statusChanged', {
-      status: 'paused',
+    this.safeEmit("run:statusChanged" as any, {
+      status: "paused",
       runId: this.currentRun.id,
-      stats: this.getCurrentStats()
+      stats: this.getCurrentStats(),
     });
   }
 
@@ -203,24 +212,24 @@ export class RunTrackingService extends BaseService {
    * Resume a paused run
    */
   public resumeRun(): void {
-    if (!this.currentRun || this.currentRun.status !== 'paused') {
+    if (!this.currentRun || this.currentRun.status !== "paused") {
       return;
     }
 
-    this.currentRun.status = 'recording';
+    this.currentRun.status = "recording";
     this.startGPSTracking();
     this.startRealTimeUpdates();
 
-    this.safeEmit('run:resumed', {
+    this.safeEmit("run:resumed", {
       runId: this.currentRun.id,
       timestamp: Date.now(),
-      stats: this.getCurrentStats()
+      stats: this.getCurrentStats(),
     });
 
-    this.safeEmit('run:statusChanged', {
-      status: 'recording',
+    this.safeEmit("run:statusChanged" as any, {
+      status: "recording",
       runId: this.currentRun.id,
-      stats: this.getCurrentStats()
+      stats: this.getCurrentStats(),
     });
   }
 
@@ -228,35 +237,36 @@ export class RunTrackingService extends BaseService {
    * Stop and complete the current run
    */
   public stopRun(): RunSession | null {
-    if (!this.currentRun || this.currentRun.status === 'completed') {
+    if (!this.currentRun || this.currentRun.status === "completed") {
       return null;
     }
 
-    this.currentRun.status = 'completed';
+    this.currentRun.status = "completed";
     this.currentRun.endTime = Date.now();
-    this.currentRun.totalDuration = this.currentRun.endTime - this.currentRun.startTime;
+    this.currentRun.totalDuration =
+      this.currentRun.endTime - this.currentRun.startTime;
 
     this.stopGPSTracking();
     this.stopRealTimeUpdates();
 
     // Calculate final stats
     this.updateRunStats();
-    
+
     // Check territory eligibility
     this.checkTerritoryEligibility();
 
     const completedRun = { ...this.currentRun };
 
-    this.safeEmit('run:completed', {
+    this.safeEmit("run:completed" as any, {
       run: completedRun,
       stats: this.getCurrentStats(),
-      territoryEligible: completedRun.territoryEligible
+      territoryEligible: completedRun.territoryEligible,
     });
 
-    this.safeEmit('run:statusChanged', {
-      status: 'completed',
+    this.safeEmit("run:statusChanged" as any, {
+      status: "completed",
       runId: completedRun.id,
-      stats: this.getCurrentStats()
+      stats: this.getCurrentStats(),
     });
 
     // Save run to storage
@@ -274,14 +284,14 @@ export class RunTrackingService extends BaseService {
     }
 
     const runId = this.currentRun.id;
-    this.currentRun.status = 'cancelled';
+    this.currentRun.status = "cancelled";
 
     this.stopGPSTracking();
     this.stopRealTimeUpdates();
 
-    this.safeEmit('run:cancelled', {
+    this.safeEmit("run:cancelled", {
       runId,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     this.currentRun = null;
@@ -292,12 +302,15 @@ export class RunTrackingService extends BaseService {
    * Process incoming GPS location updates
    */
   private processLocationUpdate(locationInfo: LocationInfo): void {
-    if (!this.currentRun || this.currentRun.status !== 'recording') {
+    if (!this.currentRun || this.currentRun.status !== "recording") {
       return;
     }
 
     // Filter out inaccurate readings
-    if (locationInfo.accuracy && locationInfo.accuracy > this.config.minAccuracy) {
+    if (
+      locationInfo.accuracy &&
+      locationInfo.accuracy > this.runConfig.minAccuracy
+    ) {
       console.log(`Skipping inaccurate GPS reading: ${locationInfo.accuracy}m`);
       return;
     }
@@ -306,40 +319,41 @@ export class RunTrackingService extends BaseService {
       lat: locationInfo.lat,
       lng: locationInfo.lng,
       timestamp: Date.now(),
-      accuracy: locationInfo.accuracy
+      accuracy: locationInfo.accuracy,
     };
 
     // Check if enough time has passed
     if (this.lastPoint) {
       const timeDiff = newPoint.timestamp - this.lastPoint.timestamp;
-      if (timeDiff < 1000) { // Less than 1 second
+      if (timeDiff < 1000) {
+        // Less than 1 second
         return;
       }
 
       // Check if moved enough distance
       const distance = this.calculateDistance(this.lastPoint, newPoint);
-      if (distance < this.config.minDistanceBetweenPoints) {
+      if (distance < this.runConfig.minDistanceBetweenPoints) {
         return;
       }
 
       // Apply smoothing to reduce GPS noise
       const smoothedPoint = this.applySmoothingFilter(this.lastPoint, newPoint);
-      
+
       // Create segment
       const segment = this.createSegment(this.lastPoint, smoothedPoint);
       this.currentRun.segments.push(segment);
       this.currentRun.points.push(smoothedPoint);
-      
+
       // Update stats
       this.updateRunStats();
-      
+
       this.lastPoint = smoothedPoint;
 
       // Emit real-time updates
-      this.safeEmit('run:pointAdded', {
+      this.safeEmit("run:pointAdded" as any, {
         point: smoothedPoint,
         segment,
-        stats: this.getCurrentStats()
+        stats: this.getCurrentStats(),
       });
     } else {
       this.currentRun.points.push(newPoint);
@@ -350,14 +364,17 @@ export class RunTrackingService extends BaseService {
   /**
    * Apply smoothing filter to reduce GPS noise
    */
-  private applySmoothingFilter(lastPoint: RunPoint, newPoint: RunPoint): RunPoint {
-    const factor = this.config.smoothingFactor;
-    
+  private applySmoothingFilter(
+    lastPoint: RunPoint,
+    newPoint: RunPoint
+  ): RunPoint {
+    const factor = this.runConfig.smoothingFactor;
+
     return {
       lat: lastPoint.lat + factor * (newPoint.lat - lastPoint.lat),
       lng: lastPoint.lng + factor * (newPoint.lng - lastPoint.lng),
       timestamp: newPoint.timestamp,
-      accuracy: newPoint.accuracy
+      accuracy: newPoint.accuracy,
     };
   }
 
@@ -367,7 +384,7 @@ export class RunTrackingService extends BaseService {
   private createSegment(startPoint: RunPoint, endPoint: RunPoint): RunSegment {
     const distance = this.calculateDistance(startPoint, endPoint);
     const duration = endPoint.timestamp - startPoint.timestamp;
-    const averageSpeed = duration > 0 ? (distance / (duration / 1000)) : 0;
+    const averageSpeed = duration > 0 ? distance / (duration / 1000) : 0;
 
     return {
       id: this.generateSegmentId(),
@@ -377,12 +394,12 @@ export class RunTrackingService extends BaseService {
       duration,
       averageSpeed,
       geometry: {
-        type: 'LineString',
+        type: "LineString",
         coordinates: [
           [startPoint.lng, startPoint.lat],
-          [endPoint.lng, endPoint.lat]
-        ]
-      }
+          [endPoint.lng, endPoint.lat],
+        ],
+      },
     };
   }
 
@@ -400,13 +417,15 @@ export class RunTrackingService extends BaseService {
     if (!this.currentRun) return;
 
     this.currentRun.totalDistance = this.currentRun.segments.reduce(
-      (total, segment) => total + segment.distance, 0
+      (total, segment) => total + segment.distance,
+      0
     );
 
     if (this.currentRun.segments.length > 0) {
-      const speeds = this.currentRun.segments.map(s => s.averageSpeed);
+      const speeds = this.currentRun.segments.map((s) => s.averageSpeed);
       this.currentRun.maxSpeed = Math.max(...speeds);
-      this.currentRun.averageSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
+      this.currentRun.averageSpeed =
+        speeds.reduce((a, b) => a + b, 0) / speeds.length;
     }
   }
 
@@ -421,16 +440,17 @@ export class RunTrackingService extends BaseService {
 
     const startPoint = this.currentRun.points[0];
     const endPoint = this.currentRun.points[this.currentRun.points.length - 1];
-    
+
     // Check minimum distance
-    const meetsDistance = this.currentRun.totalDistance >= this.config.territoryMinDistance;
-    
+    const meetsDistance =
+      this.currentRun.totalDistance >= this.runConfig.territoryMinDistance;
+
     // Check if end point is close to start (loop requirement)
     const distanceFromStart = this.calculateDistance(startPoint, endPoint);
-    const isLoop = distanceFromStart <= this.config.territoryMaxDeviation;
-    
+    const isLoop = distanceFromStart <= this.runConfig.territoryMaxDeviation;
+
     this.currentRun.territoryEligible = meetsDistance && isLoop;
-    
+
     if (this.currentRun.territoryEligible) {
       // Generate geohash for territory
       this.currentRun.geohash = this.generateTerritoryGeohash(startPoint);
@@ -451,7 +471,7 @@ export class RunTrackingService extends BaseService {
    * Start GPS tracking
    */
   private startGPSTracking(): void {
-    const locationService = this.getService('LocationService');
+    const locationService = this.getService("LocationService");
     if (locationService) {
       locationService.startLocationTracking();
     }
@@ -461,7 +481,7 @@ export class RunTrackingService extends BaseService {
    * Stop GPS tracking
    */
   private stopGPSTracking(): void {
-    const locationService = this.getService('LocationService');
+    const locationService = this.getService("LocationService");
     if (locationService) {
       locationService.stopLocationTracking();
     }
@@ -472,10 +492,10 @@ export class RunTrackingService extends BaseService {
    */
   private startRealTimeUpdates(): void {
     this.updateInterval = window.setInterval(() => {
-      if (this.currentRun?.status === 'recording') {
-        this.safeEmit('run:statsUpdated', {
+      if (this.currentRun?.status === "recording") {
+        this.safeEmit("run:statsUpdated" as any, {
           stats: this.getCurrentStats(),
-          runId: this.currentRun.id
+          runId: this.currentRun.id,
         });
       }
     }, 1000); // Update every second
@@ -510,7 +530,7 @@ export class RunTrackingService extends BaseService {
       pointCount: this.currentRun.points.length,
       segmentCount: this.currentRun.segments.length,
       status: this.currentRun.status,
-      territoryEligible: this.currentRun.territoryEligible
+      territoryEligible: this.currentRun.territoryEligible,
     };
   }
 
@@ -526,13 +546,13 @@ export class RunTrackingService extends BaseService {
    */
   private saveRun(run: RunSession): void {
     try {
-      const preferenceService = this.getService('PreferenceService');
+      const preferenceService = this.getService("PreferenceService");
       if (preferenceService) {
         const runData = JSON.stringify(run);
         preferenceService.saveLastRun(runData);
       }
     } catch (error) {
-      console.error('Failed to save run:', error);
+      console.error("Failed to save run:", error);
     }
   }
 

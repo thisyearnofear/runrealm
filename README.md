@@ -1,6 +1,16 @@
-# RunRealm - Cross-Chain Fitness GameFi Platform
+# RunRealm - ZetaChain Fitness GameFi Platform
 
-Transform your runs into valuable NFT territories using ZetaChain Universal Contracts, Google Gemini AI coaching, and immersive GameFi mechanics.
+Transform your runs into valuable NFT territories on ZetaChain, with Google Gemini AI coaching and immersive GameFi mechanics.
+
+## 🎯 **CURRENT STATUS: LIVE ON ZETACHAIN TESTNET**
+
+RunRealm is deployed and functional for single-chain territory gaming on ZetaChain Athens Testnet. Users can create territory NFTs, earn REALM rewards, and track running progress.
+
+**Live Contracts:**
+- 🪙 REALM Token: `0x18082d110113B40A24A41dF10b4b249Ee461D3eb`
+- 🌍 Universal Contract: `0x7A52d845Dc37aC5213a546a59A43148308A88983`
+- 🔧 GameLogic Library: `0x0590F45F223B87e51180f6B7546Cc25955984726`
+- 📍 Explorer: https://zetachain-athens-3.blockscout.com
 
 ## 🚀 Quick Start
 
@@ -10,17 +20,13 @@ git clone https://github.com/thisyearnofear/RunRealm.git
 cd RunRealm
 npm install
 
-# Configure environment (see docs/DEVELOPMENT_GUIDE.md for details)
+# Configure environment (see docs/DEVELOPER_GUIDE.md for details)
 cp .env.example .env
 cp src/appsettings.secrets.example.ts src/appsettings.secrets.ts
 # Add your Mapbox and Google Gemini API keys
 
-# Deploy smart contracts (optional - for Web3 features)
-npm run contracts:compile
-npm run contracts:deploy:testnet
-
-# Or use already deployed contracts on ZetaChain testnet
-# See CONTRACTS.md for addresses
+# Contracts are already deployed on ZetaChain testnet
+# See docs/DEPLOYMENT_CONTRACTS_GUIDE.md for details
 
 # Start development server
 npm run dev
@@ -31,7 +37,7 @@ npm run dev
 
 Our comprehensive documentation is organized into these focused guides:
 
-### 🛠️ [Development Guide](docs/DEVELOPMENT_GUIDE.md)
+### 🛠️ [Developer Guide](docs/DEVELOPER_GUIDE.md)
 
 Complete setup, architecture, and implementation reference covering:
 
@@ -39,29 +45,18 @@ Complete setup, architecture, and implementation reference covering:
 - **Architecture Overview**: Service-oriented design, event-driven architecture
 - **Implementation Plan**: Phase-by-phase enhancement strategy
 - **Testing Strategy**: Comprehensive testing approach
-- **Troubleshooting**: Common issues and solutions
+- **Development Guidelines**: Coding standards and best practices
 
-### 🚀 [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
+### 🎮 [User Guide](docs/USER_GUIDE.md)
 
-Production deployment, testing, and infrastructure setup including:
+Complete user-facing documentation covering:
 
-- **Smart Contract Deployment**: ZetaChain Universal Contracts
-- **Infrastructure Setup**: Hosting, CI/CD, monitoring
-- **Cross-Chain Architecture**: Multi-blockchain support
-- **Testing Checklists**: Pre-deployment validation
-- **Production Launch**: Go-live procedures and monitoring
+- **Key Features**: Running experience, GameFi integration, Web3 features
+- **Getting Started**: Basic usage, AI features, Web3 integration
+- **GameFi Components**: Territory system, token economy, player progression
+- **Interface Guide**: Dashboard, territory details, AI coaching panel
 
-### 🎮 [GameFi Reference](docs/GAMEFI_REFERENCE.md)
-
-Complete GameFi components, Web3 integration, and API documentation:
-
-- **GameFi Architecture**: UI components, territory system
-- **AI Integration**: Google Gemini route optimization and coaching
-- **Web3 Integration**: ZetaChain Universal Contracts, multi-chain support
-- **Mobile GameFi**: Touch-optimized gaming interface
-- **API Reference**: Complete service APIs and event system
-
-### 📝 [Contract Addresses](CONTRACTS.md)
+### 📝 [Deployment & Contracts Guide](docs/DEPLOYMENT_CONTRACTS_GUIDE.md)
 
 Deployed smart contract addresses and implementation details:
 
@@ -70,61 +65,20 @@ Deployed smart contract addresses and implementation details:
 - **Cross-Chain Support**: Using contracts from multiple chains
 - **Security Details**: Permissions and best practices
 
-## ✨ Key Features
-
-### 🏃‍♂️ Enhanced Running Experience
-
-- **Interactive Route Planning**: Click-to-add waypoints with distance calculation
-- **AI-Powered Coaching**: Google Gemini AI provides personalized route suggestions with wallet history context
-- **Smart Territory Analysis**: AI evaluates territories based on your portfolio and cross-chain activity
-- **Mobile-First Design**: Optimized for on-the-go route planning
-- **Real-Time Feedback**: Live distance updates and route optimization
-
-### 🎮 GameFi Integration
-
-- **Territory NFTs**: Convert running routes into unique, ownable NFT territories with cross-chain metadata
-- **Cross-Chain Support**: Claim territories from any blockchain via ZetaChain with full history tracking
-- **Cross-Chain Territory Display**: Visual indicators showing origin chain and transfer history
-- **$REALM Token Rewards**: Earn tokens based on distance, difficulty, and achievements
-- **Ghost Runners**: Compete against AI-generated runners on your routes
-- **Player Progression**: Level up, unlock achievements, climb leaderboards
-
-### 🌐 Web3 Features
-
-- **Universal Contracts**: True cross-chain functionality via ZetaChain
-- **Multi-Chain Wallet Support**: Connect from Ethereum, BSC, Polygon, and more
-- **Gas Abstraction**: Users only pay gas on their native chain
-- **NFT Marketplace**: Trade and showcase your territory collections
-
-## 🏗️ Architecture
-
-RunRealm follows a **"enhance, don't replace"** philosophy, achieving 90% code reuse by extending existing services:
-
-```
-RunRealmApp (Core)
-├── ConfigService (Extended with Web3 config)
-├── EventBus (Enhanced with blockchain events)
-├── UIService (Extended with GameFi components)
-├── Web3Service (New - blockchain interactions)
-├── AIService (New - Google Gemini integration)
-├── GameService (New - GameFi mechanics)
-└── ZetaChainService (New - Universal Contracts)
-```
-
 ## 🛠️ Technology Stack
 
 - **Frontend**: TypeScript, Mapbox GL JS, Modern CSS
-- **Blockchain**: ZetaChain Universal Contracts, Ethers.js
+- **Blockchain**: ZetaChain Universal Contracts, Ethers.js v6
 - **AI**: Google Gemini API for route optimization and coaching
 - **Smart Contracts**: Solidity 0.8.26, OpenZeppelin v5
-- **Build Tools**: Webpack, npm scripts
-- **Testing**: Jest, TypeScript compiler
+- **Build Tools**: Webpack 5, npm scripts
+- **Testing**: Jest, Jasmine, TypeScript compiler
 
 ## 🎯 Use Cases
 
 ### For Runners
 
-- Plan optimal routes with AI assistance
+- Plan optimal routes with AI assistance (see [User Guide](docs/USER_GUIDE.md))
 - Earn rewards for completing challenging routes
 - Own unique NFT territories based on your favorite running spots
 - Compete with AI ghost runners for motivation
@@ -138,7 +92,7 @@ RunRealmApp (Core)
 
 ### For Developers
 
-- Learn ZetaChain Universal Contract development
+- Learn ZetaChain Universal Contract development (see [Developer Guide](docs/DEVELOPER_GUIDE.md))
 - Study clean Web3 integration patterns
 - Explore AI-enhanced user experiences
 - Reference mobile-first GameFi design
@@ -146,27 +100,10 @@ RunRealmApp (Core)
 ## 🚀 Getting Started
 
 1. **Basic Usage**: Use as a traditional running route planner
-2. **AI Features**: Add Google Gemini API key for route optimization
-3. **Web3 Features**: Connect wallet and deploy contracts for full GameFi experience
+2. **AI Features**: Add Google Gemini API key for route optimization (see [User Guide](docs/USER_GUIDE.md))
+3. **Web3 Features**: Connect wallet for full GameFi experience (see [Deployment & Contracts Guide](docs/DEPLOYMENT_CONTRACTS_GUIDE.md))
 
-See [Development Guide](docs/DEVELOPMENT_GUIDE.md) for detailed setup instructions.
-
-## 🌐 Deployed Contracts
-
-RunRealm contracts are deployed on ZetaChain Athens Testnet and ready to use:
-
-```
-# RealmToken (REALM)
-0x904a53CAB825BAe02797D806aCB985D889EaA91b
-
-# RunRealmUniversalContract (TERRITORY)
-0x5bc467f84b220045CD815Aaa65C695794A6166E7
-
-# TerritoryNFT (Legacy Support)
-0xCEAD616B3Cd21feA96C9DcB6742DD9D13A7C8907
-```
-
-For full details including examples and usage instructions, see [CONTRACTS.md](CONTRACTS.md).
+See [Developer Guide](docs/DEVELOPER_GUIDE.md) for detailed setup instructions.
 
 ## 🌟 What Makes RunRealm Special
 
@@ -196,9 +133,9 @@ For full details including examples and usage instructions, see [CONTRACTS.md](C
 
 We welcome contributions! Please see our documentation for:
 
-- [Development setup](docs/DEVELOPMENT_GUIDE.md#environment-setup)
-- [Architecture guidelines](docs/DEVELOPMENT_GUIDE.md#architecture-overview)
-- [Testing procedures](docs/DEPLOYMENT_GUIDE.md#comprehensive-testing)
+- [Development setup](docs/DEVELOPER_GUIDE.md#environment-setup)
+- [Architecture guidelines](docs/DEVELOPER_GUIDE.md#architecture-overview)
+- [Testing procedures](docs/DEVELOPER_GUIDE.md#testing-strategy)
 
 ## 📄 License
 

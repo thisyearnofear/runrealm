@@ -233,10 +233,10 @@ PRIVATE_KEY=your_wallet_private_key_for_deployment
 ### Smart Contract Deployment
 RunRealm contracts are already deployed and ready to use on ZetaChain Athens Testnet:
 
-**Deployed Contracts (August 20, 2025):**
-- **RealmToken:** `0x904a53CAB825BAe02797D806aCB985D889EaA91b`
-- **RunRealmUniversalContract:** `0x5bc467f84b220045CD815Aaa65C695794A6166E7`
-- **TerritoryNFT:** `0xCEAD616B3Cd21feA96C9DcB6742DD9D13A7C8907`
+**Deployed Contracts (January 13, 2025):**
+- **RealmToken:** `0x18082d110113B40A24A41dF10b4b249Ee461D3eb`
+- **RunRealmUniversalContract:** `0x7A52d845Dc37aC5213a546a59A43148308A88983`
+- **GameLogic Library:** `0x0590F45F223B87e51180f6B7546Cc25955984726`
 
 For new deployments:
 1. Deploy to ZetaChain testnet first (`npm run contracts:deploy:testnet`)

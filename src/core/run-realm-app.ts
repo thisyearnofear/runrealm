@@ -1,57 +1,74 @@
 // Main application controller - orchestrates all services
 // Dynamically import mapbox-gl to reduce initial bundle size
 // import mapboxgl, { Map, MapMouseEvent, NavigationControl, GeolocateControl } from 'mapbox-gl';
-import { ConfigService } from './app-config';
-import { EventBus } from './event-bus';
-import { UIService } from '../services/ui-service';
-import { DOMService } from '../services/dom-service';
-import { AIService } from '../services/ai-service';
-import { Web3Service } from '../services/web3-service';
-import { RunTrackingService } from '../services/run-tracking-service';
-import { TerritoryService } from '../services/territory-service';
-import { EnhancedRunControls } from '../components/enhanced-run-controls';
-import { GameFiUI } from '../components/gamefi-ui';
-import TerritoryDashboard from '../components/territory-dashboard';
+import { ConfigService } from "./app-config";
+import { EventBus } from "./event-bus";
+import { UIService } from "../services/ui-service";
+import { DOMService } from "../services/dom-service";
+import { AIService } from "../services/ai-service";
+import { Web3Service } from "../services/web3-service";
+import { RunTrackingService } from "../services/run-tracking-service";
+import { TerritoryService } from "../services/territory-service";
+import { EnhancedRunControls } from "../components/enhanced-run-controls";
+import { GameFiUI } from "../components/gamefi-ui";
+import TerritoryDashboard from "../components/territory-dashboard";
 
 // Import new services
-import { AnimationService } from '../services/animation-service';
-import { OnboardingService } from '../services/onboarding-service';
-import { NavigationService } from '../services/navigation-service';
-import { ProgressionService } from '../services/progression-service';
+import { AnimationService } from "../services/animation-service";
+import { OnboardingService } from "../services/onboarding-service";
+import { NavigationService } from "../services/navigation-service";
+import { ProgressionService } from "../services/progression-service";
+import { GameService } from "../services/game-service";
+import { ContractService } from "../services/contract-service";
 
 // Import existing services
-import { PreferenceService } from '../preference-service';
-import { NextSegmentService } from '../next-segment-service';
+import { PreferenceService } from "../preference-service";
+import { NextSegmentService } from "../next-segment-service";
 // Old run model imports removed - now using RunTrackingService
-import { getStyleById } from '../utils/map-style';
-import { GeocodingService } from '../geocoding-service';
-import { LocationService } from '../services/location-service';
-import { WalletWidget } from '../components/wallet-widget';
-import { MainUI } from '../components/main-ui';
+import { getStyleById } from "../utils/map-style";
+import { GeocodingService } from "../geocoding-service";
+import { LocationService } from "../services/location-service";
+import { WalletWidget } from "../components/wallet-widget";
+import { MainUI } from "../components/main-ui";
 
 // Type definitions for Mapbox
-type MapboxGL = typeof import('mapbox-gl');
-type Map = import('mapbox-gl').Map;
-type MapMouseEvent = import('mapbox-gl').MapMouseEvent;
-type NavigationControl = import('mapbox-gl').NavigationControl;
-type GeolocateControl = import('mapbox-gl').GeolocateControl;
+type MapboxGL = typeof import("mapbox-gl");
+type Map = import("mapbox-gl").Map;
+type MapMouseEvent = import("mapbox-gl").MapMouseEvent;
+type NavigationControl = import("mapbox-gl").NavigationControl;
+type GeolocateControl = import("mapbox-gl").GeolocateControl;
 
 export class RunRealmApp {
   private static instance: RunRealmApp;
 
   // Mapbox GL library reference
   private mapboxgl: MapboxGL | null = null;
-  private Map: typeof import('mapbox-gl').Map | null = null;
-  private NavigationControl: typeof import('mapbox-gl').NavigationControl | null = null;
-  private GeolocateControl: typeof import('mapbox-gl').GeolocateControl | null = null;
+  private Map: typeof import("mapbox-gl").Map | null = null;
+  private NavigationControl:
+    | typeof import("mapbox-gl").NavigationControl
+    | null = null;
+  private GeolocateControl: typeof import("mapbox-gl").GeolocateControl | null =
+    null;
 
   // Core services
   private config: ConfigService;
   private eventBus: EventBus;
+
+  // Service instances
+  private preferenceService: PreferenceService;
   private ui: UIService;
-  private dom: DOMService;
-  private ai: AIService;
+  private location: LocationService;
   private web3: Web3Service;
+  private ai: AIService;
+  private game: GameService;
+  private contractService: ContractService;
+  private territory: TerritoryService;
+  private progression: ProgressionService;
+  private runTracking: RunTrackingService;
+  private onboarding: OnboardingService;
+  private navigation: NavigationService;
+  private animation: AnimationService;
+  private dom: DOMService;
   private gamefiUI: GameFiUI;
   private locationService: LocationService;
   private walletWidget: WalletWidget;
@@ -68,7 +85,7 @@ export class RunRealmApp {
   private enhancedRunControls: EnhancedRunControls;
 
   // Existing services (to be gradually refactored)
-  private preferenceService: PreferenceService;
+
   private nextSegmentService: NextSegmentService;
 
   // Application state
@@ -84,18 +101,16 @@ export class RunRealmApp {
     if (this.mapboxgl) return; // Already loaded
 
     try {
-      const mapboxModule = await import('mapbox-gl');
+      const mapboxModule = await import("mapbox-gl");
       this.mapboxgl = mapboxModule.default;
       this.Map = mapboxModule.Map;
       this.NavigationControl = mapboxModule.NavigationControl;
       this.GeolocateControl = mapboxModule.GeolocateControl;
 
-
-
-      console.log('Mapbox GL loaded successfully');
+      console.log("Mapbox GL loaded successfully");
     } catch (error) {
-      console.error('Failed to load Mapbox GL:', error);
-      throw new Error('Mapbox GL failed to load');
+      console.error("Failed to load Mapbox GL:", error);
+      throw new Error("Mapbox GL failed to load");
     }
   }
 
@@ -113,43 +128,70 @@ export class RunRealmApp {
   }
 
   private initializeServices(): void {
+    // Initialize services in dependency order
     this.config = ConfigService.getInstance();
     this.eventBus = EventBus.getInstance();
-    this.ui = UIService.getInstance();
-    this.dom = DOMService.getInstance();
-    this.ai = AIService.getInstance();
-    this.web3 = Web3Service.getInstance();
-    this.gamefiUI = GameFiUI.getInstance();
 
-    // Initialize new services
-    this.animationService = AnimationService.getInstance();
-    this.onboardingService = OnboardingService.getInstance();
-    this.runTrackingService = new RunTrackingService();
-    this.territoryService = new TerritoryService();
-    this.enhancedRunControls = new EnhancedRunControls();
+    // Expose services globally for inter-service communication
+    if (typeof window !== "undefined") {
+      (window as any).RunRealm = (window as any).RunRealm || {};
+      (window as any).RunRealm.services =
+        (window as any).RunRealm.services || {};
+      (window as any).RunRealm.services.eventBus = this.eventBus;
+    }
 
-    // Defer AI route handlers setup until after full initialization
-    // This will be called from the main initialization flow
-    this.navigationService = NavigationService.getInstance();
-    this.progressionService = ProgressionService.getInstance();
-
-    // Initialize existing services
     this.preferenceService = new PreferenceService();
-    // Note: geocodingService, locationService, walletWidget, and mainUI
-    // are now initialized after runtime tokens are loaded
+
+    // Initialize remaining services
+    this.ui = UIService.getInstance();
+    this.location = new LocationService();
+    this.web3 = Web3Service.getInstance();
+    this.ai = AIService.getInstance();
+    this.game = new GameService();
+    this.contractService = new ContractService(this.web3);
+    this.territory = new TerritoryService();
+    this.progression = ProgressionService.getInstance();
+    this.runTracking = new RunTrackingService();
+    this.onboarding = OnboardingService.getInstance();
+    this.navigation = NavigationService.getInstance();
+    this.animation = AnimationService.getInstance();
+
+    // Register services for global access
+    if (typeof window !== "undefined") {
+      (window as any).RunRealm.services = {
+        ...((window as any).RunRealm.services || {}),
+        config: this.config,
+        preferenceService: this.preferenceService,
+        ui: this.ui,
+        location: this.location,
+        web3: this.web3,
+        ai: this.ai,
+        game: this.game,
+        contractService: this.contractService,
+        territory: this.territory,
+        progression: this.progression,
+        runTracking: this.runTracking,
+        onboarding: this.onboarding,
+        navigation: this.navigation,
+        animation: this.animation,
+      };
+    }
   }
 
   private initializeTokenDependentServices(): void {
     // Initialize services that depend on API tokens
-    this.geocodingService = new GeocodingService(this.config.getConfig().mapbox.accessToken);
+    this.geocodingService = new GeocodingService(
+      this.config.getConfig().mapbox.accessToken
+    );
 
     // Initialize location and wallet services
-    this.locationService = new LocationService(
-      this.geocodingService,
-      this.preferenceService,
-      this.dom
+    this.locationService = this.location;
+    this.walletWidget = new WalletWidget(
+      this.dom,
+      this.ui,
+      this.animation,
+      this.web3
     );
-    this.walletWidget = new WalletWidget(this.dom, this.ui, this.animationService, this.web3);
 
     // Initialize main UI (replaces fragmented UI systems)
     this.mainUI = new MainUI(
@@ -159,7 +201,7 @@ export class RunRealmApp {
       this.ui,
       this.gamefiUI,
       this.web3,
-      this.configService
+      this.config
     );
   }
 
@@ -170,11 +212,11 @@ export class RunRealmApp {
 
   private setupEventHandlers(): void {
     // GameFi event handlers
-    this.eventBus.on('territory:claimRequested', (data) => {
+    this.eventBus.on("territory:claimRequested", (data) => {
       this.handleTerritoryClaimRequest(data);
     });
 
-    this.eventBus.on('ui:unitsToggled', (data) => {
+    this.eventBus.on("ui:unitsToggled", (data) => {
       this.handleUnitsToggled(data.useMetric);
     });
 
@@ -182,33 +224,41 @@ export class RunRealmApp {
     // Note: run events are now handled by RunTrackingService
 
     // Planned route rendering hook -> AnimationService
-    this.eventBus.on('run:plannedRouteChanged', (data: { geojson: any }) => {
+    this.eventBus.on("run:plannedRouteChanged", (data: { geojson: any }) => {
       try {
-        const feature = data.geojson && data.geojson.type === 'Feature' ? data.geojson : null;
-        const featureCollection = feature ? { type: 'FeatureCollection', features: [feature] } : data.geojson;
+        const feature =
+          data.geojson && data.geojson.type === "Feature" ? data.geojson : null;
+        const featureCollection = feature
+          ? { type: "FeatureCollection", features: [feature] }
+          : data.geojson;
         // Access the map AnimationService; assume it is exposed on window or via this.services
-        const anim = (window as any)?.RunRealm?.mapAnimationService || (this as any).animationService || (this as any).services?.animationService;
-        if (anim && typeof anim.setPlannedRoute === 'function') {
+        const anim =
+          (window as any)?.RunRealm?.mapAnimationService ||
+          (this as any).animationService ||
+          (this as any).services?.animationService;
+        if (anim && typeof anim.setPlannedRoute === "function") {
           anim.setPlannedRoute(featureCollection);
         } else {
-          console.warn('AnimationService not available to render planned route');
+          console.warn(
+            "AnimationService not available to render planned route"
+          );
         }
       } catch (e) {
-        console.error('Failed to render planned route via AnimationService', e);
+        console.error("Failed to render planned route via AnimationService", e);
       }
     });
 
-    this.eventBus.on('web3:walletConnected', (data) => {
+    this.eventBus.on("web3:walletConnected", (data) => {
       this.handleWalletConnected(data);
     });
 
     // Location service integration - recenter map when location changes
-    this.eventBus.on('location:changed', (locationInfo) => {
+    this.eventBus.on("location:changed", (locationInfo) => {
       this.handleLocationChanged(locationInfo);
     });
 
     // Progression events - now handled by RunTrackingService
-    this.eventBus.on('run:completed', (data) => {
+    this.eventBus.on("run:completed", (data) => {
       // Add distance and time to progression from RunTrackingService data
       if (data.distance) {
         this.progressionService.addDistance(data.distance);
@@ -218,23 +268,23 @@ export class RunRealmApp {
       }
     });
 
-    this.eventBus.on('territory:claimed', (data) => {
+    this.eventBus.on("territory:claimed", (data) => {
       this.progressionService.addTerritory();
     });
 
     // Navigation events
-    this.eventBus.on('run:startRequested', () => {
+    this.eventBus.on("run:startRequested", () => {
       // Handle run start request
-      this.ui.showToast('Starting new run...', { type: 'info' });
+      this.ui.showToast("Starting new run...", { type: "info" });
     });
 
-    this.eventBus.on('navigation:routeChanged', (data) => {
+    this.eventBus.on("navigation:routeChanged", (data) => {
       // Handle route changes
-      console.log('Navigation to:', (data as any).routeId);
+      console.log("Navigation to:", (data as any).routeId);
     });
 
     // Listen for config updates (e.g., when runtime tokens are loaded)
-    this.eventBus.on('config:updated', () => {
+    this.eventBus.on("config:updated", () => {
       // Refresh AI service when config is updated
       this.refreshAIService();
     });
@@ -255,7 +305,7 @@ export class RunRealmApp {
 
       // Initialize main UI (replaces old fragmented UI)
       await this.mainUI.initialize();
-      
+
       // Expose mainUI globally (also in production) for cross-service access
       (window as any).RunRealm = (window as any).RunRealm || {};
       (window as any).RunRealm.mainUI = this.mainUI;
@@ -264,53 +314,57 @@ export class RunRealmApp {
       (window as any).RunRealm.eventBus = this.eventBus;
 
       // Development-only extras
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === "development") {
         // Add debug method for testing route visualization
         (window as any).testRouteVisualization = () => {
-          console.log('🧪 Testing route visualization...');
+          console.log("🧪 Testing route visualization...");
           const testCoordinates = [
             [36.8219, -1.2921], // Nairobi center
-            [36.8250, -1.2900], // Northeast
-            [36.8280, -1.2880], // Further northeast
-            [36.8250, -1.2850], // North
-            [36.8219, -1.2921]  // Back to start
+            [36.825, -1.29], // Northeast
+            [36.828, -1.288], // Further northeast
+            [36.825, -1.285], // North
+            [36.8219, -1.2921], // Back to start
           ];
 
-          console.log('🧪 Test coordinates:', testCoordinates);
+          console.log("🧪 Test coordinates:", testCoordinates);
 
           // Test direct AnimationService call
           if (this.animationService && this.animationService.setAIRoute) {
-            console.log('🧪 Calling AnimationService.setAIRoute directly...');
-            this.animationService.setAIRoute(testCoordinates, {
-              color: '#ff0000',
-              width: 6,
-              opacity: 1.0,
-              dashArray: [10, 5]
-            }, { test: true });
+            console.log("🧪 Calling AnimationService.setAIRoute directly...");
+            this.animationService.setAIRoute(
+              testCoordinates,
+              {
+                color: "#ff0000",
+                width: 6,
+                opacity: 1.0,
+                dashArray: [10, 5],
+              },
+              { test: true }
+            );
           } else {
-            console.error('🧪 AnimationService not available');
+            console.error("🧪 AnimationService not available");
           }
 
           // Test EventBus emission
           if (this.eventBus && this.eventBus.emit) {
-            console.log('🧪 Emitting ai:routeVisualize event...');
-            this.eventBus.emit('ai:routeVisualize', {
+            console.log("🧪 Emitting ai:routeVisualize event...");
+            this.eventBus.emit("ai:routeVisualize", {
               coordinates: testCoordinates,
-              type: 'test',
+              type: "test",
               style: {
-                color: '#0000ff',
+                color: "#0000ff",
                 width: 4,
                 opacity: 0.8,
-                dashArray: [5, 5]
+                dashArray: [5, 5],
               },
-              metadata: { test: true }
+              metadata: { test: true },
             });
           } else {
-            console.error('🧪 EventBus not available');
+            console.error("🧪 EventBus not available");
           }
         };
 
-        console.log('🧪 Debug method available: testRouteVisualization()');
+        console.log("🧪 Debug method available: testRouteVisualization()");
       }
 
       this.loadSavedRun();
@@ -320,22 +374,22 @@ export class RunRealmApp {
       // Ensure AnimationService has map reference
       if (this.animationService && this.map) {
         this.animationService.map = this.map;
-        console.log('RunRealmApp: AnimationService map reference set');
+        console.log("RunRealmApp: AnimationService map reference set");
       }
 
       // Set up AI route visualization handlers now that everything is ready
       try {
         this.setupAIRouteHandlers();
       } catch (error) {
-        console.error('RunRealmApp: Failed to setup AI route handlers:', error);
+        console.error("RunRealmApp: Failed to setup AI route handlers:", error);
         // Try alternative setup
         this.setupAIRouteHandlersFallback();
       }
 
-      console.log('RunRealm application initialized successfully');
+      console.log("RunRealm application initialized successfully");
     } catch (error) {
-      console.error('Failed to initialize RunRealm:', error);
-      this.ui.showToast('Failed to initialize application', { type: 'error' });
+      console.error("Failed to initialize RunRealm:", error);
+      this.ui.showToast("Failed to initialize application", { type: "error" });
     }
   }
 
@@ -351,42 +405,47 @@ export class RunRealmApp {
     (this.mapboxgl as any).accessToken = config.mapbox.accessToken;
 
     // Check if container exists
-    const container = document.getElementById('mapbox-container');
+    const container = document.getElementById("mapbox-container");
     if (!container) {
-      throw new Error('Mapbox container not found');
+      throw new Error("Mapbox container not found");
     }
 
-    console.log('Initializing map with token:', config.mapbox.accessToken ? 'Token present' : 'No token');
+    console.log(
+      "Initializing map with token:",
+      config.mapbox.accessToken ? "Token present" : "No token"
+    );
 
     try {
       this.map = new (this.Map as any)({
         pitchWithRotate: false,
         center: [initialFocus.lng, initialFocus.lat],
         zoom: initialFocus.zoom,
-        container: 'mapbox-container',
-        style: mapStyle
+        container: "mapbox-container",
+        style: mapStyle,
       });
 
       // Wait for map to load
       return new Promise((resolve, reject) => {
-        this.map.on('load', () => {
-          console.log('Map loaded successfully');
+        this.map.on("load", () => {
+          console.log("Map loaded successfully");
           resolve();
         });
-        this.map.on('error', (error) => {
-          console.error('Map error:', error);
+        this.map.on("error", (error) => {
+          console.error("Map error:", error);
           reject(error);
         });
       });
     } catch (error) {
-      console.error('Failed to create map:', error);
+      console.error("Failed to create map:", error);
       throw error;
     }
   }
 
   private initializeMapServices(): void {
     this.animationService = AnimationService.getInstance();
-    this.nextSegmentService = new NextSegmentService(this.config.getConfig().mapbox.accessToken);
+    this.nextSegmentService = new NextSegmentService(
+      this.config.getConfig().mapbox.accessToken
+    );
   }
 
   private async initializeGameFiServices(): Promise<void> {
@@ -422,11 +481,13 @@ export class RunRealmApp {
       // Register services in global registry for cross-service access
       this.registerServicesGlobally();
 
-      console.log('GameFi services initialized');
+      console.log("GameFi services initialized");
     } catch (error) {
-      console.error('Failed to initialize GameFi services:', error);
+      console.error("Failed to initialize GameFi services:", error);
       // Continue without GameFi features but show error
-      this.ui.showToast('Some GameFi features may not be available', { type: 'warning' });
+      this.ui.showToast("Some GameFi features may not be available", {
+        type: "warning",
+      });
     }
   }
 
@@ -449,19 +510,19 @@ export class RunRealmApp {
       PreferenceService: this.preferenceService,
       AIService: this.ai,
       UIService: this.ui,
-      GameFiUI: this.gamefiUI
+      GameFiUI: this.gamefiUI,
     };
 
-    console.log('Services registered globally for cross-service access');
+    console.log("Services registered globally for cross-service access");
   }
 
   private initializeTerritoryDashboard(): void {
     // Create vanilla TypeScript TerritoryDashboard
     this.territoryDashboard = TerritoryDashboard.getInstance();
 
-    const dashboardContainer = this.dom.createElement('div', {
-      id: 'territory-dashboard-root',
-      parent: document.body
+    const dashboardContainer = this.dom.createElement("div", {
+      id: "territory-dashboard-root",
+      parent: document.body,
     });
 
     this.territoryDashboard.initialize(dashboardContainer);
@@ -470,33 +531,36 @@ export class RunRealmApp {
       this.gamefiUI.enableGameFiMode();
     }
 
-    console.log('Territory dashboard initialized');
+    console.log("Territory dashboard initialized");
   }
 
   private setupMapEventHandlers(): void {
     // Add map controls for desktop
     if (!this.config.getConfig().ui.isMobile) {
-      this.map.addControl(new (this.NavigationControl as any)(), 'bottom-right');
+      this.map.addControl(
+        new (this.NavigationControl as any)(),
+        "bottom-right"
+      );
     }
 
     // Add geolocation control
     this.map.addControl(
       new (this.GeolocateControl as any)({
         positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: false
-      }).on('geolocate', (position: GeolocationPosition) => {
+        trackUserLocation: false,
+      }).on("geolocate", (position: GeolocationPosition) => {
         this.preferenceService.saveCurrentFocus(position, this.map.getZoom());
       }),
-      'bottom-right'
+      "bottom-right"
     );
 
     // Handle map clicks
-    this.map.on('click', (e: any) => {
+    this.map.on("click", (e: any) => {
       this.handleMapClick(e);
     });
 
     // Handle style changes
-    this.map.on('style.load', () => {
+    this.map.on("style.load", () => {
       // Run re-rendering now handled by RunTrackingService
       this.animationService.readdRunToMap(null);
     });
@@ -510,8 +574,15 @@ export class RunRealmApp {
     this.saveFocus();
   }
 
-  private async addSegmentFromDirections(previousLngLat: any, lngLat: any): Promise<void> {
-    const newSegment = await this.nextSegmentService.getSegmentFromDirectionsService(previousLngLat, lngLat);
+  private async addSegmentFromDirections(
+    previousLngLat: any,
+    lngLat: any
+  ): Promise<void> {
+    const newSegment =
+      await this.nextSegmentService.getSegmentFromDirectionsService(
+        previousLngLat,
+        lngLat
+      );
 
     if (this.config.getConfig().ui.enableAnimations) {
       this.animationService.animateSegment(newSegment);
@@ -519,7 +590,11 @@ export class RunRealmApp {
 
     const coordinates = (newSegment.geometry as any).coordinates;
     const segmentEnd = coordinates[coordinates.length - 1];
-    const marker = this.createMarker({ lng: segmentEnd[0], lat: segmentEnd[1] }, false);
+    // Marker creation handled by map service
+    console.log("Segment added at:", {
+      lng: segmentEnd[0],
+      lat: segmentEnd[1],
+    });
 
     // Segment addition now handled by RunTrackingService
   }
@@ -536,22 +611,21 @@ export class RunRealmApp {
       const txHash = `0x${Math.random().toString(16).substring(2, 10)}`;
       const result = txHash;
 
-      this.ui.showToast(`Territory claim initiated! TX: ${result.slice(0, 8)}...`, {
-        type: 'success'
-      });
+      this.ui.showToast(
+        `Territory claim initiated! TX: ${result.slice(0, 8)}...`,
+        {
+          type: "success",
+        }
+      );
     } catch (error) {
-      console.error('Territory claim failed:', error);
-      this.ui.showToast('Failed to claim territory', { type: 'error' });
+      console.error("Territory claim failed:", error);
+      this.ui.showToast("Failed to claim territory", { type: "error" });
     }
   }
 
-
-
-
-
   private handleWalletConnected(data: any): void {
     this.ui.showToast(`Wallet connected: ${data.address?.slice(0, 8)}...`, {
-      type: 'success'
+      type: "success",
     });
 
     // Enable additional GameFi features
@@ -569,21 +643,21 @@ export class RunRealmApp {
         center: [locationInfo.lng, locationInfo.lat],
         zoom: 14, // Good zoom level for exploring territories
         duration: 2000, // 2 second animation
-        essential: true // This animation is essential for user experience
+        essential: true, // This animation is essential for user experience
       });
 
       // Show toast notification
-      this.ui.showToast('📍 Location updated', {
-        type: 'success'
+      this.ui.showToast("📍 Location updated", {
+        type: "success",
       });
 
       // Save the new focus
       this.saveFocus();
 
-      console.log('Map recentered to:', locationInfo);
+      console.log("Map recentered to:", locationInfo);
     } catch (error) {
-      console.error('Failed to recenter map:', error);
-      this.ui.showToast('Failed to update map location', { type: 'error' });
+      console.error("Failed to recenter map:", error);
+      this.ui.showToast("Failed to update map location", { type: "error" });
     }
   }
 
@@ -599,13 +673,13 @@ export class RunRealmApp {
   private loadSavedRun(): void {
     try {
       const savedRun = this.preferenceService.getLastRun();
-      if (savedRun && savedRun !== '{}') {
+      if (savedRun && savedRun !== "{}") {
         // Load the saved run
         // This would use existing jsonToRun logic
-        console.log('Loading saved run:', savedRun);
+        console.log("Loading saved run:", savedRun);
       }
     } catch (error) {
-      console.error('Error loading saved run:', error);
+      console.error("Error loading saved run:", error);
     }
   }
 
@@ -618,8 +692,8 @@ export class RunRealmApp {
     const position = {
       coords: {
         latitude: center.lat,
-        longitude: center.lng
-      }
+        longitude: center.lng,
+      },
     } as GeolocationPosition;
 
     this.preferenceService.saveCurrentFocus(position, this.map.getZoom());
@@ -631,33 +705,33 @@ export class RunRealmApp {
     // Set up navigation routes
     this.navigationService.registerRoutes([
       {
-        id: 'map',
-        path: '/',
-        title: 'Map',
-        icon: '🗺️',
-        visible: true
+        id: "map",
+        path: "/",
+        title: "Map",
+        icon: "🗺️",
+        visible: true,
       },
       {
-        id: 'territories',
-        path: '/territories',
-        title: 'Territories',
-        icon: '🏆',
-        visible: true
+        id: "territories",
+        path: "/territories",
+        title: "Territories",
+        icon: "🏆",
+        visible: true,
       },
       {
-        id: 'profile',
-        path: '/profile',
-        title: 'Profile',
-        icon: '👤',
-        visible: true
+        id: "profile",
+        path: "/profile",
+        title: "Profile",
+        icon: "👤",
+        visible: true,
       },
       {
-        id: 'leaderboard',
-        path: '/leaderboard',
-        title: 'Leaderboard',
-        icon: '🏅',
-        visible: true
-      }
+        id: "leaderboard",
+        path: "/leaderboard",
+        title: "Leaderboard",
+        icon: "🏅",
+        visible: true,
+      },
     ]);
 
     // Create navigation UI (optional - only if containers exist)
@@ -672,44 +746,48 @@ export class RunRealmApp {
       const onboardingConfig = {
         steps: [
           {
-            id: 'welcome',
-            title: 'Welcome to RunRealm!',
-            description: 'Claim, trade, and defend real-world running territories as NFTs.',
-            targetElement: '#mapbox-container',
-            position: 'bottom' as const
+            id: "welcome",
+            title: "Welcome to RunRealm!",
+            description:
+              "Claim, trade, and defend real-world running territories as NFTs.",
+            targetElement: "#mapbox-container",
+            position: "bottom" as const,
           },
           {
-            id: 'map-intro',
-            title: 'Interactive Map',
-            description: 'Click anywhere on the map to start planning your running route.',
-            targetElement: '#mapbox-container',
-            position: 'bottom' as const,
-            completionCondition: 'run:pointAdded'
+            id: "map-intro",
+            title: "Interactive Map",
+            description:
+              "Click anywhere on the map to start planning your running route.",
+            targetElement: "#mapbox-container",
+            position: "bottom" as const,
+            completionCondition: "run:pointAdded",
           },
           {
-            id: 'territory-claim',
-            title: 'Claim Territories',
-            description: 'When you complete a route near an unclaimed territory, you can claim it as your own NFT.',
-            targetElement: '#claim-territory-btn',
-            position: 'top' as const
+            id: "territory-claim",
+            title: "Claim Territories",
+            description:
+              "When you complete a route near an unclaimed territory, you can claim it as your own NFT.",
+            targetElement: "#claim-territory-btn",
+            position: "top" as const,
           },
           {
-            id: 'ai-coach',
-            title: 'AI Coaching',
-            description: 'Get personalized route suggestions and running tips from our AI coach.',
-            targetElement: '#get-ai-route',
-            position: 'top' as const
-          }
+            id: "ai-coach",
+            title: "AI Coaching",
+            description:
+              "Get personalized route suggestions and running tips from our AI coach.",
+            targetElement: "#get-ai-route",
+            position: "top" as const,
+          },
         ],
         allowSkip: true,
-        showProgress: true
+        showProgress: true,
       };
 
       // Resume or start onboarding
       this.onboardingService.resumeOnboarding(onboardingConfig);
     } else {
       // Mark as complete to avoid the old system
-      localStorage.setItem('runrealm_onboarding_complete', 'true');
+      localStorage.setItem("runrealm_onboarding_complete", "true");
     }
   }
 
@@ -725,82 +803,34 @@ export class RunRealmApp {
    */
   private setupAIRouteHandlers(): void {
     // Safety check: ensure EventBus is properly initialized
-    if (!this.eventBus || typeof this.eventBus.on !== 'function') {
-      console.warn('RunRealmApp: EventBus not ready, skipping AI route handlers setup');
-      console.log('RunRealmApp: EventBus state:', {
+    if (!this.eventBus || typeof this.eventBus.on !== "function") {
+      console.warn(
+        "RunRealmApp: EventBus not ready, skipping AI route handlers setup"
+      );
+      console.log("RunRealmApp: EventBus state:", {
         exists: !!this.eventBus,
         hasOn: this.eventBus && typeof this.eventBus.on,
-        eventBusType: this.eventBus && this.eventBus.constructor.name
+        eventBusType: this.eventBus && this.eventBus.constructor.name,
       });
       return;
     }
 
-    console.log('RunRealmApp: Setting up AI route handlers...');
+    console.log("RunRealmApp: Setting up AI route handlers...");
 
     // Handle AI route visualization requests
-    this.eventBus.on('ai:routeVisualize', (data: {
-      coordinates: number[][];
-      type: string;
-      style: any;
-      metadata: any;
-    }) => {
-      console.log('RunRealmApp: Visualizing AI route with', data.coordinates.length, 'coordinates');
-
-      // Safety check: ensure AnimationService has map reference
-      if (!this.animationService.map) {
-        this.animationService.map = this.map;
-      }
-
-      // Clear any existing AI route
-      this.animationService.clearAIRoute();
-
-      // Visualize the new AI route
-      if (data.coordinates && data.coordinates.length > 1) {
-        this.animationService.setAIRoute(data.coordinates, data.style, data.metadata);
-
-        // Optionally fit map to show the entire route
-        this.fitMapToRoute(data.coordinates);
-      }
-    });
-
-    // Handle route clearing
-    this.eventBus.on('ai:routeClear', () => {
-      console.log('RunRealmApp: Clearing AI route');
-      this.animationService.clearAIRoute();
-    });
-
-    // Handle waypoint visualization
-    this.eventBus.on('ai:waypointsVisualize', (data: {
-      waypoints: any[];
-      routeMetadata: any;
-    }) => {
-      console.log('RunRealmApp: Visualizing', data.waypoints.length, 'AI waypoints');
-
-      // Safety check: ensure AnimationService has map reference
-      if (!this.animationService.map) {
-        this.animationService.map = this.map;
-      }
-
-      this.animationService.setAIWaypoints(data.waypoints, data.routeMetadata);
-    });
-  }
-
-  /**
-   * Fallback method to set up AI route handlers without EventBus checks
-   */
-  private setupAIRouteHandlersFallback(): void {
-    console.log('RunRealmApp: Setting up AI route handlers (fallback mode)...');
-
-    // Direct event subscription without safety checks
-    try {
-      // Handle AI route visualization requests
-      this.eventBus.on('ai:routeVisualize', (data: {
+    this.eventBus.on(
+      "ai:routeVisualize",
+      (data: {
         coordinates: number[][];
         type: string;
         style: any;
         metadata: any;
       }) => {
-        console.log('RunRealmApp: [Fallback] Visualizing AI route with', data.coordinates?.length || 0, 'coordinates');
+        console.log(
+          "RunRealmApp: Visualizing AI route with",
+          data.coordinates.length,
+          "coordinates"
+        );
 
         // Safety check: ensure AnimationService has map reference
         if (!this.animationService.map) {
@@ -812,31 +842,119 @@ export class RunRealmApp {
 
         // Visualize the new AI route
         if (data.coordinates && data.coordinates.length > 1) {
-          this.animationService.setAIRoute(data.coordinates, data.style, data.metadata);
+          this.animationService.setAIRoute(
+            data.coordinates,
+            data.style,
+            data.metadata
+          );
 
           // Optionally fit map to show the entire route
           this.fitMapToRoute(data.coordinates);
         }
-      });
+      }
+    );
 
-      // Handle waypoint visualization
-      this.eventBus.on('ai:waypointsVisualize', (data: {
-        waypoints: any[];
-        routeMetadata: any;
-      }) => {
-        console.log('RunRealmApp: [Fallback] Visualizing', data.waypoints?.length || 0, 'AI waypoints');
+    // Handle route clearing
+    this.eventBus.on("ai:routeClear", () => {
+      console.log("RunRealmApp: Clearing AI route");
+      this.animationService.clearAIRoute();
+    });
+
+    // Handle waypoint visualization
+    this.eventBus.on(
+      "ai:waypointsVisualize",
+      (data: { waypoints: any[]; routeMetadata: any }) => {
+        console.log(
+          "RunRealmApp: Visualizing",
+          data.waypoints.length,
+          "AI waypoints"
+        );
 
         // Safety check: ensure AnimationService has map reference
         if (!this.animationService.map) {
           this.animationService.map = this.map;
         }
 
-        this.animationService.setAIWaypoints(data.waypoints, data.routeMetadata);
-      });
+        this.animationService.setAIWaypoints(
+          data.waypoints,
+          data.routeMetadata
+        );
+      }
+    );
+  }
 
-      console.log('RunRealmApp: AI route handlers set up successfully (fallback)');
+  /**
+   * Fallback method to set up AI route handlers without EventBus checks
+   */
+  private setupAIRouteHandlersFallback(): void {
+    console.log("RunRealmApp: Setting up AI route handlers (fallback mode)...");
+
+    // Direct event subscription without safety checks
+    try {
+      // Handle AI route visualization requests
+      this.eventBus.on(
+        "ai:routeVisualize",
+        (data: {
+          coordinates: number[][];
+          type: string;
+          style: any;
+          metadata: any;
+        }) => {
+          console.log(
+            "RunRealmApp: [Fallback] Visualizing AI route with",
+            data.coordinates?.length || 0,
+            "coordinates"
+          );
+
+          // Safety check: ensure AnimationService has map reference
+          if (!this.animationService.map) {
+            this.animationService.map = this.map;
+          }
+
+          // Clear any existing AI route
+          this.animationService.clearAIRoute();
+
+          // Visualize the new AI route
+          if (data.coordinates && data.coordinates.length > 1) {
+            this.animationService.setAIRoute(
+              data.coordinates,
+              data.style,
+              data.metadata
+            );
+
+            // Optionally fit map to show the entire route
+            this.fitMapToRoute(data.coordinates);
+          }
+        }
+      );
+
+      // Handle waypoint visualization
+      this.eventBus.on(
+        "ai:waypointsVisualize",
+        (data: { waypoints: any[]; routeMetadata: any }) => {
+          console.log(
+            "RunRealmApp: [Fallback] Visualizing",
+            data.waypoints?.length || 0,
+            "AI waypoints"
+          );
+
+          // Safety check: ensure AnimationService has map reference
+          if (!this.animationService.map) {
+            this.animationService.map = this.map;
+          }
+
+          this.animationService.setAIWaypoints(
+            data.waypoints,
+            data.routeMetadata
+          );
+        }
+      );
+
+      console.log(
+        "RunRealmApp: AI route handlers set up successfully (fallback)"
+      );
     } catch (error) {
-      console.error('RunRealmApp: Fallback setup also failed:', error);
+      console.error("RunRealmApp: Fallback setup also failed:", error);
     }
   }
 
@@ -856,12 +974,12 @@ export class RunRealmApp {
       this.map.fitBounds(bounds, {
         padding: { top: 50, bottom: 50, left: 50, right: 50 },
         maxZoom: 16,
-        duration: 1000 // Smooth animation
+        duration: 1000, // Smooth animation
       });
 
-      console.log('RunRealmApp: Map fitted to AI route bounds');
+      console.log("RunRealmApp: Map fitted to AI route bounds");
     } catch (error) {
-      console.warn('RunRealmApp: Failed to fit map to route:', error);
+      console.warn("RunRealmApp: Failed to fit map to route:", error);
     }
   }
 
@@ -876,7 +994,7 @@ export class RunRealmApp {
   }
 
   toggleUnits(): void {
-    this.eventBus.emit('ui:unitsToggled', { useMetric: !this.useMetric });
+    this.eventBus.emit("ui:unitsToggled", { useMetric: !this.useMetric });
   }
 
   // Old run control methods removed - now handled by RunTrackingService via EnhancedRunControls
@@ -891,12 +1009,12 @@ export class RunRealmApp {
 
   disableGameMode(): void {
     this.gameMode = false;
-    document.body.classList.remove('gamefi-mode');
+    document.body.classList.remove("gamefi-mode");
   }
 
   connectWallet(): Promise<any> {
     if (!this.web3) {
-      throw new Error('Web3 service not initialized');
+      throw new Error("Web3 service not initialized");
     }
     return this.web3.connectWallet();
   }
@@ -910,7 +1028,7 @@ export class RunRealmApp {
 
   getCurrentLocation(): Promise<any> {
     if (!this.locationService) {
-      throw new Error('Location service not initialized');
+      throw new Error("Location service not initialized");
     }
     return this.locationService.getCurrentLocation();
   }
@@ -927,10 +1045,10 @@ export class RunRealmApp {
     try {
       if (this.ai) {
         await this.ai.refreshConfig();
-        console.log('AI service refreshed with updated configuration');
+        console.log("AI service refreshed with updated configuration");
       }
     } catch (error) {
-      console.error('Failed to refresh AI service:', error);
+      console.error("Failed to refresh AI service:", error);
     }
   }
 

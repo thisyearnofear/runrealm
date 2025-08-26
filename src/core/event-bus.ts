@@ -9,7 +9,7 @@ export interface Web3Events {
   "web3:transactionSubmitted": { hash: string; type: string };
   "web3:transactionConfirmed": { hash: string; blockNumber: number };
   "web3:transactionFailed": { hash?: string; error: string };
-  "territory:claimed": { tokenId: string; geohash: string; metadata: any };
+  "web3:territoryClaimed": { tokenId: string; geohash: string; metadata: any };
   "territory:challenged": {
     tokenId: string;
     challenger: string;
@@ -30,7 +30,7 @@ export interface Web3Events {
     analysis: any;
     recommendations: string[];
   };
-  "game:rewardEarned": { amount: number; reason: string; tokenId?: string };
+  "game:rewardEarned": { amount: number; reason?: string; tokenId?: string };
   "game:challengeStarted": {
     challengeId: string;
     challenger: string;
@@ -54,6 +54,12 @@ export interface AppEvents extends Web3Events {
   "run:cleared": { timeSpent?: number; totalDistance?: number };
   "run:loaded": { run: any };
   "run:plannedRouteChanged": { geojson: any };
+  "run:completed": { distance: number; duration: number; points: any[] };
+  "run:paused": {};
+  "run:resumed": {};
+  "run:cancelled": {};
+  "run:statusChanged": { status: string };
+  "run:statsUpdated": { distance: number; duration: number; speed: number };
   "ui:settingsOpened": {};
   "ui:settingsClosed": {};
   "ui:unitsToggled": { useMetric: boolean };
@@ -62,7 +68,13 @@ export interface AppEvents extends Web3Events {
   "ui:hideRunControls": {};
   "map:styleChanged": { style: string };
   "mobile:gestureDetected": { type: string; data: any };
-  "territory:claimRequested": { geohash?: string; estimatedReward?: number };
+  "territory:claimRequested": { runId: string };
+  "territory:claimStarted": { territoryId: string; territoryName: string };
+  "territory:eligible": { territory: any; run: any; message: string };
+  "territory:preview": { territory: any; bounds: any; metadata: any };
+  "territory:nearbyUpdated": { count: number; territories: any[] };
+  "territory:claimed": { territory: any; transactionHash: string };
+  "territory:claimFailed": { error: string; territory: any; runId?: string };
   "ai:routeRequested": {
     distance?: number;
     difficulty?: number;
@@ -74,10 +86,13 @@ export interface AppEvents extends Web3Events {
   "ai:routeVisualize": { coordinates: number[][]; type: string; style: any; metadata: any };
   "ai:waypointsVisualize": { waypoints: any[]; routeMetadata: any };
   "ai:routeClear": {};
+  "ai:ghostRunnerGenerated": { runner: any; difficulty: number; success?: boolean; fallback?: boolean };
+  "ai:ghostRunnerFailed": { message: string };
   "map:focusTerritory": { geohash: string };
   "game:levelUp": { newLevel: number; player: string };
   "game:achievementUnlocked": { achievementId: string; achievement: any; player: string };
   "game:statsUpdated": { stats: any };
+  "game:rewardEarned": { amount: number };
   "navigation:routesRegistered": { routes: any[] };
   "navigation:routeChanged": { routeId: string; route: any; params?: any; previousRoute?: string };
   "onboarding:completed": {};
@@ -87,6 +102,8 @@ export interface AppEvents extends Web3Events {
   "progression:levelsLoaded": { maxLevel: number };
   "run:startRequested": {};
   "location:changed": { lat: number; lng: number; accuracy?: number; address?: string; source: string; timestamp: number };
+  "location:updated": { accuracy: number };
+  "location:error": {};
   "config:updated": {};
   'visibility:changed': { elementId: string; visible: boolean };
   "widget:stateChanged": { widgetId: string; state: any };
@@ -102,6 +119,10 @@ export interface AppEvents extends Web3Events {
   "run:clearRequested": {};
   "ui:territoryPreview": { point: any; totalDistance: number };
   "ui:gamefiEnabled": { enabled: boolean };
+  "token:transferStarted": { transactionHash: string; amount: number; token: string };
+  "staking:stakeStarted": { transactionHash: string; amount: number };
+  "staking:rewardEarned": { amount: number };
+  "rewards:settingsChanged": {};
 }
 
 export class EventBus {

@@ -53,6 +53,11 @@ hardhat-logs/
 .zencoder/
 .vscode/settings.json
 
+# AI development artifacts (cleaned up)
+.aider.tags.cache.v4/
+.aider.chat.history.md
+.aider.input.history
+
 # System files
 .DS_Store
 .DS_Store?
@@ -67,6 +72,9 @@ logs/
 *.log
 nohup.out
 output.txt
+
+# Legacy script directories (cleaned up)
+sh/
 
 # Runtime data
 pids/
@@ -93,6 +101,9 @@ package-lock.json.bak
 yarn.lock.bak
 .npm
 .pnpm
+
+# Deprecated linting config (TSLint is deprecated)
+tslint.json
 
 # OS generated files
 .DS_Store*

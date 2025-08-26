@@ -16,6 +16,17 @@ export interface RunSegment {
   fromDirections: boolean;
 }
 
+// Implementation class for RunSegment
+export class RunSegmentImpl implements RunSegment {
+  constructor(
+    public id: string,
+    public endPoint: LngLat,
+    public distance: number,
+    public geometry: LineString,
+    public fromDirections: boolean
+  ) {}
+}
+
 /**
  * Abstracts out the two means of adding a new segment to a run:
  * - from the mapbox directions service
@@ -55,7 +66,7 @@ export class NextSegmentService {
         }
 
         const route = directionsResponse.routes[0];
-        return new RunSegment(
+        return new RunSegmentImpl(
           uuid(),
           nextLngLat,
           route.distance,
@@ -83,7 +94,7 @@ export class NextSegmentService {
 
     const distance = length(turfHelpers.lineString(lineCoordinates), { units: 'meters' });
     const line = turfHelpers.lineString(lineCoordinates).geometry;
-    return new RunSegment(
+    return new RunSegmentImpl(
       uuid(),
       nextLngLat,
       distance,

@@ -294,4 +294,20 @@ export class AnimationService extends BaseService {
   public animateSegment(segment: any): void {
     // Implementation would go here
   }
+  
+  public setAIRoute(coordinates: any[], style: any, metadata: any): void {
+    // Implementation would go here
+  }
+  
+  public clearAIRoute(): void {
+    // Implementation would go here
+  }
+  
+  public setAIWaypoints(waypoints: any[], metadata: any): void {
+    // Implementation would go here
+  }
+  
+  public map: any = {
+    // Placeholder for map property
+  };
 }

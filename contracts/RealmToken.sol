@@ -5,9 +5,12 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+
 /**
  * @title RealmToken
- * @dev ERC-20 utility token for RunRealm GameFi mechanics
+ * @dev ZRC-20 compatible utility token for RunRealm GameFi mechanics
+ * ENHANCEMENT FIRST: Enhanced for ZetaChain cross-chain functionality
  * Used for rewards, staking, territory battles, and governance
  */
 contract RealmToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
@@ -15,6 +18,8 @@ contract RealmToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     // Token constants
     uint256 public constant INITIAL_SUPPLY = 1_000_000_000 * 10**18; // 1 billion tokens
     uint256 public constant MAX_SUPPLY = 10_000_000_000 * 10**18; // 10 billion tokens max
+
+
 
     // Reward rates (tokens per meter)
     uint256 public constant BASE_REWARD_RATE = 10**15; // 0.001 REALM per meter
@@ -324,6 +329,8 @@ contract RealmToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
             dailyRewardsClaimed[user] = dailyRewardsClaimed[user] + amount;
         }
     }
+
+
 
     /**
      * @dev Add authorized minter

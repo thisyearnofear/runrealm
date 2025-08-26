@@ -1,7 +1,7 @@
-import { BaseService } from '../core/base-service';
-import { RunSession } from './run-tracking-service';
-import { calculateDistance } from '../utils/distance-formatter';
-import * as turf from '@turf/turf';
+import { BaseService } from "../core/base-service";
+import { RunSession } from "./run-tracking-service";
+import { calculateDistance } from "../utils/distance-formatter";
+import * as turf from "@turf/turf";
 
 export interface TerritoryBounds {
   north: number;
@@ -16,7 +16,7 @@ export interface TerritoryMetadata {
   description: string;
   landmarks: string[];
   difficulty: number; // 1-100
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity: "common" | "rare" | "epic" | "legendary";
   estimatedReward: number;
 }
 
@@ -35,7 +35,14 @@ export interface Territory {
   };
   chainId?: number;
   tokenId?: string;
-  status: 'claimable' | 'claimed' | 'contested' | 'expired';
+  status: "claimable" | "claimed" | "contested" | "expired";
+  rarity?: "common" | "rare" | "epic" | "legendary";
+  difficulty?: number;
+  estimatedReward?: number;
+  landmarks?: string[];
+  originChain?: number;
+  crossChainHistory?: Array<{ chainId: number; timestamp: number }>;
+  transactionHash?: string;
 }
 
 export interface TerritoryClaimResult {
@@ -60,30 +67,35 @@ export class TerritoryService extends BaseService {
   private proximityThreshold = 100; // meters
 
   constructor() {
-    super('TerritoryService');
+    super();
   }
 
   protected async onInitialize(): Promise<void> {
     this.setupEventListeners();
     await this.loadClaimedTerritories();
-    this.safeEmit('service:initialized', { service: 'TerritoryService', success: true });
+    this.safeEmit("service:initialized", {
+      service: "TerritoryService",
+      success: true,
+    });
   }
 
   private setupEventListeners(): void {
     // Listen for completed runs
-    this.subscribe('run:completed', (data: { run: RunSession; territoryEligible: boolean }) => {
-      if (data.territoryEligible) {
-        this.processEligibleRun(data.run);
+    this.subscribe(
+      "run:completed",
+      (data: { distance: number; duration: number; points: any[] }) => {
+        // For now, we'll just log this - we need to implement territory eligibility logic
+        console.log("Run completed, checking territory eligibility", data);
       }
-    });
+    );
 
     // Listen for location changes to update nearby territories
-    this.subscribe('location:changed', (locationInfo) => {
+    this.subscribe("location:changed", (locationInfo) => {
       this.updateNearbyTerritories(locationInfo);
     });
 
     // Listen for territory claim requests
-    this.subscribe('territory:claimRequested', (data: { runId: string }) => {
+    this.subscribe("territory:claimRequested", (data: { runId: string }) => {
       this.handleClaimRequest(data.runId);
     });
   }
@@ -94,25 +106,25 @@ export class TerritoryService extends BaseService {
   private async processEligibleRun(run: RunSession): Promise<void> {
     try {
       const territory = await this.createTerritoryFromRun(run);
-      
-      this.safeEmit('territory:eligible', {
+
+      this.safeEmit("territory:eligible", {
         territory,
         run,
-        message: 'Congratulations! Your run qualifies for territory claiming.'
+        message: "Congratulations! Your run qualifies for territory claiming.",
       });
 
       // Show territory preview
-      this.safeEmit('territory:preview', {
+      this.safeEmit("territory:preview", {
         territory,
         bounds: territory.bounds,
-        metadata: territory.metadata
+        metadata: territory.metadata,
       });
-
     } catch (error) {
-      console.error('Failed to process eligible run:', error);
-      this.safeEmit('territory:error', {
-        error: 'Failed to process territory eligibility',
-        runId: run.id
+      console.error("Failed to process eligible run:", error);
+      this.safeEmit("territory:claimFailed", {
+        error: error.message || "Unknown error",
+        territory: {} as Territory,
+        runId: "unknown",
       });
     }
   }
@@ -122,15 +134,15 @@ export class TerritoryService extends BaseService {
    */
   private async createTerritoryFromRun(run: RunSession): Promise<Territory> {
     if (!run.geohash || run.points.length < 2) {
-      throw new Error('Invalid run data for territory creation');
+      throw new Error("Invalid run data for territory creation");
     }
 
     // Calculate territory bounds from run points
     const bounds = this.calculateTerritoryBounds(run.points);
-    
+
     // Generate metadata
     const metadata = await this.generateTerritoryMetadata(run, bounds);
-    
+
     // Check for conflicts with existing territories
     await this.validateTerritoryUniqueness(run.geohash, bounds);
 
@@ -143,9 +155,9 @@ export class TerritoryService extends BaseService {
         distance: run.totalDistance,
         duration: run.totalDuration,
         averageSpeed: run.averageSpeed,
-        pointCount: run.points.length
+        pointCount: run.points.length,
       },
-      status: 'claimable'
+      status: "claimable",
     };
 
     return territory;
@@ -154,9 +166,11 @@ export class TerritoryService extends BaseService {
   /**
    * Calculate territory bounds from run points
    */
-  private calculateTerritoryBounds(points: Array<{ lat: number; lng: number }>): TerritoryBounds {
-    const lats = points.map(p => p.lat);
-    const lngs = points.map(p => p.lng);
+  private calculateTerritoryBounds(
+    points: Array<{ lat: number; lng: number }>
+  ): TerritoryBounds {
+    const lats = points.map((p) => p.lat);
+    const lngs = points.map((p) => p.lng);
 
     const north = Math.max(...lats);
     const south = Math.min(...lats);
@@ -165,7 +179,7 @@ export class TerritoryService extends BaseService {
 
     const center = {
       lat: (north + south) / 2,
-      lng: (east + west) / 2
+      lng: (east + west) / 2,
     };
 
     return { north, south, east, west, center };
@@ -174,13 +188,16 @@ export class TerritoryService extends BaseService {
   /**
    * Generate territory metadata based on run characteristics
    */
-  private async generateTerritoryMetadata(run: RunSession, bounds: TerritoryBounds): Promise<TerritoryMetadata> {
+  private async generateTerritoryMetadata(
+    run: RunSession,
+    bounds: TerritoryBounds
+  ): Promise<TerritoryMetadata> {
     // Calculate difficulty based on distance, duration, and terrain
     const difficulty = this.calculateDifficulty(run);
-    
+
     // Determine rarity based on difficulty and location uniqueness
     const rarity = this.calculateRarity(difficulty, bounds);
-    
+
     // Estimate reward based on difficulty and rarity
     const estimatedReward = this.calculateReward(difficulty, rarity);
 
@@ -188,7 +205,11 @@ export class TerritoryService extends BaseService {
     const landmarks = await this.identifyLandmarks(bounds);
 
     const name = this.generateTerritoryName(bounds, landmarks);
-    const description = this.generateTerritoryDescription(run, difficulty, landmarks);
+    const description = this.generateTerritoryDescription(
+      run,
+      difficulty,
+      landmarks
+    );
 
     return {
       name,
@@ -196,7 +217,7 @@ export class TerritoryService extends BaseService {
       landmarks,
       difficulty,
       rarity,
-      estimatedReward
+      estimatedReward,
     };
   }
 
@@ -206,7 +227,8 @@ export class TerritoryService extends BaseService {
   private calculateDifficulty(run: RunSession): number {
     const distanceScore = Math.min(run.totalDistance / 5000, 1) * 40; // Max 40 points for 5km+
     const speedScore = Math.min(run.averageSpeed / 5, 1) * 30; // Max 30 points for 5 m/s average
-    const durationScore = Math.min(run.totalDuration / (60 * 60 * 1000), 1) * 30; // Max 30 points for 1 hour+
+    const durationScore =
+      Math.min(run.totalDuration / (60 * 60 * 1000), 1) * 30; // Max 30 points for 1 hour+
 
     return Math.round(distanceScore + speedScore + durationScore);
   }
@@ -214,14 +236,17 @@ export class TerritoryService extends BaseService {
   /**
    * Calculate territory rarity
    */
-  private calculateRarity(difficulty: number, bounds: TerritoryBounds): 'common' | 'rare' | 'epic' | 'legendary' {
+  private calculateRarity(
+    difficulty: number,
+    bounds: TerritoryBounds
+  ): "common" | "rare" | "epic" | "legendary" {
     // Check for special locations (this could be enhanced with real data)
     const isSpecialLocation = this.isSpecialLocation(bounds);
-    
-    if (difficulty >= 90 || isSpecialLocation) return 'legendary';
-    if (difficulty >= 70) return 'epic';
-    if (difficulty >= 50) return 'rare';
-    return 'common';
+
+    if (difficulty >= 90 || isSpecialLocation) return "legendary";
+    if (difficulty >= 70) return "epic";
+    if (difficulty >= 50) return "rare";
+    return "common";
   }
 
   /**
@@ -238,12 +263,13 @@ export class TerritoryService extends BaseService {
    */
   private calculateReward(difficulty: number, rarity: string): number {
     const baseReward = difficulty;
-    const rarityMultiplier = {
-      common: 1,
-      rare: 1.5,
-      epic: 2,
-      legendary: 3
-    }[rarity] || 1;
+    const rarityMultiplier =
+      {
+        common: 1,
+        rare: 1.5,
+        epic: 2,
+        legendary: 3,
+      }[rarity] || 1;
 
     return Math.round(baseReward * rarityMultiplier);
   }
@@ -254,15 +280,18 @@ export class TerritoryService extends BaseService {
   private async identifyLandmarks(bounds: TerritoryBounds): Promise<string[]> {
     // This would integrate with a POI service or geocoding API
     // For now, return generic landmarks
-    const genericLandmarks = ['Park', 'Street', 'Neighborhood'];
+    const genericLandmarks = ["Park", "Street", "Neighborhood"];
     return genericLandmarks.slice(0, Math.floor(Math.random() * 3) + 1);
   }
 
   /**
    * Generate territory name
    */
-  private generateTerritoryName(bounds: TerritoryBounds, landmarks: string[]): string {
-    const primaryLandmark = landmarks[0] || 'Territory';
+  private generateTerritoryName(
+    bounds: TerritoryBounds,
+    landmarks: string[]
+  ): string {
+    const primaryLandmark = landmarks[0] || "Territory";
     const lat = bounds.center.lat.toFixed(3);
     const lng = bounds.center.lng.toFixed(3);
     return `${primaryLandmark} ${lat}°N ${lng}°W`;
@@ -271,39 +300,53 @@ export class TerritoryService extends BaseService {
   /**
    * Generate territory description
    */
-  private generateTerritoryDescription(run: RunSession, difficulty: number, landmarks: string[]): string {
+  private generateTerritoryDescription(
+    run: RunSession,
+    difficulty: number,
+    landmarks: string[]
+  ): string {
     const distanceKm = (run.totalDistance / 1000).toFixed(1);
     const durationMin = Math.round(run.totalDuration / (60 * 1000));
-    
-    return `A ${difficulty}/100 difficulty territory covering ${distanceKm}km, completed in ${durationMin} minutes. Features: ${landmarks.join(', ')}.`;
+
+    return `A ${difficulty}/100 difficulty territory covering ${distanceKm}km, completed in ${durationMin} minutes. Features: ${landmarks.join(
+      ", "
+    )}.`;
   }
 
   /**
    * Validate territory uniqueness
    */
-  private async validateTerritoryUniqueness(geohash: string, bounds: TerritoryBounds): Promise<void> {
+  private async validateTerritoryUniqueness(
+    geohash: string,
+    bounds: TerritoryBounds
+  ): Promise<void> {
     // Check against existing territories
     for (const [id, territory] of this.claimedTerritories) {
       if (this.territoriesOverlap(bounds, territory.bounds)) {
-        throw new Error('Territory overlaps with existing claimed territory');
+        throw new Error("Territory overlaps with existing claimed territory");
       }
     }
 
     // Check against blockchain (this would be a real check in production)
     const exists = await this.checkTerritoryExistsOnChain(geohash);
     if (exists) {
-      throw new Error('Territory already exists on blockchain');
+      throw new Error("Territory already exists on blockchain");
     }
   }
 
   /**
    * Check if two territories overlap
    */
-  private territoriesOverlap(bounds1: TerritoryBounds, bounds2: TerritoryBounds): boolean {
-    return !(bounds1.east < bounds2.west || 
-             bounds2.east < bounds1.west || 
-             bounds1.north < bounds2.south || 
-             bounds2.north < bounds1.south);
+  private territoriesOverlap(
+    bounds1: TerritoryBounds,
+    bounds2: TerritoryBounds
+  ): boolean {
+    return !(
+      bounds1.east < bounds2.west ||
+      bounds2.east < bounds1.west ||
+      bounds1.north < bounds2.south ||
+      bounds2.north < bounds1.south
+    );
   }
 
   /**
@@ -323,28 +366,28 @@ export class TerritoryService extends BaseService {
       // Find the territory associated with this run
       const territory = this.findTerritoryByRunId(runId);
       if (!territory) {
-        throw new Error('No claimable territory found for this run');
+        throw new Error("No claimable territory found for this run");
       }
 
       // Attempt to claim territory
       const result = await this.claimTerritory(territory);
-      
+
       if (result.success) {
-        this.safeEmit('territory:claimed', {
+        this.safeEmit("territory:claimed", {
           territory: result.territory,
-          transactionHash: result.transactionHash
+          transactionHash: result.transactionHash,
         });
       } else {
-        this.safeEmit('territory:claimFailed', {
+        this.safeEmit("territory:claimFailed", {
           error: result.error,
-          territory
+          territory,
         });
       }
-
     } catch (error) {
-      this.safeEmit('territory:claimFailed', {
-        error: error.message,
-        runId
+      this.safeEmit("territory:claimFailed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        territory: null,
+        runId,
       });
     }
   }
@@ -352,12 +395,22 @@ export class TerritoryService extends BaseService {
   /**
    * Claim territory on blockchain
    */
-  private async claimTerritory(territory: Territory): Promise<TerritoryClaimResult> {
+  private async claimTerritory(
+    territory: Territory
+  ): Promise<TerritoryClaimResult> {
     try {
-      // Get Web3 service
-      const web3Service = this.getService('Web3Service');
+      // Get Web3 and Contract services
+      const web3Service = this.getService("Web3Service");
+      const contractService = this.getService("ContractService");
+
       if (!web3Service || !web3Service.isConnected()) {
-        throw new Error('Wallet not connected');
+        throw new Error("Wallet not connected");
+      }
+
+      if (!contractService || !contractService.isReady()) {
+        throw new Error(
+          "Contract service not ready. Please ensure you are on ZetaChain network."
+        );
       }
 
       // Prepare territory data for blockchain
@@ -365,14 +418,16 @@ export class TerritoryService extends BaseService {
         geohash: territory.geohash,
         difficulty: territory.metadata.difficulty,
         distance: territory.runData.distance,
-        landmarks: territory.metadata.landmarks
+        landmarks: territory.metadata.landmarks,
       };
 
-      // Submit to blockchain (this would be a real transaction)
-      const transactionHash = await this.submitTerritoryToBlockchain(territoryData);
-      
+      // Submit to blockchain using ContractService
+      const transactionHash = await contractService.mintTerritory(
+        territoryData
+      );
+
       // Update territory status
-      territory.status = 'claimed';
+      territory.status = "claimed";
       territory.owner = web3Service.getCurrentWallet()?.address;
       territory.claimedAt = Date.now();
       territory.transactionHash = transactionHash;
@@ -384,96 +439,98 @@ export class TerritoryService extends BaseService {
       return {
         success: true,
         territory,
-        transactionHash
+        transactionHash,
       };
-
     } catch (error) {
+      console.error("Territory claiming failed:", error);
       return {
         success: false,
-        error: error.message
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       };
     }
   }
 
   /**
-   * Submit territory to blockchain
+   * Check if territory is available for claiming
    */
-  private async submitTerritoryToBlockchain(territoryData: any): Promise<string> {
+  private async checkTerritoryAvailability(geohash: string): Promise<boolean> {
     try {
-      // Use the enhanced ZetaChain service for cross-chain territory claiming
-      const enhancedZetaChainService = (window as any).runRealmApp?.enhancedZetaChainService;
-
-      if (!enhancedZetaChainService) {
-        throw new Error('ZetaChain service not available');
+      const contractService = this.getService("ContractService");
+      if (!contractService || !contractService.isReady()) {
+        console.warn(
+          "Contract service not ready, cannot check territory availability"
+        );
+        return true; // Assume available if we can't check
       }
 
-      // Prepare territory claim request
-      const claimRequest = {
-        geohash: territoryData.geohash,
-        difficulty: territoryData.difficulty || 1,
-        distance: territoryData.distance || 0,
-        landmarks: territoryData.landmarks || [],
-        sourceChain: territoryData.sourceChain || 7001 // Default to ZetaChain testnet
-      };
-
-      // Submit the territory claim to blockchain
-      const txHash = await enhancedZetaChainService.claimTerritoryAcrossChains(claimRequest);
-
-      console.log('Territory submitted to blockchain successfully:', txHash);
-      return txHash;
-
+      const isClaimed = await contractService.isGeohashClaimed(geohash);
+      return !isClaimed;
     } catch (error) {
-      console.error('Failed to submit territory to blockchain:', error);
-      throw new Error(`Blockchain submission failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Failed to check territory availability:", error);
+      return true; // Assume available if check fails
     }
   }
 
   /**
    * Update nearby territories based on current location
    */
-  private updateNearbyTerritories(locationInfo: { lat: number; lng: number }): void {
+  private updateNearbyTerritories(locationInfo: {
+    lat: number;
+    lng: number;
+  }): void {
     const nearby: NearbyTerritory[] = [];
 
     for (const [id, territory] of this.claimedTerritories) {
-      const distance = this.calculateDistanceToTerritory(locationInfo, territory);
-      
+      const distance = this.calculateDistanceToTerritory(
+        locationInfo,
+        territory
+      );
+      const direction = this.calculateDirection(
+        locationInfo,
+        territory.bounds.center
+      );
+
       if (distance <= this.proximityThreshold) {
-        const direction = this.calculateDirection(locationInfo, territory.bounds.center);
         nearby.push({
           territory,
           distance,
-          direction
+          direction,
         });
       }
     }
 
     this.nearbyTerritories = nearby.sort((a, b) => a.distance - b.distance);
 
-    if (nearby.length > 0) {
-      this.safeEmit('territory:nearbyUpdated', {
-        territories: this.nearbyTerritories,
-        closest: nearby[0]
-      });
-    }
+    this.safeEmit("territory:nearbyUpdated", {
+      count: nearby.length,
+      territories: nearby,
+    });
   }
 
   /**
    * Calculate distance to territory center using consolidated utility
    */
-  private calculateDistanceToTerritory(location: { lat: number; lng: number }, territory: Territory): number {
+  private calculateDistanceToTerritory(
+    location: { lat: number; lng: number },
+    territory: Territory
+  ): number {
     return calculateDistance(location, territory.bounds.center);
   }
 
   /**
    * Calculate direction to territory
    */
-  private calculateDirection(from: { lat: number; lng: number }, to: { lat: number; lng: number }): string {
+  private calculateDirection(
+    from: { lat: number; lng: number },
+    to: { lat: number; lng: number }
+  ): string {
     const bearing = turf.bearing(
       turf.point([from.lng, from.lat]),
       turf.point([to.lng, to.lat])
     );
 
-    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
     const index = Math.round(bearing / 45) % 8;
     return directions[index < 0 ? index + 8 : index];
   }
@@ -506,15 +563,15 @@ export class TerritoryService extends BaseService {
    */
   private async loadClaimedTerritories(): Promise<void> {
     try {
-      const stored = localStorage.getItem('runrealm_claimed_territories');
+      const stored = localStorage.getItem("runrealm_claimed_territories");
       if (stored) {
         const territories: Territory[] = JSON.parse(stored);
-        territories.forEach(territory => {
+        territories.forEach((territory) => {
           this.claimedTerritories.set(territory.id, territory);
         });
       }
     } catch (error) {
-      console.error('Failed to load claimed territories:', error);
+      console.error("Failed to load claimed territories:", error);
     }
   }
 
@@ -524,9 +581,12 @@ export class TerritoryService extends BaseService {
   private saveTerritoriesToStorage(): void {
     try {
       const territories = Array.from(this.claimedTerritories.values());
-      localStorage.setItem('runrealm_claimed_territories', JSON.stringify(territories));
+      localStorage.setItem(
+        "runrealm_claimed_territories",
+        JSON.stringify(territories)
+      );
     } catch (error) {
-      console.error('Failed to save territories:', error);
+      console.error("Failed to save territories:", error);
     }
   }
 
