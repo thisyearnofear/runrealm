@@ -14,6 +14,7 @@ pnpm-debug.log*
 
 # Sensitive configuration
 /src/appsettings.secrets.ts
+/src/appsettings.secrets.dev.ts
 config/secrets.json
 access_token*
 *.token

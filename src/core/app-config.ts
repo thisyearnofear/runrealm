@@ -162,17 +162,18 @@ export class ConfigService {
   }
 
   private getMapboxToken(): string {
-    // 🔒 SECURE: Try to load from appsettings.secrets.ts first (recommended for development)
-    try {
-      const secretsModule = require("../appsettings.secrets");
-      if (secretsModule && secretsModule.MAPBOX_ACCESS_TOKEN) {
-        return secretsModule.MAPBOX_ACCESS_TOKEN;
-      }
-    } catch (error) {
-      // Silently fail if secrets file doesn't exist - this is expected
-      console.debug(
-        "Optional secrets file not found, continuing with other sources"
-      );
+    // 🔒 PRODUCTION SECURITY: Never expose real tokens in client-side code
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('🔒 Production mode: Using secure token endpoint for Mapbox');
+      // In production, tokens should come from secure server endpoints only
+      return this.getTokenFromSecureEndpoint('mapbox') || '';
+    }
+
+    // 🔒 DEVELOPMENT ONLY: Try localStorage for development tokens
+    const devToken = localStorage.getItem('runrealm_dev_mapbox_token');
+    if (devToken && devToken !== 'your-mapbox-token-here') {
+      console.debug('🔒 Development mode: Using token from localStorage');
+      return devToken;
     }
 
     // 🔒 SECURE: Check localStorage (user can set manually)
@@ -202,17 +203,18 @@ export class ConfigService {
       return envKey;
     }
 
-    // 🔒 SECURE: Try to load from appsettings.secrets.ts (recommended for development)
-    try {
-      const secretsModule = require("../appsettings.secrets");
-      if (secretsModule && secretsModule.GOOGLE_GEMINI_API_KEY) {
-        return secretsModule.GOOGLE_GEMINI_API_KEY;
-      }
-    } catch (error) {
-      // Silently fail if secrets file doesn't exist - this is expected
-      console.debug(
-        "Optional secrets file not found, continuing with other sources"
-      );
+    // 🔒 PRODUCTION SECURITY: Never expose real API keys in client-side code
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('🔒 Production mode: Using secure token endpoint for Gemini API');
+      // In production, API keys should come from secure server endpoints only
+      return this.getTokenFromSecureEndpoint('gemini') || '';
+    }
+
+    // 🔒 DEVELOPMENT ONLY: Try localStorage for development API key
+    const devKey = localStorage.getItem('runrealm_dev_gemini_key');
+    if (devKey && devKey !== 'your-gemini-api-key-here') {
+      console.debug('🔒 Development mode: Using API key from localStorage');
+      return devKey;
     }
 
     // 🔒 SECURE: Check localStorage (user can set manually)
@@ -245,6 +247,22 @@ export class ConfigService {
 
   private prefersReducedMotion(): boolean {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  /**
+   * 🔒 PRODUCTION SECURITY: Fetch tokens from secure server endpoint
+   * This method should be implemented to call your secure token service
+   */
+  private getTokenFromSecureEndpoint(tokenType: 'mapbox' | 'gemini'): string | null {
+    // 🔒 IMPLEMENT THIS: Replace with your secure token endpoint
+    // Example: return fetch(`/api/secure-tokens/${tokenType}`).then(r => r.text())
+
+    console.warn(`🔒 SECURITY: Implement secure token endpoint for ${tokenType}`);
+    console.warn('🔒 For production, tokens should NEVER be in client-side code');
+    console.warn('🔒 Use server-side proxy or secure token service instead');
+
+    // For now, return null to force proper implementation
+    return null;
   }
 
   getConfig(): AppConfig {

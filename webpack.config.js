@@ -8,9 +8,9 @@ require("dotenv").config();
 module.exports = (env, argv) => {
   const isProduction = argv.mode === "production";
 
-  // Define ONLY PUBLIC environment variables to be exposed to the app
+  // 🔒 SECURITY: Define ONLY PUBLIC environment variables to be exposed to the app
   // ⚠️ WARNING: These values will be visible in the client-side bundle!
-  // DO NOT include sensitive API keys, private keys, or secrets here
+  // 🚨 NEVER include sensitive API keys, private keys, or secrets here
   const exposedEnvVariables = {
     NODE_ENV: argv.mode || "development",
     // Public configuration only
@@ -18,9 +18,9 @@ module.exports = (env, argv) => {
     ENABLE_AI_FEATURES: process.env.ENABLE_AI_FEATURES || "true",
     ENABLE_CROSS_CHAIN: process.env.ENABLE_CROSS_CHAIN || "true",
     AUTO_CONNECT_WALLET: process.env.AUTO_CONNECT_WALLET || "true",
-    // Public API keys (these are meant to be public-facing)
-    MAPBOX_ACCESS_TOKEN: process.env.MAPBOX_ACCESS_TOKEN || "",
-    GOOGLE_GEMINI_API_KEY: process.env.GOOGLE_GEMINI_API_KEY || "",
+    // 🔒 SECURITY: API keys removed from webpack - use secure token endpoints instead
+    // MAPBOX_ACCESS_TOKEN: REMOVED FOR SECURITY
+    // GOOGLE_GEMINI_API_KEY: REMOVED FOR SECURITY
     // Public RPC URLs (these are meant to be public)
     ZETACHAIN_RPC_URL:
       process.env.ZETACHAIN_RPC_URL ||

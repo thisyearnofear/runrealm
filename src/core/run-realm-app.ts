@@ -54,7 +54,7 @@ export class RunRealmApp {
   private config: ConfigService;
   private eventBus: EventBus;
 
-  // Service instances
+  // Core service instances (CONSOLIDATED - single source of truth)
   private preferenceService: PreferenceService;
   private ui: UIService;
   private location: LocationService;
@@ -70,21 +70,12 @@ export class RunRealmApp {
   private animation: AnimationService;
   private dom: DOMService;
   private gamefiUI: GameFiUI;
-  private locationService: LocationService;
   private walletWidget: WalletWidget;
   private geocodingService: GeocodingService;
   private mainUI: MainUI;
-
-  // New services
-  private animationService: AnimationService;
-  private onboardingService: OnboardingService;
-  private navigationService: NavigationService;
-  private progressionService: ProgressionService;
-  private territoryService: TerritoryService;
   private enhancedRunControls: EnhancedRunControls;
 
-  // Existing services (to be gradually refactored)
-
+  // Lazy-loaded services (PERFORMANT: created only when needed)
   private nextSegmentService: NextSegmentService;
 
   // Application state
@@ -156,36 +147,20 @@ export class RunRealmApp {
     this.navigation = NavigationService.getInstance();
     this.animation = AnimationService.getInstance();
 
-    // Register services for global access
-    if (typeof window !== "undefined") {
-      (window as any).RunRealm.services = {
-        ...((window as any).RunRealm.services || {}),
-        config: this.config,
-        preferenceService: this.preferenceService,
-        ui: this.ui,
-        location: this.location,
-        web3: this.web3,
-        ai: this.ai,
-        game: this.game,
-        contractService: this.contractService,
-        territory: this.territory,
-        progression: this.progression,
-        runTracking: this.runTracking,
-        onboarding: this.onboarding,
-        navigation: this.navigation,
-        animation: this.animation,
-      };
-    }
+    // Initialize remaining services (CONSOLIDATED)
+    this.enhancedRunControls = new EnhancedRunControls();
+    this.gamefiUI = GameFiUI.getInstance();
+
+    // SINGLE SOURCE OF TRUTH: Global service registry (CONSOLIDATED)
+    this.registerGlobalServices();
   }
 
   private initializeTokenDependentServices(): void {
-    // Initialize services that depend on API tokens
+    // Initialize services that depend on API tokens (CONSOLIDATED)
     this.geocodingService = new GeocodingService(
       this.config.getConfig().mapbox.accessToken
     );
 
-    // Initialize location and wallet services
-    this.locationService = this.location;
     this.walletWidget = new WalletWidget(
       this.dom,
       this.ui,
@@ -193,10 +168,10 @@ export class RunRealmApp {
       this.web3
     );
 
-    // Initialize main UI (replaces fragmented UI systems)
+    // Initialize main UI (single UI system - AGGRESSIVE CONSOLIDATION)
     this.mainUI = new MainUI(
       this.dom,
-      this.locationService,
+      this.location, // Use direct reference - no duplicate locationService
       this.walletWidget,
       this.ui,
       this.gamefiUI,
@@ -259,17 +234,17 @@ export class RunRealmApp {
 
     // Progression events - now handled by RunTrackingService
     this.eventBus.on("run:completed", (data) => {
-      // Add distance and time to progression from RunTrackingService data
+      // Add distance and time to progression from RunTrackingService data (FIXED)
       if (data.distance) {
-        this.progressionService.addDistance(data.distance);
+        this.progression.addDistance(data.distance);
       }
       if (data.duration) {
-        this.progressionService.addTime(data.duration);
+        this.progression.addTime(data.duration);
       }
     });
 
     this.eventBus.on("territory:claimed", (data) => {
-      this.progressionService.addTerritory();
+      this.progression.addTerritory();
     });
 
     // Navigation events
@@ -299,7 +274,6 @@ export class RunRealmApp {
       this.initializeTokenDependentServices();
 
       await this.initializeMap();
-      this.initializeMapServices();
       this.setupMapEventHandlers();
       await this.initializeGameFiServices();
 
@@ -310,7 +284,7 @@ export class RunRealmApp {
       (window as any).RunRealm = (window as any).RunRealm || {};
       (window as any).RunRealm.mainUI = this.mainUI;
       (window as any).RunRealm.map = this.map;
-      (window as any).RunRealm.animationService = this.animationService;
+      (window as any).RunRealm.animationService = this.animation;
       (window as any).RunRealm.eventBus = this.eventBus;
 
       // Development-only extras
@@ -328,10 +302,10 @@ export class RunRealmApp {
 
           console.log("🧪 Test coordinates:", testCoordinates);
 
-          // Test direct AnimationService call
-          if (this.animationService && this.animationService.setAIRoute) {
+          // Test direct AnimationService call (FIXED: use consolidated property)
+          if (this.animation && this.animation.setAIRoute) {
             console.log("🧪 Calling AnimationService.setAIRoute directly...");
-            this.animationService.setAIRoute(
+            this.animation.setAIRoute(
               testCoordinates,
               {
                 color: "#ff0000",
@@ -371,9 +345,9 @@ export class RunRealmApp {
       this.initializeNavigation();
       this.initializeOnboarding();
 
-      // Ensure AnimationService has map reference
-      if (this.animationService && this.map) {
-        this.animationService.map = this.map;
+      // Ensure AnimationService has map reference (FIXED: use consolidated property)
+      if (this.animation && this.map) {
+        this.animation.map = this.map;
         console.log("RunRealmApp: AnimationService map reference set");
       }
 
@@ -441,24 +415,20 @@ export class RunRealmApp {
     }
   }
 
-  private initializeMapServices(): void {
-    this.animationService = AnimationService.getInstance();
-    this.nextSegmentService = new NextSegmentService(
-      this.config.getConfig().mapbox.accessToken
-    );
-  }
+  // AGGRESSIVE CONSOLIDATION: Removed initializeMapServices() - services initialized in constructor
+  // nextSegmentService initialized inline where needed to prevent bloat
 
   private async initializeGameFiServices(): Promise<void> {
     try {
-      // Initialize core services first
-      await this.locationService.initialize();
+      // CONSOLIDATED: Initialize core services first
+      await this.location.initialize();
 
       // Set location service reference on run tracking service
-      this.runTracking.setLocationService(this.locationService);
+      this.runTracking.setLocationService(this.location);
 
       // Initialize run tracking and territory services
       await this.runTracking.initialize();
-      await this.territoryService.initialize();
+      await this.territory.initialize();
 
       // Initialize enhanced run controls
       await this.enhancedRunControls.initialize();
@@ -478,9 +448,6 @@ export class RunRealmApp {
       // Create Territory Dashboard container
       this.initializeTerritoryDashboard();
 
-      // Register services in global registry for cross-service access
-      this.registerServicesGlobally();
-
       console.log("GameFi services initialized");
     } catch (error) {
       console.error("Failed to initialize GameFi services:", error);
@@ -492,28 +459,55 @@ export class RunRealmApp {
   }
 
   /**
-   * Register services in global registry for cross-service communication
+   * SINGLE SOURCE OF TRUTH: Consolidated global service registration
+   * ENHANCEMENT FIRST: Enhanced existing method instead of creating new one
    */
-  private registerServicesGlobally(): void {
+  private registerGlobalServices(): void {
+    if (typeof window === "undefined") return;
+
     // Create global RunRealm namespace if it doesn't exist
     if (!(window as any).RunRealm) {
       (window as any).RunRealm = {};
     }
 
-    // Register services
+    // CONSOLIDATED: Single registry with consistent naming
     (window as any).RunRealm.services = {
-      LocationService: this.locationService,
-      RunTrackingService: this.runTracking,
-      TerritoryService: this.territoryService,
-      EnhancedRunControls: this.enhancedRunControls,
-      Web3Service: this.web3,
-      PreferenceService: this.preferenceService,
-      AIService: this.ai,
-      UIService: this.ui,
-      GameFiUI: this.gamefiUI,
+      // Core services
+      config: this.config,
+      preferenceService: this.preferenceService,
+      ui: this.ui,
+      dom: this.dom,
+
+      // Location & tracking
+      location: this.location,
+      LocationService: this.location, // Legacy compatibility
+      runTracking: this.runTracking,
+      RunTrackingService: this.runTracking, // Legacy compatibility
+
+      // GameFi services
+      territory: this.territory,
+      TerritoryService: this.territory, // Legacy compatibility
+      enhancedRunControls: this.enhancedRunControls,
+      EnhancedRunControls: this.enhancedRunControls, // Legacy compatibility
+      gamefiUI: this.gamefiUI,
+      GameFiUI: this.gamefiUI, // Legacy compatibility
+
+      // Web3 & AI
+      web3: this.web3,
+      Web3Service: this.web3, // Legacy compatibility
+      ai: this.ai,
+      AIService: this.ai, // Legacy compatibility
+
+      // UI services
+      animation: this.animation,
+      navigation: this.navigation,
+      onboarding: this.onboarding,
+      progression: this.progression,
+      game: this.game,
+      contractService: this.contractService,
     };
 
-    console.log("Services registered globally for cross-service access");
+    console.log("Services registered globally (CONSOLIDATED)");
   }
 
   private initializeTerritoryDashboard(): void {
@@ -561,8 +555,8 @@ export class RunRealmApp {
 
     // Handle style changes
     this.map.on("style.load", () => {
-      // Run re-rendering now handled by RunTrackingService
-      this.animationService.readdRunToMap(null);
+      // Run re-rendering now handled by RunTrackingService (FIXED)
+      this.animation.readdRunToMap(null);
     });
   }
 
@@ -578,6 +572,13 @@ export class RunRealmApp {
     previousLngLat: any,
     lngLat: any
   ): Promise<void> {
+    // LAZY INITIALIZATION: Create service only when needed (PERFORMANT)
+    if (!this.nextSegmentService) {
+      this.nextSegmentService = new NextSegmentService(
+        this.config.getConfig().mapbox.accessToken
+      );
+    }
+
     const newSegment =
       await this.nextSegmentService.getSegmentFromDirectionsService(
         previousLngLat,
@@ -585,7 +586,7 @@ export class RunRealmApp {
       );
 
     if (this.config.getConfig().ui.enableAnimations) {
-      this.animationService.animateSegment(newSegment);
+      this.animation.animateSegment(newSegment);
     }
 
     const coordinates = (newSegment.geometry as any).coordinates;
@@ -702,8 +703,8 @@ export class RunRealmApp {
   // Removed old initializeUI - replaced by MainUI component
 
   private initializeNavigation(): void {
-    // Set up navigation routes
-    this.navigationService.registerRoutes([
+    // Set up navigation routes (FIXED: use consolidated property)
+    this.navigation.registerRoutes([
       {
         id: "map",
         path: "/",
@@ -741,8 +742,8 @@ export class RunRealmApp {
   }
 
   private initializeOnboarding(): void {
-    // Set up onboarding if needed
-    if (this.onboardingService.shouldShowOnboarding()) {
+    // Set up onboarding if needed (FIXED: use consolidated property)
+    if (this.onboarding.shouldShowOnboarding()) {
       const onboardingConfig = {
         steps: [
           {
@@ -783,8 +784,8 @@ export class RunRealmApp {
         showProgress: true,
       };
 
-      // Resume or start onboarding
-      this.onboardingService.resumeOnboarding(onboardingConfig);
+      // Resume or start onboarding (FIXED: use consolidated property)
+      this.onboarding.resumeOnboarding(onboardingConfig);
     } else {
       // Mark as complete to avoid the old system
       localStorage.setItem("runrealm_onboarding_complete", "true");
@@ -832,17 +833,17 @@ export class RunRealmApp {
           "coordinates"
         );
 
-        // Safety check: ensure AnimationService has map reference
-        if (!this.animationService.map) {
-          this.animationService.map = this.map;
+        // Safety check: ensure AnimationService has map reference (FIXED)
+        if (!this.animation.map) {
+          this.animation.map = this.map;
         }
 
         // Clear any existing AI route
-        this.animationService.clearAIRoute();
+        this.animation.clearAIRoute();
 
         // Visualize the new AI route
         if (data.coordinates && data.coordinates.length > 1) {
-          this.animationService.setAIRoute(
+          this.animation.setAIRoute(
             data.coordinates,
             data.style,
             data.metadata
@@ -854,10 +855,10 @@ export class RunRealmApp {
       }
     );
 
-    // Handle route clearing
+    // Handle route clearing (FIXED)
     this.eventBus.on("ai:routeClear", () => {
       console.log("RunRealmApp: Clearing AI route");
-      this.animationService.clearAIRoute();
+      this.animation.clearAIRoute();
     });
 
     // Handle waypoint visualization
@@ -870,12 +871,12 @@ export class RunRealmApp {
           "AI waypoints"
         );
 
-        // Safety check: ensure AnimationService has map reference
-        if (!this.animationService.map) {
-          this.animationService.map = this.map;
+        // Safety check: ensure AnimationService has map reference (FIXED)
+        if (!this.animation.map) {
+          this.animation.map = this.map;
         }
 
-        this.animationService.setAIWaypoints(
+        this.animation.setAIWaypoints(
           data.waypoints,
           data.routeMetadata
         );
@@ -911,12 +912,12 @@ export class RunRealmApp {
             this.animationService.map = this.map;
           }
 
-          // Clear any existing AI route
-          this.animationService.clearAIRoute();
+          // Clear any existing AI route (FIXED)
+          this.animation.clearAIRoute();
 
           // Visualize the new AI route
           if (data.coordinates && data.coordinates.length > 1) {
-            this.animationService.setAIRoute(
+            this.animation.setAIRoute(
               data.coordinates,
               data.style,
               data.metadata
@@ -938,12 +939,12 @@ export class RunRealmApp {
             "AI waypoints"
           );
 
-          // Safety check: ensure AnimationService has map reference
-          if (!this.animationService.map) {
-            this.animationService.map = this.map;
+          // Safety check: ensure AnimationService has map reference (FIXED)
+          if (!this.animation.map) {
+            this.animation.map = this.map;
           }
 
-          this.animationService.setAIWaypoints(
+          this.animation.setAIWaypoints(
             data.waypoints,
             data.routeMetadata
           );
@@ -1019,18 +1020,18 @@ export class RunRealmApp {
     return this.web3.connectWallet();
   }
 
-  // Location service methods
+  // Location service methods (FIXED: use consolidated property)
   showLocationModal(): void {
-    if (this.locationService) {
-      this.locationService.showLocationModal();
+    if (this.location) {
+      this.location.showLocationModal();
     }
   }
 
   getCurrentLocation(): Promise<any> {
-    if (!this.locationService) {
+    if (!this.location) {
       throw new Error("Location service not initialized");
     }
-    return this.locationService.getCurrentLocation();
+    return this.location.getCurrentLocation();
   }
 
   // Wallet connection methods
