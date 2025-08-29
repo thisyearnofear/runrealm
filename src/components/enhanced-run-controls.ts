@@ -176,9 +176,6 @@ export class EnhancedRunControls extends BaseService {
     this.attachEventHandlers();
   }
 
-  /**
-   * Inject necessary CSS styles for animations
-   */
   private injectStyles(): void {
     // Check if styles are already injected
     if (document.getElementById('runrealm-styles')) return;
@@ -205,6 +202,26 @@ export class EnhancedRunControls extends BaseService {
         width: 100%;
         background-color: #f0f0f0;
         border-radius: 4px;
+      }
+      
+      /* Celebration effects */
+      @keyframes floatUp {
+        0% {
+          transform: translate(0, 0) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(0, -100px) scale(0);
+          opacity: 0;
+        }
+      }
+      
+      .celebration-bubble {
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 100;
+        animation: floatUp 1.5s ease-in forwards;
       }
     `;
     document.head.appendChild(style);
@@ -698,6 +715,8 @@ export class EnhancedRunControls extends BaseService {
     // Add haptic feedback for mobile
     if (type === 'success') {
       this.hapticFeedback('light');
+      // Add celebration effect for success messages
+      this.addSuccessCelebration();
     } else if (type === 'error') {
       this.hapticFeedback('medium');
     }
@@ -710,6 +729,61 @@ export class EnhancedRunControls extends BaseService {
         feedbackEl.className = 'run-feedback';
       }, 300);
     }, 3000);
+  }
+
+  /**
+   * Add celebration effect for successful actions
+   */
+  private addSuccessCelebration(): void {
+    if (!this.container) return;
+
+    // Add a subtle glow effect to the container
+    this.container.style.boxShadow = '0 0 20px rgba(0, 255, 136, 0.4)';
+    
+    // Create floating particles for celebration
+    const particleCount = 15;
+    
+    for (let i = 0; i < particleCount; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'celebration-bubble';
+      
+      // Random position and size
+      const size = Math.random() * 10 + 5;
+      const posX = Math.random() * 100;
+      const posY = Math.random() * 100;
+      const delay = Math.random() * 0.5;
+      const duration = Math.random() * 1 + 1;
+      
+      particle.style.cssText = `
+        position: absolute;
+        width: ${size}px;
+        height: ${size}px;
+        background: rgba(0, 255, 136, 0.6);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 100;
+        left: ${posX}%;
+        top: ${posY}%;
+        animation: floatUp ${duration}s ease-in ${delay}s forwards;
+        box-shadow: 0 0 8px rgba(0, 255, 136, 0.8);
+      `;
+      
+      this.container.appendChild(particle);
+      
+      // Remove particle after animation
+      setTimeout(() => {
+        if (particle.parentNode) {
+          particle.parentNode.removeChild(particle);
+        }
+      }, (duration + delay) * 1000);
+    }
+    
+    // Remove glow effect after a short time
+    setTimeout(() => {
+      if (this.container) {
+        this.container.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
+      }
+    }, 1000);
   }
 
   private getFeedbackIcon(type: string): string {
@@ -1025,5 +1099,12 @@ export class EnhancedRunControls extends BaseService {
   protected async onDestroy(): Promise<void> {
     this.removeEventHandlers();
     this.stopRealTimeUpdates();
+  }
+
+  // Test method for celebration effects (development only)
+  public testCelebration(): void {
+    if (process.env.NODE_ENV === 'development') {
+      this.showFeedback('Test celebration!', 'success');
+    }
   }
 }

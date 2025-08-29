@@ -151,7 +151,8 @@ export class ConfigService {
 
   private async fetchRuntimeTokens(): Promise<{mapbox?: string, gemini?: string}> {
     try {
-      const response = await fetch('/.netlify/functions/get-tokens');
+      // Default implementation uses Express.js server endpoint
+      const response = await fetch('/api/tokens');
       if (response.ok) {
         return await response.json();
       }
@@ -252,6 +253,7 @@ export class ConfigService {
   /**
    * 🔒 PRODUCTION SECURITY: Fetch tokens from secure server endpoint
    * This method should be implemented to call your secure token service
+   * Default implementation uses Express.js server endpoint
    */
   private getTokenFromSecureEndpoint(tokenType: 'mapbox' | 'gemini'): string | null {
     // 🔒 IMPLEMENT THIS: Replace with your secure token endpoint

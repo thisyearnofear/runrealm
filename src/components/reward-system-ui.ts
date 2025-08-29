@@ -498,9 +498,61 @@ export class RewardSystemUI extends BaseService {
     // Add visual effect to widget
     if (this.rewardWidget) {
       this.rewardWidget.classList.add('reward-earned');
+      
+      // Add celebration effects
+      this.addCelebrationEffects(this.rewardWidget, amount);
+      
       setTimeout(() => {
         this.rewardWidget?.classList.remove('reward-earned');
       }, 1000);
+    }
+  }
+
+  /**
+   * Add celebration effects when rewards are earned
+   */
+  private addCelebrationEffects(widget: HTMLElement, amount: number): void {
+    // Create floating particles for celebration
+    const particleCount = Math.min(Math.max(Math.floor(amount / 5), 5), 20); // More particles for larger rewards
+    
+    for (let i = 0; i < particleCount; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'celebration-particle';
+      
+      // Random position around the widget
+      const posX = Math.random() * 100;
+      const posY = Math.random() * 100;
+      
+      particle.style.cssText = `
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: linear-gradient(45deg, #00ff88, #00cc6a);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 1000;
+        left: ${posX}%;
+        top: ${posY}%;
+        animation: celebrationFloat 1.5s ease-out forwards;
+        box-shadow: 0 0 8px rgba(0, 255, 136, 0.8);
+      `;
+      
+      widget.appendChild(particle);
+      
+      // Remove particle after animation
+      setTimeout(() => {
+        if (particle.parentNode) {
+          particle.parentNode.removeChild(particle);
+        }
+      }, 1500);
+    }
+    
+    // Add a special glow effect for larger rewards
+    if (amount > 20) {
+      widget.style.boxShadow = '0 0 30px rgba(0, 255, 136, 0.6)';
+      setTimeout(() => {
+        widget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
+      }, 1500);
     }
   }
 
@@ -596,6 +648,7 @@ export class RewardSystemUI extends BaseService {
           backdrop-filter: blur(10px);
           transition: all 0.3s ease;
           overflow: hidden;
+          transform-origin: center;
         }
 
         .reward-widget.collapsed .reward-widget-content {
@@ -752,6 +805,8 @@ export class RewardSystemUI extends BaseService {
           justify-content: center;
           gap: 8px;
           margin-bottom: 8px;
+          position: relative;
+          overflow: hidden;
         }
 
         .reward-btn:last-child {
@@ -1009,6 +1064,44 @@ export class RewardSystemUI extends BaseService {
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
+        /* Celebration effects */
+        @keyframes celebrationFloat {
+          0% {
+            transform: translate(0, 0) scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(var(--x, 0), -100px) scale(0);
+            opacity: 0;
+          }
+        }
+
+        .celebration-particle {
+          position: absolute;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 1000;
+          animation: celebrationFloat 1.5s ease-out forwards;
+        }
+
+        /* Button hover effects */
+        .reward-btn::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+          transition: left 0.6s ease;
+        }
+
+        .reward-btn:hover::before {
+          left: 100%;
+        }
+
         /* Mobile responsiveness */
         @media (max-width: 768px) {
           .reward-widget {
@@ -1033,6 +1126,10 @@ export class RewardSystemUI extends BaseService {
           .reward-widget.reward-earned {
             animation: none;
           }
+          
+          .celebration-particle {
+            animation: none;
+          }
         }
       `,
       parent: document.head
@@ -1041,5 +1138,12 @@ export class RewardSystemUI extends BaseService {
 
   protected async onDestroy(): Promise<void> {
     this.rewardWidget?.remove();
+  }
+
+  // Test method for celebration effects (development only)
+  public testCelebration(amount: number = 10): void {
+    if (process.env.NODE_ENV === 'development') {
+      this.showRewardNotification('Test Reward', amount);
+    }
   }
 }

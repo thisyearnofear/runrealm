@@ -33,13 +33,21 @@ module.exports = (env, argv) => {
     TERRITORY_MANAGER_ADDRESS: process.env.TERRITORY_MANAGER_ADDRESS || "",
   };
 
+  // Entry points configuration
+  const entry = {
+    app: path.resolve(__dirname, "src/index.ts"),
+  };
+
+  // Add development setup script only in development mode
+  if (!isProduction) {
+    entry.devSetup = path.resolve(__dirname, "src/dev-setup.ts");
+  }
+
   return {
     mode: isProduction ? "production" : "development",
     devtool: isProduction ? "source-map" : "eval-source-map",
 
-    entry: {
-      app: path.resolve(__dirname, "src/index.ts"),
-    },
+    entry: entry,
 
     output: {
       path: path.join(__dirname, "public"),
@@ -81,7 +89,6 @@ module.exports = (env, argv) => {
         "@components": path.resolve(__dirname, "src/components"),
       },
       fallback: {
-        "../appsettings.secrets": false,
         process: require.resolve("process/browser"),
       },
     },
@@ -221,6 +228,13 @@ module.exports = (env, argv) => {
       hot: true,
       open: false,
       historyApiFallback: true,
+      proxy: [
+        {
+          context: ['/api'],
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+        },
+      ],
       client: {
         overlay: {
           errors: true,

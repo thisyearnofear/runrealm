@@ -12,26 +12,118 @@ RunRealm is deployed and functional for single-chain territory gaming on ZetaCha
 - 🔧 GameLogic Library: `0x0590F45F223B87e51180f6B7546Cc25955984726`
 - 📍 Explorer: https://zetachain-athens-3.blockscout.com
 
-## 🚀 Quick Start
+## Development Setup
+
+### Environment Variables
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Fill in your actual API keys in the `.env` file:
+   - Mapbox Access Token (get from https://account.mapbox.com/access-tokens/)
+   - Google Gemini API Key (get from https://makersuite.google.com/app/apikey)
+
+### Development API Keys
+
+For development, the application uses multiple fallback methods to load API keys:
+
+1. Runtime tokens endpoint (Express.js server)
+2. localStorage (set automatically in development mode)
+3. src/appsettings.secrets.ts (not committed to version control)
+
+To set up your development environment with API keys:
+
+1. Create `src/appsettings.secrets.ts` from the example:
+   ```bash
+   cp src/appsettings.secrets.example.ts src/appsettings.secrets.ts
+   ```
+
+2. Fill in your actual keys in `src/appsettings.secrets.ts`
+
+**⚠️ SECURITY WARNING**: Never commit `src/appsettings.secrets.ts` to version control. The file is already included in `.gitignore`.
+
+### Running the Development Server
 
 ```bash
-# Clone and setup
-git clone https://github.com/thisyearnofear/RunRealm.git
-cd RunRealm
-npm install
-
-# Configure environment (see docs/DEVELOPER_GUIDE.md for details)
-cp .env.example .env
-cp src/appsettings.secrets.example.ts src/appsettings.secrets.ts
-# Add your Mapbox and Google Gemini API keys
-
-# Contracts are already deployed on ZetaChain testnet
-# See docs/DEPLOYMENT_CONTRACTS_GUIDE.md for details
-
-# Start development server
 npm run dev
-# Open http://localhost:8080
 ```
+
+The development server will automatically set the API keys in localStorage for development use.
+
+## Production Deployment
+
+For production deployment, API keys should NEVER be included in client-side code. Instead:
+
+1. Use secure server-side endpoints to provide tokens at runtime
+2. Store actual API keys as environment variables on your server
+3. Use the Express.js server (already set up) to serve tokens securely
+
+### Express.js Server (Default and Recommended)
+
+The application includes an Express.js server that serves static files and provides the API endpoint for tokens.
+
+1. Set your API keys as environment variables:
+   ```bash
+   export MAPBOX_ACCESS_TOKEN=your_mapbox_token
+   export GOOGLE_GEMINI_API_KEY=your_gemini_key
+   ```
+
+2. Build the application:
+   ```bash
+   npm run build
+   ```
+
+3. Start the server:
+   ```bash
+   npm run server
+   ```
+
+The server will serve the static files and provide the API endpoint for tokens at `/api/tokens`.
+
+### Deployment to Your Hetzner Server
+
+Since you have a Hetzner server, you can deploy the application there:
+
+1. Clone the repository to your Hetzner server:
+   ```bash
+   git clone <your-repo-url>
+   cd RunRealm
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set your API keys as environment variables in a `.env` file or systemd service:
+   ```bash
+   echo "MAPBOX_ACCESS_TOKEN=your_mapbox_token" >> .env
+   echo "GOOGLE_GEMINI_API_KEY=your_gemini_key" >> .env
+   ```
+
+4. Build the application:
+   ```bash
+   npm run build
+   ```
+
+5. Start the server:
+   ```bash
+   npm run server
+   ```
+
+For production use, you should set up a systemd service to run the server automatically and use a reverse proxy like Nginx for SSL termination.
+
+### Other Serverless Platforms
+
+If you prefer to use serverless platforms, you can also deploy the token endpoint to:
+- AWS Lambda
+- Google Cloud Functions
+- Azure Functions
+- Vercel Functions
+
+Just make sure to update the `fetchRuntimeTokens` method in `src/core/app-config.ts` to point to your endpoint.
 
 ## 📚 Documentation
 

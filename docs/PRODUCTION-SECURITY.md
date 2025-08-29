@@ -17,62 +17,37 @@ Before production deployment:
 
 ### 2. **Implement Secure Token Service**
 
-Create a server-side endpoint to serve tokens securely:
+The application includes an Express.js server that serves as a secure token service.
 
-```typescript
-// Example: /api/secure-tokens/mapbox
-app.get('/api/secure-tokens/:service', authenticateUser, (req, res) => {
-  const { service } = req.params;
-  
-  // Validate user permissions
-  if (!req.user.hasPermission(service)) {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
-  
-  // Return token with rate limiting and expiration
-  const token = getSecureToken(service, req.user.id);
-  res.json({ 
-    token, 
-    expires: Date.now() + (60 * 60 * 1000) // 1 hour
-  });
-});
-```
+1. Set your API keys as environment variables on your server:
+   ```bash
+   export MAPBOX_ACCESS_TOKEN=your_mapbox_token
+   export GOOGLE_GEMINI_API_KEY=your_gemini_key
+   ```
+
+2. Build and start the server:
+   ```bash
+   npm run build
+   npm run server
+   ```
+
+The server will provide the API endpoint for tokens at `/api/tokens`, which is already configured in the application.
+
+If you need to customize the token service, you can modify the `server.js` file or implement your own secure token endpoint.
 
 ### 3. **Update Token Fetching**
 
-Modify `getTokenFromSecureEndpoint()` in `app-config.ts`:
-
-```typescript
-private async getTokenFromSecureEndpoint(tokenType: 'mapbox' | 'gemini'): Promise<string | null> {
-  try {
-    const response = await fetch(`/api/secure-tokens/${tokenType}`, {
-      headers: {
-        'Authorization': `Bearer ${this.getUserToken()}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Token fetch failed: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data.token;
-  } catch (error) {
-    console.error(`Failed to fetch ${tokenType} token:`, error);
-    return null;
-  }
-}
-```
+The application is already configured to use the Express.js server endpoint at `/api/tokens`. No additional configuration is needed.
 
 ### 4. **Environment Variables (Server-Side Only)**
 
 ```bash
 # .env (server-side only - NEVER expose to client)
 MAPBOX_ACCESS_TOKEN=pk.your_real_mapbox_token
-GEMINI_API_KEY=your_real_gemini_key
-JWT_SECRET=your_jwt_secret_for_token_auth
+GOOGLE_GEMINI_API_KEY=your_real_gemini_key
 ```
+
+### 5. **Build Configuration**
 
 ### 5. **Build Configuration**
 

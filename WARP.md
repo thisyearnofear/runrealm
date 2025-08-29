@@ -90,16 +90,20 @@ npm run clean
 ```
 
 ### Deployment
+
 ```bash
-# Deploy to Vercel production
-npm run deploy:vercel
+# Build for production
+npm run build
 
-# Deploy to staging
-npm run deploy:staging
+# Start production server
+npm run server
 
-# Run Lighthouse audit
-npm run lighthouse
+# Set environment variables for production
+export MAPBOX_ACCESS_TOKEN=your_mapbox_token
+export GOOGLE_GEMINI_API_KEY=your_gemini_key
 ```
+
+The application includes an Express.js server that serves static files and provides the API endpoint for tokens at `/api/tokens`.
 
 ## Architecture
 

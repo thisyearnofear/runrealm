@@ -213,23 +213,35 @@ Services use consistent error handling:
 - Target: <400KB total bundle, <3s load time, 90+ Lighthouse score
 - Mobile-first design with touch optimizations
 
-## 🚀 Deployment Process
+## 🚀 Deployment
 
-### Pre-deployment Checklist
-1. Type checking passes (`npm run typecheck`)
-2. All tests pass (`npm test`)
-3. Smart contracts compile (`npm run contracts:compile`)
-4. Production build succeeds (`npm run build:prod`)
-5. Lighthouse audit >90 score (`npm run lighthouse`)
+### Build for Production
 
-### Deployment Commands
 ```bash
-# Deploy to Vercel production
-npm run deploy:vercel
+# Create production build
+npm run build
 
-# Deploy to staging
-npm run deploy:staging
-
-# Run Lighthouse audit
-npm run lighthouse
+# The build output will be in the 'public' directory
 ```
+
+### Deploy with Express.js Server (Default)
+
+The application includes an Express.js server that serves static files and provides the API endpoint for tokens.
+
+1. Set your API keys as environment variables:
+   ```bash
+   export MAPBOX_ACCESS_TOKEN=your_mapbox_token
+   export GOOGLE_GEMINI_API_KEY=your_gemini_key
+   ```
+
+2. Start the server:
+   ```bash
+   npm run server
+   ```
+
+The server will start on port 3000 (or the port specified in the PORT environment variable).
+
+For production use, you should:
+1. Set up a systemd service to run the server automatically
+2. Use a reverse proxy like Nginx for SSL termination
+3. Configure your domain to point to the server
