@@ -151,8 +151,9 @@ export class ConfigService {
 
   private async fetchRuntimeTokens(): Promise<{mapbox?: string, gemini?: string}> {
     try {
-      // Default implementation uses Express.js server endpoint
-      const response = await fetch('/api/tokens');
+      // Use configurable API base URL for dev/prod environments
+      const apiBaseUrl = (typeof __ENV__ !== 'undefined' && __ENV__.API_BASE_URL) ? __ENV__.API_BASE_URL : '';
+      const response = await fetch(`${apiBaseUrl}/api/tokens`);
       if (response.ok) {
         return await response.json();
       }

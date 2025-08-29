@@ -1,0 +1,58 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual deployment
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build frontend
+      run: npm run build
+      
+    - name: Deploy to Hetzner
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HETZNER_HOST }}
+        username: ${{ secrets.HETZNER_USER }}
+        key: ${{ secrets.HETZNER_SSH_KEY }}
+        script: |
+          cd /opt/runrealm
+          
+          # Pull latest changes
+          git pull origin main
+          
+          # Install dependencies
+          source ~/.nvm/nvm.sh
+          nvm use 20
+          npm ci --only=production
+          
+          # Build frontend
+          npm run build
+          
+          # Restart server with PM2
+          pm2 reload runrealm || pm2 start server.js --name runrealm
+          
+          # Save PM2 configuration
+          pm2 save
+          
+          # Verify deployment
+          sleep 5
+          curl -f http://localhost:3000/api/tokens
+          
+          echo "✅ Deployment successful!"

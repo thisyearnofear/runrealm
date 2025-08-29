@@ -191,9 +191,49 @@ Deployed smart contract addresses and implementation details:
 
 ## 🚀 Getting Started
 
+### For Users
 1. **Basic Usage**: Use as a traditional running route planner
 2. **AI Features**: Add Google Gemini API key for route optimization (see [User Guide](docs/USER_GUIDE.md))
 3. **Web3 Features**: Connect wallet for full GameFi experience (see [Deployment & Contracts Guide](docs/DEPLOYMENT_CONTRACTS_GUIDE.md))
+
+### For Developers
+
+#### Local Development
+```bash
+# Clone and setup
+git clone https://github.com/thisyearnofear/runrealm.git
+cd runrealm
+npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys
+
+# Start development servers
+npm run server    # Express server (:3000)
+npm run serve     # Webpack dev server (:8080)
+```
+
+#### Production Deployment
+```bash
+# Build and run production server
+npm run build
+npm run server
+
+# Or use Docker for consistency
+docker-compose up --build
+```
+
+#### Deploy to Server (Hetzner/VPS)
+```bash
+# On your server
+cd /opt
+git clone https://github.com/thisyearnofear/runrealm.git runrealm
+cd runrealm
+npm ci
+npm run build
+pm2 start server.js --name runrealm
+```
 
 See [Developer Guide](docs/DEVELOPER_GUIDE.md) for detailed setup instructions.
 

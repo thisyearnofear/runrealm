@@ -44,7 +44,7 @@ jest-cache/
 # Smart contract artifacts
 /artifacts/
 /cache/
-/deployments/*.json
+/deployments/
 typechain-types/
 hardhat-logs/
 
@@ -144,3 +144,12 @@ $RECYCLE.BIN/
 *.msix
 *.msm
 *.msp
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+.docker/
+
+# Production logs
+logs/
+*.log

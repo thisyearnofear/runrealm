@@ -1,6 +1,8 @@
 declare global {
   const __ENV__: {
     NODE_ENV: string;
+    // API base URL for token endpoint (dev/prod configuration)
+    API_BASE_URL: string;
     // ⚠️ SECURITY NOTE: Only public configuration is exposed via __ENV__
     // Sensitive API keys are loaded via other secure methods
     ENABLE_WEB3: string;

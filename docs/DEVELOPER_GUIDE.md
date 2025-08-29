@@ -29,6 +29,8 @@ npm run dev
 MAPBOX_ACCESS_TOKEN=your_mapbox_token
 GOOGLE_GEMINI_API_KEY=your_google_ai_key
 PRIVATE_KEY=your_wallet_private_key_for_deployment
+NODE_ENV=development  # or production
+PORT=3000  # server port
 ```
 
 ### Configuration Files
@@ -37,6 +39,52 @@ PRIVATE_KEY=your_wallet_private_key_for_deployment
 - `hardhat.config.js` - Blockchain deployment configuration
 - `tsconfig.json` - TypeScript compiler settings
 - `webpack.config.js` - Build configuration
+
+## 🚀 Development & Deployment
+
+### Local Development
+```bash
+# Start both servers for development
+npm run server    # Express server on :3000 (API + static files)
+npm run serve     # Webpack dev server on :8080 (with proxy to :3000)
+```
+
+### Production Build & Server
+```bash
+# 1. Build the frontend
+npm run build
+
+# 2. Set up production environment
+cp .env.example .env
+# Edit .env with your actual tokens:
+# MAPBOX_ACCESS_TOKEN=your_token
+# GOOGLE_GEMINI_API_KEY=your_key
+# NODE_ENV=production
+
+# 3. Start the production server
+npm run server
+# Opens http://localhost:3000 (serves static files AND /api/tokens)
+```
+
+### Deploy to Hetzner Server
+```bash
+# SSH to your server
+ssh your-user@your-server
+
+# Navigate to project directory
+cd /opt/runrealm
+
+# Pull latest changes
+git pull
+
+# Install dependencies and build
+npm ci
+npm run build
+
+# Start with PM2 (production process manager)
+pm2 start server.js --name runrealm
+pm2 save  # Save PM2 configuration
+```
 
 ## 🏗️ Architecture Overview
 

@@ -1,24 +1,49 @@
-name: PR
+name: CI
 
 on:
+  push:
+    branches: [ main, develop ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
     steps:
-      - name: Setup node
-        uses: actions/setup-node@v2
-        with:
-          node-version: "14"
-
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Install dependencies
-        run: npm i
-
-      - name: Run unit tests
-        run: npm run test
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run type checking
+      run: npm run typecheck
+      
+    - name: Run tests
+      run: npm test
+      
+    - name: Build frontend
+      run: npm run build
+      
+    - name: Test server startup
+      run: |
+        # Create minimal .env for testing
+        echo "MAPBOX_ACCESS_TOKEN=test_token" > .env
+        echo "GOOGLE_GEMINI_API_KEY=test_key" >> .env
+        echo "NODE_ENV=production" >> .env
+        
+        # Start server in background and test
+        timeout 10s npm run server &
+        sleep 5
+        curl -f http://localhost:3000/api/tokens || exit 1
