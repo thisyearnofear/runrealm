@@ -426,11 +426,12 @@ export class AIService extends BaseService {
     try {
       // This will be handled by webpack at build time
       const secrets = require('../appsettings.secrets');
-      if (secrets.GOOGLE_GEMINI_API_KEY) {
+      if (secrets?.GOOGLE_GEMINI_API_KEY) {
         console.log('AIService: Using secrets file Gemini API key');
         return secrets.GOOGLE_GEMINI_API_KEY;
       }
     } catch (error) {
+      // This is normal in production - secrets file doesn't exist
       console.log('AIService: Could not load from secrets file (this is normal in production)');
     }
 

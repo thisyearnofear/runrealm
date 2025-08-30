@@ -4,7 +4,15 @@
  * Following DRY principle - update once, use everywhere
  */
 
-import { appSettings } from '../appsettings.secrets';
+// Conditional import for development vs production
+let appSettings: any = null;
+try {
+  // Only available in development - will fail gracefully in production
+  appSettings = require('../appsettings.secrets').appSettings;
+} catch (error) {
+  // Production mode - use environment variables and runtime config
+  console.log('Production mode: Using runtime configuration instead of secrets file');
+}
 
 export interface ContractConfig {
   address: string;
@@ -210,23 +218,44 @@ const REALM_TOKEN_ABI = [
 
 /**
  * Get current network configuration
- * DRY: Single source of truth from appsettings
+ * DRY: Single source of truth from appsettings (dev) or environment (prod)
  */
 export function getCurrentNetworkConfig(): NetworkConfig {
-  const zetaConfig = appSettings.web3.zetachain;
+  // Development mode - use appsettings.secrets.ts
+  if (appSettings?.web3?.zetachain) {
+    const zetaConfig = appSettings.web3.zetachain;
+    return {
+      chainId: zetaConfig.chainId,
+      name: zetaConfig.chainId === 7001 ? 'ZetaChain Athens Testnet' : 'ZetaChain Mainnet',
+      rpcUrl: zetaConfig.rpcUrl,
+      explorerUrl: zetaConfig.explorerUrl,
+      contracts: {
+        universal: {
+          address: zetaConfig.contracts.universal,
+          abi: UNIVERSAL_CONTRACT_ABI
+        },
+        realmToken: {
+          address: zetaConfig.contracts.realmToken,
+          abi: REALM_TOKEN_ABI
+        }
+      }
+    };
+  }
 
+  // Production mode - use environment variables and known deployed addresses
+  const chainId = 7001; // ZetaChain Athens Testnet
   return {
-    chainId: zetaConfig.chainId,
-    name: zetaConfig.chainId === 7001 ? 'ZetaChain Athens Testnet' : 'ZetaChain Mainnet',
-    rpcUrl: zetaConfig.rpcUrl,
-    explorerUrl: zetaConfig.explorerUrl,
+    chainId,
+    name: 'ZetaChain Athens Testnet',
+    rpcUrl: (globalThis as any).__ENV__?.ZETACHAIN_RPC_URL || 'https://zetachain-athens-evm.blockpi.network/v1/rpc/public',
+    explorerUrl: 'https://zetachain-athens-3.blockscout.com',
     contracts: {
       universal: {
-        address: zetaConfig.contracts.universal,
+        address: (globalThis as any).__ENV__?.TERRITORY_MANAGER_ADDRESS || '0x7A52d845Dc37aC5213a546a59A43148308A88983',
         abi: UNIVERSAL_CONTRACT_ABI
       },
       realmToken: {
-        address: zetaConfig.contracts.realmToken,
+        address: (globalThis as any).__ENV__?.REALM_TOKEN_ADDRESS || '0x18082d110113B40A24A41dF10b4b249Ee461D3eb',
         abi: REALM_TOKEN_ABI
       }
     }
