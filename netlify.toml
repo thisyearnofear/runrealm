@@ -11,9 +11,9 @@
 
 # SPA Routing & API Proxy (order matters - specific rules first)
 [[redirects]]
-  # Proxy API calls to Hetzner backend
+  # Proxy API calls to Hetzner backend (now with SSL)
   from = "/api/*"
-  to = "https://runrealm.coupondj.fun:3000/api/:splat"
+  to = "https://runrealm.coupondj.fun/api/:splat"
   status = 200
   force = false
 
