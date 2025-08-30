@@ -1,4 +1,4 @@
-import { CurrentRun, RunStart, RunSegment } from './current-run';
+import { CurrentRun, RunStart } from './current-run';
 import { LngLat, Marker } from 'mapbox-gl';
 import { LineString } from 'geojson';
 
@@ -24,16 +24,27 @@ describe('CurrentRun class', () => {
     let currentRun = new CurrentRun(new RunStart({} as LngLat));
 
     let initialExpectedDistance = 500;
-    let firstSegment = new RunSegment('some-uuid', {} as LngLat, initialExpectedDistance, {} as LineString, false);
+    let firstSegment = {
+      id: 'some-uuid',
+      position: {} as LngLat,
+      distance: initialExpectedDistance,
+      lineString: {} as LineString,
+      followsRoads: false
+    };
     let marker = getMockMarker();
     currentRun.addSegment(firstSegment, marker);
 
     expect(currentRun.distance).toBe(initialExpectedDistance, 'Distance was not set correctly from the distance response.');
-    expect(firstSegment.marker).toBe(marker);
     expect(firstSegment.followsRoads).toBe(false);
 
     let secondDistance = 1337;
-    let secondSegment = new RunSegment('different-uuid', {} as LngLat, secondDistance, {} as LineString, true);
+    let secondSegment = {
+      id: 'different-uuid',
+      position: {} as LngLat,
+      distance: secondDistance,
+      lineString: {} as LineString,
+      followsRoads: true
+    };
     currentRun.addSegment(secondSegment, getMockMarker());
     expect(currentRun.distance).toBe(initialExpectedDistance + secondDistance, 'Distance did not correctly add the incoming distance response value.');
   });
@@ -53,7 +64,13 @@ describe('CurrentRun class', () => {
 
     let expectedLngLat = { lng: 101, lat: 202 } as LngLat;
     let expectedDistance = 100;
-    let segment = new RunSegment('some-uuid', expectedLngLat, expectedDistance, {} as LineString, false);
+    let segment = {
+      id: 'some-uuid',
+      position: expectedLngLat,
+      distance: expectedDistance,
+      lineString: {} as LineString,
+      followsRoads: false
+    };
     let marker = getMockMarker();
     spyOn(marker, 'remove').and.stub();
     currentRun.addSegment(segment, marker);

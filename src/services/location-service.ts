@@ -257,6 +257,16 @@ export class LocationService extends BaseService {
       13 // Default zoom
     );
 
+    // Update location marker on map if AnimationService is available
+    try {
+      const animationService = (window as any).RunRealm?.services?.animation;
+      if (animationService && typeof animationService.updateUserLocationMarker === 'function') {
+        animationService.updateUserLocationMarker(locationInfo.lng, locationInfo.lat);
+      }
+    } catch (error) {
+      console.warn('LocationService: Failed to update location marker:', error);
+    }
+
     // Emit location change event
     this.safeEmit("location:changed", locationInfo);
   }

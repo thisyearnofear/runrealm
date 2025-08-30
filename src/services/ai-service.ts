@@ -282,20 +282,6 @@ export class AIService extends BaseService {
           return;
         }
 
-        // Emit route ready event with enhanced data for visualization
-        const routeData = {
-          route: optimization.suggestedRoute.coordinates || [],
-          distance: optimization.suggestedRoute.distance,
-          duration: Math.round((optimization.suggestedRoute.distance || 0) * 5),
-          waypoints: waypoints.map(wp => ({ lat: wp.lat, lng: wp.lng })), // Ensure clean waypoint data
-          totalDistance: optimization.suggestedRoute.distance,
-          difficulty: optimization.suggestedRoute.difficulty,
-          estimatedTime: Math.round((optimization.suggestedRoute.distance || 0) * 5),
-          reasoning: optimization.suggestedRoute.reasoning,
-          confidence: optimization.confidence
-        };
-        this.safeEmit('ai:routeReady', routeData);
-
         // Fix coordinate format: AI returns [lat, lng] but Mapbox needs [lng, lat]
         const mapboxCoordinates = optimization.suggestedRoute.coordinates.map(coord => {
           if (Array.isArray(coord) && coord.length === 2) {
@@ -341,7 +327,7 @@ export class AIService extends BaseService {
               territoryValue: wp.territoryValue,
               estimatedReward: wp.estimatedReward,
               claimPriority: wp.claimPriority
-            };
+            }
           });
 
           this.safeEmit('ai:waypointsVisualize', {

@@ -20,6 +20,7 @@ import { NavigationService } from "../services/navigation-service";
 import { ProgressionService } from "../services/progression-service";
 import { GameService } from "../services/game-service";
 import { ContractService } from "../services/contract-service";
+import { SoundService } from "../services/sound-service";
 
 // Import existing services
 import { PreferenceService } from "../preference-service";
@@ -30,6 +31,9 @@ import { GeocodingService } from "../geocoding-service";
 import { LocationService } from "../services/location-service";
 import { WalletWidget } from "../components/wallet-widget";
 import { MainUI } from "../components/main-ui";
+
+// Import new components
+import { RouteInfoPanel } from "../components/route-info-panel";
 
 // Type definitions for Mapbox
 type MapboxGL = typeof import("mapbox-gl");
@@ -68,11 +72,13 @@ export class RunRealmApp {
   private onboarding: OnboardingService;
   private navigation: NavigationService;
   private animation: AnimationService;
+  private sound: SoundService;
   private dom: DOMService;
   private gamefiUI: GameFiUI;
   private walletWidget: WalletWidget;
   private geocodingService: GeocodingService;
   private mainUI: MainUI;
+  private routeInfoPanel: RouteInfoPanel;
   private enhancedRunControls: EnhancedRunControls;
 
   // Lazy-loaded services (PERFORMANT: created only when needed)
@@ -146,6 +152,7 @@ export class RunRealmApp {
     this.onboarding = OnboardingService.getInstance();
     this.navigation = NavigationService.getInstance();
     this.animation = AnimationService.getInstance();
+    this.sound = SoundService.getInstance();
 
     // Initialize remaining services (CONSOLIDATED)
     this.enhancedRunControls = new EnhancedRunControls();
@@ -178,6 +185,10 @@ export class RunRealmApp {
       this.web3,
       this.config
     );
+
+    // Initialize route info panel
+    this.routeInfoPanel = RouteInfoPanel.getInstance();
+    this.routeInfoPanel.initialize();
   }
 
   private initializeState(): void {
@@ -223,13 +234,10 @@ export class RunRealmApp {
       }
     });
 
-    this.eventBus.on("web3:walletConnected", (data) => {
-      this.handleWalletConnected(data);
-    });
-
-    // Location service integration - recenter map when location changes
     this.eventBus.on("location:changed", (locationInfo) => {
       this.handleLocationChanged(locationInfo);
+      // Play sound when location changes
+      this.sound.playNotificationSound();
     });
 
     // Progression events - now handled by RunTrackingService
@@ -241,21 +249,63 @@ export class RunRealmApp {
       if (data.duration) {
         this.progression.addTime(data.duration);
       }
+      
+      // Play celebration sound when run is completed
+      this.sound.playSuccessSound();
+      
+      // Show celebration effect
+      if (this.animation && typeof this.animation.confetti === 'function') {
+        this.animation.confetti(document.body);
+      }
     });
 
     this.eventBus.on("territory:claimed", (data) => {
       this.progression.addTerritory();
+      // Play success sound when territory is claimed
+      this.sound.playSuccessSound();
+      
+      // Show celebration effect
+      if (this.animation && typeof this.animation.confetti === 'function') {
+        this.animation.confetti(document.body);
+      }
     });
 
     // Navigation events
     this.eventBus.on("run:startRequested", () => {
       // Handle run start request
       this.ui.showToast("Starting new run...", { type: "info" });
+      // Play notification sound
+      this.sound.playNotificationSound();
     });
 
     this.eventBus.on("navigation:routeChanged", (data) => {
       // Handle route changes
       console.log("Navigation to:", (data as any).routeId);
+    });
+
+    // AI service events
+    this.eventBus.on("ai:routeReady", (data) => {
+      // Play route generated sound
+      this.sound.playRouteGeneratedSound();
+      
+      // Show success toast
+      this.ui.showToast("AI route generated successfully!", { 
+        type: "success",
+        action: {
+          text: "View",
+          callback: () => {
+            // The route info panel will automatically show when ai:routeReady is emitted
+          }
+        }
+      });
+    });
+
+    this.eventBus.on("ai:routeFailed", (data) => {
+      // Play error sound
+      this.sound.playErrorSound();
+      
+      // Show error toast
+      this.ui.showToast(`Route generation failed: ${data.message}`, { type: "error" });
     });
 
     // Listen for config updates (e.g., when runtime tokens are loaded)
@@ -349,6 +399,11 @@ export class RunRealmApp {
       if (this.animation && this.map) {
         this.animation.map = this.map;
         console.log("RunRealmApp: AnimationService map reference set");
+        
+        // Also expose mapboxgl globally for AnimationService to use
+        if (this.mapboxgl) {
+          (window as any).mapboxgl = this.mapboxgl;
+        }
       }
 
       // Set up AI route visualization handlers now that everything is ready
