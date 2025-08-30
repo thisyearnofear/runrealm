@@ -1,0 +1,61 @@
+# RunRealm Netlify Configuration
+# Minimal deployment config following Core Principles: ENHANCEMENT FIRST, DRY, CLEAN
+
+[build]
+  # Reuse existing build script (DRY principle)
+  command = "npm run build"
+  # Webpack outputs to public/ directory
+  publish = "public"
+  # Skip builds for non-functional changes
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF || exit 1"
+
+# SPA Routing & API Proxy (order matters - specific rules first)
+[[redirects]]
+  # Proxy API calls to Hetzner backend
+  from = "/api/*"
+  to = "http://runrealm.coupondj.fun:3000/api/:splat"
+  status = 200
+  force = false
+
+[[redirects]]
+  # SPA fallback - serve index.html for all client-side routes
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+
+# Security & Performance Headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # CORS for external API access (Mapbox, Web3 providers)
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS, PUT, PATCH, DELETE"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
+    # Security hardening
+    X-Frame-Options = "SAMEORIGIN"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer-when-downgrade"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
+# Cache optimization for static assets
+[[headers]]
+  for = "/favicon*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/apple-touch-icon*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
