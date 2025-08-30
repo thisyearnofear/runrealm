@@ -375,8 +375,17 @@ export class RunRealmApp {
     const initialFocus = this.preferenceService.getLastOrDefaultFocus();
     const mapStyle = getStyleById(this.preferenceService.getMapStyle());
 
-    // Set Mapbox access token
-    (this.mapboxgl as any).accessToken = config.mapbox.accessToken;
+    // Set Mapbox access token with fallback
+    let mapboxToken = config.mapbox.accessToken;
+    
+    // Fallback: try to get token from localStorage if config doesn't have it
+    if (!mapboxToken) {
+      mapboxToken = localStorage.getItem('runrealm_mapbox_access_token') || '';
+      console.debug('Using Mapbox token from localStorage fallback');
+    }
+    
+    console.debug(`Initializing map with token: ${mapboxToken ? 'Token available' : 'No token'}`);
+    (this.mapboxgl as any).accessToken = mapboxToken;
 
     // Check if container exists
     const container = document.getElementById("mapbox-container");

@@ -70,19 +70,27 @@ export class ConfigService {
 
   async initializeRuntimeTokens(): Promise<void> {
     try {
+      console.debug('Fetching runtime tokens...');
       const runtimeTokens = await this.fetchRuntimeTokens();
+      console.debug('Runtime tokens received:', Object.keys(runtimeTokens));
 
       // Store tokens in localStorage for immediate use
       if (runtimeTokens.mapbox) {
         localStorage.setItem('runrealm_mapbox_access_token', runtimeTokens.mapbox);
         // Update the config
         this.config.mapbox.accessToken = runtimeTokens.mapbox;
+        console.debug('Mapbox token updated in config');
+      } else {
+        console.debug('No Mapbox token received from runtime endpoint');
       }
 
       if (runtimeTokens.gemini && this.config.web3?.ai) {
         localStorage.setItem('runrealm_google_gemini_api_key', runtimeTokens.gemini);
         // Update the config
         this.config.web3.ai.geminiApiKey = runtimeTokens.gemini;
+        console.debug('Gemini API key updated in config');
+      } else {
+        console.debug('No Gemini API key received from runtime endpoint');
       }
 
       this.runtimeTokensLoaded = true;
@@ -96,7 +104,7 @@ export class ConfigService {
       const tokenCount = Object.keys(runtimeTokens).length;
       console.debug(`Runtime tokens initialized successfully (${tokenCount} tokens loaded)`);
     } catch (error) {
-      console.debug('Runtime token initialization failed, using fallback sources');
+      console.error('Runtime token initialization failed:', error);
       this.runtimeTokensLoaded = true; // Mark as attempted
     }
   }
@@ -158,17 +166,20 @@ export class ConfigService {
         ? '/api/tokens'  // Netlify will proxy this to Hetzner backend
         : `${(typeof __ENV__ !== 'undefined' && __ENV__.API_BASE_URL) || 'http://localhost:3000'}/api/tokens`;
       
-      console.debug(`Fetching tokens from: ${apiUrl}`);
+      console.debug(`Fetching tokens from: ${apiUrl} (production: ${isProduction})`);
       const response = await fetch(apiUrl);
+      console.debug(`Response status: ${response.status}, ok: ${response.ok}`);
+      
       if (response.ok) {
         const tokens = await response.json();
-        console.debug('Successfully fetched runtime tokens');
+        console.debug('Successfully fetched runtime tokens, keys:', Object.keys(tokens));
         return tokens;
       } else {
-        console.debug(`Token fetch failed with status: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`Token fetch failed with status: ${response.status}, body: ${errorText}`);
       }
     } catch (error) {
-      console.debug('Runtime token fetch failed:', error.message);
+      console.error('Runtime token fetch failed:', error);
     }
     return {};
   }
