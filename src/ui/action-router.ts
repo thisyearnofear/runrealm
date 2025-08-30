@@ -1,8 +1,10 @@
 import { EventBus } from '../core/event-bus';
+import { AIOrchestrator } from '../services/ai-orchestrator';
 
 export type UIAction = 'ai.requestRoute' | 'ai.requestGhostRunner' | 'ai.showRoute' | 'ai.quickPrompt';
 
 const bus = EventBus.getInstance();
+const aiOrchestrator = AIOrchestrator.getInstance();
 
 // Centralized defaults for AI actions
 export const AI_DEFAULTS = {
@@ -98,14 +100,12 @@ export const ActionRouter = {
 
     switch (action) {
       case 'ai.requestRoute':
-        console.log('ActionRouter: Emitting ai:routeRequested event');
-        bus.emit('ai:routeRequested', normalizeRoutePayload(payload) as any);
+        console.log('ActionRouter: Requesting AI route through orchestrator');
+        aiOrchestrator.requestRoute(normalizeRoutePayload(payload));
         break;
       case 'ai.requestGhostRunner':
-        console.log('ActionRouter: Emitting ai:ghostRunnerRequested event');
-        // New explicit request event for ghost runner generation
-        // Handled by AIService subscription
-        bus.emit('ai:ghostRunnerRequested' as any, normalizeGhostPayload(payload) as any);
+        console.log('ActionRouter: Requesting ghost runner through orchestrator');
+        aiOrchestrator.requestGhostRunner(normalizeGhostPayload(payload));
         break;
       case 'ai.showRoute':
         console.log('ActionRouter: Emitting ai:routeVisualize event with coordinates:', payload?.coordinates?.length || 0);
@@ -131,7 +131,7 @@ export const ActionRouter = {
         console.log('ActionRouter: Processing quick prompt:', payload?.type);
         // Convert quick prompt to route request with enhanced context
         const quickPromptData = normalizeQuickPrompt(payload);
-        bus.emit('ai:routeRequested', quickPromptData);
+        aiOrchestrator.requestRoute(quickPromptData);
         break;
       default:
         console.warn('Unknown UI action:', action, payload);

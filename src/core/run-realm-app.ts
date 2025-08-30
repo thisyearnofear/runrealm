@@ -21,6 +21,7 @@ import { ProgressionService } from "../services/progression-service";
 import { GameService } from "../services/game-service";
 import { ContractService } from "../services/contract-service";
 import { SoundService } from "../services/sound-service";
+import { AIOrchestrator } from "../services/ai-orchestrator";
 
 // Import existing services
 import { PreferenceService } from "../preference-service";
@@ -73,6 +74,7 @@ export class RunRealmApp {
   private navigation: NavigationService;
   private animation: AnimationService;
   private sound: SoundService;
+  private aiOrchestrator: AIOrchestrator;
   private dom: DOMService;
   private gamefiUI: GameFiUI;
   private walletWidget: WalletWidget;
@@ -153,6 +155,7 @@ export class RunRealmApp {
     this.navigation = NavigationService.getInstance();
     this.animation = AnimationService.getInstance();
     this.sound = SoundService.getInstance();
+    this.aiOrchestrator = AIOrchestrator.getInstance();
 
     // Initialize remaining services (CONSOLIDATED)
     this.enhancedRunControls = new EnhancedRunControls();
@@ -283,30 +286,30 @@ export class RunRealmApp {
       console.log("Navigation to:", (data as any).routeId);
     });
 
-    // AI service events
-    this.eventBus.on("ai:routeReady", (data) => {
-      // Play route generated sound
-      this.sound.playRouteGeneratedSound();
-      
-      // Show success toast
-      this.ui.showToast("AI route generated successfully!", { 
-        type: "success",
-        action: {
-          text: "View",
-          callback: () => {
-            // The route info panel will automatically show when ai:routeReady is emitted
-          }
-        }
-      });
-    });
+    // AI service events - now handled by AIOrchestrator
+    // this.eventBus.on("ai:routeReady", (data) => {
+    //   // Play route generated sound
+    //   this.sound.playRouteGeneratedSound();
+    //   
+    //   // Show success toast
+    //   this.ui.showToast("AI route generated successfully!", { 
+    //     type: "success",
+    //     action: {
+    //       text: "View",
+    //       callback: () => {
+    //         // The route info panel will automatically show when ai:routeReady is emitted
+    //       }
+    //     }
+    //   });
+    // });
 
-    this.eventBus.on("ai:routeFailed", (data) => {
-      // Play error sound
-      this.sound.playErrorSound();
-      
-      // Show error toast
-      this.ui.showToast(`Route generation failed: ${data.message}`, { type: "error" });
-    });
+    // this.eventBus.on("ai:routeFailed", (data) => {
+    //   // Play error sound
+    //   this.sound.playErrorSound();
+    //   
+    //   // Show error toast
+    //   this.ui.showToast(`Route generation failed: ${data.message}`, { type: "error" });
+    // });
 
     // Listen for config updates (e.g., when runtime tokens are loaded)
     this.eventBus.on("config:updated", () => {

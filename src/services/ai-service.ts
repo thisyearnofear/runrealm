@@ -195,13 +195,24 @@ export class AIService extends BaseService {
 
     // Wire EventBus listeners for AI triggers
     // Listen for route requests
-    this.subscribe('ai:routeRequested', async (data: { distance?: number; difficulty?: number; goals?: string[]; quickPromptType?: string; contextPrompt?: string; [key: string]: any }) => {
+    this.subscribe('ai:routeRequested', async (data: { requestId?: string; distance?: number; difficulty?: number; goals?: string[]; quickPromptType?: string; contextPrompt?: string; [key: string]: any }) => {
       console.log('AIService: Received ai:routeRequested event:', data);
       try {
+        // Report progress
+        if (data.requestId) {
+          this.safeEmit(`${data.requestId}:progress`, { progress: 10 });
+        }
+        
         // Initialize if needed
         if (!this.isInitialized) {
           await this.init();
         }
+        
+        // Report progress
+        if (data.requestId) {
+          this.safeEmit(`${data.requestId}:progress`, { progress: 20 });
+        }
+        
         const goals: AIGoals = {};
         if (Array.isArray(data?.goals) && data.goals.length) {
           // If goals provided as strings, map a couple of simple flags
@@ -253,12 +264,17 @@ export class AIService extends BaseService {
 
         console.log('AIService: Using location for route generation:', currentLocation);
 
+        // Report progress
+        if (data.requestId) {
+          this.safeEmit(`${data.requestId}:progress`, { progress: 40 });
+        }
+
         // If AI disabled or init failed, synthesize a fallback route and emit failure for UI
         if (!this.isAIEnabled()) {
           const fallback = this.parseRouteOptimization(JSON.stringify({}), currentLocation, goals);
           const waypoints = fallback.suggestedRoute.coordinates.map(([lng, lat]) => ({ lat, lng }));
           if (waypoints.length < 2) {
-            this.safeEmit('ai:routeFailed', { message: 'AI is disabled and no fallback route available.' });
+            this.safeEmit('ai:routeFailed', { message: 'AI is disabled and no fallback route available.', requestId: data.requestId });
             return;
           }
           this.safeEmit('ai:routeReady', {
@@ -268,17 +284,29 @@ export class AIService extends BaseService {
             waypoints,
             totalDistance: fallback.suggestedRoute.distance,
             difficulty: fallback.suggestedRoute.difficulty,
-            estimatedTime: Math.round((fallback.suggestedRoute.distance || 0) * 5) // naive 5s/m
+            estimatedTime: Math.round((fallback.suggestedRoute.distance || 0) * 5), // naive 5s/m
+            requestId: data.requestId
           });
           return;
         }
 
+        // Report progress
+        if (data.requestId) {
+          this.safeEmit(`${data.requestId}:progress`, { progress: 50 });
+        }
+
         const optimization = await this.suggestRoute(currentLocation, goals, []);
+        
+        // Report progress
+        if (data.requestId) {
+          this.safeEmit(`${data.requestId}:progress`, { progress: 80 });
+        }
+        
         const coords = optimization.suggestedRoute.coordinates || [];
         const waypoints = coords.map(([lng, lat]) => ({ lat, lng }));
 
         if (waypoints.length < 2) {
-          this.safeEmit('ai:routeFailed', { message: 'Not enough route data returned by AI.' });
+          this.safeEmit('ai:routeFailed', { message: 'Not enough route data returned by AI.', requestId: data.requestId });
           return;
         }
 
@@ -339,14 +367,24 @@ export class AIService extends BaseService {
             }
           });
         }
+        
+        // Report completion
+        if (data.requestId) {
+          this.safeEmit(`${data.requestId}:progress`, { progress: 100 });
+          this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
+        }
       } catch (err) {
         console.error('AI route request failed', err);
-        this.safeEmit('ai:routeFailed', { message: 'Failed to generate route. Please try again.' });
+        this.safeEmit('ai:routeFailed', { 
+          message: 'Failed to generate route. Please try again.', 
+          requestId: data.requestId,
+          error: err.message || err
+        });
       }
     });
 
     // Listen for ghost runner requests
-    this.subscribe('ai:ghostRunnerRequested' as any, async (data: { difficulty?: number }) => {
+    this.subscribe('ai:ghostRunnerRequested' as any, async (data: { requestId?: string; difficulty?: number }) => {
       console.log('AIService: Received ai:ghostRunnerRequested event:', data);
       try {
         console.log('AIService: Ghost runner request received:', data);
@@ -365,15 +403,25 @@ export class AIService extends BaseService {
         this.safeEmit('ai:ghostRunnerGenerated', {
           runner: ghost,
           difficulty: ghost.difficulty,
-          success: true
+          success: true,
+          requestId: data.requestId
         });
+        
+        // Report completion
+        if (data.requestId) {
+          this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
+        }
 
       } catch (err) {
         const errorMsg = `Ghost runner generation failed: ${err.message || err}`;
         console.error('AIService:', errorMsg, err);
 
         // Emit both specific error and general service error
-        this.safeEmit('ai:ghostRunnerFailed', { message: errorMsg });
+        this.safeEmit('ai:ghostRunnerFailed', { 
+          message: errorMsg,
+          requestId: data.requestId,
+          error: err.message || err
+        });
         this.safeEmit('service:error', {
           service: 'AIService',
           context: 'ghostRunner',
