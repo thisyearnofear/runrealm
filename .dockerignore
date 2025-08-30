@@ -1,0 +1,49 @@
+# Dependencies (will be installed in container)
+node_modules/
+npm-debug.log*
+
+# Environment files (will be provided at runtime)
+.env
+.env.*
+
+# Build outputs (will be built in container)
+/public/*.js
+/public/*.js.map
+/public/*.css
+/public/*.css.map
+/public/index.html
+/dist/
+/build/
+
+# Development files
+.git/
+.github/
+.vscode/
+.idea/
+
+# Testing
+coverage/
+test-results/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation (not needed in container)
+docs/
+*.md
+LICENSE
+
+# Development tools
+.aider*
+.qodo/

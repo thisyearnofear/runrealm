@@ -146,7 +146,6 @@ $RECYCLE.BIN/
 *.msp
 
 # Docker
-.dockerignore
 docker-compose.override.yml
 .docker/
 
