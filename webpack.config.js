@@ -14,7 +14,7 @@ module.exports = (env, argv) => {
   const exposedEnvVariables = {
     NODE_ENV: argv.mode || "development",
     // API base URL for token endpoint (dev → local express, prod → hetzner backend)
-    API_BASE_URL: argv.mode === "production" ? "http://runrealm.coupondj.fun:3000" : "http://localhost:3000",
+    API_BASE_URL: argv.mode === "production" ? "https://runrealm.coupondj.fun:3000" : "http://localhost:3000",
     // Public configuration only
     ENABLE_WEB3: process.env.ENABLE_WEB3 || "true",
     ENABLE_AI_FEATURES: process.env.ENABLE_AI_FEATURES || "true",

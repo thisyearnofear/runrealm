@@ -151,14 +151,24 @@ export class ConfigService {
 
   private async fetchRuntimeTokens(): Promise<{mapbox?: string, gemini?: string}> {
     try {
-      // Use configurable API base URL for dev/prod environments
-      const apiBaseUrl = (typeof __ENV__ !== 'undefined' && __ENV__.API_BASE_URL) ? __ENV__.API_BASE_URL : '';
-      const response = await fetch(`${apiBaseUrl}/api/tokens`);
+      // In production, use relative URL to leverage Netlify proxy
+      // In development, use full API base URL
+      const isProduction = process.env.NODE_ENV === 'production';
+      const apiUrl = isProduction 
+        ? '/api/tokens'  // Netlify will proxy this to Hetzner backend
+        : `${(typeof __ENV__ !== 'undefined' && __ENV__.API_BASE_URL) || 'http://localhost:3000'}/api/tokens`;
+      
+      console.debug(`Fetching tokens from: ${apiUrl}`);
+      const response = await fetch(apiUrl);
       if (response.ok) {
-        return await response.json();
+        const tokens = await response.json();
+        console.debug('Successfully fetched runtime tokens');
+        return tokens;
+      } else {
+        console.debug(`Token fetch failed with status: ${response.status}`);
       }
     } catch (error) {
-      console.debug('Runtime token fetch failed, falling back to other sources');
+      console.debug('Runtime token fetch failed:', error.message);
     }
     return {};
   }

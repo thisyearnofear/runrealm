@@ -13,7 +13,7 @@
 [[redirects]]
   # Proxy API calls to Hetzner backend
   from = "/api/*"
-  to = "http://runrealm.coupondj.fun:3000/api/:splat"
+  to = "https://runrealm.coupondj.fun:3000/api/:splat"
   status = 200
   force = false
 
