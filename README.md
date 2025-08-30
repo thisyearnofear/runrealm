@@ -224,15 +224,10 @@ npm run server
 docker-compose up --build
 ```
 
-#### Deploy to Server (Hetzner/VPS)
+#### Deploy to Server (Minimal Setup)
 ```bash
-# On your server
-cd /opt
-git clone https://github.com/thisyearnofear/runrealm.git runrealm
-cd runrealm
-npm ci
-npm run build
-pm2 start server.js --name runrealm
+# Minimal server setup - copy built files only
+# See docs/DEVELOPER_GUIDE.md for detailed instructions
 ```
 
 See [Developer Guide](docs/DEVELOPER_GUIDE.md) for detailed setup instructions.

@@ -49,41 +49,51 @@ npm run server    # Express server on :3000 (API + static files)
 npm run serve     # Webpack dev server on :8080 (with proxy to :3000)
 ```
 
-### Production Build & Server
+### Production Deployment (Split Architecture)
+
+**Frontend (Netlify):**
 ```bash
-# 1. Build the frontend
+# Build for production (automatically points to Hetzner backend)
 npm run build
-
-# 2. Set up production environment
-cp .env.example .env
-# Edit .env with your actual tokens:
-# MAPBOX_ACCESS_TOKEN=your_token
-# GOOGLE_GEMINI_API_KEY=your_key
-# NODE_ENV=production
-
-# 3. Start the production server
-npm run server
-# Opens http://localhost:3000 (serves static files AND /api/tokens)
+# Deploy to Netlify via GitHub integration or manual upload
+# Live at: https://runrealm.netlify.app
 ```
 
-### Deploy to Hetzner Server
+**Backend (Hetzner - API only):**
+```bash
+# Minimal server setup with CORS for Netlify
+# See "Deploy to Server" section below
+# API endpoint: http://runrealm.coupondj.fun:3000/api/tokens
+```
+
+### Deploy to Server (Minimal Setup)
 ```bash
 # SSH to your server
 ssh your-user@your-server
 
-# Navigate to project directory
-cd /opt/runrealm
+# Set up minimal server (one-time setup)
+cd /opt
+mkdir runrealm && cd runrealm
 
-# Pull latest changes
-git pull
+# Create minimal package.json
+cat > package.json << 'EOF'
+{
+  "name": "runrealm-server",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {"start": "node server.js"},
+  "dependencies": {"express": "^5.1.0", "dotenv": "^17.2.1"}
+}
+EOF
 
-# Install dependencies and build
-npm ci
-npm run build
+# Install minimal dependencies and copy files
+npm install
+# Copy server.js and built public/ files from your local build
+# Set up .env with your API keys
 
-# Start with PM2 (production process manager)
+# Start with PM2
 pm2 start server.js --name runrealm
-pm2 save  # Save PM2 configuration
+pm2 save
 ```
 
 ## 🏗️ Architecture Overview

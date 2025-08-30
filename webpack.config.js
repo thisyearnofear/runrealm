@@ -13,8 +13,8 @@ module.exports = (env, argv) => {
   // 🚨 NEVER include sensitive API keys, private keys, or secrets here
   const exposedEnvVariables = {
     NODE_ENV: argv.mode || "development",
-    // API base URL for token endpoint (dev → local express, prod → same origin)
-    API_BASE_URL: argv.mode === "production" ? "" : "http://localhost:3000",
+    // API base URL for token endpoint (dev → local express, prod → hetzner backend)
+    API_BASE_URL: argv.mode === "production" ? "http://runrealm.coupondj.fun:3000" : "http://localhost:3000",
     // Public configuration only
     ENABLE_WEB3: process.env.ENABLE_WEB3 || "true",
     ENABLE_AI_FEATURES: process.env.ENABLE_AI_FEATURES || "true",
