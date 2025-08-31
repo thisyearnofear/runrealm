@@ -365,7 +365,7 @@ export class RunRealmApp {
           if (this.animation && this.animation.setAIRoute) {
             console.log("🧪 Calling AnimationService.setAIRoute directly...");
             this.animation.setAIRoute(
-              testCoordinates,
+              testCoordinates as [number, number][],
               {
                 color: "#ff0000",
                 width: 6,
@@ -727,10 +727,16 @@ export class RunRealmApp {
         essential: true, // This animation is essential for user experience
       });
 
-      // Show toast notification
-      this.ui.showToast("📍 Location updated", {
-        type: "success",
-      });
+      // Only show location update notification if not during an active run
+      // This prevents constant notifications during GPS tracking
+      const currentRun = this.runTracking.getCurrentRun();
+      const isDuringActiveRun = currentRun && currentRun.status === "recording";
+
+      if (!isDuringActiveRun) {
+        this.ui.showToast("📍 Location updated", {
+          type: "success",
+        });
+      }
 
       // Save the new focus
       this.saveFocus();
@@ -924,13 +930,13 @@ export class RunRealmApp {
         // Visualize the new AI route
         if (data.coordinates && data.coordinates.length > 1) {
           this.animation.setAIRoute(
-            data.coordinates,
+            data.coordinates as [number, number][],
             data.style,
             data.metadata
           );
 
           // Optionally fit map to show the entire route
-          this.fitMapToRoute(data.coordinates);
+          this.fitMapToRoute(data.coordinates as [number, number][]);
         }
       }
     );
@@ -988,8 +994,8 @@ export class RunRealmApp {
           );
 
           // Safety check: ensure AnimationService has map reference
-          if (!this.animationService.map) {
-            this.animationService.map = this.map;
+          if (!this.animation.map) {
+            this.animation.map = this.map;
           }
 
           // Clear any existing AI route (FIXED)
@@ -998,13 +1004,13 @@ export class RunRealmApp {
           // Visualize the new AI route
           if (data.coordinates && data.coordinates.length > 1) {
             this.animation.setAIRoute(
-              data.coordinates,
+              data.coordinates as [number, number][],
               data.style,
               data.metadata
             );
 
             // Optionally fit map to show the entire route
-            this.fitMapToRoute(data.coordinates);
+            this.fitMapToRoute(data.coordinates as [number, number][]);
           }
         }
       );
