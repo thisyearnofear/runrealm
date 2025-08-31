@@ -22,6 +22,7 @@ import { GameService } from "../services/game-service";
 import { ContractService } from "../services/contract-service";
 import { SoundService } from "../services/sound-service";
 import { AIOrchestrator } from "../services/ai-orchestrator";
+import { CrossChainService } from "../services/cross-chain-service";
 
 // Import existing services
 import { PreferenceService } from "../preference-service";
@@ -35,6 +36,7 @@ import { MainUI } from "../components/main-ui";
 
 // Import new components
 import { RouteInfoPanel } from "../components/route-info-panel";
+import { CrossChainDemoComponent } from "../components/cross-chain-demo";
 
 // Type definitions for Mapbox
 type MapboxGL = typeof import("mapbox-gl");
@@ -82,6 +84,8 @@ export class RunRealmApp {
   private mainUI: MainUI;
   private routeInfoPanel: RouteInfoPanel;
   private enhancedRunControls: EnhancedRunControls;
+  private crossChainService: CrossChainService;
+  private crossChainDemo: CrossChainDemoComponent;
 
   // Lazy-loaded services (PERFORMANT: created only when needed)
   private nextSegmentService: NextSegmentService;
@@ -156,6 +160,8 @@ export class RunRealmApp {
     this.animation = AnimationService.getInstance();
     this.sound = SoundService.getInstance();
     this.aiOrchestrator = AIOrchestrator.getInstance();
+    this.crossChainService = new CrossChainService();
+    this.crossChainDemo = new CrossChainDemoComponent();
 
     // Initialize remaining services (CONSOLIDATED)
     this.enhancedRunControls = new EnhancedRunControls();
@@ -506,6 +512,11 @@ export class RunRealmApp {
         await this.walletWidget.initialize();
       }
 
+      // Initialize Cross-Chain Service (if Web3 is enabled)
+      if (this.config.isWeb3Enabled()) {
+        await this.crossChainService.initialize();
+      }
+
       // Initialize AI service AFTER web3/config is fully loaded
       await this.ai.initializeService();
 
@@ -564,6 +575,8 @@ export class RunRealmApp {
       Web3Service: this.web3, // Legacy compatibility
       ai: this.ai,
       AIService: this.ai, // Legacy compatibility
+      crossChain: this.crossChainService,
+      CrossChainService: this.crossChainService, // Legacy compatibility
 
       // UI services
       animation: this.animation,

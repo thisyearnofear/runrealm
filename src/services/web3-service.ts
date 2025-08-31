@@ -349,6 +349,13 @@ export class Web3Service extends BaseService {
   }
 
   /**
+   * Get the current signer
+   */
+  public getSigner(): any {
+    return this.signer;
+  }
+
+  /**
    * Check if wallet is connected
    */
   public isWalletConnected(): boolean {

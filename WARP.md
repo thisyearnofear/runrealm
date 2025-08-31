@@ -118,7 +118,7 @@ RunRealmApp (main controller in src/core/run-realm-app.ts)
 ├── Web3Service - Blockchain interactions (NEW)
 ├── AIService - Google Gemini integration (NEW)  
 ├── GameFiUI - Gaming HUD overlay (NEW)
-└── ZetaChainService - Universal contracts (NEW)
+└── CrossChainService - ZetaChain Universal Contracts (NEW)
 ```
 
 ### Key Services & Components
@@ -137,6 +137,7 @@ RunRealmApp (main controller in src/core/run-realm-app.ts)
 - `OnboardingService` - User onboarding flow
 - `NavigationService` - App navigation and routing
 - `ProgressionService` - Player statistics and achievements
+- `CrossChainService` - ZetaChain Universal Contract integration
 
 **Smart Contracts** (`contracts/`):
 - `RunRealmUniversalContract.sol` - Main ZetaChain Universal Contract for cross-chain territory management
@@ -157,11 +158,76 @@ The application uses a comprehensive event system defined in `src/core/event-bus
 - `territory:*` - Territory claiming and management
 - `ai:*` - AI coaching and route generation
 - `game:*` - GameFi mechanics and rewards
+- `crosschain:*` - Cross-chain messaging and interactions
 
 ### Data Flow Pattern
 ```
 User Action → EventBus → Service Layer → Blockchain/AI → UI Update
 ```
+
+## Google Buildathon Cross-Chain Innovation
+
+### Key Cross-Chain Features Implemented
+
+**🎯 Cross-Chain Lending Track:**
+- Universal contract integration for cross-chain territory claiming
+- Gas abstraction - users pay gas only on their native chain
+- Cross-chain messaging via ZetaChain Gateway API
+- True cross-chain ownership with unified interface
+
+**🚀 Web3 Applications Track:**
+- Innovative fitness GameFi experience with real-world value
+- Google Gemini AI integration for route optimization
+- NFT territories with cross-chain provenance tracking
+- Seamless UX across multiple blockchain networks
+
+### Special Prizes Targeted Implementation
+
+**Best Use of ZetaChain Universal Contract:**
+- Proper Universal Contract pattern implementation
+- Cross-chain messaging via Gateway API integration
+- Gas abstraction for improved user experience
+- Single interface for all chain interactions
+
+**Most Innovative Use of Gateway API:**
+- Territory claiming from any supported chain
+- Player stats synchronization across chains
+- Reward distribution to multiple chains
+- Real-time cross-chain activity tracking
+
+**Best AI Feature:**
+- Google Gemini integration for route suggestions
+- AI-powered territory difficulty assessment
+- Personalized coaching based on cross-chain activity
+- Context-aware fitness recommendations
+
+### Cross-Chain Service Architecture
+
+The `CrossChainService` implements ZetaChain's Universal Contract capabilities:
+
+```typescript
+// Cross-chain territory claim
+const tx = await zetaClient.gateway.sendMessage({
+  signer: walletSigner,
+  destinationChainId: 7001,
+  destinationAddress: contractAddress,
+  message: encodedTerritoryData,
+  gasLimit: 500000
+});
+```
+
+**Key Methods:**
+- `sendMessage()` - Cross-chain message transmission
+- `listenForMessages()` - Incoming message handling
+- `getSupportedChains()` - Chain compatibility checking
+- `demonstrateZetaChainAPI()` - API usage examples for judges
+
+### Cross-Chain Integration Points
+
+1. **Frontend**: CrossChainService orchestrates ZetaChain interactions
+2. **Smart Contracts**: Universal Contract handles `onCall` message processing
+3. **UI**: Visual chain indicators and cross-chain history tracking
+4. **Data Model**: Territory metadata with cross-chain provenance
 
 ## Important Files
 
@@ -178,6 +244,11 @@ User Action → EventBus → Service Layer → Blockchain/AI → UI Update
 - `src/core/event-bus.ts` - Type-safe event system
 - `src/current-run.ts` - Running route data model
 - `src/index.ts` - Application entry point
+
+### Cross-Chain Services
+- `src/services/cross-chain-service.ts` - ZetaChain Gateway API integration
+- `src/services/contract-service.ts` - Smart contract interactions with cross-chain support
+- `src/services/territory-service.ts` - Territory management with cross-chain tracking
 
 ### Environment Setup
 - Copy `.env.example` to `.env` and add Mapbox token
@@ -206,6 +277,12 @@ Services use consistent error handling:
 - Cross-chain support via ZetaChain Universal Contracts
 - Gas abstraction - users pay gas on their native chain
 
+### Cross-Chain Integration
+- Cross-chain features build on existing ZetaChain infrastructure
+- Universal Contract handles all chain interactions
+- Gateway API manages message routing between chains
+- Client-side services coordinate cross-chain operations
+
 ### Performance Considerations
 - Mapbox GL is dynamically imported to reduce initial bundle size
 - Bundle optimization with code splitting and tree shaking
@@ -217,6 +294,7 @@ Services use consistent error handling:
 - Unit tests for core functionality
 - Integration tests for Web3 features
 - Performance testing with automated lighthouse audits
+- Cross-chain simulation testing
 
 ## Deployment Requirements
 

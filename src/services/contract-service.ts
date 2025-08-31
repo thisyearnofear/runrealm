@@ -33,6 +33,7 @@ export interface TerritoryMetadata {
   totalRewards: number;
   isActive: boolean;
   tokenId: number;
+  crossChainHistory?: Array<{ chainId: number; timestamp: number; transactionHash?: string }>;
 }
 
 export interface PlayerStats {
@@ -41,6 +42,11 @@ export interface PlayerStats {
   totalRewards: number;
   level: number;
   lastActivity: number;
+}
+
+export interface CrossChainTerritoryData extends TerritoryClaimData {
+  originChainId: number;
+  originAddress: string;
 }
 
 export class ContractService extends BaseService {
@@ -271,6 +277,120 @@ export class ContractService extends BaseService {
   }
 
   /**
+   * Handle cross-chain territory claim
+   * MODULAR: Reusable for cross-chain interactions
+   */
+  public async handleCrossChainTerritoryClaim(
+    crossChainData: CrossChainTerritoryData
+  ): Promise<void> {
+    if (!this.universalContract) {
+      throw new Error("Universal contract not initialized");
+    }
+
+    try {
+      console.log(
+        "ContractService: Handling cross-chain territory claim...",
+        crossChainData
+      );
+
+      // Check if geohash is already claimed
+      const isClaimed = await this.universalContract[
+        CONTRACT_METHODS.universal.isGeohashClaimed
+      ](crossChainData.geohash);
+
+      if (isClaimed) {
+        throw new Error("Territory already claimed by another player");
+      }
+
+      // In a real implementation, this would be called via ZetaChain's onCall method
+      // For now, we'll simulate the process by directly calling mintTerritory
+      const tx = await this.universalContract[
+        CONTRACT_METHODS.universal.mintTerritory
+      ](
+        crossChainData.geohash,
+        crossChainData.difficulty,
+        crossChainData.distance,
+        crossChainData.landmarks
+      );
+
+      console.log(
+        "ContractService: Cross-chain territory claim transaction submitted:",
+        tx.hash
+      );
+
+      // Wait for confirmation
+      const receipt = await tx.wait();
+
+      if (receipt.status === 1) {
+        console.log("ContractService: Cross-chain territory claimed successfully!", {
+          hash: tx.hash,
+        });
+        
+        // Emit success event
+        this.safeEmit("web3:crossChainTerritoryClaimed", {
+          hash: tx.hash,
+          geohash: crossChainData.geohash,
+          originChainId: crossChainData.originChainId,
+          originAddress: crossChainData.originAddress,
+        });
+      } else {
+        throw new Error("Cross-chain territory claim transaction failed");
+      }
+    } catch (error) {
+      console.error("ContractService: Cross-chain territory claim failed:", error);
+      
+      // Emit failure event
+      this.safeEmit("web3:crossChainTerritoryClaimFailed", {
+        error: error instanceof Error ? error.message : String(error),
+        data: crossChainData,
+      });
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Process incoming cross-chain message
+   * This method would be called by the Universal Contract's onCall function
+   * when a cross-chain message is received
+   */
+  public async processCrossChainMessage(
+    context: any,
+    zrc20: string,
+    amount: number,
+    message: string
+  ): Promise<void> {
+    try {
+      console.log("ContractService: Processing cross-chain message", { context, zrc20, amount, message });
+      
+      // Decode the message
+      const decoded = JSON.parse(message);
+      
+      // Handle different message types
+      switch (decoded.type) {
+        case "territoryClaim":
+          await this.handleCrossChainTerritoryClaim(decoded.data);
+          break;
+        case "statsUpdate":
+          // Handle stats update
+          console.log("Processing stats update from cross-chain message");
+          break;
+        case "rewardClaim":
+          // Handle reward claim
+          console.log("Processing reward claim from cross-chain message");
+          break;
+        default:
+          console.warn("Unknown cross-chain message type:", decoded.type);
+      }
+      
+      console.log("ContractService: Cross-chain message processed successfully");
+    } catch (error) {
+      console.error("ContractService: Failed to process cross-chain message:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if a geohash is already claimed
    */
   public async isGeohashClaimed(geohash: string): Promise<boolean> {
@@ -339,6 +459,8 @@ export class ContractService extends BaseService {
         totalRewards: Number(info.totalRewards),
         isActive: info.isActive,
         tokenId,
+        // Note: crossChainHistory is not stored on-chain, it's tracked client-side
+        crossChainHistory: []
       };
     } catch (error) {
       console.error("ContractService: Failed to get territory info:", error);

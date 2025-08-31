@@ -57,7 +57,7 @@ const tx = await zetaClient.gateway.sendMessage({
   signer: walletSigner,
   destinationChainId: 7001,
   destinationAddress: contractAddress,
-  message: encodedData,
+  message: encodedTerritoryData,
   gasLimit: 500000
 });
 ```
@@ -131,78 +131,23 @@ npm run dev
 
 The development server will automatically set the API keys in localStorage for development use.
 
-## Production Deployment
+## 🎯 Cross-Chain Demo for Judges
 
-For production deployment, API keys should NEVER be included in client-side code. Instead:
+To demonstrate the cross-chain functionality:
 
-1. Use secure server-side endpoints to provide tokens at runtime
-2. Store actual API keys as environment variables on your server
-3. Use the Express.js server (already set up) to serve tokens securely
+1. Connect wallet to any supported chain (Ethereum, BSC, Polygon, etc.)
+2. Open browser console to view detailed logs
+3. Navigate to territory claiming feature
+4. Claim a territory cross-chain
+5. Observe cross-chain message processing
+6. View territory created on ZetaChain with cross-chain history
 
-### Express.js Server (Default and Recommended)
+### Technical Documentation
 
-The application includes an Express.js server that serves static files and provides the API endpoint for tokens.
-
-1. Set your API keys as environment variables:
-   ```bash
-   export MAPBOX_ACCESS_TOKEN=your_mapbox_token
-   export GOOGLE_GEMINI_API_KEY=your_gemini_key
-   ```
-
-2. Build the application:
-   ```bash
-   npm run build
-   ```
-
-3. Start the server:
-   ```bash
-   npm run server
-   ```
-
-The server will serve the static files and provide the API endpoint for tokens at `/api/tokens`.
-
-### Deployment to Your Hetzner Server
-
-Since you have a Hetzner server, you can deploy the application there:
-
-1. Clone the repository to your Hetzner server:
-   ```bash
-   git clone <your-repo-url>
-   cd RunRealm
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Set your API keys as environment variables in a `.env` file or systemd service:
-   ```bash
-   echo "MAPBOX_ACCESS_TOKEN=your_mapbox_token" >> .env
-   echo "GOOGLE_GEMINI_API_KEY=your_gemini_key" >> .env
-   ```
-
-4. Build the application:
-   ```bash
-   npm run build
-   ```
-
-5. Start the server:
-   ```bash
-   npm run server
-   ```
-
-For production use, you should set up a systemd service to run the server automatically and use a reverse proxy like Nginx for SSL termination.
-
-### Other Serverless Platforms
-
-If you prefer to use serverless platforms, you can also deploy the token endpoint to:
-- AWS Lambda
-- Google Cloud Functions
-- Azure Functions
-- Vercel Functions
-
-Just make sure to update the `fetchRuntimeTokens` method in `src/core/app-config.ts` to point to your endpoint.
+For detailed technical implementation:
+- [ZetaChain Integration Guide](ZETA_CHAIN_INTEGRATION_GUIDE.md)
+- [Technical Demo Script](TECHNICAL_DEMO_SCRIPT.md)
+- [Smart Contract Documentation](docs/DEPLOYMENT_CONTRACTS_GUIDE.md)
 
 ## 📚 Documentation
 

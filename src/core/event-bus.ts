@@ -10,6 +10,8 @@ export interface Web3Events {
   "web3:transactionConfirmed": { hash: string; blockNumber: number };
   "web3:transactionFailed": { hash?: string; error: string };
   "web3:territoryClaimed": { tokenId: string; geohash: string; metadata: any };
+  "web3:crossChainTerritoryClaimed": { hash: string; geohash: string; originChainId: number };
+  "web3:crossChainTerritoryClaimFailed": { error: string; geohash: string };
   "territory:challenged": {
     tokenId: string;
     challenger: string;
@@ -73,8 +75,8 @@ export interface AppEvents extends Web3Events {
   "territory:eligible": { territory: any; run: any; message: string };
   "territory:preview": { territory: any; bounds: any; metadata: any };
   "territory:nearbyUpdated": { count: number; territories: any[] };
-  "territory:claimed": { territory: any; transactionHash: string };
-  "territory:claimFailed": { error: string; territory: any; runId?: string };
+  "territory:claimed": { territory: any; transactionHash: string; isCrossChain?: boolean; sourceChainId?: number };
+  "territory:claimFailed": { error: string; territory: any; runId?: string; isCrossChain?: boolean };
   "ai:routeRequested": {
     distance?: number;
     difficulty?: number;
@@ -123,6 +125,16 @@ export interface AppEvents extends Web3Events {
   "staking:stakeStarted": { transactionHash: string; amount: number };
   "staking:rewardEarned": { amount: number };
   "rewards:settingsChanged": {};
+  // Cross-chain events
+  "crosschain:territoryClaimRequested": { territoryData: any; targetChainId: number };
+  "crosschain:territoryClaimInitiated": { messageId: string; territoryData: any; targetChainId: number };
+  "crosschain:territoryClaimFailed": { error: string; data: any };
+  "crosschain:statsUpdateRequested": { statsData: any; targetChainId: number };
+  "crosschain:statsUpdateInitiated": { messageId: string; statsData: any; targetChainId: number };
+  "crosschain:statsUpdateFailed": { error: string; data: any };
+  "crosschain:messageSent": { messageId: string; targetChainId: number; targetAddress: string; data: string };
+  "crosschain:messageReceived": { message: any; decodedData: any };
+  "crosschain:territoryUpdated": { territoryId: string; action: string; sourceChainId: number };
 }
 
 export class EventBus {

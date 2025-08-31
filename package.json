@@ -89,6 +89,7 @@
     "@openzeppelin/contracts-upgradeable": "^5.4.0",
     "@turf/turf": "^6.5.0",
     "@zetachain/protocol-contracts": "^13.0.0",
+    "@zetachain/toolkit": "^16.1.1",
     "buffer": "^6.0.3",
     "copy-webpack-plugin": "^13.0.1",
     "cross-env": "^10.0.0",

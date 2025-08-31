@@ -41,8 +41,11 @@ export interface Territory {
   estimatedReward?: number;
   landmarks?: string[];
   originChain?: number;
-  crossChainHistory?: Array<{ chainId: number; timestamp: number }>;
+  crossChainHistory?: Array<{ chainId: number; timestamp: number; transactionHash?: string }>;
   transactionHash?: string;
+  isCrossChain?: boolean;
+  sourceChainId?: number;
+  crossChainClaimTxHash?: string;
 }
 
 export interface TerritoryClaimResult {
@@ -98,6 +101,151 @@ export class TerritoryService extends BaseService {
     this.subscribe("territory:claimRequested", (data: { runId: string }) => {
       this.handleClaimRequest(data.runId);
     });
+
+    // Listen for cross-chain claim confirmations
+    this.subscribe("web3:crossChainTerritoryClaimed", (data: any) => {
+      this.handleCrossChainClaimConfirmation(data);
+    });
+
+    // Listen for cross-chain claim failures
+    this.subscribe("web3:crossChainTerritoryClaimFailed", (data: any) => {
+      this.handleCrossChainClaimFailure(data);
+    });
+  }
+
+  /**
+   * Handle territory claim request
+   */
+  private async handleClaimRequest(runId: string): Promise<void> {
+    try {
+      // Find the territory associated with this run
+      const territory = this.findTerritoryByRunId(runId);
+      if (!territory) {
+        throw new Error("No claimable territory found for this run");
+      }
+
+      // Attempt to claim territory
+      const result = await this.claimTerritory(territory);
+
+      if (result.success) {
+        this.safeEmit("territory:claimed", {
+          territory: result.territory,
+          transactionHash: result.transactionHash,
+        });
+      } else {
+        this.safeEmit("territory:claimFailed", {
+          error: result.error,
+          territory,
+        });
+      }
+    } catch (error) {
+      this.safeEmit("territory:claimFailed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        territory: null,
+        runId,
+      });
+    }
+  }
+
+  /**
+   * Handle cross-chain claim confirmation
+   */
+  private async handleCrossChainClaimConfirmation(data: any): Promise<void> {
+    try {
+      console.log("TerritoryService: Cross-chain claim confirmed", data);
+
+      // Find the territory that was claimed
+      let targetTerritory: Territory | null = null;
+      for (const [id, territory] of this.claimedTerritories) {
+        if (territory.geohash === data.geohash && territory.isCrossChain) {
+          targetTerritory = territory;
+          break;
+        }
+      }
+
+      if (targetTerritory) {
+        // Update territory status to claimed
+        targetTerritory.status = "claimed";
+        targetTerritory.transactionHash = data.hash;
+        targetTerritory.crossChainClaimTxHash = data.hash;
+        targetTerritory.chainId = 7001; // ZetaChain testnet
+
+        // Add to cross-chain history
+        if (targetTerritory.crossChainHistory) {
+          const lastEntry = targetTerritory.crossChainHistory[targetTerritory.crossChainHistory.length - 1];
+          if (lastEntry) {
+            lastEntry.transactionHash = data.hash;
+          }
+        }
+
+        // Update in storage
+        this.claimedTerritories.set(targetTerritory.id, targetTerritory);
+        this.saveTerritoriesToStorage();
+
+        // Emit event
+        this.safeEmit("territory:claimed", {
+          territory: targetTerritory,
+          transactionHash: data.hash,
+          isCrossChain: true,
+          sourceChainId: data.originChainId
+        });
+
+        console.log("TerritoryService: Cross-chain territory claim completed successfully");
+      } else {
+        console.warn("TerritoryService: Could not find territory for cross-chain claim confirmation");
+      }
+    } catch (error) {
+      console.error("TerritoryService: Failed to handle cross-chain claim confirmation:", error);
+    }
+  }
+
+  /**
+   * Handle cross-chain claim failure
+   */
+  private async handleCrossChainClaimFailure(data: any): Promise<void> {
+    try {
+      console.log("TerritoryService: Cross-chain claim failed", data);
+
+      // Find the territory that failed to be claimed
+      let targetTerritory: Territory | null = null;
+      for (const [id, territory] of this.claimedTerritories) {
+        // Look for territories with pending cross-chain claims
+        if (territory.isCrossChain && territory.status === "claimable") {
+          targetTerritory = territory;
+          break;
+        }
+      }
+
+      if (targetTerritory) {
+        // Update territory status to show failure
+        targetTerritory.status = "claimable"; // Reset to claimable so user can try again
+
+        // Remove from cross-chain history if it was just added
+        if (targetTerritory.crossChainHistory && targetTerritory.crossChainHistory.length > 0) {
+          const lastEntry = targetTerritory.crossChainHistory[targetTerritory.crossChainHistory.length - 1];
+          if (lastEntry && !lastEntry.transactionHash) {
+            targetTerritory.crossChainHistory.pop();
+          }
+        }
+
+        // Update in storage
+        this.claimedTerritories.set(targetTerritory.id, targetTerritory);
+        this.saveTerritoriesToStorage();
+
+        // Emit event
+        this.safeEmit("territory:claimFailed", {
+          error: data.error,
+          territory: targetTerritory,
+          isCrossChain: true
+        });
+
+        console.log("TerritoryService: Cross-chain territory claim failure handled");
+      } else {
+        console.warn("TerritoryService: Could not find territory for cross-chain claim failure");
+      }
+    } catch (error) {
+      console.error("TerritoryService: Failed to handle cross-chain claim failure:", error);
+    }
   }
 
   /**
@@ -358,39 +506,6 @@ export class TerritoryService extends BaseService {
     return false;
   }
 
-  /**
-   * Handle territory claim request
-   */
-  private async handleClaimRequest(runId: string): Promise<void> {
-    try {
-      // Find the territory associated with this run
-      const territory = this.findTerritoryByRunId(runId);
-      if (!territory) {
-        throw new Error("No claimable territory found for this run");
-      }
-
-      // Attempt to claim territory
-      const result = await this.claimTerritory(territory);
-
-      if (result.success) {
-        this.safeEmit("territory:claimed", {
-          territory: result.territory,
-          transactionHash: result.transactionHash,
-        });
-      } else {
-        this.safeEmit("territory:claimFailed", {
-          error: result.error,
-          territory,
-        });
-      }
-    } catch (error) {
-      this.safeEmit("territory:claimFailed", {
-        error: error instanceof Error ? error.message : "Unknown error",
-        territory: null,
-        runId,
-      });
-    }
-  }
 
   /**
    * Claim territory on blockchain
@@ -399,9 +514,10 @@ export class TerritoryService extends BaseService {
     territory: Territory
   ): Promise<TerritoryClaimResult> {
     try {
-      // Get Web3 and Contract services
+      // Get Web3, Contract, and CrossChain services
       const web3Service = this.getService("Web3Service");
       const contractService = this.getService("ContractService");
+      const crossChainService = this.getService("CrossChainService");
 
       if (!web3Service || !web3Service.isConnected()) {
         throw new Error("Wallet not connected");
@@ -413,34 +529,93 @@ export class TerritoryService extends BaseService {
         );
       }
 
-      // Prepare territory data for blockchain
-      const territoryData = {
-        geohash: territory.geohash,
-        difficulty: territory.metadata.difficulty,
-        distance: territory.runData.distance,
-        landmarks: territory.metadata.landmarks,
-      };
+      const wallet = web3Service.getCurrentWallet();
+      if (!wallet) {
+        throw new Error("Wallet not connected");
+      }
 
-      // Submit to blockchain using ContractService
-      const transactionHash = await contractService.mintTerritory(
-        territoryData
-      );
+      // Check if this is a cross-chain claim
+      const isCrossChainClaim = wallet.chainId !== 7001; // Not on ZetaChain testnet
+      
+      if (isCrossChainClaim && crossChainService) {
+        // Handle cross-chain territory claim
+        console.log("TerritoryService: Initiating cross-chain territory claim");
+        
+        // Prepare cross-chain territory data
+        const crossChainData = {
+          geohash: territory.geohash,
+          difficulty: territory.metadata.difficulty,
+          distance: territory.runData.distance,
+          landmarks: territory.metadata.landmarks,
+          originChainId: wallet.chainId,
+          originAddress: wallet.address
+        };
 
-      // Update territory status
-      territory.status = "claimed";
-      territory.owner = web3Service.getCurrentWallet()?.address;
-      territory.claimedAt = Date.now();
-      territory.transactionHash = transactionHash;
+        // Request cross-chain claim through CrossChainService
+        this.safeEmit("crosschain:territoryClaimRequested", {
+          territoryData: crossChainData,
+          targetChainId: 7001 // ZetaChain testnet
+        });
 
-      // Store locally
-      this.claimedTerritories.set(territory.id, territory);
-      this.saveTerritoriesToStorage();
+        // Mark territory as cross-chain claim in progress
+        territory.status = "claimable";
+        territory.isCrossChain = true;
+        territory.sourceChainId = wallet.chainId;
+        
+        // Initialize cross-chain history if not exists
+        if (!territory.crossChainHistory) {
+          territory.crossChainHistory = [];
+        }
+        
+        // Add to cross-chain history
+        territory.crossChainHistory.push({
+          chainId: wallet.chainId,
+          timestamp: Date.now()
+        });
+        
+        // Store locally
+        this.claimedTerritories.set(territory.id, territory);
+        this.saveTerritoriesToStorage();
 
-      return {
-        success: true,
-        territory,
-        transactionHash,
-      };
+        return {
+          success: true,
+          territory,
+          transactionHash: "cross-chain-pending",
+        };
+      } else {
+        // Handle direct territory claim on ZetaChain
+        console.log("TerritoryService: Initiating direct territory claim");
+        
+        // Prepare territory data for blockchain
+        const territoryData = {
+          geohash: territory.geohash,
+          difficulty: territory.metadata.difficulty,
+          distance: territory.runData.distance,
+          landmarks: territory.metadata.landmarks,
+        };
+
+        // Submit to blockchain using ContractService
+        const transactionHash = await contractService.mintTerritory(
+          territoryData
+        );
+
+        // Update territory status
+        territory.status = "claimed";
+        territory.owner = wallet.address;
+        territory.claimedAt = Date.now();
+        territory.transactionHash = transactionHash;
+        territory.chainId = wallet.chainId;
+
+        // Store locally
+        this.claimedTerritories.set(territory.id, territory);
+        this.saveTerritoriesToStorage();
+
+        return {
+          success: true,
+          territory,
+          transactionHash,
+        };
+      }
     } catch (error) {
       console.error("Territory claiming failed:", error);
       return {
