@@ -1,12 +1,11 @@
-import { Component } from "../core/base-service";
+import { BaseService } from "../core/base-service";
 
 /**
  * CrossChainDemoComponent - Demonstrates cross-chain functionality for the Google Buildathon
  * This component provides a visual demonstration of how cross-chain operations work
  */
-export class CrossChainDemoComponent extends Component {
+export class CrossChainDemoComponent extends BaseService {
   private container: HTMLElement | null = null;
-  private eventBus: any = null;
 
   constructor() {
     super();
@@ -19,11 +18,7 @@ export class CrossChainDemoComponent extends Component {
       return;
     }
 
-    // Get event bus from global services
-    const services = (window as any).RunRealm?.services;
-    if (services?.eventBus) {
-      this.eventBus = services.eventBus;
-    }
+    // EventBus is already available from BaseService
 
     this.render();
     this.setupEventListeners();
@@ -154,7 +149,8 @@ export class CrossChainDemoComponent extends Component {
     const chainButtons = this.container?.querySelectorAll(".chain-btn");
     chainButtons?.forEach(button => {
       button.classList.remove("selected");
-      if (parseInt(button.dataset.chain || "1") === chainId) {
+      const htmlButton = button as HTMLElement;
+      if (parseInt(htmlButton.dataset.chain || "1") === chainId) {
         button.classList.add("selected");
       }
     });
