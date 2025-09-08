@@ -22,12 +22,20 @@ export interface RunSegment {
   geometry: GeoJSON.LineString;
 }
 
+export interface RunLap {
+  lapNumber: number;
+  time: number; // duration of the lap in ms
+  distance: number; // distance of the lap in meters
+  totalTime: number; // total time at the end of the lap
+}
+
 export interface RunSession {
   id: string;
   startTime: number;
   endTime?: number;
   points: RunPoint[];
   segments: RunSegment[];
+  laps: RunLap[];
   totalDistance: number; // meters
   totalDuration: number; // milliseconds
   averageSpeed: number; // m/s
@@ -57,6 +65,8 @@ export class RunTrackingService extends BaseService {
   private runConfig: RunTrackingConfig;
   private updateInterval: number | null = null;
   private locationService: any = null; // Direct reference to avoid registry dependency
+  private lastLapDistance: number = 0;
+  private lastLapTime: number = 0;
 
   constructor() {
     super();
@@ -101,10 +111,18 @@ export class RunTrackingService extends BaseService {
         console.error("RunTrackingService: Error starting run:", error);
       });
     });
+    this.subscribe("run:startWithRoute" as any, (data: { coordinates: any[]; distance: number }) => {
+      console.log("RunTrackingService: Received run:startWithRoute event with data:", data);
+      // Start run with the provided route data
+      this.startRunWithRoute(data.coordinates, data.distance).catch((error) => {
+        console.error("RunTrackingService: Error starting run with route:", error);
+      });
+    });
     this.subscribe("run:pauseRequested" as any, () => this.pauseRun());
     this.subscribe("run:resumeRequested" as any, () => this.resumeRun());
     this.subscribe("run:stopRequested" as any, () => this.stopRun());
     this.subscribe("run:cancelRequested" as any, () => this.cancelRun());
+    this.subscribe("run:lapRequested" as any, () => this.recordLap());
   }
 
   /**
@@ -145,6 +163,7 @@ export class RunTrackingService extends BaseService {
         startTime: Date.now(),
         points: [startPoint],
         segments: [],
+        laps: [],
         totalDistance: 0,
         totalDuration: 0,
         averageSpeed: 0,
@@ -154,6 +173,8 @@ export class RunTrackingService extends BaseService {
       };
 
       this.lastPoint = startPoint;
+      this.lastLapDistance = 0;
+      this.lastLapTime = 0;
 
       // Start GPS tracking
       this.startGPSTracking();
@@ -180,6 +201,92 @@ export class RunTrackingService extends BaseService {
     } catch (error) {
       console.error("RunTrackingService: Failed to start run:", error);
       throw new Error(`Failed to start run: ${error.message}`);
+    }
+  }
+
+  /**
+   * Start a new run session with a predefined route
+   */
+  public async startRunWithRoute(coordinates: any[], distance: number): Promise<string> {
+    console.log("RunTrackingService: Starting run with route...", { coordinates, distance });
+
+    if (this.currentRun?.status === "recording") {
+      throw new Error("A run is already in progress");
+    }
+
+    // Get current location to start
+    if (!this.locationService) {
+      console.error("RunTrackingService: LocationService not available");
+      throw new Error(
+        "LocationService not available - make sure setLocationService() was called"
+      );
+    }
+
+    try {
+      console.log("RunTrackingService: Getting current location for route run...");
+      const currentLocation = await this.locationService.getCurrentLocation(
+        true
+      );
+      console.log("RunTrackingService: Got location:", currentLocation);
+
+      const runId = this.generateRunId();
+      const startPoint: RunPoint = {
+        lat: currentLocation.lat,
+        lng: currentLocation.lng,
+        timestamp: Date.now(),
+        accuracy: currentLocation.accuracy,
+      };
+
+      this.currentRun = {
+        id: runId,
+        startTime: Date.now(),
+        points: [startPoint],
+        segments: [],
+        laps: [],
+        totalDistance: 0,
+        totalDuration: 0,
+        averageSpeed: 0,
+        maxSpeed: 0,
+        status: "recording",
+        territoryEligible: false,
+      };
+
+      this.lastPoint = startPoint;
+      this.lastLapDistance = 0;
+      this.lastLapTime = 0;
+
+      // Start GPS tracking
+      this.startGPSTracking();
+
+      // Start real-time updates
+      this.startRealTimeUpdates();
+
+      console.log(
+        "RunTrackingService: Run with route started successfully, emitting events"
+      );
+      this.safeEmit("run:started" as any, {
+        runId,
+        startPoint,
+        timestamp: Date.now(),
+      });
+
+      // Emit event with planned route information
+      this.safeEmit("run:plannedRouteActivated" as any, {
+        coordinates,
+        distance,
+        runId,
+      });
+
+      this.safeEmit("run:statusChanged" as any, {
+        status: "recording",
+        runId,
+        stats: this.getCurrentStats(),
+      });
+
+      return runId;
+    } catch (error) {
+      console.error("RunTrackingService: Failed to start run with route:", error);
+      throw new Error(`Failed to start run with route: ${error.message}`);
     }
   }
 
@@ -296,6 +403,37 @@ export class RunTrackingService extends BaseService {
 
     this.currentRun = null;
     this.lastPoint = null;
+  }
+
+  /**
+   * Record a lap
+   */
+  public recordLap(): void {
+    if (!this.currentRun || this.currentRun.status !== 'recording') {
+      return;
+    }
+  
+    const now = Date.now();
+    const totalTime = now - this.currentRun.startTime;
+    const totalDistance = this.currentRun.totalDistance;
+  
+    const lapTime = totalTime - this.lastLapTime;
+    const lapDistance = totalDistance - this.lastLapDistance;
+  
+    const lapNumber = this.currentRun.laps.length + 1;
+    const newLap: RunLap = {
+      lapNumber,
+      time: lapTime,
+      distance: lapDistance,
+      totalTime: totalTime,
+    };
+  
+    this.currentRun.laps.push(newLap);
+  
+    this.lastLapTime = totalTime;
+    this.lastLapDistance = totalDistance;
+  
+    this.safeEmit('run:lap' as any, { lap: newLap, runId: this.currentRun.id });
   }
 
   /**

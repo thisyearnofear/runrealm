@@ -67,6 +67,10 @@ export class EnhancedRunControls extends BaseService {
     );
   }
 
+  private getMapService(): any {
+    return (window as any).RunRealm?.services?.mapService;
+  }
+
   private setupEventListeners(): void {
     // Listen for run tracking events
     this.subscribe('run:started' as any, (data: any) => {
@@ -96,14 +100,38 @@ export class EnhancedRunControls extends BaseService {
     this.subscribe('run:pointAdded' as any, (data: any) => {
       this.updateStats(data.stats);
       this.showPointAddedFeedback();
-      // Update real-time visualization
-      this.updateRunVisualization(data.point);
+
+      const runTrackingService = (window as any).RunRealm?.services?.runTracking;
+      if (runTrackingService) {
+        const currentRun = runTrackingService.getCurrentRun();
+        if (currentRun) {
+            const mapService = this.getMapService();
+            if (mapService) {
+                mapService.drawRunTrail(currentRun.points);
+            }
+        }
+      }
+    });
+
+    this.subscribe('run:lap' as any, (data: any) => {
+      this.addLapToList(data.lap);
     });
 
     this.subscribe('territory:eligible' as any, (data: any) => {
       this.showTerritoryEligibleNotification(data);
       // Add haptic feedback for territory eligibility
       this.hapticFeedback('heavy');
+
+      const runTrackingService = (window as any).RunRealm?.services?.runTracking;
+      if (runTrackingService) {
+        const currentRun = runTrackingService.getCurrentRun();
+        if (currentRun) {
+            const mapService = this.getMapService();
+            if (mapService) {
+                mapService.drawTerritory(currentRun.points);
+            }
+        }
+      }
     });
 
     // Setup mobile-specific interactions
@@ -169,96 +197,46 @@ export class EnhancedRunControls extends BaseService {
       document.body.appendChild(this.container);
     }
 
-    // Inject CSS for animations
-    this.injectStyles();
-
     this.renderWidget();
     this.attachEventHandlers();
   }
 
-  private injectStyles(): void {
-    // Check if styles are already injected
-    if (document.getElementById('runrealm-styles')) return;
+  
 
-    const style = document.createElement('style');
-    style.id = 'runrealm-styles';
-    style.textContent = `
-      @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
-      }
-      
-      .animate-pulse {
-        animation: pulse 1s infinite;
-      }
-      
-      .run-visualization {
-        margin: 10px 0;
-        text-align: center;
-      }
-      
-      #run-path-canvas {
-        width: 100%;
-        background-color: #f0f0f0;
-        border-radius: 4px;
-      }
-      
-      /* Celebration effects */
-      @keyframes floatUp {
-        0% {
-          transform: translate(0, 0) scale(1);
-          opacity: 1;
-        }
-        100% {
-          transform: translate(0, -100px) scale(0);
-          opacity: 0;
-        }
-      }
-      
-      .celebration-bubble {
-        position: absolute;
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 100;
-        animation: floatUp 1.5s ease-in forwards;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  private getWidgetContent(): string {
+  private _getWidgetBodyHTML(isStandalone: boolean): string {
     const stats = this.currentStats;
     const distance = stats ? this.formatDistance(stats.distance) : '0.00 km';
     const duration = stats ? this.formatDuration(stats.duration) : '00:00';
     const speed = stats ? this.formatSpeed(stats.averageSpeed) : '0.0 km/h';
     const pace = stats ? this.formatPace(stats.averageSpeed) : '--:--';
+    const isRunning = this.isRecording || this.isPaused;
+
+    const distanceDisplay = isStandalone ? `<span class="stat-value" id="distance-display">${distance}</span>` : `<span class="stat-value">${distance}</span>`;
+    const durationDisplay = isStandalone ? `<span class="stat-value" id="duration-display">${duration}</span>` : `<span class="stat-value">${duration}</span>`;
+    const speedDisplay = isStandalone ? `<span class="stat-value" id="speed-display">${speed}</span>` : `<span class="stat-value">${speed}</span>`;
+    const paceDisplay = isStandalone ? `<span class="stat-value" id="pace-display">${pace}</span>` : `<span class="stat-value">${pace}</span>`;
 
     return `
-      <div class="run-status ${this.getStatusClass()}">
-        ${this.getStatusText()}
-      </div>
-
       <div class="run-stats">
         <div class="stat-group">
           <div class="stat-item primary">
             <span class="stat-label">Distance</span>
-            <span class="stat-value">${distance}</span>
+            ${distanceDisplay}
           </div>
           <div class="stat-item">
             <span class="stat-label">Time</span>
-            <span class="stat-value">${duration}</span>
+            ${durationDisplay}
           </div>
         </div>
-
+        
         <div class="stat-group">
           <div class="stat-item">
             <span class="stat-label">Speed</span>
-            <span class="stat-value">${speed}</span>
+            ${speedDisplay}
           </div>
           <div class="stat-item">
             <span class="stat-label">Pace</span>
-            <span class="stat-value">${pace}</span>
+            ${paceDisplay}
           </div>
         </div>
 
@@ -272,7 +250,17 @@ export class EnhancedRunControls extends BaseService {
 
       <!-- Real-time visualization container -->
       <div class="run-visualization" id="run-visualization">
-        <canvas id="run-path-canvas" width="200" height="100"></canvas>
+        ${!isRunning ? `
+          <div class="motivation-quote">
+            <p class="quote-text"><em>"The miracle isn't that I finished. The miracle is that I had the courage to start."</em></p>
+            <p class="quote-author">- John Bingham</p>
+          </div>
+        ` : ``}
+      </div>
+
+      <div id="run-splits-container" class="run-splits-container" style="display: none;">
+        <h4>Lap Splits</h4>
+        <ul id="splits-list"></ul>
       </div>
 
       <div class="run-controls">
@@ -283,62 +271,17 @@ export class EnhancedRunControls extends BaseService {
     `;
   }
 
-  private handleWidgetToggle(minimized: boolean): void {
-    // Update widget content when toggled
-    this.updateWidgetContent();
-  }
-
-  private updateWidgetContent(): void {
-    const widgetSystem = this.getWidgetSystem();
-    if (widgetSystem) {
-      widgetSystem.updateWidget('run-tracker', this.getWidgetContent());
-      // Listen for content update completion to reattach handlers reliably
-      this.subscribe('widget:contentUpdated' as any, (data: any) => {
-        if (data.widgetId === 'run-tracker') {
-          // Inject styles if not already present
-          this.injectStyles();
-          this.attachEventHandlers();
-        }
-      });
-    }
-  }
-
-  private tryMigrateToWidgetSystem(): void {
-    if (!this.standaloneActive) return;
-
-    const widgetSystem = this.getWidgetSystem();
-    if (!widgetSystem) return;
-
-    widgetSystem.registerWidget({
-      id: 'run-tracker',
-      title: 'Run Tracker',
-      icon: '🏃‍♂️',
-      position: 'bottom-left',
-      minimized: true,
-      priority: 10,
-      content: this.getWidgetContent(),
-    });
-
-    // Remove fallback DOM and update flags
-    document.getElementById('enhanced-run-controls')?.remove();
-    this.standaloneActive = false;
-    this.widgetInitialized = true;
-  }
-
-  private updateDisplay(): void {
-    // Update both widget system and standalone widget
-    this.updateWidgetContent();
-    this.renderWidget();
+  private getWidgetContent(): string {
+    return `
+      <div class="run-status ${this.getStatusClass()}">
+        ${this.getStatusText()}
+      </div>
+      ${this._getWidgetBodyHTML(false)}
+    `;
   }
 
   private renderWidget(): void {
     if (!this.container) return;
-
-    const stats = this.currentStats;
-    const distance = stats ? this.formatDistance(stats.distance) : '0.00 km';
-    const duration = stats ? this.formatDuration(stats.duration) : '00:00';
-    const speed = stats ? this.formatSpeed(stats.averageSpeed) : '0.0 km/h';
-    const pace = stats ? this.formatPace(stats.averageSpeed) : '--:--';
 
     this.container.innerHTML = `
       <div class="run-controls-header">
@@ -347,48 +290,30 @@ export class EnhancedRunControls extends BaseService {
           ${this.getStatusText()}
         </div>
       </div>
+      ${this._getWidgetBodyHTML(true)}
+    `;
+  }
 
-      <div class="run-stats">
-        <div class="stat-group">
-          <div class="stat-item primary">
-            <span class="stat-label">Distance</span>
-            <span class="stat-value" id="distance-display">${distance}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Duration</span>
-            <span class="stat-value" id="duration-display">${duration}</span>
-          </div>
+  private getWidgetContent(): string {
+    return `
+      <div class="run-status ${this.getStatusClass()}">
+        ${this.getStatusText()}
+      </div>
+      ${this._getWidgetBodyHTML(false)}
+    `;
+  }
+
+  private renderWidget(): void {
+    if (!this.container) return;
+
+    this.container.innerHTML = `
+      <div class="run-controls-header">
+        <h3>🏃‍♂️ Run Tracker</h3>
+        <div class="run-status ${this.getStatusClass()}">
+          ${this.getStatusText()}
         </div>
-        
-        <div class="stat-group">
-          <div class="stat-item">
-            <span class="stat-label">Speed</span>
-            <span class="stat-value" id="speed-display">${speed}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Pace</span>
-            <span class="stat-value" id="pace-display">${pace}</span>
-          </div>
-        </div>
-
-        ${stats?.territoryEligible ? `
-          <div class="territory-indicator animate-pulse">
-            <span class="territory-icon">🏆</span>
-            <span class="territory-text">Territory Eligible!</span>
-          </div>
-        ` : ''}
       </div>
-
-      <!-- Real-time visualization container -->
-      <div class="run-visualization" id="run-visualization">
-        <canvas id="run-path-canvas" width="200" height="100"></canvas>
-      </div>
-
-      <div class="run-controls">
-        ${this.renderControlButtons()}
-      </div>
-
-      <div class="run-feedback" id="run-feedback"></div>
+      ${this._getWidgetBodyHTML(true)}
     `;
   }
 
@@ -415,6 +340,10 @@ export class EnhancedRunControls extends BaseService {
         <button class="control-btn success" id="stop-run-btn">
           <span class="btn-icon">⏹️</span>
           <span class="btn-text">Finish</span>
+        </button>
+        <button class="control-btn info" id="lap-run-btn">
+          <span class="btn-icon">🚩</span>
+          <span class="btn-text">Lap</span>
         </button>
         <button class="control-btn danger" id="cancel-run-btn">
           <span class="btn-icon">❌</span>
@@ -501,7 +430,32 @@ export class EnhancedRunControls extends BaseService {
       event.preventDefault();
       event.stopPropagation();
       this.checkGPS();
+    } else if (target.matches('#lap-run-btn, #lap-run-btn *, .control-btn.info') ||
+                target.closest('#lap-run-btn')) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.recordLap();
     }
+  }
+
+  private recordLap(): void {
+    this.safeEmit('run:lapRequested' as any, {});
+  }
+
+  private addLapToList(lap: any): void {
+    const splitsList = document.getElementById('splits-list');
+    if (!splitsList) return;
+
+    const lapElement = document.createElement('li');
+    lapElement.innerHTML = `
+      <span class="lap-number">Lap ${lap.lapNumber}</span>
+      <span class="lap-distance">${this.formatDistance(lap.distance)}</span>
+      <span class="lap-time">${this.formatDuration(lap.time)}</span>
+    `;
+    splitsList.appendChild(lapElement);
+
+    // Scroll to the bottom of the list
+    splitsList.scrollTop = splitsList.scrollHeight;
   }
 
   private async startRun(): Promise<void> {
@@ -596,6 +550,16 @@ export class EnhancedRunControls extends BaseService {
     this.startRealTimeUpdates();
     this.updateDisplay();
     this.showFeedback('🏃‍♂️ Run started! GPS tracking active.', 'success');
+
+    const splitsContainer = document.getElementById('run-splits-container');
+    if (splitsContainer) {
+      splitsContainer.style.display = 'block';
+    }
+
+    const mapService = this.getMapService();
+    if (mapService) {
+      mapService.clearRun();
+    }
   }
 
   private handleRunPaused(data: any): void {
@@ -628,6 +592,20 @@ export class EnhancedRunControls extends BaseService {
     } else {
       this.showFeedback(`✅ Run completed! ${distance} in ${duration}.`, 'success');
     }
+
+    const splitsContainer = document.getElementById('run-splits-container');
+    if (splitsContainer) {
+      splitsContainer.style.display = 'none';
+      const splitsList = splitsContainer.querySelector('#splits-list');
+      if (splitsList) {
+        splitsList.innerHTML = ''; // Clear splits
+      }
+    }
+
+    const mapService = this.getMapService();
+    if (mapService) {
+      mapService.clearRun();
+    }
   }
 
   private handleRunCancelled(data: any): void {
@@ -637,6 +615,20 @@ export class EnhancedRunControls extends BaseService {
     this.stopRealTimeUpdates();
     this.updateDisplay();
     this.showFeedback('❌ Run cancelled', 'warning');
+
+    const splitsContainer = document.getElementById('run-splits-container');
+    if (splitsContainer) {
+      splitsContainer.style.display = 'none';
+      const splitsList = splitsContainer.querySelector('#splits-list');
+      if (splitsList) {
+        splitsList.innerHTML = ''; // Clear splits
+      }
+    }
+
+    const mapService = this.getMapService();
+    if (mapService) {
+      mapService.clearRun();
+    }
   }
 
   private updateStats(stats: RunStats): void {
@@ -813,79 +805,9 @@ export class EnhancedRunControls extends BaseService {
     }
   }
 
-  /**
-   * Update the real-time run visualization with a new point
-   */
-  private updateRunVisualization(point: any): void {
-    const canvas = document.getElementById('run-path-canvas') as HTMLCanvasElement;
-    if (!canvas) return;
+  
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Initialize or get the path points array
-    if (!this.pathPoints) {
-      this.pathPoints = [];
-    }
-
-    // Add the new point to our path
-    this.pathPoints.push({
-      x: point.lat,
-      y: point.lng
-    });
-
-    // Keep only the last 50 points for performance
-    if (this.pathPoints.length > 50) {
-      this.pathPoints.shift();
-    }
-
-    // Clear the canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw the path if we have enough points
-    if (this.pathPoints.length > 1) {
-      // Normalize coordinates to fit canvas
-      const minX = Math.min(...this.pathPoints.map(p => p.x));
-      const maxX = Math.max(...this.pathPoints.map(p => p.x));
-      const minY = Math.min(...this.pathPoints.map(p => p.y));
-      const maxY = Math.max(...this.pathPoints.map(p => p.y));
-      
-      const rangeX = maxX - minX || 1; // Avoid division by zero
-      const rangeY = maxY - minY || 1; // Avoid division by zero
-      
-      ctx.beginPath();
-      ctx.strokeStyle = '#00ff88';
-      ctx.lineWidth = 2;
-      
-      this.pathPoints.forEach((point, index) => {
-        const x = ((point.x - minX) / rangeX) * canvas.width;
-        const y = ((point.y - minY) / rangeY) * canvas.height;
-        
-        if (index === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-      });
-      
-      ctx.stroke();
-      
-      // Draw current position marker
-      if (this.pathPoints.length > 0) {
-        const lastPoint = this.pathPoints[this.pathPoints.length - 1];
-        const x = ((lastPoint.x - minX) / rangeX) * canvas.width;
-        const y = ((lastPoint.y - minY) / rangeY) * canvas.height;
-        
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, 2 * Math.PI);
-        ctx.fillStyle = '#ff0055';
-        ctx.fill();
-      }
-    }
-  }
-
-  // Store path points for visualization
-  private pathPoints: Array<{x: number, y: number}> = [];
+  
 
   /**
    * Setup mobile-specific interactions and gestures
@@ -1001,21 +923,6 @@ export class EnhancedRunControls extends BaseService {
       pointer-events: none;
       z-index: 1;
     `;
-
-    // Add ripple animation if not already present
-    if (!document.querySelector('#ripple-animation-styles')) {
-      const style = document.createElement('style');
-      style.id = 'ripple-animation-styles';
-      style.textContent = `
-        @keyframes ripple {
-          to {
-            transform: scale(2);
-            opacity: 0;
-          }
-        }
-      `;
-      document.head.appendChild(style);
-    }
 
     element.style.position = 'relative';
     element.style.overflow = 'hidden';

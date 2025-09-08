@@ -1,3 +1,5 @@
+import { GhostRunner } from '../services/ai-service';
+
 // Centralized event system for loose coupling
 export type EventCallback<T = any> = (data: T) => void;
 
@@ -56,6 +58,7 @@ export interface AppEvents extends Web3Events {
   "run:cleared": { timeSpent?: number; totalDistance?: number };
   "run:loaded": { run: any };
   "run:plannedRouteChanged": { geojson: any };
+  "run:plannedRouteActivated": { coordinates: any[]; distance: number; runId: string };
   "run:completed": { distance: number; duration: number; points: any[] };
   "run:paused": {};
   "run:resumed": {};
@@ -90,6 +93,8 @@ export interface AppEvents extends Web3Events {
   "ai:routeClear": {};
   "ai:ghostRunnerGenerated": { runner: any; difficulty: number; success?: boolean; fallback?: boolean };
   "ai:ghostRunnerFailed": { message: string };
+  "ghost:ready": { runner: GhostRunner };
+  "ghost:progress": { ghostId: string; progress: number; location: { lat: number, lng: number } };
   "map:focusTerritory": { geohash: string };
   "game:levelUp": { newLevel: number; player: string };
   "game:achievementUnlocked": { achievementId: string; achievement: any; player: string };

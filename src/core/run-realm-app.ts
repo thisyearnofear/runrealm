@@ -19,6 +19,7 @@ import { OnboardingService } from "../services/onboarding-service";
 import { NavigationService } from "../services/navigation-service";
 import { ProgressionService } from "../services/progression-service";
 import { GameService } from "../services/game-service";
+import { MapService } from '../services/map-service';
 import { ContractService } from "../services/contract-service";
 import { SoundService } from "../services/sound-service";
 import { AIOrchestrator } from "../services/ai-orchestrator";
@@ -78,6 +79,7 @@ export class RunRealmApp {
   private sound: SoundService;
   private aiOrchestrator: AIOrchestrator;
   private dom: DOMService;
+  private mapService: MapService;
   private gamefiUI: GameFiUI;
   private walletWidget: WalletWidget;
   private geocodingService: GeocodingService;
@@ -162,6 +164,7 @@ export class RunRealmApp {
     this.aiOrchestrator = AIOrchestrator.getInstance();
     this.crossChainService = new CrossChainService();
     this.crossChainDemo = new CrossChainDemoComponent();
+    this.mapService = new MapService();
 
     // Initialize remaining services (CONSOLIDATED)
     this.enhancedRunControls = new EnhancedRunControls();
@@ -243,6 +246,29 @@ export class RunRealmApp {
       }
     });
 
+    // Planned route activation for runs started with predefined routes
+    this.eventBus.on("run:plannedRouteActivated" as any, (data: { coordinates: any[]; distance: number; runId: string }) => {
+      try {
+        // Convert coordinates to GeoJSON format
+        const geojson = {
+          type: "Feature",
+          properties: {
+            distance: data.distance,
+            runId: data.runId
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: data.coordinates
+          }
+        };
+        
+        // Emit the same event as regular planned routes
+        this.eventBus.emit("run:plannedRouteChanged", { geojson });
+      } catch (e) {
+        console.error("Failed to activate planned route", e);
+      }
+    });
+
     this.eventBus.on("location:changed", (locationInfo) => {
       this.handleLocationChanged(locationInfo);
       // Play sound when location changes
@@ -316,6 +342,13 @@ export class RunRealmApp {
     //   // Show error toast
     //   this.ui.showToast(`Route generation failed: ${data.message}`, { type: "error" });
     // });
+
+    this.eventBus.on('ai:routeReady', (data: any) => {
+      const mapService = (window as any).RunRealm?.services?.mapService;
+      if (mapService) {
+        mapService.drawSuggestedRoute(data.route);
+      }
+    });
 
     // Listen for config updates (e.g., when runtime tokens are loaded)
     this.eventBus.on("config:updated", () => {
@@ -475,6 +508,7 @@ export class RunRealmApp {
       return new Promise((resolve, reject) => {
         this.map.on("load", () => {
           console.log("Map loaded successfully");
+          this.mapService.setMap(this.map);
           resolve();
         });
         this.map.on("error", (error) => {
@@ -585,6 +619,7 @@ export class RunRealmApp {
       progression: this.progression,
       game: this.game,
       contractService: this.contractService,
+      mapService: this.mapService,
     };
 
     console.log("Services registered globally (CONSOLIDATED)");

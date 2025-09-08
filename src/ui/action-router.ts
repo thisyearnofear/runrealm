@@ -1,7 +1,7 @@
 import { EventBus } from '../core/event-bus';
 import { AIOrchestrator } from '../services/ai-orchestrator';
 
-export type UIAction = 'ai.requestRoute' | 'ai.requestGhostRunner' | 'ai.showRoute' | 'ai.quickPrompt';
+export type UIAction = 'ai.requestRoute' | 'ai.requestGhostRunner' | 'ai.showRoute' | 'ai.quickPrompt' | 'ai.startRun';
 
 const bus = EventBus.getInstance();
 const aiOrchestrator = AIOrchestrator.getInstance();
@@ -126,6 +126,14 @@ export const ActionRouter = {
         };
         console.log('ActionRouter: Emitting visualization data:', visualizeData);
         bus.emit('ai:routeVisualize', visualizeData);
+        break;
+      case 'ai.startRun':
+        console.log('ActionRouter: Starting run with AI-generated route');
+        // Emit event to start run with the provided route
+        bus.emit('run:startWithRoute', {
+          coordinates: payload?.coordinates || [],
+          distance: payload?.distance || 0
+        });
         break;
       case 'ai.quickPrompt':
         console.log('ActionRouter: Processing quick prompt:', payload?.type);

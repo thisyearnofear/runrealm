@@ -1,11 +1,11 @@
 // Clean, modular entry point for RunRealm
 import { RunRealmApp } from './core/run-realm-app';
 import { DebugUI } from './utils/debug-ui';
-import './styles/z-index-system.css';
-import './styles/location-wallet.css';
-import './styles/gamefi-ui.css';
-import './styles/widget-system.css';
-import './styles/enhanced-run-controls.css';
+// CONSOLIDATED CSS - Following AGGRESSIVE CONSOLIDATION principle
+import './styles/core-system.css';     // Variables, z-index, animations, utilities
+import './styles/components.css';      // Widgets, GameFi UI, controls, rewards
+import './styles/interfaces.css';      // Modals, location, wallet, cross-chain
+import './styles/responsive.css';      // Mobile-first responsive design
 
 // Filter out noisy browser extension errors and token exposure in production
 if (process.env.NODE_ENV === 'production') {

@@ -126,7 +126,8 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
     
     // AI events
     eventBus.current.on('ai:routeRequested', handleAIRouteRequest);
-    eventBus.current.on('ai:ghostRunnerGenerated', handleGhostRunnerRequest);
+    eventBus.current.on('ghost:ready', handleGhostReady);
+    eventBus.current.on('ghost:progress', handleGhostProgress);
     eventBus.current.on('ai:routeSuggested', handleCoachMessage);
     
     // Web3 events
@@ -276,54 +277,42 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
     }
   }, [initialPosition, onRouteGenerated]);
 
-  const handleGhostRunnerRequest = useCallback(async (data: any) => {
-    if (!aiService.current) return;
+  const handleGhostReady = useCallback((data: any) => {
+    const ghost = data.runner;
+    setGhostRunners(prev => [...prev, ghost]);
 
-    const ghostRunner: GhostRunner = {
-      id: `ghost_${Date.now()}`,
-      name: `AI Runner ${Math.floor(Math.random() * 1000)}`,
-      difficulty: data.difficulty || 50,
-      currentRoute: [], // Will be populated by AI service
-      progress: 0,
-      estimatedTime: 1800, // 30 minutes
-      active: true
-    };
+    const mapService = (window as any).RunRealm?.services?.mapService;
+    const animationService = (window as any).RunRealm?.services?.animationService;
 
-    // Generate route for ghost runner
-    try {
-      // const route = await aiService.current.generateOptimalRoute({
-      //   startLocation: initialPosition,
-      //   preferences: {
-      //     distance: 1500,
-      //     difficulty: ghostRunner.difficulty > 66 ? 'hard' : ghostRunner.difficulty > 33 ? 'medium' : 'easy',
-      //     goals: ['competition']
-      //   }
-      // });
-      const route: any = null; // Mock route
-
-      if (route && route.path) {
-        ghostRunner.currentRoute = route.path;
-      }
-
-      setGhostRunners(prev => [...prev, ghostRunner]);
-
-      if (gamefiUI.current) {
-        gamefiUI.current.showRewardNotification(
-          `👻 ${ghostRunner.name} has started running! Race against them to claim territories first.`,
-          'info'
-        );
-        gamefiUI.current.updateCoachMessage(
-          `👻 Ghost Runner spawned! They'll compete for nearby territories. Better get moving!`
-        );
-      }
-
-      // Simulate ghost runner progress
-      simulateGhostRunnerProgress(ghostRunner.id);
-
-    } catch (error) {
-      console.error('Ghost runner creation failed:', error);
+    if (mapService && ghost.route) {
+      mapService.drawGhostRoute(ghost.route);
     }
-  }, [initialPosition]);
+
+    if (animationService) {
+      animationService.startGhostAnimation(ghost);
+    }
+
+    if (gamefiUI.current) {
+      gamefiUI.current.showRewardNotification(
+        `👻 ${ghost.name} has started running! Race against them to claim territories first.`,
+        'info'
+      );
+      gamefiUI.current.updateCoachMessage(
+        `👻 Ghost Runner spawned! They'll compete for nearby territories. Better get moving!`
+      );
+    }
+  }, []);
+
+  const handleGhostProgress = useCallback((data: any) => {
+    setGhostRunners(prev => 
+      prev.map(ghost => {
+        if (ghost.id === data.ghostId) {
+          return { ...ghost, progress: data.progress };
+        }
+        return ghost;
+      })
+    );
+  }, []);
 
   const handleCoachMessage = useCallback((data: { route: any; confidence: number; reasoning: string }) => {
     const message = data.reasoning || 'AI Coach message';
@@ -453,39 +442,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
     return 'legendary';
   };
 
-  const simulateGhostRunnerProgress = useCallback((ghostId: string) => {
-    const updateProgress = () => {
-      setGhostRunners(prev => 
-        prev.map(ghost => {
-          if (ghost.id === ghostId && ghost.active && ghost.progress < 100) {
-            const newProgress = ghost.progress + (Math.random() * 5);
-            
-            if (newProgress >= 100) {
-              // Ghost runner completed
-              if (gamefiUI.current) {
-                gamefiUI.current.showRewardNotification(
-                  `👻 ${ghost.name} completed their run! Competition ended.`,
-                  'info'
-                );
-              }
-              return { ...ghost, progress: 100, active: false };
-            }
-            
-            return { ...ghost, progress: newProgress };
-          }
-          return ghost;
-        })
-      );
-    };
-
-    const interval = setInterval(updateProgress, 2000);
-    
-    // Clean up after 30 minutes
-    setTimeout(() => {
-      clearInterval(interval);
-      setGhostRunners(prev => prev.filter(ghost => ghost.id !== ghostId));
-    }, 1800000);
-  }, []);
+  
 
   // Component UI (minimal - mostly handled by GameFi UI)
   if (!dashboardVisible) {

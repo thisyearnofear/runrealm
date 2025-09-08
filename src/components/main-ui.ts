@@ -24,6 +24,7 @@ import { RewardSystemUI } from "./reward-system-ui";
 import { Web3Service } from "../services/web3-service";
 import { ConfigService } from "../core/app-config";
 import { ContractService } from "../services/contract-service";
+import { RouteStateService } from "../services/route-state-service";
 
 export class MainUI extends BaseService {
   private domService: DOMService;
@@ -46,6 +47,7 @@ export class MainUI extends BaseService {
   private contractService: ContractService;
   private web3Service: Web3Service;
   private configService: ConfigService;
+  private routeStateService: RouteStateService;
   private isGameFiMode: boolean = false;
 
   // GPS and Network status for location widget
@@ -93,6 +95,7 @@ export class MainUI extends BaseService {
       this.animationService,
       this.widgetStateService
     );
+    this.routeStateService = RouteStateService.getInstance();
   }
 
   protected async onInitialize(): Promise<void> {
@@ -203,6 +206,9 @@ export class MainUI extends BaseService {
 
     this.setupEventHandlers();
     console.log("MainUI: Event handlers set up");
+
+    this.setupRouteStateListeners();
+    console.log("MainUI: Route state listeners set up");
 
     // URL param onboarding=reset support for QA/support
     const params = new URLSearchParams(window.location.search);
@@ -780,6 +786,77 @@ export class MainUI extends BaseService {
     );
 
     // Run controls visibility events removed - now handled by EnhancedRunControls
+  }
+
+  /**
+   * Listen for route state changes to update widgets
+   */
+  private setupRouteStateListeners(): void {
+    // Listen for route state changes to update widgets
+    this.subscribe("route:stateChanged", (data: { routeId: string; routeData: any; isActive: boolean }) => {
+      if (data.isActive) {
+        // Update territory-info widget with route details
+        const km = (data.routeData.totalDistance || data.routeData.distance || 0) / 1000;
+        const etaMin = data.routeData.estimatedTime
+          ? Math.round(data.routeData.estimatedTime / 60)
+          : undefined;
+        const diffLabel =
+          typeof data.routeData.difficulty === "number"
+            ? data.routeData.difficulty < 33
+              ? "Easy"
+              : data.routeData.difficulty < 67
+              ? "Medium"
+              : "Hard"
+            : "—";
+        
+        const statsHtml = `
+          <div class=\"widget-stat\"><span class=\"widget-stat-label\">Planned Distance</span><span class=\"widget-stat-value\">${km.toFixed(
+            2
+          )} km</span></div>
+          <div class=\"widget-stat\"><span class=\"widget-stat-label\">Difficulty</span><span class=\"widget-stat-value\">${diffLabel}</span></div>
+          ${
+            etaMin !== undefined
+              ? `<div class=\"widget-stat\"><span class=\"widget-stat-label\">ETA</span><span class=\"widget-stat-value\">~${etaMin} min</span></div>`
+              : ""
+          }
+          <div class=\"widget-tip success\">
+            🎉 Route ready! Click \"Start Run\" to begin.
+          </div>
+          <div class=\"widget-buttons\">
+            <button class=\"widget-button primary\" data-action=\"ai.startRun\" data-payload='{\"coordinates\":${JSON.stringify(
+              data.routeData.coordinates
+            )}, \"distance\": ${data.routeData.totalDistance || data.routeData.distance}}'>
+              ▶️ Start Run
+            </button>
+            <button class=\"widget-button secondary\" data-action=\"ai.requestGhostRunner\" data-payload='{\"difficulty\":${data.routeData.difficulty || 50}}'>
+              👻 Start Ghost Runner
+            </button>
+          </div>`;
+
+        this.widgetSystem.updateWidget("territory-info", statsHtml);
+        const w = this.widgetSystem.getWidget("territory-info");
+        if (w && w.minimized) this.widgetSystem.toggleWidget("territory-info");
+      }
+    });
+
+    // Listen for route cleared events
+    this.subscribe("route:cleared", () => {
+      // Reset territory-info widget to default state
+      const defaultHtml = `
+        <div class=\"widget-tip\">
+          🗺️ Click on the map to preview territories
+        </div>
+        <div class=\"widget-buttons\">
+          <button class=\"widget-button\" id=\"claim-territory-btn\" disabled>
+            ⚡ Claim Territory
+          </button>
+          <button class=\"widget-button secondary\" id=\"analyze-btn\">
+            🤖 AI Analysis
+          </button>
+        </div>
+      `;
+      this.widgetSystem.updateWidget("territory-info", defaultHtml);
+    });
   }
 
   /**
@@ -1724,22 +1801,96 @@ export class MainUI extends BaseService {
     const content = widgetElement?.innerHTML || "";
     if (content.includes("widget-loading")) {
       console.log("MainUI: Clearing stuck AI loading state");
-      const defaultHtml = `
-        <div class="widget-tip">
-          🤖 AI Coach ready to help!
-          <br><small>Generate routes or compete with ghost runners.</small>
+      const errorHtml = `
+        <div class="widget-tip error">
+          🤖 Request timed out
+          <br><small>Please try again or check your connection.</small>
         </div>
-        <div class="widget-buttons">
-          <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
-            📍 Suggest Route
-          </button>
-          <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>
-            👻 Ghost Runner
-          </button>
+        <div class="widget-section">
+          <div class="widget-section-title">🧭 Route Planning</div>
+          <div class="widget-buttons">
+            <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
+              📍 Suggest Route
+            </button>
+          </div>
+        </div>
+        <div class="widget-section">
+          <div class="widget-section-title">👻 Ghost Runner</div>
+          <div class="widget-buttons">
+            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>
+              👻 Summon Ghost
+            </button>
+          </div>
         </div>
       `;
-      this.widgetSystem.updateWidget("ai-coach", defaultHtml);
+      this.widgetSystem.updateWidget("ai-coach", errorHtml);
     }
+  }
+
+  /**
+   * Add celebration effect for successful AI actions
+   */
+  private addCelebrationEffect(): void {
+    const widget = this.widgetSystem.getWidget("ai-coach");
+    if (!widget) {
+      console.warn("MainUI: AI coach widget not found for celebration");
+      return;
+    }
+
+    const widgetElement = this.widgetSystem.getWidgetElement("ai-coach");
+    if (!widgetElement) {
+      console.warn("MainUI: AI coach widget element not found for celebration");
+      return;
+    }
+
+    if (!widgetElement.classList) {
+      console.warn("MainUI: Widget element invalid for celebration");
+      return;
+    }
+
+    // Prevent multiple celebrations
+    if (widgetElement.classList.contains("celebrating")) return;
+
+    // Add celebration class
+    widgetElement.classList.add("celebrating");
+
+    // Use requestAnimationFrame for better performance
+    requestAnimationFrame(() => {
+      // Create floating particles
+      const particleCount = window.innerWidth < 768 ? 3 : 6; // Fewer particles on mobile
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement("div");
+        particle.className = "celebration-particle";
+        particle.style.cssText = `
+          position: absolute;
+          width: 6px;
+          height: 6px;
+          background: linear-gradient(45deg, #00ff00, #00aa00);
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 1000;
+          left: ${Math.random() * 100}%;
+          top: 50%;
+          animation: celebrationFloat 1.5s ease-out forwards;
+        `;
+
+        widgetElement.appendChild(particle);
+
+        // Remove particle after animation
+        setTimeout(() => {
+          if (particle.parentNode) {
+            particle.parentNode.removeChild(particle);
+          }
+        }, 1500);
+      }
+    });
+
+    // Remove celebration class after animation
+    setTimeout(() => {
+      if (widgetElement && widgetElement.classList) {
+        widgetElement.classList.remove("celebrating");
+      }
+    }, 1500);
   }
 
   /**

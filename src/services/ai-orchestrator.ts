@@ -6,6 +6,7 @@
 import { EventBus } from '../core/event-bus';
 import { UIService } from './ui-service';
 import { SoundService } from './sound-service';
+import { RouteStateService } from './route-state-service';
 
 export interface AIRequestOptions {
   timeout?: number;
@@ -28,6 +29,7 @@ export class AIOrchestrator {
   private eventBus: EventBus;
   private uiService: UIService;
   private soundService: SoundService;
+  private routeStateService: RouteStateService;
   private activeRequests: Map<string, AIRequestStatus> = new Map();
   private requestCache: Map<string, { data: any; timestamp: number }> = new Map();
   
@@ -35,6 +37,7 @@ export class AIOrchestrator {
     this.eventBus = EventBus.getInstance();
     this.uiService = UIService.getInstance();
     this.soundService = SoundService.getInstance();
+    this.routeStateService = RouteStateService.getInstance();
     this.setupEventListeners();
   }
 
@@ -54,11 +57,42 @@ export class AIOrchestrator {
     this.eventBus.on('ai:routeReady', (data) => {
       this.updateRequestStatus(data.requestId, 'success', 100);
       this.soundService.playRouteGeneratedSound();
+      // Dismiss loading toast
+      this.uiService.dismissToast();
+      // Show success notification
+      this.uiService.showToast('📍 Route generated successfully!', {
+        type: 'success',
+        duration: 5000
+      });
+      // Store route in state service
+      this.routeStateService.setRouteData(data.requestId, {
+        coordinates: data.route || [],
+        distance: data.distance || 0,
+        difficulty: data.difficulty || 50,
+        waypoints: data.waypoints || [],
+        estimatedTime: data.estimatedTime || 0,
+        totalDistance: data.totalDistance || 0,
+        generatedAt: Date.now(),
+        source: 'ai'
+      });
+      // Cache the response for future use
+      const cacheKey = `route_${JSON.stringify(this.getRouteParamsFromData(data))}`;
+      this.requestCache.set(cacheKey, {
+        data: data,
+        timestamp: Date.now()
+      });
     });
 
     this.eventBus.on('ai:routeFailed', (data) => {
       this.updateRequestStatus(data.requestId, 'error', 0, data.message);
       this.soundService.playErrorSound();
+      // Dismiss loading toast
+      this.uiService.dismissToast();
+      // Show error notification
+      this.uiService.showToast(`Route generation failed: ${data.message}`, {
+        type: 'error',
+        duration: 5000
+      });
     });
 
     this.eventBus.on('ai:ghostRunnerRequested', (data) => {
@@ -68,11 +102,31 @@ export class AIOrchestrator {
     this.eventBus.on('ai:ghostRunnerGenerated', (data) => {
       this.updateRequestStatus(data.requestId, 'success', 100);
       this.soundService.playSuccessSound();
+      // Dismiss loading toast
+      this.uiService.dismissToast();
+      // Show success notification
+      this.uiService.showToast(`👻 ${data.runner.name} is ready to race!`, {
+        type: 'success',
+        duration: 5000
+      });
+      // Cache the response for future use
+      const cacheKey = `ghost_${JSON.stringify(this.getGhostParamsFromData(data))}`;
+      this.requestCache.set(cacheKey, {
+        data: data,
+        timestamp: Date.now()
+      });
     });
 
     this.eventBus.on('ai:ghostRunnerFailed', (data) => {
       this.updateRequestStatus(data.requestId, 'error', 0, data.message);
       this.soundService.playErrorSound();
+      // Dismiss loading toast
+      this.uiService.dismissToast();
+      // Show error notification
+      this.uiService.showToast(`Ghost runner failed: ${data.message}`, {
+        type: 'error',
+        duration: 5000
+      });
     });
   }
 
@@ -341,5 +395,20 @@ export class AIOrchestrator {
       requestId,
       error: errorMessage
     });
+  }
+
+  // Helper methods to extract parameters for caching
+  private getRouteParamsFromData(data: any): any {
+    return {
+      distance: data.distance,
+      difficulty: data.difficulty,
+      goals: data.goals
+    };
+  }
+
+  private getGhostParamsFromData(data: any): any {
+    return {
+      difficulty: data.difficulty
+    };
   }
 }

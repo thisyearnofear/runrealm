@@ -5,6 +5,8 @@
 
 import { BaseService } from '../core/base-service';
 import type { Map as MapboxMap } from 'mapbox-gl';
+import { GhostRunner } from './ai-service';
+import { RunPoint } from './run-tracking-service';
 
 export interface AnimationConfig {
   duration?: number;
@@ -665,6 +667,70 @@ export class AnimationService extends BaseService {
   }
 
   /**
+   * Animate a route being drawn on the map
+   */
+  public animateRoute(coordinates: [number, number][], options: { 
+    duration?: number; 
+    color?: string; 
+    metadata?: any 
+  } = {}): void {
+    if (!this.map || !coordinates || coordinates.length < 2) {
+      console.warn('AnimationService: Invalid coordinates for route animation');
+      return;
+    }
+
+    const { duration = 2000, color = '#00ff88', metadata = {} } = options;
+    const totalPoints = coordinates.length;
+    const startTime = performance.now();
+    const animationDuration = duration;
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / animationDuration, 1);
+      const pointsToShow = Math.floor(progress * totalPoints);
+      
+      // Update the source with progressively more coordinates
+      if (this.map && this.map.getSource('planned-route-source')) {
+        const partialCoordinates = coordinates.slice(0, Math.max(2, pointsToShow));
+        
+        (this.map.getSource('planned-route-source') as any).setData({
+          type: 'Feature',
+          properties: {
+            ...metadata,
+            source: 'planned-route'
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: partialCoordinates
+          }
+        });
+      }
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        // Ensure all coordinates are shown
+        if (this.map && this.map.getSource('planned-route-source')) {
+          (this.map.getSource('planned-route-source') as any).setData({
+            type: 'Feature',
+            properties: {
+              ...metadata,
+              source: 'planned-route'
+            },
+            geometry: {
+              type: 'LineString',
+              coordinates: coordinates
+            }
+          });
+        }
+        console.log('AnimationService: Route animated successfully');
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  }
+
+  /**
    * Add interactive popups to waypoints
    */
   private addWaypointPopups(waypoints: any[]): void {
@@ -752,5 +818,149 @@ export class AnimationService extends BaseService {
 
   public animateSegment(segment: any): void {
     // Implementation would go here
+  }
+
+  public startGhostAnimation(ghost: GhostRunner): void {
+    if (!this.map || !ghost.route || ghost.route.length < 2) {
+      console.warn('AnimationService: Map not available or invalid route for ghost animation');
+      return;
+    }
+
+    const ghostMarkerElement = document.createElement('div');
+    ghostMarkerElement.className = 'ghost-marker'; // I'll need to add styles for this
+
+    const ghostMarker = new (window as any).mapboxgl.Marker({
+      element: ghostMarkerElement,
+    })
+      .setLngLat([ghost.route[0].lng, ghost.route[0].lat])
+      .addTo(this.map);
+
+    const startTime = Date.now();
+    const runDuration = ghost.route[ghost.route.length - 1].timestamp - ghost.route[0].timestamp;
+
+    const animate = () => {
+      const elapsedTime = Date.now() - startTime;
+      const progress = Math.min(elapsedTime / runDuration, 1);
+
+      // Find the current segment
+      let currentSegmentIndex = -1;
+      for (let i = 0; i < ghost.route.length - 1; i++) {
+        if (elapsedTime >= (ghost.route[i].timestamp - ghost.route[0].timestamp) &&
+            elapsedTime <= (ghost.route[i+1].timestamp - ghost.route[0].timestamp)) {
+          currentSegmentIndex = i;
+          break;
+        }
+      }
+
+      if (currentSegmentIndex !== -1) {
+        const segmentStart = ghost.route[currentSegmentIndex];
+        const segmentEnd = ghost.route[currentSegmentIndex + 1];
+        const segmentDuration = segmentEnd.timestamp - segmentStart.timestamp;
+        const timeIntoSegment = elapsedTime - (segmentStart.timestamp - ghost.route[0].timestamp);
+        const segmentProgress = timeIntoSegment / segmentDuration;
+
+        const lng = segmentStart.lng + (segmentEnd.lng - segmentStart.lng) * segmentProgress;
+        const lat = segmentStart.lat + (segmentEnd.lat - segmentStart.lat) * segmentProgress;
+
+        ghostMarker.setLngLat([lng, lat]);
+        
+        this.safeEmit('ghost:progress', {
+            ghostId: ghost.id,
+            progress: progress * 100,
+            location: { lat, lng }
+        });
+      }
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        ghostMarker.remove();
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }
+
+  /**
+   * Set or update a planned route on the map
+   * This method handles both AI-generated routes and user-defined routes
+   */
+  public setPlannedRoute(geojson: any): void {
+    if (!this.map || !geojson) {
+      console.warn('AnimationService: Map or geojson not available for planned route');
+      return;
+    }
+
+    try {
+      // Ensure we have a valid GeoJSON structure
+      const featureCollection = geojson.type === 'FeatureCollection' ? geojson : 
+                              geojson.type === 'Feature' ? { type: 'FeatureCollection', features: [geojson] } :
+                              null;
+
+      if (!featureCollection) {
+        console.warn('AnimationService: Invalid GeoJSON for planned route');
+        return;
+      }
+
+      // Remove existing planned route if it exists
+      if (this.map.getLayer('planned-route-layer')) {
+        this.map.removeLayer('planned-route-layer');
+      }
+      if (this.map.getSource('planned-route-source')) {
+        this.map.removeSource('planned-route-source');
+      }
+
+      // Add source for the planned route
+      this.map.addSource('planned-route-source', {
+        type: 'geojson',
+        data: featureCollection
+      });
+
+      // Add layer for the planned route
+      this.map.addLayer({
+        id: 'planned-route-layer',
+        type: 'line',
+        source: 'planned-route-source',
+        paint: {
+          'line-color': '#00ff88',
+          'line-width': 4,
+          'line-opacity': 0.8,
+          'line-dasharray': [2, 2]
+        }
+      });
+
+      // If we have a LineString feature, animate it
+      const lineFeature = featureCollection.features.find((f: any) => f.geometry.type === 'LineString');
+      if (lineFeature) {
+        this.animateRoute(lineFeature.geometry.coordinates, {
+          duration: 2000,
+          color: '#00ff88',
+          metadata: lineFeature.properties
+        });
+      }
+
+      console.log('AnimationService: Planned route set successfully');
+    } catch (error) {
+      console.error('AnimationService: Failed to set planned route:', error);
+    }
+  }
+
+  /**
+   * Clear planned route from the map
+   */
+  public clearPlannedRoute(): void {
+    if (!this.map) return;
+
+    // Remove layer if it exists
+    if (this.map.getLayer('planned-route-layer')) {
+      this.map.removeLayer('planned-route-layer');
+    }
+
+    // Remove source if it exists
+    if (this.map.getSource('planned-route-source')) {
+      this.map.removeSource('planned-route-source');
+    }
+
+    console.log('AnimationService: Planned route cleared');
   }
 }

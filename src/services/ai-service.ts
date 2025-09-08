@@ -7,6 +7,7 @@
 // import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { BaseService } from '../core/base-service';
 import type { CurrentRun } from '../current-run';
+import { RunPoint } from './run-tracking-service';
 
 export interface RouteOptimization {
   suggestedRoute: {
@@ -30,6 +31,7 @@ export interface GhostRunner {
   pace: number; // seconds per meter
   specialAbility: string;
   backstory: string;
+  route?: RunPoint[]; // The path the ghost will follow
 }
 
 export interface TerritoryAnalysis {
