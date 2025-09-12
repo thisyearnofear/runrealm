@@ -677,9 +677,25 @@ export class TerritoryService extends BaseService {
 
     this.nearbyTerritories = nearby.sort((a, b) => a.distance - b.distance);
 
+    // Enhanced proximity alerts
+    nearby.forEach(nearbyTerritory => {
+      this.showProximityAlert(nearbyTerritory.territory, nearbyTerritory.distance);
+    });
+
     this.safeEmit("territory:nearbyUpdated", {
       count: nearby.length,
       territories: nearby,
+    });
+  }
+
+  private showProximityAlert(territory: any, distance: number): void {
+    const urgency = distance < 100 ? 'high' : distance < 300 ? 'medium' : 'low';
+    this.safeEmit('ui:territoryAlert', {
+      territory,
+      distance,
+      urgency,
+      message: `${territory.name} - ${distance}m away`,
+      action: distance < 50 ? 'claim' : 'approach'
     });
   }
 

@@ -6,6 +6,7 @@
 
 import { BaseService } from "../core/base-service";
 import { Web3Service } from "./web3-service";
+import { UserContextService } from "./user-context-service";
 import {
   getCurrentNetworkConfig,
   getContractConfig,
@@ -51,6 +52,7 @@ export interface CrossChainTerritoryData extends TerritoryClaimData {
 
 export class ContractService extends BaseService {
   private web3Service: Web3Service;
+  private userContextService: UserContextService;
 
   private universalContract: any = null;
   private realmTokenContract: any = null;
@@ -58,6 +60,7 @@ export class ContractService extends BaseService {
   constructor(web3Service: Web3Service) {
     super();
     this.web3Service = web3Service;
+    this.userContextService = UserContextService.getInstance();
   }
 
   protected async onInitialize(): Promise<void> {
@@ -158,6 +161,12 @@ export class ContractService extends BaseService {
   public async mintTerritory(
     territoryData: TerritoryClaimData
   ): Promise<string> {
+    // Track territory claim attempt
+    this.userContextService.trackUserAction('territory_claim_attempted', {
+      geohash: territoryData.geohash,
+      difficulty: territoryData.difficulty
+    });
+
     if (!this.universalContract) {
       throw new Error(
         "Universal contract not initialized. Please connect wallet and switch to ZetaChain."
@@ -255,6 +264,13 @@ export class ContractService extends BaseService {
           tokenId: tokenId || "unknown",
           geohash: territoryData.geohash,
           metadata: territoryData,
+        });
+
+        // Track successful territory claim
+        this.userContextService.trackUserAction('territory_claim_success', {
+          tokenId: tokenId || "unknown",
+          geohash: territoryData.geohash,
+          difficulty: territoryData.difficulty
         });
 
         console.log("ContractService: Territory minted successfully!", {

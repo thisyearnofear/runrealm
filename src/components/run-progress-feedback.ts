@@ -27,9 +27,20 @@ export class RunProgressFeedback extends BaseService {
   }
 
   private showMilestone(km: number, speed: number): void {
-    const pace = speed > 0 ? (1000 / speed) / 60 : 0; // minutes per km
+    const pace = speed > 0 ? (1000 / speed) / 60 : 0;
     const encouragement = this.getEncouragement(km, pace);
     
+    // Enhanced celebration with animation and sound
+    this.safeEmit('ui:celebration', {
+      type: 'milestone',
+      achievement: `${km}km completed!`,
+      message: encouragement,
+      animation: 'confetti',
+      sound: 'achievement',
+      duration: 4000
+    });
+
+    // Legacy toast for fallback
     this.safeEmit('ui:showToast', {
       message: `🎉 ${km}km completed! ${encouragement}`,
       type: 'success',

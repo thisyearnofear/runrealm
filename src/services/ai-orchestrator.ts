@@ -7,6 +7,7 @@ import { EventBus } from '../core/event-bus';
 import { UIService } from './ui-service';
 import { SoundService } from './sound-service';
 import { RouteStateService } from './route-state-service';
+import { UserContextService } from './user-context-service';
 
 export interface AIRequestOptions {
   timeout?: number;
@@ -30,6 +31,7 @@ export class AIOrchestrator {
   private uiService: UIService;
   private soundService: SoundService;
   private routeStateService: RouteStateService;
+  private userContextService: UserContextService;
   private activeRequests: Map<string, AIRequestStatus> = new Map();
   private requestCache: Map<string, { data: any; timestamp: number }> = new Map();
   
@@ -38,6 +40,7 @@ export class AIOrchestrator {
     this.uiService = UIService.getInstance();
     this.soundService = SoundService.getInstance();
     this.routeStateService = RouteStateService.getInstance();
+    this.userContextService = UserContextService.getInstance();
     this.setupEventListeners();
   }
 
@@ -137,6 +140,13 @@ export class AIOrchestrator {
     params: any,
     options: AIRequestOptions = {}
   ): Promise<void> {
+    // Track AI route usage
+    this.userContextService.trackUserAction('ai_route_requested', {
+      adaptive: params.adaptive,
+      distance: params.distance,
+      difficulty: params.difficulty
+    });
+
     // Apply smart defaults if adaptive flag is set
     const smartParams = params.adaptive ? this.applySmartDefaults(params) : params;
     

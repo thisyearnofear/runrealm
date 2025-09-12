@@ -183,6 +183,10 @@ export class TerritoryDashboard {
         <div class="territory-info">
           <p>${territory.metadata.description}</p>
           <div class="territory-stats">
+            <div class="territory-score">
+              <span class="score-value">${this.calculateTerritoryValue(territory)}</span>
+              <span class="score-label">Territory Value</span>
+            </div>
             <span>Difficulty: ${territory.difficulty}/100</span>
             <span>Reward: ${territory.estimatedReward} $REALM</span>
           </div>
@@ -504,6 +508,27 @@ export class TerritoryDashboard {
     this.territories.push(territory);
     this.playerStats.territoriesOwned = this.territories.length;
     this.updateDisplay();
+  }
+
+  private calculateTerritoryValue(territory: Territory): number {
+    let score = territory.estimatedReward;
+    
+    // Rarity multiplier
+    const rarityMultiplier = {
+      'common': 1,
+      'uncommon': 1.5,
+      'rare': 2,
+      'epic': 3,
+      'legendary': 5
+    }[territory.rarity] || 1;
+    
+    // Cross-chain bonus
+    const crossChainBonus = territory.crossChainHistory.length * 0.2;
+    
+    // Landmark bonus
+    const landmarkBonus = territory.landmarks.length * 0.1;
+    
+    return Math.round(score * rarityMultiplier * (1 + crossChainBonus + landmarkBonus));
   }
 
   public getTerritories(): Territory[] {

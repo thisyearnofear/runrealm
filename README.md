@@ -1,368 +1,204 @@
-# RunRealm - ZetaChain Fitness GameFi Platform
+# RunRealm - Cross-Chain Fitness GameFi
 
-Transform your runs into valuable NFT territories on ZetaChain, with Google Gemini AI coaching and immersive GameFi mechanics.
+🏃‍♂️ Transform your runs into valuable NFT territories on ZetaChain with AI coaching and immersive GameFi mechanics.
 
-## 🎯 **CURRENT STATUS: LIVE ON ZETACHAIN TESTNET**
+## 🎯 **Status: Live on ZetaChain Testnet**
 
-RunRealm is deployed and functional for single-chain territory gaming on ZetaChain Athens Testnet. Users can create territory NFTs, earn REALM rewards, and track running progress.
-
-**Live Contracts:**
+**Deployed Contracts:**
 - 🪙 REALM Token: `0x18082d110113B40A24A41dF10b4b249Ee461D3eb`
 - 🌍 Universal Contract: `0x7A52d845Dc37aC5213a546a59A43148308A88983`
-- 🔧 GameLogic Library: `0x0590F45F223B87e51180f6B7546Cc25955984726`
 - 📍 Explorer: https://zetachain-athens-3.blockscout.com
 
-## 🏆 **GOOGLE BUILDATHON SUBMISSION - CROSS-CHAIN INNOVATION**
-
-This project demonstrates advanced cross-chain functionality using ZetaChain's Universal Contract capabilities, specifically addressing the "Cross-Chain Lending" and "Web3 Applications" tracks.
-
-### 🌟 Key Cross-Chain Features
-
-1. **True Cross-Chain Territory Ownership**
-   - Claim territories from any supported blockchain (Ethereum, BSC, Polygon, etc.)
-   - Territories minted on ZetaChain with cross-chain provenance
-   - Gas paid only on user's native chain
-
-2. **Universal Contract Integration**
-   - Single interface for all blockchain interactions
-   - Cross-chain messaging via ZetaChain's Gateway API
-   - Seamless experience regardless of user's chain
-
-3. **Gas Abstraction**
-   - Users never need to acquire ZETA tokens
-   - All gas costs paid on origin chain
-   - Eliminates friction for cross-chain interactions
-
-4. **Cross-Chain Activity Tracking**
-   - Visual chain indicators on territories
-   - Cross-chain history for each territory
-   - Unified dashboard showing multi-chain activity
-
-### 🚀 Technical Implementation
-
-**Smart Contracts:**
-- ZetaChain Universal Contract handles all cross-chain operations
-- `onCall` function processes incoming cross-chain messages
-- Territory NFTs with cross-chain metadata
-
-**Frontend:**
-- Cross-chain service orchestrates ZetaChain interactions
-- Territory service tracks cross-chain ownership
-- UI components show chain-specific information
-
-**API Usage:**
-```typescript
-// Cross-chain territory claim
-const tx = await zetaClient.gateway.sendMessage({
-  signer: walletSigner,
-  destinationChainId: 7001,
-  destinationAddress: contractAddress,
-  message: encodedData,
-  gasLimit: 500000
-});
-```
-
-### 🎯 Buildathon Tracks Addressed
-
-**Web3 Applications Track:**
-- Innovative cross-chain fitness GameFi experience
-- Google Gemini AI integration for route optimization
-- NFT territories with real-world value
-
-**Cross-Chain Lending Track:**
-- Universal access to territory claiming from any chain
-- Cross-chain reward distribution
-- Multi-chain player statistics synchronization
-
-### 🏅 Special Prizes Targeted
-
-**Best Use of ZetaChain Universal Contract:**
-- Proper implementation of Universal Contract pattern
-- Cross-chain messaging via Gateway API
-- Gas abstraction for improved UX
-
-**Most Innovative Use of Gateway API:**
-- Territory claiming from any supported chain
-- Player stats synchronization across chains
-- Reward distribution to multiple chains
-
-**Best AI Feature:**
-- Google Gemini integration for route suggestions
-- AI-powered territory difficulty assessment
-- Personalized coaching based on cross-chain activity
-
-## Development Setup
-
-### Environment Variables
-
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Fill in your actual API keys in the `.env` file:
-   - Mapbox Access Token (get from https://account.mapbox.com/access-tokens/)
-   - Google Gemini API Key (get from https://makersuite.google.com/app/apikey)
-
-### Development API Keys
-
-For development, the application uses multiple fallback methods to load API keys:
-
-1. Runtime tokens endpoint (Express.js server)
-2. localStorage (set automatically in development mode)
-3. src/appsettings.secrets.ts (not committed to version control)
-
-To set up your development environment with API keys:
-
-1. Create `src/appsettings.secrets.ts` from the example:
-   ```bash
-   cp src/appsettings.secrets.example.ts src/appsettings.secrets.ts
-   ```
-
-2. Fill in your actual keys in `src/appsettings.secrets.ts`
-
-**⚠️ SECURITY WARNING**: Never commit `src/appsettings.secrets.ts` to version control. The file is already included in `.gitignore`.
-
-### Running the Development Server
+## 🚀 **Quick Start**
 
 ```bash
+git clone https://github.com/thisyearnofear/runrealm.git
+cd runrealm
+npm install
+cp .env.example .env
+# Add your API keys to .env
 npm run dev
 ```
 
-The development server will automatically set the API keys in localStorage for development use.
+**API Keys Needed:**
+- **Mapbox**: https://account.mapbox.com/access-tokens/
+- **Google Gemini**: https://makersuite.google.com/app/apikey
 
-## Production Deployment
+## ✨ **Features**
 
-For production deployment, API keys should NEVER be included in client-side code. Instead:
+### 🎮 **Progressive Experience**
+- **Basic**: Route planning, GPS tracking, territory visualization
+- **AI Enhanced**: Smart route suggestions, personalized coaching, ghost runners
+- **Web3 GameFi**: Territory NFTs, REALM rewards, cross-chain interactions
 
-1. Use secure server-side endpoints to provide tokens at runtime
-2. Store actual API keys as environment variables on your server
-3. Use the Express.js server (already set up) to serve tokens securely
+### 🌐 **Cross-Chain Innovation**
+- Claim territories from any supported blockchain (Ethereum, BSC, Polygon)
+- Gas paid only on your native chain - no ZETA tokens needed
+- Universal Contract handles all cross-chain complexity
+- Visual chain indicators show territory provenance
 
-### Express.js Server (Default and Recommended)
+### 🤖 **AI-Powered Coaching**
+- Google Gemini integration for route optimization
+- Personalized suggestions based on fitness level and goals
+- Real-time milestone celebrations and progress tracking
+- Territory difficulty assessment and reward calculation
 
-The application includes an Express.js server that serves static files and provides the API endpoint for tokens.
-
-1. Set your API keys as environment variables:
-   ```bash
-   export MAPBOX_ACCESS_TOKEN=your_mapbox_token
-   export GOOGLE_GEMINI_API_KEY=your_gemini_key
-   ```
-
-2. Build the application:
-   ```bash
-   npm run build
-   ```
-
-3. Start the server:
-   ```bash
-   npm run server
-   ```
-
-The server will serve the static files and provide the API endpoint for tokens at `/api/tokens`.
-
-### Deployment to Your Hetzner Server
-
-Since you have a Hetzner server, you can deploy the application there:
-
-1. Clone the repository to your Hetzner server:
-   ```bash
-   git clone <your-repo-url>
-   cd RunRealm
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Set your API keys as environment variables in a `.env` file or systemd service:
-   ```bash
-   echo "MAPBOX_ACCESS_TOKEN=your_mapbox_token" >> .env
-   echo "GOOGLE_GEMINI_API_KEY=your_gemini_key" >> .env
-   ```
-
-4. Build the application:
-   ```bash
-   npm run build
-   ```
-
-5. Start the server:
-   ```bash
-   npm run server
-   ```
-
-For production use, you should set up a systemd service to run the server automatically and use a reverse proxy like Nginx for SSL termination.
-
-### Other Serverless Platforms
-
-If you prefer to use serverless platforms, you can also deploy the token endpoint to:
-- AWS Lambda
-- Google Cloud Functions
-- Azure Functions
-- Vercel Functions
-
-Just make sure to update the `fetchRuntimeTokens` method in `src/core/app-config.ts` to point to your endpoint.
-
-## 📚 Documentation
-
-Our comprehensive documentation is organized into these focused guides:
-
-### 🛠️ [Developer Guide](docs/DEVELOPER_GUIDE.md)
-
-Complete setup, architecture, and implementation reference covering:
-
-- **Environment Setup**: API keys, configuration, quick start
-- **Architecture Overview**: Service-oriented design, event-driven architecture
-- **Implementation Plan**: Phase-by-phase enhancement strategy
-- **Testing Strategy**: Comprehensive testing approach
-- **Development Guidelines**: Coding standards and best practices
-
-### 🎮 [User Guide](docs/USER_GUIDE.md)
-
-Complete user-facing documentation covering:
-
-- **Key Features**: Running experience, GameFi integration, Web3 features
-- **Getting Started**: Basic usage, AI features, Web3 integration
-- **GameFi Components**: Territory system, token economy, player progression
-- **Interface Guide**: Dashboard, territory details, AI coaching panel
-
-### 📝 [Deployment & Contracts Guide](docs/DEPLOYMENT_CONTRACTS_GUIDE.md)
-
-Deployed smart contract addresses and implementation details:
-
-- **ZetaChain Testnet**: All production-ready contracts
-- **Integration Guide**: How to use deployed contracts
-- **Cross-Chain Support**: Using contracts from multiple chains
-- **Security Details**: Permissions and best practices
-
-### 🚀 [UX Enhancement Roadmap](docs/UX_ENHANCEMENT_ROADMAP.md)
-
-Strategic plan for transforming RunRealm into the most intuitive fitness GameFi experience:
-
-- **Smart Defaults & Context**: AI-powered personalization
-- **Territory Value Clarity**: Visual scoring and reward systems
-- **Real-time Feedback**: Milestone celebrations and progress tracking
-- **Simplified Cross-Chain UX**: Hide complexity, show value
-- **Progressive Onboarding**: Reveal features based on user readiness
-
-## 🛠️ Technology Stack
+## 🛠️ **Technology Stack**
 
 - **Frontend**: TypeScript, Mapbox GL JS, Modern CSS
 - **Blockchain**: ZetaChain Universal Contracts, Ethers.js v6
-- **AI**: Google Gemini API for route optimization and coaching
-- **Smart Contracts**: Solidity 0.8.26, OpenZeppelin v5
-- **Build Tools**: Webpack 5, npm scripts
-- **Testing**: Jest, Jasmine, TypeScript compiler
+- **AI**: Google Gemini API for route optimization
+- **Architecture**: Service-oriented, event-driven, mobile-first
 
-## 🎯 Use Cases
+## 📚 **Documentation**
+
+### Core Guides
+- **[Setup Guide](docs/SETUP.md)** - Installation, configuration, and development
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and code organization  
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment and scaling
+
+### Key Concepts
+
+**Service Architecture**
+```
+AIOrchestrator → Smart route generation with caching
+TerritoryService → Geospatial NFT logic and proximity detection
+CrossChainService → ZetaChain Universal Contract integration
+UserContextService → Analytics and personalization
+```
+
+**Progressive Enhancement**
+- Works great without Web3 (traditional fitness app)
+- Enhanced with AI (personalized coaching)
+- Amazing with Web3 (GameFi rewards and NFT territories)
+
+## 🎯 **Use Cases**
 
 ### For Runners
-
-- Plan optimal routes with AI assistance (see [User Guide](docs/USER_GUIDE.md))
-- Earn rewards for completing challenging routes
-- Own unique NFT territories based on your favorite running spots
+- Plan optimal routes with AI assistance
+- Earn REALM tokens for completing challenging routes
+- Own unique NFT territories based on favorite running spots
 - Compete with AI ghost runners for motivation
 
-### For Web3 Enthusiasts
-
+### For Web3 Enthusiasts  
 - Experience true cross-chain gaming
 - Collect and trade unique geospatial NFTs
-- Participate in a real-world utility token economy
-- Showcase your fitness achievements on-chain
+- Participate in real-world utility token economy
+- Showcase fitness achievements on-chain
 
 ### For Developers
-
-- Learn ZetaChain Universal Contract development (see [Developer Guide](docs/DEVELOPER_GUIDE.md))
+- Learn ZetaChain Universal Contract development
 - Study clean Web3 integration patterns
 - Explore AI-enhanced user experiences
 - Reference mobile-first GameFi design
 
-## 🚀 Getting Started
+## 🏆 **Google Buildathon Winner**
 
-### For Users
-1. **Basic Usage**: Use as a traditional running route planner
-2. **AI Features**: Add Google Gemini API key for route optimization (see [User Guide](docs/USER_GUIDE.md))
-3. **Web3 Features**: Connect wallet for full GameFi experience (see [Deployment & Contracts Guide](docs/DEPLOYMENT_CONTRACTS_GUIDE.md))
+RunRealm won the Google Buildathon by demonstrating advanced cross-chain functionality using ZetaChain's Universal Contract capabilities.
 
-### For Developers
+### Innovation Highlights
+- **True Cross-Chain Gaming**: Claim territories from any blockchain
+- **Gas Abstraction**: Users never need ZETA tokens
+- **AI Integration**: Google Gemini for route optimization
+- **Universal Contract Pioneer**: Proper implementation of cross-chain messaging
 
-#### Local Development
+## 🚀 **Development**
+
+### Local Development
 ```bash
-# Clone and setup
-git clone https://github.com/thisyearnofear/runrealm.git
-cd runrealm
-npm install
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your API keys
-
-# Start development servers
-npm run server    # Express server (:3000)
-npm run serve     # Webpack dev server (:8080)
+npm run dev        # Development server (localhost:8080)
+npm run server     # Express server (localhost:3000)
+npm run build      # Production build
+npm test          # Run tests
 ```
 
-#### Production Deployment
-```bash
-# Build and run production server
-npm run build
-npm run server
-
-# Or use Docker for consistency
-docker-compose up --build
+### Project Structure
+```
+src/
+├── components/    # UI components and widgets
+├── services/      # Business logic and integrations
+├── core/         # Base classes and utilities
+├── styles/       # CSS modules and design system
+└── config/       # Configuration and contracts
 ```
 
-#### Deploy to Server (Minimal Setup)
-```bash
-# Minimal server setup - copy built files only
-# See docs/DEVELOPER_GUIDE.md for detailed instructions
-```
+### Key Services
+- **AIOrchestrator**: Manages AI requests with intelligent caching
+- **TerritoryService**: Handles geospatial NFT logic and proximity alerts
+- **CrossChainService**: ZetaChain Universal Contract integration
+- **UserContextService**: Analytics tracking and user personalization
 
-See [Developer Guide](docs/DEVELOPER_GUIDE.md) for detailed setup instructions.
-
-## 🌟 What Makes RunRealm Special
+## 🌟 **What Makes RunRealm Special**
 
 ### Technical Excellence
-
-- **Clean Architecture**: Modular, maintainable, well-documented code
-- **Performance Optimized**: <400KB bundle, <3s load time, 90+ Lighthouse score
-- **Mobile-First**: Touch-optimized interface with haptic feedback
-- **Progressive Enhancement**: Works great without Web3, amazing with it
+- **Clean Architecture**: Modular, maintainable, well-documented
+- **Performance**: <400KB bundle, <3s load time, 90+ Lighthouse score
+- **Mobile-First**: Touch-optimized with haptic feedback
+- **Progressive Enhancement**: Graceful degradation across feature levels
 
 ### Innovation
-
-- **First Geospatial GameFi**: Real-world territories as NFTs with cross-chain provenance
-- **Universal Contract Pioneer**: True cross-chain gaming experience with visual chain indicators
-- **AI-Enhanced Fitness**: Personalized coaching with wallet history and territory portfolio context
-- **Cross-Chain Territory Intelligence**: AI analyzes territories considering your multi-chain activity
-- **Seamless UX**: Web3 complexity hidden behind intuitive interface
+- **First Geospatial GameFi**: Real-world territories as cross-chain NFTs
+- **Universal Contract Pioneer**: Seamless cross-chain experience
+- **AI-Enhanced Fitness**: Personalized coaching with blockchain context
+- **Gas Abstraction**: Web3 complexity hidden behind intuitive interface
 
 ### Real-World Impact
-
 - **Fitness Motivation**: Gamification encourages regular exercise
-- **Community Building**: Shared territories and competitions
+- **Community Building**: Shared territories and friendly competition
 - **Economic Incentives**: Earn tokens for healthy activities
-- **Accessibility**: Works on any device, any blockchain
+- **Accessibility**: Works on any device, any supported blockchain
 
-## 🤝 Contributing
+## 🔧 **Production Deployment**
 
-We welcome contributions! Please see our documentation for:
+### Quick Deploy (Recommended)
+```bash
+npm run build
+export MAPBOX_ACCESS_TOKEN=your_token
+export GOOGLE_GEMINI_API_KEY=your_key
+npm run server
+```
 
-- [Development setup](docs/DEVELOPER_GUIDE.md#environment-setup)
-- [Architecture guidelines](docs/DEVELOPER_GUIDE.md#architecture-overview)
-- [Testing procedures](docs/DEVELOPER_GUIDE.md#testing-strategy)
+### Docker
+```bash
+docker build -t runrealm .
+docker run -p 3000:3000 --env-file .env runrealm
+```
 
-## 📄 License
+### Serverless (Vercel/Netlify)
+- Deploy `dist/` folder to static hosting
+- Configure serverless function for `/api/tokens` endpoint
+- Set environment variables in platform dashboard
+
+See [Deployment Guide](docs/DEPLOYMENT.md) for detailed instructions.
+
+## 🤝 **Contributing**
+
+We welcome contributions! Key areas:
+
+- **New Features**: Territory trading, social features, advanced AI coaching
+- **Performance**: Bundle optimization, caching improvements
+- **Cross-Chain**: Additional blockchain integrations
+- **Mobile**: Native app development, offline capabilities
+
+### Development Guidelines
+- TypeScript strict mode
+- Service-oriented architecture  
+- Event-driven communication
+- Mobile-first responsive design
+- Comprehensive testing
+
+## 📄 **License**
 
 MIT License - see LICENSE file for details.
 
-## 🆘 Support
+## 🆘 **Support**
 
-- **Documentation**: Check our comprehensive guides above
+- **Documentation**: Check our [setup](docs/SETUP.md) and [architecture](docs/ARCHITECTURE.md) guides
 - **Issues**: Open a GitHub issue for bugs or feature requests
-- **Community**: Join our Discord for discussions and support
+- **Community**: Join discussions in GitHub Discussions
 
 ---
 
 **RunRealm**: Where fitness meets the future of Web3 gaming! 🏃‍♂️🎮🚀
+
+*Built with ❤️ for the Google Buildathon - Winner of Cross-Chain Innovation Track*

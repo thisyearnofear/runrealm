@@ -72,4 +72,40 @@ export class UserContextService extends BaseService {
     // Could analyze run history timestamps
     return 'morning';
   }
+
+  public trackUserAction(action: string, data?: any): void {
+    const event = {
+      action,
+      timestamp: Date.now(),
+      sessionId: this.getSessionId(),
+      data
+    };
+    
+    // Store for analytics
+    const events = JSON.parse(localStorage.getItem('user-analytics') || '[]');
+    events.push(event);
+    
+    // Keep only last 1000 events
+    if (events.length > 1000) {
+      events.splice(0, events.length - 1000);
+    }
+    
+    localStorage.setItem('user-analytics', JSON.stringify(events));
+    
+    // Emit for real-time tracking
+    this.safeEmit('analytics:userAction', event);
+  }
+
+  private getSessionId(): string {
+    let sessionId = sessionStorage.getItem('session-id');
+    if (!sessionId) {
+      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionStorage.setItem('session-id', sessionId);
+    }
+    return sessionId;
+  }
+
+  public getAnalytics(): any[] {
+    return JSON.parse(localStorage.getItem('user-analytics') || '[]');
+  }
 }
