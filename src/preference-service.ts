@@ -11,6 +11,7 @@ export class PreferenceService {
   private FOLLOW_ROADS_KEY = 'runmap-follow_roads';
   private MAP_STYLE_KEY = 'runmap-map_style';
   private LAST_RUN_KEY = 'runmap-last_run';
+  private SHOW_TERRITORIES_KEY = 'runmap-show_territories';
 
   public getLastOrDefaultFocus(): MapFocus {
     let initialPosition = JSON.parse(localStorage.getItem(this.LAST_FOCUS_KEY)) as MapFocus;
@@ -49,6 +50,14 @@ export class PreferenceService {
     this.saveBooleanPreference(this.FOLLOW_ROADS_KEY, value);
   }
 
+  public getShowTerritories(): boolean {
+    return this.loadBooleanPreference(this.SHOW_TERRITORIES_KEY, true); // Default: show
+  }
+
+  public saveShowTerritories(value: boolean): void {
+    this.saveBooleanPreference(this.SHOW_TERRITORIES_KEY, value);
+  }
+
   public getMapStyle(): string {
     return this.loadStringPreference(this.MAP_STYLE_KEY, 'street-style');
   }
@@ -73,10 +82,10 @@ export class PreferenceService {
     this.saveBooleanPreference(this.STORAGE_NOTICE_KEY, value);
   }
 
-  private loadBooleanPreference(settingKey: string): boolean {
+  private loadBooleanPreference(settingKey: string, defaultValue: boolean = true): boolean {
     const setting = localStorage.getItem(settingKey);
     if (setting === null) {
-      return true;
+      return defaultValue;
     } else {
       return setting === 'true';
     }

@@ -22,6 +22,7 @@ export interface OnboardingConfig {
   steps: OnboardingStep[];
   allowSkip?: boolean;
   showProgress?: boolean;
+  mode?: 'basic' | 'ai' | 'web3' | 'gamefi'; // Progressive complexity
 }
 
 export class OnboardingService extends BaseService {
@@ -45,6 +46,56 @@ export class OnboardingService extends BaseService {
       OnboardingService.instance = new OnboardingService();
     }
     return OnboardingService.instance;
+  }
+
+  /**
+   * Start progressive onboarding based on user experience
+   */
+  public startProgressive(): void {
+    const hasUsedApp = localStorage.getItem('runrealm-has-used-app');
+    const hasUsedAI = localStorage.getItem('runrealm-has-used-ai');
+    const hasUsedWeb3 = localStorage.getItem('runrealm-has-used-web3');
+
+    if (!hasUsedApp) {
+      this.start({ steps: this.getBasicSteps(), mode: 'basic', allowSkip: true });
+    } else if (!hasUsedAI) {
+      this.start({ steps: this.getAISteps(), mode: 'ai', allowSkip: true });
+    } else if (!hasUsedWeb3) {
+      this.start({ steps: this.getWeb3Steps(), mode: 'web3', allowSkip: true });
+    }
+  }
+
+  private getBasicSteps(): OnboardingStep[] {
+    return [
+      {
+        id: 'welcome',
+        title: 'Welcome to RunRealm! 🏃‍♂️',
+        description: 'Plan routes, track runs, discover your city.',
+        targetElement: '.map-container'
+      }
+    ];
+  }
+
+  private getAISteps(): OnboardingStep[] {
+    return [
+      {
+        id: 'ai-intro',
+        title: 'AI Coach Available 🤖',
+        description: 'Try "Smart Morning" for personalized route suggestions.',
+        targetElement: '[data-payload*="smart_morning"]'
+      }
+    ];
+  }
+
+  private getWeb3Steps(): OnboardingStep[] {
+    return [
+      {
+        id: 'web3-intro',
+        title: 'Own Your Runs 🏆',
+        description: 'Connect wallet to claim territories and earn rewards.',
+        targetElement: '.wallet-widget'
+      }
+    ];
   }
 
   /**

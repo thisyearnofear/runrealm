@@ -1,4 +1,5 @@
 import { Component } from "../core/base-service";
+import { ChainHelper } from "../utils/chain-helper";
 
 /**
  * CrossChainWidget - UI component for cross-chain messaging and interactions
@@ -250,8 +251,12 @@ export class CrossChainWidget extends Component {
     const supportedChains = crossChainService.getSupportedChains();
     chainsListEl.innerHTML = supportedChains
       .map(chainId => {
-        const chainName = crossChainService.getChainName(chainId);
-        return `<span class="chain-tag chain-${chainId}" title="${chainName}">${chainName}</span>`;
+        const chainName = ChainHelper.getSimpleName(chainId);
+        const gasEstimate = ChainHelper.getGasEstimate(chainId);
+        const recommended = ChainHelper.shouldRecommendChain(chainId);
+        return `<span class="chain-tag chain-${chainId} ${recommended ? 'recommended' : ''}" title="${chainName} - Gas: ${gasEstimate}">
+          ${chainName} ${recommended ? '⭐' : ''}
+        </span>`;
       })
       .join(" ");
   }

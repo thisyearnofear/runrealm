@@ -1048,6 +1048,8 @@ export class MainUI extends BaseService {
     const difficultyLabel =
       difficulty < 33 ? "Easy" : difficulty < 67 ? "Medium" : "Hard";
     const rarityClass = String(rarity).toLowerCase();
+    const valueScore = this.calculateTerritoryValue(estimatedReward, difficulty, rarity);
+    const valueColor = valueScore > 70 ? '#00ff88' : valueScore > 40 ? '#ffaa00' : '#ff6b6b';
 
     const landmarksHtml =
       Array.isArray(landmarks) && landmarks.length
@@ -1060,6 +1062,10 @@ export class MainUI extends BaseService {
         : '<div class="widget-tip">No notable landmarks</div>';
 
     const content = `
+      <div class="territory-value-header" style="border-left: 4px solid ${valueColor}; padding-left: 8px; margin-bottom: 12px;">
+        <div style="color: ${valueColor}; font-weight: bold; font-size: 1.1em;">⭐ ${valueScore} Value Score</div>
+        <div style="font-size: 0.85em; opacity: 0.8;">💎 ${rarity} • ⚡ ${estimatedReward} REALM • 🎯 ${difficultyLabel}</div>
+      </div>
       <div class="widget-stat">
         <span class="widget-stat-label">Difficulty</span>
         <span class="widget-stat-value">${difficultyLabel}</span>
@@ -1087,6 +1093,11 @@ export class MainUI extends BaseService {
         this.widgetSystem.toggleWidget("territory-info");
       }
     }, 150);
+  }
+
+  private calculateTerritoryValue(reward: number, difficulty: number, rarity: string): number {
+    const rarityMultiplier = { common: 1, rare: 1.5, epic: 2, legendary: 3 }[rarity.toLowerCase()] || 1;
+    return Math.min(Math.round((reward * 0.8 + difficulty * 0.4) * rarityMultiplier), 100);
   }
 
   /**
@@ -1615,6 +1626,9 @@ export class MainUI extends BaseService {
         <button class="widget-button secondary" id="analyze-btn">
           🤖 AI Analysis
         </button>
+        <button class="widget-button secondary" data-action="territory.toggle">
+          👁️ Toggle View
+        </button>
       </div>
     `;
   }
@@ -1975,14 +1989,14 @@ export class MainUI extends BaseService {
         <div class="prompt-section">
           <div class="prompt-title">🏃‍♂️ Quick Routes</div>
           <div class="widget-buttons compact">
-            <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"morning_run","distance":2000,"goals":["exploration"],"difficulty":30}'>
-              🌅 Morning Jog
+            <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"smart_morning","adaptive":true}'>
+              🌅 Smart Morning
             </button>
-            <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"territory_hunt","distance":3000,"goals":["exploration","territory"],"difficulty":50}'>
-              🏆 Territory Hunt
+            <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"smart_territory","adaptive":true}'>
+              🏆 Best Territory
             </button>
-            <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"training_session","distance":4000,"goals":["training"],"difficulty":70}'>
-              💪 Training Run
+            <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"smart_training","adaptive":true}'>
+              💪 Optimal Training
             </button>
           </div>
         </div>

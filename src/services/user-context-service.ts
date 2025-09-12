@@ -1,0 +1,75 @@
+import { BaseService } from '../core/base-service';
+import { PreferenceService } from '../preference-service';
+
+export interface UserProfile {
+  fitnessLevel: 'beginner' | 'intermediate' | 'advanced';
+  preferredDistance: number;
+  timeOfDay: 'morning' | 'afternoon' | 'evening';
+  goals: string[];
+  completedRuns: number;
+  avgPace?: number;
+}
+
+export class UserContextService extends BaseService {
+  private preferenceService = new PreferenceService();
+  
+  public getSmartSuggestions(): { distance: number; difficulty: number; goals: string[] } {
+    const profile = this.getUserProfile();
+    const timeContext = this.getTimeContext();
+    
+    return {
+      distance: this.calculateOptimalDistance(profile, timeContext),
+      difficulty: this.calculateDifficulty(profile),
+      goals: this.suggestGoals(profile, timeContext)
+    };
+  }
+
+  private getUserProfile(): UserProfile {
+    // Infer from usage patterns
+    const runs = JSON.parse(localStorage.getItem('user-runs') || '[]');
+    return {
+      fitnessLevel: runs.length > 10 ? 'intermediate' : 'beginner',
+      preferredDistance: this.calculateAvgDistance(runs),
+      timeOfDay: this.getPreferredTime(),
+      goals: ['exploration'],
+      completedRuns: runs.length
+    };
+  }
+
+  private getTimeContext(): string {
+    const hour = new Date().getHours();
+    if (hour < 10) return 'morning';
+    if (hour < 17) return 'afternoon';
+    return 'evening';
+  }
+
+  private calculateOptimalDistance(profile: UserProfile, timeContext: string): number {
+    const base = profile.preferredDistance || 2000;
+    const multiplier = timeContext === 'morning' ? 0.8 : timeContext === 'evening' ? 1.2 : 1.0;
+    return Math.round(base * multiplier);
+  }
+
+  private calculateDifficulty(profile: UserProfile): number {
+    const base = profile.fitnessLevel === 'beginner' ? 30 : 
+                 profile.fitnessLevel === 'intermediate' ? 50 : 70;
+    return Math.min(base + (profile.completedRuns * 2), 90);
+  }
+
+  private suggestGoals(profile: UserProfile, timeContext: string): string[] {
+    const goals = ['exploration'];
+    if (profile.completedRuns > 5) goals.push('territory');
+    if (timeContext === 'morning') goals.push('training');
+    return goals;
+  }
+
+  private calculateAvgDistance(runs: any[]): number {
+    if (!runs.length) return 2000;
+    const total = runs.reduce((sum, run) => sum + (run.distance || 0), 0);
+    return Math.round(total / runs.length);
+  }
+
+  private getPreferredTime(): 'morning' | 'afternoon' | 'evening' {
+    // Could analyze run history timestamps
+    return 'morning';
+  }
+}

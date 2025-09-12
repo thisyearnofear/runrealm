@@ -137,6 +137,9 @@ export class AIOrchestrator {
     params: any,
     options: AIRequestOptions = {}
   ): Promise<void> {
+    // Apply smart defaults if adaptive flag is set
+    const smartParams = params.adaptive ? this.applySmartDefaults(params) : params;
+    
     const requestId = this.generateRequestId('route');
     const defaultOptions: AIRequestOptions = {
       timeout: 30000,
@@ -149,7 +152,7 @@ export class AIOrchestrator {
     
     // Check cache first
     if (mergedOptions.cache) {
-      const cached = this.checkCache(`route_${JSON.stringify(params)}`, mergedOptions.cacheTTL!);
+      const cached = this.checkCache(`route_${JSON.stringify(smartParams)}`, mergedOptions.cacheTTL!);
       if (cached) {
         this.eventBus.emit('ai:routeReady', { ...cached, requestId });
         return;
@@ -166,8 +169,8 @@ export class AIOrchestrator {
     });
     
     try {
-      // Add request ID to params
-      const requestParams = { ...params, requestId };
+      // Add request ID to smart params
+      const requestParams = { ...smartParams, requestId };
       
       // Emit request with timeout
       await this.emitWithTimeout('ai:routeRequested', requestParams, mergedOptions.timeout!);
@@ -279,6 +282,31 @@ export class AIOrchestrator {
 
   private generateRequestId(type: string): string {
     return `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private applySmartDefaults(params: any): any {
+    const runs = JSON.parse(localStorage.getItem('user-runs') || '[]');
+    const avgDistance = runs.length ? runs.reduce((sum, r) => sum + (r.distance || 0), 0) / runs.length : 2000;
+    
+    const contexts = {
+      smart_morning: {
+        distance: Math.round(avgDistance * 0.8),
+        difficulty: Math.min(30 + runs.length, 60),
+        goals: ['exploration']
+      },
+      smart_territory: {
+        distance: Math.round(avgDistance * 1.2),
+        difficulty: Math.min(50 + runs.length * 2, 80),
+        goals: ['exploration', 'territory']
+      },
+      smart_training: {
+        distance: Math.round(avgDistance * 1.1),
+        difficulty: Math.min(40 + runs.length * 3, 90),
+        goals: ['training']
+      }
+    };
+    
+    return contexts[params.type] || contexts.smart_morning;
   }
 
   private createRequestStatus(

@@ -774,3 +774,35 @@
   cursor: grabbing !important;
   background: var(--widget-header-bg-active) !important;
 }
+
+/* ===== TERRITORY VALUE DISPLAY ===== */
+.territory-value-header {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.territory-value-header div:first-child {
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.territory-value-header div:last-child {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+/* ===== CHAIN TAG ENHANCEMENTS ===== */
+.chain-tag.recommended {
+  background: linear-gradient(135deg, #00ff88, #00cc6a) !important;
+  color: #000 !important;
+  font-weight: bold !important;
+  box-shadow: 0 2px 8px rgba(0, 255, 136, 0.3) !important;
+}
+
+.chain-tag.recommended:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4) !important;
+}

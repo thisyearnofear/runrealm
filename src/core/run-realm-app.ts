@@ -9,6 +9,8 @@ import { AIService } from "../services/ai-service";
 import { Web3Service } from "../services/web3-service";
 import { RunTrackingService } from "../services/run-tracking-service";
 import { TerritoryService } from "../services/territory-service";
+import { TerritoryToggle } from "../components/territory-toggle";
+import { RunProgressFeedback } from "../components/run-progress-feedback";
 import { EnhancedRunControls } from "../components/enhanced-run-controls";
 import { GameFiUI } from "../components/gamefi-ui";
 import TerritoryDashboard from "../components/territory-dashboard";
@@ -71,6 +73,8 @@ export class RunRealmApp {
   private game: GameService;
   private contractService: ContractService;
   private territory: TerritoryService;
+  private territoryToggle: TerritoryToggle;
+  private runProgressFeedback: RunProgressFeedback;
   private progression: ProgressionService;
   private runTracking: RunTrackingService;
   private onboarding: OnboardingService;
@@ -154,6 +158,8 @@ export class RunRealmApp {
     this.game = new GameService();
     this.contractService = new ContractService(this.web3);
     this.territory = new TerritoryService();
+    this.territoryToggle = new TerritoryToggle();
+    this.runProgressFeedback = new RunProgressFeedback();
     this.dom = DOMService.getInstance();
     this.progression = ProgressionService.getInstance();
     this.runTracking = new RunTrackingService();
@@ -212,6 +218,11 @@ export class RunRealmApp {
     // GameFi event handlers
     this.eventBus.on("territory:claimRequested", (data) => {
       this.handleTerritoryClaimRequest(data);
+    });
+
+    // Territory visibility toggle
+    this.eventBus.on("territory:toggleVisibility", () => {
+      this.territoryToggle.toggle();
     });
 
     this.eventBus.on("ui:unitsToggled", (data) => {
@@ -509,6 +520,7 @@ export class RunRealmApp {
         this.map.on("load", () => {
           console.log("Map loaded successfully");
           this.mapService.setMap(this.map);
+          this.territoryToggle.setMapService(this.mapService);
           resolve();
         });
         this.map.on("error", (error) => {

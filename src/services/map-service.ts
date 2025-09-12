@@ -9,9 +9,21 @@ const TERRITORY_LAYER_ID = 'run-territory-layer';
 
 export class MapService extends BaseService {
   private map: Map | null = null;
+  private territoriesVisible: boolean = true;
 
   public setMap(map: Map): void {
     this.map = map;
+  }
+
+  public setTerritoriesVisible(visible: boolean): void {
+    this.territoriesVisible = visible;
+    if (this.map && this.map.getLayer(TERRITORY_LAYER_ID)) {
+      this.map.setLayoutProperty(TERRITORY_LAYER_ID, 'visibility', visible ? 'visible' : 'none');
+    }
+  }
+
+  public getTerritoriesVisible(): boolean {
+    return this.territoriesVisible;
   }
 
   public drawRunTrail(points: RunPoint[]): void {
@@ -95,6 +107,9 @@ export class MapService extends BaseService {
         id: TERRITORY_LAYER_ID,
         type: 'fill',
         source: TERRITORY_SOURCE_ID,
+        layout: {
+          'visibility': this.territoriesVisible ? 'visible' : 'none'
+        },
         paint: {
           'fill-color': '#00ff88',
           'fill-opacity': 0.3,

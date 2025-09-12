@@ -1,7 +1,7 @@
 import { EventBus } from '../core/event-bus';
 import { AIOrchestrator } from '../services/ai-orchestrator';
 
-export type UIAction = 'ai.requestRoute' | 'ai.requestGhostRunner' | 'ai.showRoute' | 'ai.quickPrompt' | 'ai.startRun';
+export type UIAction = 'ai.requestRoute' | 'ai.requestGhostRunner' | 'ai.showRoute' | 'ai.quickPrompt' | 'ai.startRun' | 'territory.toggle';
 
 const bus = EventBus.getInstance();
 const aiOrchestrator = AIOrchestrator.getInstance();
@@ -140,6 +140,10 @@ export const ActionRouter = {
         // Convert quick prompt to route request with enhanced context
         const quickPromptData = normalizeQuickPrompt(payload);
         aiOrchestrator.requestRoute(quickPromptData);
+        break;
+      case 'territory.toggle':
+        console.log('ActionRouter: Toggling territory visibility');
+        bus.emit('territory:toggleVisibility');
         break;
       default:
         console.warn('Unknown UI action:', action, payload);

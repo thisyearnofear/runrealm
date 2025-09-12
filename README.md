@@ -236,6 +236,16 @@ Deployed smart contract addresses and implementation details:
 - **Cross-Chain Support**: Using contracts from multiple chains
 - **Security Details**: Permissions and best practices
 
+### 🚀 [UX Enhancement Roadmap](docs/UX_ENHANCEMENT_ROADMAP.md)
+
+Strategic plan for transforming RunRealm into the most intuitive fitness GameFi experience:
+
+- **Smart Defaults & Context**: AI-powered personalization
+- **Territory Value Clarity**: Visual scoring and reward systems
+- **Real-time Feedback**: Milestone celebrations and progress tracking
+- **Simplified Cross-Chain UX**: Hide complexity, show value
+- **Progressive Onboarding**: Reveal features based on user readiness
+
 ## 🛠️ Technology Stack
 
 - **Frontend**: TypeScript, Mapbox GL JS, Modern CSS
