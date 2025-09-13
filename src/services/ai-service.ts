@@ -273,7 +273,7 @@ export class AIService extends BaseService {
 
         // If AI disabled or init failed, synthesize a fallback route and emit failure for UI
         if (!this.isAIEnabled()) {
-          const fallback = this.parseRouteOptimization(JSON.stringify({}), currentLocation, goals);
+          const fallback = await this.parseRouteOptimization(JSON.stringify({}), currentLocation, goals);
           const waypoints = fallback.suggestedRoute.coordinates.map(([lng, lat]) => ({ lat, lng }));
           if (waypoints.length < 2) {
             this.safeEmit('ai:routeFailed', { message: 'AI is disabled and no fallback route available.', requestId: data.requestId });
@@ -545,7 +545,7 @@ export class AIService extends BaseService {
         const text = response.text();
         console.log('AIService: Received response from Gemini:', text.substring(0, 100) + '...');
 
-        const optimization = this.parseRouteOptimization(text, currentLocation, goals);
+        const optimization = await this.parseRouteOptimization(text, currentLocation, goals);
         console.log('AIService: Route optimization parsed successfully');
 
         return optimization;
@@ -945,7 +945,7 @@ Make this feel like a personal AI running coach in a game world!
   }
 
   // Response parsers
-  private parseRouteOptimization(text: string, location: any, goals: AIGoals): RouteOptimization {
+  private async parseRouteOptimization(text: string, location: any, goals: AIGoals): Promise<RouteOptimization> {
     try {
       // Try to extract JSON from the response
       let jsonText = text.trim();
@@ -972,7 +972,7 @@ Make this feel like a personal AI running coach in a game world!
       // Ensure coordinates are valid
       if (!Array.isArray(parsed.suggestedRoute.coordinates) || parsed.suggestedRoute.coordinates.length < 2) {
         console.warn('AIService: Invalid coordinates in response, generating fallback');
-        parsed.suggestedRoute.coordinates = this.generateFallbackRoute(location, goals.distance || 2000);
+        parsed.suggestedRoute.coordinates = await this.generateFallbackRoute(location, goals.distance || 2000);
       }
 
       console.log('AIService: Successfully parsed route optimization:', {
@@ -989,7 +989,7 @@ Make this feel like a personal AI running coach in a game world!
       // Fallback if JSON parsing fails
       return {
         suggestedRoute: {
-          coordinates: this.generateFallbackRoute(location, goals.distance || 2000),
+          coordinates: await this.generateFallbackRoute(location, goals.distance || 2000),
           distance: goals.distance || 2000,
           difficulty: goals.difficulty || 50,
           reasoning: 'AI-generated fallback route optimized for territory claiming'
@@ -1121,13 +1121,24 @@ Make this feel like a personal AI running coach in a game world!
     };
   }
 
-  private generateFallbackRoute(
+  private async generateFallbackRoute(
     center: { lat: number; lng: number },
     distance: number
-  ): [number, number][] {
-    // Generate a simple circular route
+  ): Promise<[number, number][]> {
+    // Try to get road-following route via Mapbox Directions
+    try {
+      const waypoints = this.generateCircularWaypoints(center, distance);
+      const roadRoute = await this.getMapboxRoute(waypoints);
+      if (roadRoute && roadRoute.length > 2) {
+        return roadRoute;
+      }
+    } catch (error) {
+      console.warn('Failed to get road route, using fallback:', error);
+    }
+
+    // Fallback to simple circular route
     const points: [number, number][] = [];
-    const radius = distance / (2 * Math.PI * 111000); // Approximate radius in degrees
+    const radius = distance / (2 * Math.PI * 111000);
     const numPoints = 8;
     
     for (let i = 0; i <= numPoints; i++) {
@@ -1138,6 +1149,46 @@ Make this feel like a personal AI running coach in a game world!
     }
     
     return points;
+  }
+
+  private generateCircularWaypoints(center: { lat: number; lng: number }, distance: number): [number, number][] {
+    const radius = distance / (2 * Math.PI * 111000);
+    const waypoints: [number, number][] = [];
+    
+    // Generate 4 waypoints for a roughly circular route
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * 2 * Math.PI;
+      const lat = center.lat + radius * Math.cos(angle);
+      const lng = center.lng + radius * Math.sin(angle);
+      waypoints.push([lng, lat]);
+    }
+    waypoints.push(waypoints[0]); // Close the loop
+    
+    return waypoints;
+  }
+
+  private async getMapboxRoute(waypoints: [number, number][]): Promise<[number, number][]> {
+    const config = this.config.getConfig();
+    const token = config.mapbox?.accessToken;
+    
+    if (!token) {
+      throw new Error('No Mapbox token available');
+    }
+
+    const coordinates = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(';');
+    const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?geometries=geojson&access_token=${token}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Mapbox API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (data.routes && data.routes[0] && data.routes[0].geometry) {
+      return data.routes[0].geometry.coordinates;
+    }
+    
+    throw new Error('No route found');
   }
 
   private calculatePaceFromDifficulty(difficulty: number): number {

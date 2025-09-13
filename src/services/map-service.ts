@@ -134,33 +134,35 @@ export class MapService extends BaseService {
     if (this.map.getSource(TRAIL_SOURCE_ID)) {
       this.map.removeSource(TRAIL_SOURCE_ID);
     }
+
+    if (this.map.getLayer('suggested-route-layer')) {
+      this.map.removeLayer('suggested-route-layer');
+    }
+    if (this.map.getSource('suggested-route-source')) {
+      this.map.removeSource('suggested-route-source');
+    }
   }
 
   public drawSuggestedRoute(points: any[]): void {
     if (!this.map) return;
 
     const coordinates = points.map(p => [p.lng, p.lat]);
+    const difficulty = points[0]?.difficulty || 50;
 
     const source = this.map.getSource('suggested-route-source') as any;
     if (source) {
       source.setData({
         type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: coordinates,
-        },
+        properties: { difficulty },
+        geometry: { type: 'LineString', coordinates },
       });
     } else {
       this.map.addSource('suggested-route-source', {
         type: 'geojson',
         data: {
           type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: coordinates,
-          },
+          properties: { difficulty },
+          geometry: { type: 'LineString', coordinates },
         },
       });
 
@@ -168,15 +170,15 @@ export class MapService extends BaseService {
         id: 'suggested-route-layer',
         type: 'line',
         source: 'suggested-route-source',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-        },
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: {
-          'line-color': '#888',
+          'line-color': [
+            'interpolate', ['linear'], ['get', 'difficulty'],
+            30, '#4A90E2', 60, '#F39C12', 90, '#E74C3C'
+          ],
           'line-width': 4,
           'line-opacity': 0.8,
-          'line-dasharray': [2, 2],
+          'line-dasharray': [3, 2],
         },
       });
     }
