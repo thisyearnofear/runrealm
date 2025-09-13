@@ -11,7 +11,15 @@ export interface UserProfile {
 }
 
 export class UserContextService extends BaseService {
+  private static instance: UserContextService;
   private preferenceService = new PreferenceService();
+
+  public static getInstance(): UserContextService {
+    if (!UserContextService.instance) {
+      UserContextService.instance = new UserContextService();
+    }
+    return UserContextService.instance;
+  }
   
   public getSmartSuggestions(): { distance: number; difficulty: number; goals: string[] } {
     const profile = this.getUserProfile();
