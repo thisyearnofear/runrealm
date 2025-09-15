@@ -1,6 +1,7 @@
 // Main application controller - orchestrates all services
 // Dynamically import mapbox-gl to reduce initial bundle size
 // import mapboxgl, { Map, MapMouseEvent, NavigationControl, GeolocateControl } from 'mapbox-gl';
+import { ExternalFitnessService } from "../services/external-fitness-service";
 import { ConfigService } from "./app-config";
 import { EventBus } from "./event-bus";
 import { UIService } from "../services/ui-service";
@@ -92,6 +93,7 @@ export class RunRealmApp {
   private enhancedRunControls: EnhancedRunControls;
   private crossChainService: CrossChainService;
   private crossChainDemo: CrossChainDemoComponent;
+  private externalFitnessService: ExternalFitnessService;
 
   // Lazy-loaded services (PERFORMANT: created only when needed)
   private nextSegmentService: NextSegmentService;
@@ -171,6 +173,7 @@ export class RunRealmApp {
     this.crossChainService = new CrossChainService();
     this.crossChainDemo = new CrossChainDemoComponent();
     this.mapService = new MapService();
+    this.externalFitnessService = new ExternalFitnessService();
 
     // Initialize remaining services (CONSOLIDATED)
     this.enhancedRunControls = new EnhancedRunControls();
@@ -623,6 +626,8 @@ export class RunRealmApp {
       AIService: this.ai, // Legacy compatibility
       crossChain: this.crossChainService,
       CrossChainService: this.crossChainService, // Legacy compatibility
+      externalFitness: this.externalFitnessService,
+      ExternalFitnessService: this.externalFitnessService, // Legacy compatibility
 
       // UI services
       animation: this.animation,

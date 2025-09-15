@@ -6,6 +6,14 @@ import './styles/core-system.css';     // Variables, z-index, animations, utilit
 import './styles/components.css';      // Widgets, GameFi UI, controls, rewards
 import './styles/interfaces.css';      // Modals, location, wallet, cross-chain
 import './styles/responsive.css';      // Mobile-first responsive design
+import './styles/external-fitness.css'; // External fitness integration
+
+// Register service worker for offline support
+if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+  navigator.serviceWorker.register('/sw.js')
+    .then(() => console.log('SW registered'))
+    .catch(() => console.log('SW registration failed'));
+}
 
 // Filter out noisy browser extension errors and token exposure in production
 if (process.env.NODE_ENV === 'production') {

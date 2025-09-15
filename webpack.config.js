@@ -202,6 +202,11 @@ module.exports = (env, argv) => {
             to: path.resolve(__dirname, "public"),
             noErrorOnMissing: true,
           },
+          {
+            from: path.resolve(__dirname, "src/sw.js"),
+            to: path.resolve(__dirname, "public/sw.js"),
+            noErrorOnMissing: true,
+          },
         ],
       }),
       new webpack.DefinePlugin({

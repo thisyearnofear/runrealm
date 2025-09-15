@@ -22,6 +22,7 @@ import { WalletWidget } from "./wallet-widget";
 import { TransactionStatus } from "./transaction-status";
 import { RewardSystemUI } from "./reward-system-ui";
 import { Web3Service } from "../services/web3-service";
+import { ExternalFitnessIntegration } from "./external-fitness-integration";
 import { ConfigService } from "../core/app-config";
 import { ContractService } from "../services/contract-service";
 import { RouteStateService } from "../services/route-state-service";
@@ -48,6 +49,7 @@ export class MainUI extends BaseService {
   private web3Service: Web3Service;
   private configService: ConfigService;
   private routeStateService: RouteStateService;
+  private externalFitnessIntegration: ExternalFitnessIntegration | null = null;
   private isGameFiMode: boolean = false;
 
   // GPS and Network status for location widget
@@ -331,6 +333,11 @@ export class MainUI extends BaseService {
     this.domService.delegate(document.body, ".fab-option", "click", (event) => {
       const action = (event.target as HTMLElement).dataset.action;
       this.handleFabAction(action!);
+    });
+
+    this.domService.delegate(document.body, "#import-activities-btn", "click", () => {
+      this.showExternalFitnessIntegration();
+      this.trackUserAction("import_activities_clicked");
     });
 
     // Old run control button handlers removed - now handled by EnhancedRunControls
@@ -1629,6 +1636,10 @@ export class MainUI extends BaseService {
         <button class="widget-button secondary" data-action="territory.toggle">
           👁️ Toggle View
         </button>
+        <button class="widget-button tertiary" id="import-activities-btn">
+          <span class="btn-icon">🌟</span>
+          <span class="btn-text">Import Legendary Runs</span>
+        </button>
       </div>
     `;
   }
@@ -2029,6 +2040,26 @@ export class MainUI extends BaseService {
   }
 
   // Old run controls show/hide methods removed - now handled by EnhancedRunControls
+
+  /**
+   * Show external fitness integration panel
+   */
+  private showExternalFitnessIntegration(): void {
+    if (!this.externalFitnessIntegration) {
+      // Create container if it doesn't exist
+      let container = document.getElementById('external-fitness-container');
+      if (!container) {
+        container = this.domService.createElement('div', {
+          id: 'external-fitness-container',
+          parent: document.body
+        });
+      }
+      
+      this.externalFitnessIntegration = new ExternalFitnessIntegration(container);
+    }
+    
+    this.externalFitnessIntegration.show();
+  }
 
   /**
    * Toggle widget visibility (show/hide completely)

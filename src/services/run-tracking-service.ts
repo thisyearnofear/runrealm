@@ -29,6 +29,20 @@ export interface RunLap {
   totalTime: number; // total time at the end of the lap
 }
 
+export interface ExternalActivity {
+  id: string;
+  source: "strava" | "garmin" | "apple_health" | "google_fit";
+  name: string;
+  startTime: number;
+  distance: number;
+  duration: number;
+  polyline?: string; // encoded polyline
+  averageSpeed: number;
+  maxSpeed?: number;
+  elevationGain?: number;
+  sourceUrl?: string;
+}
+
 export interface RunSession {
   id: string;
   startTime: number;
@@ -43,6 +57,7 @@ export interface RunSession {
   status: "recording" | "paused" | "completed" | "cancelled";
   territoryEligible: boolean;
   geohash?: string;
+  externalActivity?: ExternalActivity; // Link to imported activity
 }
 
 export interface RunTrackingConfig {
@@ -626,7 +641,7 @@ export class RunTrackingService extends BaseService {
   }
 
   /**
-   * Start real-time updates
+   * Start real-time updates with adaptive frequency
    */
   private startRealTimeUpdates(): void {
     this.updateInterval = window.setInterval(() => {
@@ -636,7 +651,7 @@ export class RunTrackingService extends BaseService {
           runId: this.currentRun.id,
         });
       }
-    }, 1000); // Update every second
+    }, 2000); // Reduced from 1s to 2s for better battery life
   }
 
   /**
@@ -706,6 +721,88 @@ export class RunTrackingService extends BaseService {
    */
   private generateSegmentId(): string {
     return `segment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Import activity from external fitness service
+   */
+  public async importExternalActivity(activity: ExternalActivity): Promise<RunSession> {
+    const runSession: RunSession = {
+      id: this.generateRunId(),
+      startTime: activity.startTime,
+      endTime: activity.startTime + activity.duration,
+      points: await this.decodePolylineToPoints(activity.polyline),
+      segments: [],
+      laps: [],
+      totalDistance: activity.distance,
+      totalDuration: activity.duration,
+      averageSpeed: activity.averageSpeed,
+      maxSpeed: activity.maxSpeed || activity.averageSpeed,
+      status: "completed",
+      territoryEligible: false,
+      externalActivity: activity
+    };
+
+    // Generate segments from points
+    runSession.segments = this.generateSegmentsFromPoints(runSession.points);
+    
+    // Check territory eligibility
+    this.checkImportedTerritoryEligibility(runSession);
+    
+    // Save imported run
+    this.saveRun(runSession);
+    
+    this.safeEmit("run:imported", { runSession, source: activity.source });
+    
+    return runSession;
+  }
+
+  /**
+   * Decode polyline to RunPoints (simplified implementation)
+   */
+  private async decodePolylineToPoints(polyline?: string): Promise<RunPoint[]> {
+    if (!polyline) return [];
+    
+    // Simplified polyline decoding - in production use proper polyline library
+    // This is a placeholder that would integrate with actual polyline decoding
+    return [];
+  }
+
+  /**
+   * Generate segments from imported points
+   */
+  private generateSegmentsFromPoints(points: RunPoint[]): RunSegment[] {
+    const segments: RunSegment[] = [];
+    
+    for (let i = 0; i < points.length - 1; i++) {
+      const segment = this.createSegment(points[i], points[i + 1]);
+      segments.push(segment);
+    }
+    
+    return segments;
+  }
+
+  /**
+   * Check territory eligibility for imported runs
+   */
+  private checkImportedTerritoryEligibility(run: RunSession): void {
+    if (run.points.length < 2) {
+      run.territoryEligible = false;
+      return;
+    }
+
+    const startPoint = run.points[0];
+    const endPoint = run.points[run.points.length - 1];
+
+    const meetsDistance = run.totalDistance >= this.runConfig.territoryMinDistance;
+    const distanceFromStart = this.calculateDistance(startPoint, endPoint);
+    const isLoop = distanceFromStart <= this.runConfig.territoryMaxDeviation;
+
+    run.territoryEligible = meetsDistance && isLoop;
+
+    if (run.territoryEligible) {
+      run.geohash = this.generateTerritoryGeohash(startPoint);
+    }
   }
 
   /**

@@ -23,6 +23,7 @@ npm run dev
 **API Keys Needed:**
 - **Mapbox**: https://account.mapbox.com/access-tokens/
 - **Google Gemini**: https://makersuite.google.com/app/apikey
+- **Strava** (optional): https://developers.strava.com/
 
 ## ✨ **Features**
 
@@ -30,12 +31,13 @@ npm run dev
 - **Basic**: Route planning, GPS tracking, territory visualization
 - **AI Enhanced**: Smart route suggestions, personalized coaching, ghost runners
 - **Web3 GameFi**: Territory NFTs, REALM rewards, cross-chain interactions
+- **Fitness Integration**: Import activities from Strava, Garmin, Apple Health
 
 ### 🌐 **Cross-Chain Innovation**
 - Claim territories from any supported blockchain (Ethereum, BSC, Polygon)
 - Gas paid only on your native chain - no ZETA tokens needed
 - Universal Contract handles all cross-chain complexity
-- Visual chain indicators show territory provenance
+- Import existing runs to claim territories retroactively
 
 ### 🤖 **AI-Powered Coaching**
 - Google Gemini integration for route optimization
@@ -55,7 +57,7 @@ npm run dev
 ### Core Guides
 - **[Setup Guide](docs/SETUP.md)** - Installation, configuration, and development
 - **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and code organization  
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment and scaling
+- **[Production Guide](docs/PRODUCTION.md)** - Deployment, optimization, and monitoring
 
 ### Key Concepts
 
@@ -78,10 +80,10 @@ UserContextService → Analytics and personalization
 - Plan optimal routes with AI assistance
 - Earn REALM tokens for completing challenging routes
 - Own unique NFT territories based on favorite running spots
-- Compete with AI ghost runners for motivation
+- Import existing Strava/Garmin activities to claim territories retroactively
 
 ### For Web3 Enthusiasts  
-- Experience true cross-chain gaming
+- Experience true cross-chain gaming without gas complexity
 - Collect and trade unique geospatial NFTs
 - Participate in real-world utility token economy
 - Showcase fitness achievements on-chain

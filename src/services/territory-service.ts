@@ -508,6 +508,32 @@ export class TerritoryService extends BaseService {
 
 
   /**
+   * Claim territory from external fitness activity
+   */
+  public async claimTerritoryFromExternalActivity(
+    runSession: RunSession
+  ): Promise<TerritoryClaimResult> {
+    if (!runSession.territoryEligible || !runSession.geohash) {
+      return {
+        success: false,
+        error: "Activity not eligible for territory claiming",
+        territoryId: "",
+      };
+    }
+
+    // Generate territory from external activity
+    const territory = await this.generateTerritoryFromRun(runSession);
+    
+    // Add external activity metadata
+    if (runSession.externalActivity) {
+      territory.metadata.description = `Territory claimed from ${runSession.externalActivity.source} activity: ${runSession.externalActivity.name}`;
+      territory.metadata.landmarks.push(`Source: ${runSession.externalActivity.source}`);
+    }
+
+    return this.claimTerritory(territory);
+  }
+
+  /**
    * Claim territory on blockchain
    */
   private async claimTerritory(

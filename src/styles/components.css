@@ -302,6 +302,23 @@
   border-color: rgba(255, 255, 255, 0.5);
 }
 
+.widget-button.tertiary {
+  background: linear-gradient(135deg, 
+    rgba(0, 255, 136, 0.1) 0%,
+    rgba(0, 189, 255, 0.1) 100%);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: var(--color-primary);
+  font-size: 12px;
+}
+
+.widget-button.tertiary:hover {
+  background: linear-gradient(135deg, 
+    rgba(0, 255, 136, 0.2) 0%,
+    rgba(0, 189, 255, 0.2) 100%);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 16px rgba(0, 255, 136, 0.3);
+}
+
 .widget-button.primary {
   background: linear-gradient(135deg, #28a745, #20c997);
   box-shadow: var(--elevation-2);
