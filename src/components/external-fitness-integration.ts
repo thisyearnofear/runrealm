@@ -1,13 +1,16 @@
 import { BaseService } from "../core/base-service";
 import { ExternalActivity } from "../services/run-tracking-service";
+import { ExternalFitnessService } from "../services/external-fitness-service";
 
 export class ExternalFitnessIntegration extends BaseService {
   private container: HTMLElement;
   private isVisible = false;
+  private fitnessService: ExternalFitnessService;
 
   constructor(container: HTMLElement) {
     super();
     this.container = container;
+    this.fitnessService = new ExternalFitnessService();
     this.render();
     this.setupEventListeners();
   }
@@ -67,12 +70,16 @@ export class ExternalFitnessIntegration extends BaseService {
     stravaCard.addEventListener('click', () => this.connectStrava());
 
     // Listen for fitness service events
-    this.addEventListener('fitness:connected', (event: any) => {
-      this.onServiceConnected(event.detail.source);
+    this.eventBus.on('fitness:connected', (event) => {
+      this.onServiceConnected(event.source);
     });
 
-    this.addEventListener('fitness:activities', (event: any) => {
-      this.displayActivities(event.detail.activities);
+    this.eventBus.on('fitness:connectionFailed', (event) => {
+      this.onConnectionFailed(event.source, event.error);
+    });
+
+    this.eventBus.on('fitness:activities', (event) => {
+      this.displayActivities(event.activities);
     });
   }
 
@@ -100,9 +107,6 @@ export class ExternalFitnessIntegration extends BaseService {
   }
 
   private async connectStrava(): Promise<void> {
-    const fitnessService = this.getService('ExternalFitnessService');
-    if (!fitnessService) return;
-
     const stravaCard = this.container.querySelector('.service-card.strava') as HTMLElement;
     const status = stravaCard.querySelector('.service-status') as HTMLElement;
     
@@ -110,13 +114,55 @@ export class ExternalFitnessIntegration extends BaseService {
     stravaCard.classList.add('connecting');
 
     try {
-      const authUrl = fitnessService.initiateStravaAuth();
-      window.open(authUrl, '_blank', 'width=600,height=600');
+      const authUrl = this.fitnessService.initiateStravaAuth();
+      
+      // Open OAuth window
+      const authWindow = window.open(
+        authUrl, 
+        'strava-auth', 
+        'width=600,height=600,scrollbars=yes,resizable=yes'
+      );
+      
+      if (!authWindow) {
+        throw new Error('Unable to open authentication window. Please allow popups.');
+      }
+      
+      // Monitor for successful authentication
+      const pollTimer = setInterval(() => {
+        try {
+          if (authWindow.closed) {
+            clearInterval(pollTimer);
+            // Check if authentication was successful
+            if (this.fitnessService.isConnected('strava')) {
+              this.onServiceConnected('strava');
+            } else {
+              status.textContent = 'Connect';
+              stravaCard.classList.remove('connecting');
+            }
+          }
+        } catch (error) {
+          // Ignore cross-origin errors
+        }
+      }, 1000);
+      
     } catch (error) {
       console.error('Failed to connect Strava:', error);
       status.textContent = 'Failed';
       stravaCard.classList.remove('connecting');
+      
+      // Show user-friendly error
+      this.showError(error instanceof Error ? error.message : 'Connection failed');
     }
+  }
+
+  private onConnectionFailed(source: string, error: string): void {
+    const serviceCard = this.container.querySelector(`.service-card.${source}`) as HTMLElement;
+    const status = serviceCard.querySelector('.service-status') as HTMLElement;
+    
+    serviceCard.classList.remove('connecting');
+    status.textContent = 'Failed';
+    
+    this.showError(`Failed to connect to ${source}: ${error}`);
   }
 
   private onServiceConnected(source: string): void {
@@ -131,14 +177,14 @@ export class ExternalFitnessIntegration extends BaseService {
   }
 
   private async loadRecentActivities(source: string): Promise<void> {
-    const fitnessService = this.getService('ExternalFitnessService');
-    if (!fitnessService) return;
-
     try {
-      const activities = await fitnessService.getStravaActivities(8);
-      this.displayActivities(activities);
+      if (source === 'strava') {
+        const activities = await this.fitnessService.getStravaActivities(8);
+        this.displayActivities(activities);
+      }
     } catch (error) {
       console.error('Failed to load activities:', error);
+      this.showError('Failed to load activities');
     }
   }
 
@@ -182,7 +228,7 @@ export class ExternalFitnessIntegration extends BaseService {
     // Add claim listeners
     grid.querySelectorAll('.claim-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const activityData = (e.target as HTMLElement).closest('.claim-btn')?.dataset.activity;
+        const activityData = (e.target as HTMLElement).closest('.claim-btn')?.getAttribute('data-activity');
         if (activityData) {
           this.importActivity(JSON.parse(activityData));
         }
@@ -220,8 +266,11 @@ export class ExternalFitnessIntegration extends BaseService {
           claimBtn.classList.add('claimed');
           
           this.safeEmit('territory:claimed', { 
-            territoryId: result.territoryId,
-            source: activity.source 
+            territory: {
+              ...result,
+              source: activity.source
+            },
+            transactionHash: result.territoryId || 'external-import'
           });
           
           // Show success animation
@@ -253,8 +302,41 @@ export class ExternalFitnessIntegration extends BaseService {
     setTimeout(() => sparkles.remove(), 2000);
   }
 
+  private showError(message: string): void {
+    // Create a temporary error message
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'fitness-error';
+    errorDiv.innerHTML = `
+      <div class="error-content">
+        <span class="error-icon">⚠️</span>
+        <span class="error-message">${message}</span>
+      </div>
+    `;
+    
+    this.container.appendChild(errorDiv);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+      if (errorDiv.parentNode) {
+        errorDiv.parentNode.removeChild(errorDiv);
+      }
+    }, 5000);
+  }
   private getService(serviceName: string): any {
     const services = (window as any).RunRealm?.services;
     return services?.[serviceName];
+  }
+
+  /**
+   * Override BaseService initialize method
+   */
+  protected async onInitialize(): Promise<void> {
+    await this.fitnessService.initialize();
+    
+    // Check if already connected
+    const status = this.fitnessService.getConnectionStatus();
+    if (status.strava) {
+      this.onServiceConnected('strava');
+    }
   }
 }

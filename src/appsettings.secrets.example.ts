@@ -7,6 +7,11 @@ export const MAPBOX_ACCESS_TOKEN = "your_mapbox_access_token_here";
 // Google Gemini API Key - get from https://makersuite.google.com/app/apikey
 export const GOOGLE_GEMINI_API_KEY = "your_google_gemini_api_key_here";
 
+// Strava API Configuration - get from https://www.strava.com/settings/api
+export const STRAVA_CLIENT_ID = "your_strava_client_id_here";
+export const STRAVA_CLIENT_SECRET = "your_strava_client_secret_here";
+export const STRAVA_REDIRECT_URI = "http://localhost:3000/auth/strava/callback"; // For development
+
 // Web3 Configuration - LIVE DEPLOYED CONTRACTS ON ZETACHAIN TESTNET
 export const ZETACHAIN_RPC_URL =
   "https://zetachain-athens-evm.blockpi.network/v1/rpc/public";
@@ -31,6 +36,11 @@ export const appSettings = {
     apiKey: GOOGLE_GEMINI_API_KEY,
     model: "gemini-pro",
   },
+  strava: {
+    clientId: STRAVA_CLIENT_ID,
+    clientSecret: STRAVA_CLIENT_SECRET,
+    redirectUri: STRAVA_REDIRECT_URI,
+  },
   web3: {
     zetachain: {
       chainId: 7001,
@@ -46,5 +56,11 @@ export const appSettings = {
   ui: {
     enableAnimations: true,
     isMobile: false,
+  },
+  fitness: {
+    enableStrava: true,
+    enableGarmin: false, // Coming soon
+    enableAppleHealth: false, // Coming soon
+    enableGoogleFit: false, // Coming soon
   },
 };

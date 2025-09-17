@@ -1,20 +1,22 @@
-import { Component } from "../core/base-service";
+
 import { ChainHelper } from "../utils/chain-helper";
+import { EventBus } from "../core/event-bus";
 
 /**
  * CrossChainWidget - UI component for cross-chain messaging and interactions
  * CLEAN: Clear separation of concerns with explicit dependencies
  * MODULAR: Composable, testable, independent module
  */
-export class CrossChainWidget extends Component {
+export class CrossChainWidget {
   private container: HTMLElement | null = null;
   private crossChainService: any = null;
   private web3Service: any = null;
   private contractService: any = null;
   private activityLog: Array<any> = [];
+  private eventBus: EventBus;
 
   constructor() {
-    super();
+    this.eventBus = EventBus.getInstance();
     this.initializeServices();
   }
 
@@ -40,7 +42,66 @@ export class CrossChainWidget extends Component {
     this.setupServiceListeners();
   }
 
-  private render(): void {\n    if (!this.container) return;\n\n    this.container.innerHTML = `\n      <div class=\"cross-chain-widget\">\n        <div class=\"widget-header\">\n          <h3>⛓️ Cross-Chain Interactions</h3>\n          <button class=\"refresh-btn\" id=\"cross-chain-refresh\">🔄</button>\n        </div>\n        \n        <div class=\"widget-content\">\n          <div class=\"chain-info\">\n            <div class=\"current-chain\">\n              <span class=\"label\">Current Chain:</span>\n              <span class=\"value\" id=\"current-chain-name\">Not connected</span>\n            </div>\n            \n            <div class=\"supported-chains\">\n              <span class=\"label\">Supported Chains:</span>\n              <div class=\"chains-list\" id=\"supported-chains-list\"></div>\n            </div>\n          </div>\n          \n          <div class=\"cross-chain-actions\">\n            <button class=\"action-btn primary\" id=\"claim-cross-chain-territory\" disabled>\n              🌍 Claim Territory Cross-Chain\n            </button>\n            \n            <button class=\"action-btn\" id=\"view-cross-chain-history\" disabled>\n              📜 View Cross-Chain History\n            </button>\n          </div>\n          \n          <div class=\"cross-chain-activity\">\n            <div class=\"section-header\">\n              <h4>Recent Activity</h4>\n              <span class=\"activity-count\" id=\"activity-count\">0</span>\n            </div>\n            <div class=\"activity-list\" id=\"activity-list\">\n              <div class=\"no-activity\">No cross-chain activity yet</div>\n            </div>\n          </div>\n          \n          <div class=\"cross-chain-status\" id=\"cross-chain-status\" style=\"display: none;\">\n            <div class=\"status-indicator\">\n              <span class=\"status-icon\" id=\"status-icon\">🟡</span>\n              <span class=\"status-text\" id=\"status-text\">Processing cross-chain request...</span>\n            </div>\n            <div class=\"progress-bar\">\n              <div class=\"progress-fill\" id=\"progress-fill\"></div>\n            </div>\n          </div>\n        </div>\n      </div>\n    `;\n\n    this.updateChainInfo();\n    this.updateSupportedChains();\n    this.updateActivityList();\n  }
+  private render(): void {
+    if (!this.container) return;
+
+    this.container.innerHTML = `
+      <div class="cross-chain-widget">
+        <div class="widget-header">
+          <h3>⛓️ Cross-Chain Interactions</h3>
+          <button class="refresh-btn" id="cross-chain-refresh">🔄</button>
+        </div>
+        
+        <div class="widget-content">
+          <div class="chain-info">
+            <div class="current-chain">
+              <span class="label">Current Chain:</span>
+              <span class="value" id="current-chain-name">Not connected</span>
+            </div>
+            
+            <div class="supported-chains">
+              <span class="label">Supported Chains:</span>
+              <div class="chains-list" id="supported-chains-list"></div>
+            </div>
+          </div>
+          
+          <div class="cross-chain-actions">
+            <button class="action-btn primary" id="claim-cross-chain-territory" disabled>
+              🌍 Claim Territory Cross-Chain
+            </button>
+            
+            <button class="action-btn" id="view-cross-chain-history" disabled>
+              📜 View Cross-Chain History
+            </button>
+          </div>
+          
+          <div class="cross-chain-activity">
+            <div class="section-header">
+              <h4>Recent Activity</h4>
+              <span class="activity-count" id="activity-count">0</span>
+            </div>
+            <div class="activity-list" id="activity-list">
+              <div class="no-activity">No cross-chain activity yet</div>
+            </div>
+          </div>
+          
+          <div class="cross-chain-status" id="cross-chain-status" style="display: none;">
+            <div class="status-indicator">
+              <span class="status-icon" id="status-icon">🟡</span>
+              <span class="status-text" id="status-text">Processing cross-chain request...</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.updateChainInfo();
+    this.updateSupportedChains();
+    this.updateActivityList();
+  }
 
   private setupEventListeners(): void {
     // Refresh button
@@ -250,7 +311,7 @@ export class CrossChainWidget extends Component {
 
     const supportedChains = crossChainService.getSupportedChains();
     chainsListEl.innerHTML = supportedChains
-      .map(chainId => {
+      .map((chainId: number) => {
         const chainName = ChainHelper.getSimpleName(chainId);
         const gasEstimate = ChainHelper.getGasEstimate(chainId);
         const recommended = ChainHelper.shouldRecommendChain(chainId);
@@ -390,6 +451,7 @@ export class CrossChainWidget extends Component {
       historyBtn.removeEventListener("click", () => {});
     }
 
-    super.cleanup();
+    // Cleanup event listeners
+    // No parent cleanup needed
   }
 }

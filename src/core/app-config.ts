@@ -1,6 +1,28 @@
 // Centralized application configuration
 import { EventBus } from './event-bus';
 
+export interface StravaConfig {
+  clientId: string;
+  clientSecret?: string; // Only on server-side
+  redirectUri: string;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresAt?: number;
+}
+
+export interface ExternalFitnessConfig {
+  strava?: StravaConfig;
+  garmin?: {
+    enabled: boolean;
+  };
+  appleHealth?: {
+    enabled: boolean;
+  };
+  googleFit?: {
+    enabled: boolean;
+  };
+}
+
 export interface Web3Config {
   enabled: boolean;
   zetachain: {
@@ -46,8 +68,10 @@ export interface AppConfig {
     enableToasts: boolean;
     enableKeyboardShortcuts: boolean;
     enableWeb3: boolean;
+    enableFitness: boolean;
   };
   web3?: Web3Config;
+  fitness?: ExternalFitnessConfig;
 }
 
 export class ConfigService {
@@ -93,6 +117,19 @@ export class ConfigService {
         console.debug('No Gemini API key received from runtime endpoint');
       }
 
+      // Handle Strava configuration
+      if (runtimeTokens.strava && runtimeTokens.strava.clientId) {
+        localStorage.setItem('runrealm_strava_client_id', runtimeTokens.strava.clientId);
+        localStorage.setItem('runrealm_strava_redirect_uri', runtimeTokens.strava.redirectUri);
+        if (this.config.fitness?.strava) {
+          this.config.fitness.strava.clientId = runtimeTokens.strava.clientId;
+          this.config.fitness.strava.redirectUri = runtimeTokens.strava.redirectUri;
+        }
+        console.debug('Strava configuration updated in config');
+      } else {
+        console.debug('No Strava configuration received from runtime endpoint');
+      }
+
       this.runtimeTokensLoaded = true;
       // Refresh config with new tokens
       this.refreshConfig();
@@ -135,8 +172,12 @@ export class ConfigService {
         enableWeb3:
           this.getEnvVar("ENABLE_WEB3") === "true" ||
           localStorage.getItem("runrealm_web3_enabled") === "true",
+        enableFitness:
+          this.getEnvVar("ENABLE_FITNESS") !== "false" &&
+          localStorage.getItem("runrealm_fitness_enabled") !== "false",
       },
       web3: this.loadWeb3Config(),
+      fitness: this.loadFitnessConfig(),
     };
   }
 
@@ -157,7 +198,7 @@ export class ConfigService {
     return localStorage.getItem(`runrealm_${name.toLowerCase()}`);
   }
 
-  private async fetchRuntimeTokens(): Promise<{mapbox?: string, gemini?: string}> {
+  private async fetchRuntimeTokens(): Promise<{mapbox?: string, gemini?: string, strava?: StravaConfig}> {
     try {
       // In production, use relative URL to leverage Netlify proxy
       // In development, use full API base URL
@@ -340,6 +381,94 @@ export class ConfigService {
   }
 
   
+
+  private loadFitnessConfig(): ExternalFitnessConfig | undefined {
+    const fitnessEnabled = this.config?.features?.enableFitness !== false;
+    
+    if (!fitnessEnabled) {
+      return undefined;
+    }
+
+    return {
+      strava: this.loadStravaConfig(),
+      garmin: {
+        enabled: false // Coming soon
+      },
+      appleHealth: {
+        enabled: false // Coming soon
+      },
+      googleFit: {
+        enabled: false // Coming soon
+      }
+    };
+  }
+
+  private loadStravaConfig(): StravaConfig | undefined {
+    const clientId = 
+      this.getSecureEnvVar("STRAVA_CLIENT_ID") ||
+      localStorage.getItem('runrealm_strava_client_id');
+    
+    const redirectUri = 
+      this.getSecureEnvVar("STRAVA_REDIRECT_URI") ||
+      localStorage.getItem('runrealm_strava_redirect_uri') ||
+      'http://localhost:3000/auth/strava/callback';
+    
+    if (!clientId) {
+      console.debug('Strava client ID not found. Strava integration disabled.');
+      return undefined;
+    }
+    
+    return {
+      clientId,
+      redirectUri,
+      accessToken: localStorage.getItem('runrealm_strava_access_token') || undefined,
+      refreshToken: localStorage.getItem('runrealm_strava_refresh_token') || undefined,
+      expiresAt: parseInt(localStorage.getItem('runrealm_strava_expires_at') || '0') || undefined
+    };
+  }
+
+  isFitnessEnabled(): boolean {
+    return this.config.fitness !== undefined;
+  }
+
+  getFitnessConfig(): ExternalFitnessConfig | undefined {
+    return this.config.fitness;
+  }
+
+  getStravaConfig(): StravaConfig | undefined {
+    return this.config.fitness?.strava;
+  }
+
+  updateStravaTokens(accessToken: string, refreshToken: string, expiresAt: number): void {
+    // Store in localStorage
+    localStorage.setItem('runrealm_strava_access_token', accessToken);
+    localStorage.setItem('runrealm_strava_refresh_token', refreshToken);
+    localStorage.setItem('runrealm_strava_expires_at', expiresAt.toString());
+    
+    // Update config
+    if (this.config.fitness?.strava) {
+      this.config.fitness.strava.accessToken = accessToken;
+      this.config.fitness.strava.refreshToken = refreshToken;
+      this.config.fitness.strava.expiresAt = expiresAt;
+    }
+    
+    // Emit event
+    this.eventBus.emit('fitness:tokens:updated', { source: 'strava' });
+  }
+
+  clearStravaTokens(): void {
+    localStorage.removeItem('runrealm_strava_access_token');
+    localStorage.removeItem('runrealm_strava_refresh_token');
+    localStorage.removeItem('runrealm_strava_expires_at');
+    
+    if (this.config.fitness?.strava) {
+      delete this.config.fitness.strava.accessToken;
+      delete this.config.fitness.strava.refreshToken;
+      delete this.config.fitness.strava.expiresAt;
+    }
+    
+    this.eventBus.emit('fitness:tokens:cleared', { source: 'strava' });
+  }
 
   isWeb3Enabled(): boolean {
     return this.config.web3?.enabled === true;

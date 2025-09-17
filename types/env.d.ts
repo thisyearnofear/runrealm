@@ -8,6 +8,7 @@ declare global {
     ENABLE_WEB3: string;
     ENABLE_AI_FEATURES: string;
     ENABLE_CROSS_CHAIN: string;
+    ENABLE_FITNESS: string;
     ZETACHAIN_RPC_URL: string;
     TERRITORY_NFT_ADDRESS: string;
     REALM_TOKEN_ADDRESS: string;

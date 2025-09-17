@@ -140,6 +140,13 @@ export interface AppEvents extends Web3Events {
   "crosschain:messageSent": { messageId: string; targetChainId: number; targetAddress: string; data: string };
   "crosschain:messageReceived": { message: any; decodedData: any };
   "crosschain:territoryUpdated": { territoryId: string; action: string; sourceChainId: number };
+  // Fitness integration events
+  "fitness:connected": { source: string };
+  "fitness:disconnected": { source: string };
+  "fitness:connectionFailed": { source: string; error: string };
+  "fitness:activities": { activities: any[]; source: string };
+  "fitness:tokens:updated": { source: string };
+  "fitness:tokens:cleared": { source: string };
 }
 
 export class EventBus {
