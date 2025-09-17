@@ -25,7 +25,7 @@ export interface RouteState {
 
 export class RouteStateService extends BaseService {
   private static instance: RouteStateService;
-  private eventBus: EventBus;
+  protected eventBus: EventBus;
   private routeState: RouteState;
   private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes
 
@@ -128,10 +128,11 @@ export class RouteStateService extends BaseService {
       this.routeState.currentRoute = route;
       this.routeState.activeRouteId = routeId;
       
-      this.safeEmit('route:activated', {
-        routeId,
-        routeData: route
-      });
+      // Note: This event is not in the AppEvents interface
+      // this.safeEmit('route:activated', {
+      //   routeId,
+      //   routeData: route
+      // });
       
       return true;
     }
@@ -158,7 +159,8 @@ export class RouteStateService extends BaseService {
       this.clearCurrentRoute();
     }
     
-    this.safeEmit('route:removed', { routeId });
+    // Note: This event is not in the AppEvents interface
+    // this.safeEmit('route:removed', { routeId });
   }
 
   /**

@@ -1626,10 +1626,10 @@ export class MainUI extends BaseService {
       <div class="widget-tip">
         🗺️ Click on the map to preview territories
       </div>
+      <div class="widget-info">
+        <p>🎯 Territory claiming is automatic when you complete runs near unclaimed areas</p>
+      </div>
       <div class="widget-buttons">
-        <button class="widget-button" id="claim-territory-btn" disabled>
-          ⚡ Claim Territory
-        </button>
         <button class="widget-button secondary" id="analyze-btn">
           🤖 AI Analysis
         </button>
@@ -1911,72 +1911,6 @@ export class MainUI extends BaseService {
     });
 
     // Remove celebration class after animation
-    setTimeout(() => {
-      if (widgetElement && widgetElement.classList) {
-        widgetElement.classList.remove("celebrating");
-      }
-    }, 1500);
-  }
-
-  /**
-   * Add celebration effect for successful AI actions
-   */
-  private addCelebrationEffect(): void {
-    const widget = this.widgetSystem.getWidget("ai-coach");
-    if (!widget) {
-      console.warn("MainUI: AI coach widget not found for celebration");
-      return;
-    }
-
-    const widgetElement = this.widgetSystem.getWidgetElement("ai-coach");
-    if (!widgetElement) {
-      console.warn("MainUI: AI coach widget element not found for celebration");
-      return;
-    }
-
-    if (!widgetElement.classList) {
-      console.warn("MainUI: Widget element invalid for celebration");
-      return;
-    }
-
-    // Prevent multiple celebrations
-    if (widgetElement.classList.contains("celebrating")) return;
-
-    // Add celebration class
-    widgetElement.classList.add("celebrating");
-
-    // Use requestAnimationFrame for better performance
-    requestAnimationFrame(() => {
-      // Create floating particles
-      const particleCount = window.innerWidth < 768 ? 3 : 6; // Fewer particles on mobile
-      for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement("div");
-        particle.className = "celebration-particle";
-        particle.style.cssText = `
-          position: absolute;
-          width: 6px;
-          height: 6px;
-          background: linear-gradient(45deg, #00ff00, #00aa00);
-          border-radius: 50%;
-          pointer-events: none;
-          z-index: 1000;
-          left: ${Math.random() * 100}%;
-          top: 50%;
-          animation: celebrationFloat 1.5s ease-out forwards;
-        `;
-
-        widgetElement.appendChild(particle);
-
-        // Remove particle after animation
-        setTimeout(() => {
-          if (particle.parentNode) {
-            particle.parentNode.removeChild(particle);
-          }
-        }, 1500);
-      }
-    });
-
-    // Remove celebration class
     setTimeout(() => {
       if (widgetElement && widgetElement.classList) {
         widgetElement.classList.remove("celebrating");

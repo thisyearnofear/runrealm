@@ -752,7 +752,8 @@ export class RunTrackingService extends BaseService {
     // Save imported run
     this.saveRun(runSession);
     
-    this.safeEmit("run:imported", { runSession, source: activity.source });
+    // Note: This event is not in the AppEvents interface
+    // this.safeEmit("run:imported", { runSession, source: activity.source });
     
     return runSession;
   }

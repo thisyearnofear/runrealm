@@ -1,18 +1,381 @@
 import { BaseService } from '../core/base-service';
 import { RunPoint } from './run-tracking-service';
-import type { Map, LngLatLike } from 'mapbox-gl';
+import type { Map as MapboxMap, LngLatLike } from 'mapbox-gl';
+import { TerritoryIntent, TerritoryPreview } from './territory-service';
 
 const TRAIL_SOURCE_ID = 'run-trail-source';
 const TRAIL_LAYER_ID = 'run-trail-layer';
 const TERRITORY_SOURCE_ID = 'run-territory-source';
 const TERRITORY_LAYER_ID = 'run-territory-layer';
+// New constants for territory preview functionality
+const TERRITORY_PREVIEW_SOURCE_ID = 'territory-preview-source';
+const TERRITORY_PREVIEW_LAYER_ID = 'territory-preview-layer';
+const TERRITORY_INTENT_SOURCE_ID = 'territory-intent-source';
+const TERRITORY_INTENT_LAYER_ID = 'territory-intent-layer';
+const TERRITORY_SELECTION_SOURCE_ID = 'territory-selection-source';
+const TERRITORY_SELECTION_LAYER_ID = 'territory-selection-layer';
+
+export interface TerritoryMapOptions {
+  showPreviews?: boolean;
+  showIntents?: boolean;
+  allowSelection?: boolean;
+  previewOpacity?: number;
+  intentOpacity?: number;
+}
 
 export class MapService extends BaseService {
-  private map: Map | null = null;
+  private map: MapboxMap | null = null;
   private territoriesVisible: boolean = true;
+  // New: Territory preview state management
+  private territoryPreviews: Map<string, TerritoryPreview> = new Map();
+  private territoryIntents: Map<string, TerritoryIntent> = new Map();
+  private selectedTerritoryId: string | null = null;
+  private territoryMapOptions: TerritoryMapOptions = {
+    showPreviews: true,
+    showIntents: true,
+    allowSelection: true,
+    previewOpacity: 0.2,
+    intentOpacity: 0.4
+  };
 
-  public setMap(map: Map): void {
+  public setMap(map: MapboxMap): void {
     this.map = map;
+    this.initializeTerritoryPreviewLayers();
+  }
+
+  /**
+   * Initialize map layers for territory preview functionality
+   */
+  private initializeTerritoryPreviewLayers(): void {
+    if (!this.map) return;
+
+    // Initialize territory preview layer
+    this.map.addSource(TERRITORY_PREVIEW_SOURCE_ID, {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: []
+      }
+    });
+
+    this.map.addLayer({
+      id: TERRITORY_PREVIEW_LAYER_ID,
+      type: 'fill',
+      source: TERRITORY_PREVIEW_SOURCE_ID,
+      layout: {
+        'visibility': this.territoryMapOptions.showPreviews ? 'visible' : 'none'
+      },
+      paint: {
+        'fill-color': [
+          'case',
+          ['==', ['get', 'rarity'], 'legendary'], '#FFD700',
+          ['==', ['get', 'rarity'], 'epic'], '#9B59B6',
+          ['==', ['get', 'rarity'], 'rare'], '#3498DB',
+          '#2ECC71' // common
+        ],
+        'fill-opacity': this.territoryMapOptions.previewOpacity || 0.2,
+        'fill-outline-color': '#FFFFFF'
+      }
+    });
+
+    // Initialize territory intent layer
+    this.map.addSource(TERRITORY_INTENT_SOURCE_ID, {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: []
+      }
+    });
+
+    this.map.addLayer({
+      id: TERRITORY_INTENT_LAYER_ID,
+      type: 'fill',
+      source: TERRITORY_INTENT_SOURCE_ID,
+      layout: {
+        'visibility': this.territoryMapOptions.showIntents ? 'visible' : 'none'
+      },
+      paint: {
+        'fill-color': '#E67E22',
+        'fill-opacity': this.territoryMapOptions.intentOpacity || 0.4,
+        'fill-outline-color': '#D35400'
+      }
+    });
+
+    // Initialize territory selection layer
+    this.map.addSource(TERRITORY_SELECTION_SOURCE_ID, {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: []
+      }
+    });
+
+    this.map.addLayer({
+      id: TERRITORY_SELECTION_LAYER_ID,
+      type: 'line',
+      source: TERRITORY_SELECTION_SOURCE_ID,
+      layout: {
+        'visibility': 'visible'
+      },
+      paint: {
+        'line-color': '#FF6B6B',
+        'line-width': 3,
+        'line-opacity': 0.8,
+        'line-dasharray': [2, 2]
+      }
+    });
+
+    // Add click handler for territory selection
+    if (this.territoryMapOptions.allowSelection) {
+      this.map.on('click', TERRITORY_PREVIEW_LAYER_ID, this.handleTerritoryClick.bind(this));
+      this.map.on('mouseenter', TERRITORY_PREVIEW_LAYER_ID, () => {
+        if (this.map) this.map.getCanvas().style.cursor = 'pointer';
+      });
+      this.map.on('mouseleave', TERRITORY_PREVIEW_LAYER_ID, () => {
+        if (this.map) this.map.getCanvas().style.cursor = '';
+      });
+    }
+  }
+
+  /**
+   * Handle territory click for selection
+   */
+  private handleTerritoryClick(e: any): void {
+    if (!e.features || e.features.length === 0) return;
+
+    const feature = e.features[0];
+    const territoryId = feature.properties?.id;
+    
+    if (territoryId) {
+      this.selectTerritory(territoryId);
+      this.safeEmit('territory:preview', { territory: feature, bounds: feature.geometry, metadata: feature.properties });
+    }
+  }
+
+  /**
+   * Add territory preview to the map
+   */
+  public addTerritoryPreview(preview: TerritoryPreview): void {
+    // Use geohash as the key since TerritoryPreview doesn't have territoryId
+    this.territoryPreviews.set(preview.geohash, preview);
+    this.updateTerritoryPreviewLayer();
+  }
+
+  /**
+   * Remove territory preview from the map
+   */
+  public removeTerritoryPreview(previewId: string): void {
+    this.territoryPreviews.delete(previewId);
+    this.updateTerritoryPreviewLayer();
+  }
+
+  /**
+   * Add territory intent to the map
+   */
+  public addTerritoryIntent(intent: TerritoryIntent): void {
+    this.territoryIntents.set(intent.id, intent);
+    this.updateTerritoryIntentLayer();
+  }
+
+  /**
+   * Remove territory intent from the map
+   */
+  public removeTerritoryIntent(intentId: string): void {
+    this.territoryIntents.delete(intentId);
+    this.updateTerritoryIntentLayer();
+  }
+
+  /**
+   * Select a territory and highlight it
+   */
+  public selectTerritory(territoryId: string): void {
+    this.selectedTerritoryId = territoryId;
+    
+    const preview = this.territoryPreviews.get(territoryId);
+    if (preview) {
+      this.updateTerritorySelectionLayer(preview);
+    }
+  }
+
+  /**
+   * Clear territory selection
+   */
+  public clearTerritorySelection(): void {
+    this.selectedTerritoryId = null;
+    this.updateTerritorySelectionLayer(null);
+  }
+
+  /**
+   * Update territory preview layer with current previews
+   */
+  private updateTerritoryPreviewLayer(): void {
+    if (!this.map) return;
+
+    const features = Array.from(this.territoryPreviews.values()).map(preview => ({
+      type: 'Feature' as const,
+      properties: {
+        id: preview.geohash,
+        rarity: preview.metadata.rarity,
+        difficulty: preview.metadata.difficulty,
+        estimatedReward: preview.metadata.estimatedReward,
+        name: preview.metadata.name
+      },
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [this.boundsToCoordinates(preview.bounds)]
+      }
+    }));
+
+    const source = this.map.getSource(TERRITORY_PREVIEW_SOURCE_ID) as any;
+    if (source) {
+      source.setData({
+        type: 'FeatureCollection',
+        features
+      });
+    }
+  }
+
+  /**
+   * Update territory intent layer with current intents
+   */
+  private updateTerritoryIntentLayer(): void {
+    if (!this.map) return;
+
+    const features = Array.from(this.territoryIntents.values()).map(intent => ({
+      type: 'Feature' as const,
+      properties: {
+        id: intent.id,
+        status: intent.status,
+        expiresAt: intent.expiresAt,
+        estimatedDistance: intent.estimatedDistance
+      },
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [this.boundsToCoordinates(intent.bounds)]
+      }
+    }));
+
+    const source = this.map.getSource(TERRITORY_INTENT_SOURCE_ID) as any;
+    if (source) {
+      source.setData({
+        type: 'FeatureCollection',
+        features
+      });
+    }
+  }
+
+  /**
+   * Update territory selection layer
+   */
+  private updateTerritorySelectionLayer(preview: TerritoryPreview | null): void {
+    if (!this.map) return;
+
+    const features = preview ? [{
+      type: 'Feature' as const,
+      properties: { id: preview.geohash },
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [this.boundsToCoordinates(preview.bounds)]
+      }
+    }] : [];
+
+    const source = this.map.getSource(TERRITORY_SELECTION_SOURCE_ID) as any;
+    if (source) {
+      source.setData({
+        type: 'FeatureCollection',
+        features
+      });
+    }
+  }
+
+  /**
+   * Convert territory bounds to coordinate array
+   */
+  private boundsToCoordinates(bounds: any): number[][] {
+    return [
+      [bounds.west, bounds.south],
+      [bounds.east, bounds.south],
+      [bounds.east, bounds.north],
+      [bounds.west, bounds.north],
+      [bounds.west, bounds.south] // Close the polygon
+    ];
+  }
+
+  /**
+   * Update territory map options
+   */
+  public updateTerritoryMapOptions(options: Partial<TerritoryMapOptions>): void {
+    this.territoryMapOptions = { ...this.territoryMapOptions, ...options };
+    
+    if (this.map) {
+      // Update layer visibility
+      if (options.showPreviews !== undefined) {
+        this.map.setLayoutProperty(
+          TERRITORY_PREVIEW_LAYER_ID, 
+          'visibility', 
+          options.showPreviews ? 'visible' : 'none'
+        );
+      }
+      
+      if (options.showIntents !== undefined) {
+        this.map.setLayoutProperty(
+          TERRITORY_INTENT_LAYER_ID, 
+          'visibility', 
+          options.showIntents ? 'visible' : 'none'
+        );
+      }
+
+      // Update opacity
+      if (options.previewOpacity !== undefined) {
+        this.map.setPaintProperty(
+          TERRITORY_PREVIEW_LAYER_ID, 
+          'fill-opacity', 
+          options.previewOpacity
+        );
+      }
+
+      if (options.intentOpacity !== undefined) {
+        this.map.setPaintProperty(
+          TERRITORY_INTENT_LAYER_ID, 
+          'fill-opacity', 
+          options.intentOpacity
+        );
+      }
+    }
+  }
+
+  /**
+   * Get all territory previews currently on the map
+   */
+  public getTerritoryPreviews(): TerritoryPreview[] {
+    return Array.from(this.territoryPreviews.values());
+  }
+
+  /**
+   * Get all territory intents currently on the map
+   */
+  public getTerritoryIntents(): TerritoryIntent[] {
+    return Array.from(this.territoryIntents.values());
+  }
+
+  /**
+   * Get currently selected territory ID
+   */
+  public getSelectedTerritoryId(): string | null {
+    return this.selectedTerritoryId;
+  }
+
+  /**
+   * Clear all territory previews and intents
+   */
+  public clearAllTerritoryPreviews(): void {
+    this.territoryPreviews.clear();
+    this.territoryIntents.clear();
+    this.selectedTerritoryId = null;
+    
+    this.updateTerritoryPreviewLayer();
+    this.updateTerritoryIntentLayer();
+    this.updateTerritorySelectionLayer(null);
   }
 
   public setTerritoriesVisible(visible: boolean): void {
@@ -24,6 +387,20 @@ export class MapService extends BaseService {
 
   public getTerritoriesVisible(): boolean {
     return this.territoriesVisible;
+  }
+
+  /**
+   * Focus the map on a specific location with smooth animation
+   */
+  public focusOnLocation(lng: number, lat: number, zoom: number = 14): void {
+    if (!this.map) return;
+
+    this.map.flyTo({
+      center: [lng, lat],
+      zoom: zoom,
+      duration: 2000, // 2 second animation
+      essential: true
+    });
   }
 
   public drawRunTrail(points: RunPoint[]): void {
@@ -121,6 +498,7 @@ export class MapService extends BaseService {
   public clearRun(): void {
     if (!this.map) return;
 
+    // Clear existing territory and trail layers
     if (this.map.getLayer(TERRITORY_LAYER_ID)) {
       this.map.removeLayer(TERRITORY_LAYER_ID);
     }
@@ -141,6 +519,9 @@ export class MapService extends BaseService {
     if (this.map.getSource('suggested-route-source')) {
       this.map.removeSource('suggested-route-source');
     }
+
+    // Clear territory preview layers
+    this.clearAllTerritoryPreviews();
   }
 
   public drawSuggestedRoute(points: any[]): void {

@@ -55,8 +55,11 @@ export interface AppEvents extends Web3Events {
   "run:started": { startPoint: any };
   "run:pointAdded": { point: any; totalDistance: number };
   "run:pointRemoved": { totalDistance: number };
-  "run:cleared": { timeSpent?: number; totalDistance?: number };
+  "run:cleared": { runId: string };
   "run:loaded": { run: any };
+  "territory:toggleVisibility": {};
+  "route:stateChanged": { routeId: string; routeData: any; isActive: boolean };
+  "route:cleared": {};
   "run:plannedRouteChanged": { geojson: any };
   "run:plannedRouteActivated": { coordinates: any[]; distance: number; runId: string };
   "run:completed": { distance: number; duration: number; points: any[] };
@@ -78,7 +81,7 @@ export interface AppEvents extends Web3Events {
   "territory:eligible": { territory: any; run: any; message: string };
   "territory:preview": { territory: any; bounds: any; metadata: any };
   "territory:nearbyUpdated": { count: number; territories: any[] };
-  "territory:claimed": { territory: any; transactionHash: string; isCrossChain?: boolean; sourceChainId?: number };
+  "territory:claimed": { territory: any; transactionHash: string; isCrossChain?: boolean; sourceChainId?: number; source?: string };
   "territory:claimFailed": { error: string; territory: any; runId?: string; isCrossChain?: boolean };
   "ai:routeRequested": {
     distance?: number;

@@ -82,12 +82,13 @@ export class GameFiUI extends BaseService {
     });
 
     this.subscribe('territory:claimed', (data) => {
-      this.showRewardNotification(`🎉 Territory Claimed! +${data.metadata.estimatedReward} $REALM`);
+      // Access reward from territory metadata if available
+      const reward = data.territory?.metadata?.estimatedReward || data.territory?.estimatedReward || 25;
+      this.showRewardNotification(`🎉 Territory Claimed! +${reward} $REALM`);
       this.updatePlayerStats({ territoriesOwned: 1 } as any);
     });
 
-    // Button event handlers using event delegation
-    this.dom.delegate(document.body, '#claim-territory-btn', 'click', () => this.handleClaimTerritory());
+    // Button event handlers using event delegation - claim button removed as claiming is now handled by TerritoryService
     // Note: #get-ai-route and #spawn-ghost-runner handlers removed - now handled by ActionRouter in MainUI
   }
 
@@ -218,12 +219,10 @@ export class GameFiUI extends BaseService {
   }
 
   // Event handlers
-  private handleClaimTerritory(): void {
-    this.safeEmit('territory:claimRequested', {
-      // timestamp property removed as it's not in the expected type
-    });
-  }
-
+  /**
+   * @deprecated Territory claiming is now handled by TerritoryService
+   * This method is kept for backward compatibility
+   */
   public cleanup(): void {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);

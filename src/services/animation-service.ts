@@ -610,7 +610,7 @@ export class AnimationService extends BaseService {
     try {
       this.map.addSource('ai-waypoints-source', {
         type: 'geojson',
-        data: geoJson
+        data: geoJson as any
       });
 
       // Add layer for the waypoints
@@ -913,7 +913,7 @@ export class AnimationService extends BaseService {
       // Add source for the planned route
       this.map.addSource('planned-route-source', {
         type: 'geojson',
-        data: featureCollection
+        data: featureCollection as any
       });
 
       // Add layer for the planned route

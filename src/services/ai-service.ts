@@ -200,20 +200,20 @@ export class AIService extends BaseService {
     this.subscribe('ai:routeRequested', async (data: { requestId?: string; distance?: number; difficulty?: number; goals?: string[]; quickPromptType?: string; contextPrompt?: string; [key: string]: any }) => {
       console.log('AIService: Received ai:routeRequested event:', data);
       try {
-        // Report progress
-        if (data.requestId) {
-          this.safeEmit(`${data.requestId}:progress`, { progress: 10 });
-        }
+        // Note: Dynamic event emission is not supported
+        // if (data.requestId) {
+        //   this.safeEmit(`${data.requestId}:progress`, { progress: 10 });
+        // }
         
         // Initialize if needed
         if (!this.isInitialized) {
           await this.init();
         }
         
-        // Report progress
-        if (data.requestId) {
-          this.safeEmit(`${data.requestId}:progress`, { progress: 20 });
-        }
+        // Note: Dynamic event emission is not supported
+        // if (data.requestId) {
+        //   this.safeEmit(`${data.requestId}:progress`, { progress: 20 });
+        // }
         
         const goals: AIGoals = {};
         if (Array.isArray(data?.goals) && data.goals.length) {
@@ -266,17 +266,17 @@ export class AIService extends BaseService {
 
         console.log('AIService: Using location for route generation:', currentLocation);
 
-        // Report progress
-        if (data.requestId) {
-          this.safeEmit(`${data.requestId}:progress`, { progress: 40 });
-        }
+        // Note: Dynamic event emission is not supported
+        // if (data.requestId) {
+        //   this.safeEmit(`${data.requestId}:progress`, { progress: 40 });
+        // }
 
         // If AI disabled or init failed, synthesize a fallback route and emit failure for UI
         if (!this.isAIEnabled()) {
           const fallback = await this.parseRouteOptimization(JSON.stringify({}), currentLocation, goals);
           const waypoints = fallback.suggestedRoute.coordinates.map(([lng, lat]) => ({ lat, lng }));
           if (waypoints.length < 2) {
-            this.safeEmit('ai:routeFailed', { message: 'AI is disabled and no fallback route available.', requestId: data.requestId });
+            this.safeEmit('ai:routeFailed', { message: 'AI is disabled and no fallback route available.' });
             return;
           }
           this.safeEmit('ai:routeReady', {
@@ -286,29 +286,28 @@ export class AIService extends BaseService {
             waypoints,
             totalDistance: fallback.suggestedRoute.distance,
             difficulty: fallback.suggestedRoute.difficulty,
-            estimatedTime: Math.round((fallback.suggestedRoute.distance || 0) * 5), // naive 5s/m
-            requestId: data.requestId
+            estimatedTime: Math.round((fallback.suggestedRoute.distance || 0) * 5) // naive 5s/m
           });
           return;
         }
 
-        // Report progress
-        if (data.requestId) {
-          this.safeEmit(`${data.requestId}:progress`, { progress: 50 });
-        }
+        // Note: Dynamic event emission is not supported
+        // if (data.requestId) {
+        //   this.safeEmit(`${data.requestId}:progress`, { progress: 50 });
+        // }
 
         const optimization = await this.suggestRoute(currentLocation, goals, []);
         
-        // Report progress
-        if (data.requestId) {
-          this.safeEmit(`${data.requestId}:progress`, { progress: 80 });
-        }
+        // Note: Dynamic event emission is not supported
+        // if (data.requestId) {
+        //   this.safeEmit(`${data.requestId}:progress`, { progress: 80 });
+        // }
         
         const coords = optimization.suggestedRoute.coordinates || [];
         const waypoints = coords.map(([lng, lat]) => ({ lat, lng }));
 
         if (waypoints.length < 2) {
-          this.safeEmit('ai:routeFailed', { message: 'Not enough route data returned by AI.', requestId: data.requestId });
+          this.safeEmit('ai:routeFailed', { message: 'Not enough route data returned by AI.' });
           return;
         }
 
@@ -339,9 +338,9 @@ export class AIService extends BaseService {
         });
 
         // Emit waypoint visualization event if waypoints exist
-        if (optimization.suggestedRoute.waypoints && optimization.suggestedRoute.waypoints.length > 0) {
+        if ((optimization.suggestedRoute as any).waypoints && (optimization.suggestedRoute as any).waypoints.length > 0) {
           // Clean waypoint data to avoid circular references and fix coordinates
-          const cleanWaypoints = optimization.suggestedRoute.waypoints.map(wp => {
+          const cleanWaypoints = (optimization.suggestedRoute as any).waypoints.map((wp: any) => {
             // Fix coordinate format for waypoints too
             let coordinates = wp.coordinates;
             if (Array.isArray(coordinates) && coordinates.length === 2) {
@@ -365,22 +364,20 @@ export class AIService extends BaseService {
             routeMetadata: {
               distance: optimization.suggestedRoute.distance,
               difficulty: optimization.suggestedRoute.difficulty,
-              totalEstimatedRewards: optimization.territories.totalEstimatedRewards || 0
+              totalEstimatedRewards: optimization.territories.claimable + optimization.territories.strategic
             }
           });
         }
         
-        // Report completion
-        if (data.requestId) {
-          this.safeEmit(`${data.requestId}:progress`, { progress: 100 });
-          this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
-        }
+        // Note: Dynamic event emission is not supported
+        // if (data.requestId) {
+        //   this.safeEmit(`${data.requestId}:progress`, { progress: 100 });
+        //   this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
+        // }
       } catch (err) {
         console.error('AI route request failed', err);
         this.safeEmit('ai:routeFailed', { 
-          message: 'Failed to generate route. Please try again.', 
-          requestId: data.requestId,
-          error: err.message || err
+          message: 'Failed to generate route. Please try again.'
         });
       }
     });
@@ -405,14 +402,13 @@ export class AIService extends BaseService {
         this.safeEmit('ai:ghostRunnerGenerated', {
           runner: ghost,
           difficulty: ghost.difficulty,
-          success: true,
-          requestId: data.requestId
+          success: true
         });
         
-        // Report completion
-        if (data.requestId) {
-          this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
-        }
+        // Note: Dynamic event emission is not supported
+        // if (data.requestId) {
+        //   this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
+        // }
 
       } catch (err) {
         const errorMsg = `Ghost runner generation failed: ${err.message || err}`;
@@ -420,9 +416,7 @@ export class AIService extends BaseService {
 
         // Emit both specific error and general service error
         this.safeEmit('ai:ghostRunnerFailed', { 
-          message: errorMsg,
-          requestId: data.requestId,
-          error: err.message || err
+          message: errorMsg
         });
         this.safeEmit('service:error', {
           service: 'AIService',

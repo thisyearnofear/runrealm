@@ -346,8 +346,7 @@ export class ContractService extends BaseService {
         this.safeEmit("web3:crossChainTerritoryClaimed", {
           hash: tx.hash,
           geohash: crossChainData.geohash,
-          originChainId: crossChainData.originChainId,
-          originAddress: crossChainData.originAddress,
+          originChainId: crossChainData.originChainId
         });
       } else {
         throw new Error("Cross-chain territory claim transaction failed");
@@ -358,7 +357,7 @@ export class ContractService extends BaseService {
       // Emit failure event
       this.safeEmit("web3:crossChainTerritoryClaimFailed", {
         error: error instanceof Error ? error.message : String(error),
-        data: crossChainData,
+        geohash: crossChainData.geohash
       });
       
       throw error;

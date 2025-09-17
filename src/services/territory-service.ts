@@ -20,6 +20,21 @@ export interface TerritoryMetadata {
   estimatedReward: number;
 }
 
+// New interface for territory intent/commitment
+export interface TerritoryIntent {
+  id: string;
+  bounds: TerritoryBounds;
+  geohash: string;
+  metadata: TerritoryMetadata;
+  createdAt: number;
+  expiresAt: number;
+  plannedRoute?: Array<{ lat: number; lng: number }>;
+  estimatedDistance: number;
+  estimatedDuration: number;
+  status: "active" | "completed" | "expired" | "cancelled";
+  userId?: string;
+}
+
 export interface Territory {
   id: string;
   geohash: string;
@@ -46,6 +61,8 @@ export interface Territory {
   isCrossChain?: boolean;
   sourceChainId?: number;
   crossChainClaimTxHash?: string;
+  // Link to territory intent if this territory was pre-committed
+  intentId?: string;
 }
 
 export interface TerritoryClaimResult {
@@ -61,6 +78,16 @@ export interface NearbyTerritory {
   direction: string; // N, NE, E, SE, S, SW, W, NW
 }
 
+// New interface for territory preview/selection
+export interface TerritoryPreview {
+  bounds: TerritoryBounds;
+  geohash: string;
+  metadata: TerritoryMetadata;
+  isAvailable: boolean;
+  conflictingTerritories?: Territory[];
+  estimatedClaimability: number; // 0-100 percentage
+}
+
 /**
  * Service for managing territory detection, validation, and claiming
  */
@@ -68,6 +95,9 @@ export class TerritoryService extends BaseService {
   private claimedTerritories: Map<string, Territory> = new Map();
   private nearbyTerritories: NearbyTerritory[] = [];
   private proximityThreshold = 100; // meters
+  // New: Territory intent management
+  private territoryIntents: Map<string, TerritoryIntent> = new Map();
+  private readonly INTENT_EXPIRY_HOURS = 24; // Territory intents expire after 24 hours
 
   constructor() {
     super();
@@ -76,6 +106,7 @@ export class TerritoryService extends BaseService {
   protected async onInitialize(): Promise<void> {
     this.setupEventListeners();
     await this.loadClaimedTerritories();
+    await this.loadTerritoryIntents();
     this.safeEmit("service:initialized", {
       service: "TerritoryService",
       success: true,
@@ -113,9 +144,242 @@ export class TerritoryService extends BaseService {
     });
   }
 
+  // New: Territory Intent Management Methods
+
   /**
-   * Handle territory claim request
+   * Create a territory intent for a planned run
    */
+  public async createTerritoryIntent(
+    bounds: TerritoryBounds,
+    plannedRoute?: Array<{ lat: number; lng: number }>,
+    estimatedDistance?: number,
+    estimatedDuration?: number
+  ): Promise<TerritoryIntent> {
+    const geohash = this.generateGeohash(bounds);
+    
+    // Create a mock RunSession for metadata generation
+    const mockRunSession: RunSession = {
+      id: "",
+      startTime: Date.now(),
+      points: plannedRoute?.map(p => ({ ...p, timestamp: Date.now() })) || [],
+      segments: [],
+      laps: [],
+      totalDistance: estimatedDistance || 0,
+      totalDuration: estimatedDuration || 0,
+      averageSpeed: estimatedDistance && estimatedDuration ? (estimatedDistance / (estimatedDuration / 1000)) : 0,
+      maxSpeed: 0,
+      status: "completed",
+      territoryEligible: true,
+      geohash
+    };
+
+    const metadata = await this.generateTerritoryMetadata(mockRunSession, bounds);
+
+    const intent: TerritoryIntent = {
+      id: this.generateTerritoryId(),
+      bounds,
+      geohash,
+      metadata,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + (this.INTENT_EXPIRY_HOURS * 60 * 60 * 1000),
+      plannedRoute,
+      estimatedDistance: estimatedDistance || 0,
+      estimatedDuration: estimatedDuration || 0,
+      status: "active"
+    };
+
+    this.territoryIntents.set(intent.id, intent);
+    this.saveTerritoryIntentsToStorage();
+    
+    // Use existing event pattern - territory claimed is closest match
+    this.safeEmit("web3:territoryClaimed", { 
+      tokenId: intent.id, 
+      geohash: intent.geohash, 
+      metadata: intent.metadata 
+    });
+    return intent;
+  }
+
+  /**
+   * Get territory preview for a given area
+   */
+  public async getTerritoryPreview(bounds: TerritoryBounds): Promise<TerritoryPreview> {
+    const geohash = this.generateGeohash(bounds);
+    const isAvailable = await this.checkTerritoryAvailability(geohash);
+    
+    // Create a mock RunSession for metadata generation
+    const mockRunSession: RunSession = {
+      id: "",
+      startTime: Date.now(),
+      points: [],
+      segments: [],
+      laps: [],
+      totalDistance: 0,
+      totalDuration: 0,
+      averageSpeed: 0,
+      maxSpeed: 0,
+      status: "completed",
+      territoryEligible: true,
+      geohash
+    };
+
+    const metadata = await this.generateTerritoryMetadata(mockRunSession, bounds);
+
+    // Check for conflicting territories
+    const conflictingTerritories: Territory[] = [];
+    for (const [, territory] of this.claimedTerritories) {
+      if (this.territoriesOverlap(bounds, territory.bounds)) {
+        conflictingTerritories.push(territory);
+      }
+    }
+
+    const estimatedClaimability = isAvailable && conflictingTerritories.length === 0 ? 100 : 
+                                 isAvailable ? Math.max(0, 100 - (conflictingTerritories.length * 25)) : 0;
+
+    return {
+      bounds,
+      geohash,
+      metadata,
+      isAvailable,
+      conflictingTerritories,
+      estimatedClaimability
+    };
+  }
+
+  /**
+   * Check if a completed run fulfills any territory intents
+   */
+  private async checkIntentFulfillment(runSession: RunSession): Promise<void> {
+    if (!runSession.territoryEligible || !runSession.geohash) {
+      return;
+    }
+
+    // Find matching territory intent
+    for (const [intentId, intent] of this.territoryIntents) {
+      if (intent.status !== "active") continue;
+      
+      // Check if the run overlaps with the intended territory
+      if (this.runOverlapsWithIntent(runSession, intent)) {
+        // Mark intent as completed
+        intent.status = "completed";
+        this.territoryIntents.set(intentId, intent);
+        
+        // Create territory with intent reference
+        const territory = await this.createTerritoryFromRun(runSession);
+        territory.intentId = intentId;
+        
+        // Claim the territory
+        const result = await this.claimTerritory(territory);
+        
+        // Use existing event pattern - web3 territory claimed
+        this.safeEmit("web3:territoryClaimed", { 
+          tokenId: territory.id,
+          geohash: territory.geohash,
+          metadata: territory.metadata
+        });
+        
+        this.saveTerritoryIntentsToStorage();
+        break;
+      }
+    }
+  }
+
+  /**
+   * Check if a run overlaps with a territory intent
+   */
+  private runOverlapsWithIntent(runSession: RunSession, intent: TerritoryIntent): boolean {
+    if (!runSession.points || runSession.points.length === 0) {
+      return false;
+    }
+
+    const runBounds = this.calculateTerritoryBounds(runSession.points);
+    return this.territoriesOverlap(runBounds, intent.bounds);
+  }
+
+  /**
+   * Get active territory intents
+   */
+  public getActiveTerritoryIntents(): TerritoryIntent[] {
+    const now = Date.now();
+    const activeIntents: TerritoryIntent[] = [];
+    
+    for (const [intentId, intent] of this.territoryIntents) {
+      if (intent.status === "active" && intent.expiresAt > now) {
+        activeIntents.push(intent);
+      } else if (intent.expiresAt <= now && intent.status === "active") {
+        // Mark expired intents
+        intent.status = "expired";
+        this.territoryIntents.set(intentId, intent);
+      }
+    }
+    
+    if (activeIntents.length !== this.territoryIntents.size) {
+      this.saveTerritoryIntentsToStorage();
+    }
+    
+    return activeIntents;
+  }
+
+  /**
+   * Cancel a territory intent
+   */
+  public cancelTerritoryIntent(intentId: string): boolean {
+    const intent = this.territoryIntents.get(intentId);
+    if (!intent) return false;
+
+    intent.status = "cancelled";
+    this.territoryIntents.set(intentId, intent);
+    this.saveTerritoryIntentsToStorage();
+    
+    // Use existing service error event for cancellation
+    this.safeEmit("service:error", {
+      service: "TerritoryService",
+      context: "Territory intent cancelled",
+      error: `Intent ${intentId} was cancelled by user`
+    });
+    
+    return true;
+  }
+
+  /**
+   * Load territory intents from storage
+   */
+  private async loadTerritoryIntents(): Promise<void> {
+    try {
+      const stored = localStorage.getItem("runrealm_territory_intents");
+      if (stored) {
+        const intents = JSON.parse(stored);
+        this.territoryIntents = new Map(Object.entries(intents));
+        
+        // Clean up expired intents
+        this.getActiveTerritoryIntents();
+      }
+    } catch (error) {
+      console.warn("Failed to load territory intents:", error);
+    }
+  }
+
+  /**
+   * Save territory intents to storage
+   */
+  private saveTerritoryIntentsToStorage(): void {
+    try {
+      const intentsObj = Object.fromEntries(this.territoryIntents);
+      localStorage.setItem("runrealm_territory_intents", JSON.stringify(intentsObj));
+    } catch (error) {
+      console.warn("Failed to save territory intents:", error);
+    }
+  }
+
+  /**
+   * Generate geohash from bounds (simplified implementation)
+   */
+  private generateGeohash(bounds: TerritoryBounds): string {
+    const lat = bounds.center.lat;
+    const lng = bounds.center.lng;
+    return `${lat.toFixed(6)}_${lng.toFixed(6)}`;
+  }
+
   private async handleClaimRequest(runId: string): Promise<void> {
     try {
       // Find the territory associated with this run
@@ -517,12 +781,11 @@ export class TerritoryService extends BaseService {
       return {
         success: false,
         error: "Activity not eligible for territory claiming",
-        territoryId: "",
       };
     }
 
     // Generate territory from external activity
-    const territory = await this.generateTerritoryFromRun(runSession);
+    const territory = await this.createTerritoryFromRun(runSession);
     
     // Add external activity metadata
     if (runSession.externalActivity) {
@@ -716,12 +979,10 @@ export class TerritoryService extends BaseService {
 
   private showProximityAlert(territory: any, distance: number): void {
     const urgency = distance < 100 ? 'high' : distance < 300 ? 'medium' : 'low';
-    this.safeEmit('ui:territoryAlert', {
-      territory,
-      distance,
-      urgency,
-      message: `${territory.name} - ${distance}m away`,
-      action: distance < 50 ? 'claim' : 'approach'
+    this.safeEmit('ui:toast', {
+      message: `Territory Alert: ${territory.name} - ${distance}m away`,
+      type: urgency === 'high' ? 'warning' : 'info',
+      duration: 5000
     });
   }
 

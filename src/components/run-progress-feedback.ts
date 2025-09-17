@@ -5,19 +5,17 @@ export class RunProgressFeedback extends BaseService {
 
   constructor() {
     super();
-    this.subscribe('run:statsUpdated', (data: { stats: any; runId: string }) => {
-      if (data.stats) {
-        this.checkMilestones(data.stats);
-      }
+    this.subscribe('run:statsUpdated', (data: { distance: number; duration: number; speed: number }) => {
+      this.checkMilestones(data);
     });
   }
 
-  private checkMilestones(stats: { distance: number; averageSpeed: number }): void {
+  private checkMilestones(stats: { distance: number; speed: number }): void {
     const km = Math.floor(stats.distance / 1000);
     
     if (km > this.lastMilestone) {
       this.lastMilestone = km;
-      this.showMilestone(km, stats.averageSpeed);
+      this.showMilestone(km, stats.speed);
     }
 
     // Territory proximity alerts every 500m
@@ -30,18 +28,8 @@ export class RunProgressFeedback extends BaseService {
     const pace = speed > 0 ? (1000 / speed) / 60 : 0;
     const encouragement = this.getEncouragement(km, pace);
     
-    // Enhanced celebration with animation and sound
-    this.safeEmit('ui:celebration', {
-      type: 'milestone',
-      achievement: `${km}km completed!`,
-      message: encouragement,
-      animation: 'confetti',
-      sound: 'achievement',
-      duration: 4000
-    });
-
-    // Legacy toast for fallback
-    this.safeEmit('ui:showToast', {
+    // Show toast notification
+    this.safeEmit('ui:toast', {
       message: `🎉 ${km}km completed! ${encouragement}`,
       type: 'success',
       duration: 3000
@@ -55,6 +43,7 @@ export class RunProgressFeedback extends BaseService {
   }
 
   private checkTerritoryProximity(): void {
-    this.safeEmit('territory:checkProximity');
+    // Note: This event is not in the AppEvents interface
+    // this.safeEmit('territory:checkProximity', {});
   }
 }

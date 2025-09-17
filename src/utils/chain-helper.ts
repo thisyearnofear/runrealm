@@ -1,6 +1,6 @@
 export class ChainHelper {
   static getSimpleName(chainId: number): string {
-    const names = {
+    const names: Record<number, string> = {
       1: 'Ethereum',
       56: 'BSC', 
       137: 'Polygon',
@@ -10,7 +10,7 @@ export class ChainHelper {
   }
 
   static getGasEstimate(chainId: number): string {
-    const estimates = {
+    const estimates: Record<number, string> = {
       1: '$5-15',
       56: '$0.20-0.50', 
       137: '$0.01-0.10',

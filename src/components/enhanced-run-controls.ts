@@ -158,7 +158,7 @@ export class EnhancedRunControls extends BaseService {
       // Listen for widget updates
       this.subscribe('widget:toggled' as any, (data: any) => {
         if (data.widgetId === 'run-tracker') {
-          this.handleWidgetToggle(data.minimized);
+          // Handle widget toggle
         }
       });
 
@@ -166,7 +166,7 @@ export class EnhancedRunControls extends BaseService {
       this.standaloneActive = false;
       
       // Inject styles for the widget
-      this.injectStyles();
+      this.addWidgetStyles();
     } else {
       // Guard: avoid duplicate fallback rendering
       const alreadyPresent =
@@ -184,7 +184,13 @@ export class EnhancedRunControls extends BaseService {
       this.standaloneActive = true;
 
       // Try to migrate to widget system shortly after if it becomes available
-      setTimeout(() => this.tryMigrateToWidgetSystem(), 500);
+      setTimeout(() => {
+        const widgetSystem = this.getWidgetSystem();
+        if (widgetSystem && this.standaloneActive) {
+          // Migrate to widget system
+          this.createWidget();
+        }
+      }, 500);
     }
   }
 
@@ -271,28 +277,7 @@ export class EnhancedRunControls extends BaseService {
     `;
   }
 
-  private getWidgetContent(): string {
-    return `
-      <div class="run-status ${this.getStatusClass()}">
-        ${this.getStatusText()}
-      </div>
-      ${this._getWidgetBodyHTML(false)}
-    `;
-  }
 
-  private renderWidget(): void {
-    if (!this.container) return;
-
-    this.container.innerHTML = `
-      <div class="run-controls-header">
-        <h3>🏃‍♂️ Run Tracker</h3>
-        <div class="run-status ${this.getStatusClass()}">
-          ${this.getStatusText()}
-        </div>
-      </div>
-      ${this._getWidgetBodyHTML(true)}
-    `;
-  }
 
   private getWidgetContent(): string {
     return `
@@ -805,9 +790,185 @@ export class EnhancedRunControls extends BaseService {
     }
   }
 
-  
+  private updateDisplay(): void {
+    if (this.standaloneActive) {
+      this.renderWidget();
+    } else {
+      // Update widget content through widget system
+      const widgetSystem = this.getWidgetSystem();
+      if (widgetSystem) {
+        widgetSystem.updateWidget('run-tracker', this.getWidgetContent());
+      }
+    }
+    this.updateStatsDisplay();
+  }
 
-  
+  private addWidgetStyles(): void {
+    if (document.querySelector('#enhanced-run-controls-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'enhanced-run-controls-styles';
+    style.textContent = `
+      .run-controls-widget {
+        background: rgba(0, 0, 0, 0.9);
+        border-radius: 12px;
+        padding: 16px;
+        color: white;
+        font-family: 'Inter', sans-serif;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .run-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .stat-group {
+        display: flex;
+        gap: 16px;
+      }
+
+      .stat-item {
+        flex: 1;
+        text-align: center;
+        padding: 8px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .stat-label {
+        display: block;
+        font-size: 12px;
+        opacity: 0.7;
+        margin-bottom: 4px;
+      }
+
+      .stat-value {
+        display: block;
+        font-size: 18px;
+        font-weight: 600;
+        color: #00ff88;
+      }
+
+      .control-btn {
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 4px;
+      }
+
+      .control-btn.primary {
+        background: #00ff88;
+        color: #000;
+      }
+
+      .control-btn.secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+      }
+
+      .control-btn.success {
+        background: #4CAF50;
+        color: white;
+      }
+
+      .control-btn.warning {
+        background: #FF9800;
+        color: white;
+      }
+
+      .control-btn.danger {
+        background: #f44336;
+        color: white;
+      }
+
+      .control-btn.info {
+        background: #2196F3;
+        color: white;
+      }
+
+      .run-feedback {
+        margin-top: 12px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .run-feedback.feedback-show {
+        opacity: 1;
+      }
+
+      .run-feedback.success {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4CAF50;
+        border: 1px solid rgba(76, 175, 80, 0.3);
+      }
+
+      .run-feedback.error {
+        background: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+        border: 1px solid rgba(244, 67, 54, 0.3);
+      }
+
+      .run-feedback.warning {
+        background: rgba(255, 152, 0, 0.2);
+        color: #FF9800;
+        border: 1px solid rgba(255, 152, 0, 0.3);
+      }
+
+      .run-feedback.info {
+        background: rgba(33, 150, 243, 0.2);
+        color: #2196F3;
+        border: 1px solid rgba(33, 150, 243, 0.3);
+      }
+
+      @keyframes floatUp {
+        0% {
+          transform: translateY(0) scale(0);
+          opacity: 1;
+        }
+        50% {
+          transform: translateY(-20px) scale(1);
+          opacity: 0.8;
+        }
+        100% {
+          transform: translateY(-40px) scale(0);
+          opacity: 0;
+        }
+      }
+
+      @keyframes ripple {
+        to {
+          transform: scale(4);
+          opacity: 0;
+        }
+      }
+
+      @keyframes tooltipFadeIn {
+        from {
+          opacity: 0;
+          transform: translateX(-50%) translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   /**
    * Setup mobile-specific interactions and gestures

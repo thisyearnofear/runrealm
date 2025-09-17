@@ -74,22 +74,19 @@ export class TransactionStatus extends BaseService {
 
   private setupEventListeners(): void {
     // Listen for Web3 transaction events
-    this.subscribe('web3:transactionSubmitted', (data) => {
+    this.subscribe('web3:transactionSubmitted', (data: { hash: string; type: string }) => {
       this.addTransaction({
         hash: data.hash,
-        type: data.type || 'generic',
+        type: (data.type as TransactionInfo['type']) || 'generic',
         status: 'pending',
-        timestamp: Date.now(),
-        metadata: data.metadata
+        timestamp: Date.now()
       });
     });
 
-    this.subscribe('web3:transactionConfirmed', (data) => {
+    this.subscribe('web3:transactionConfirmed', (data: { hash: string; blockNumber: number }) => {
       this.updateTransaction(data.hash, {
         status: 'confirmed',
-        blockNumber: data.blockNumber,
-        confirmations: data.confirmations || 1,
-        gasUsed: data.gasUsed
+        blockNumber: data.blockNumber
       });
     });
 
@@ -101,9 +98,9 @@ export class TransactionStatus extends BaseService {
     });
 
     // Territory claiming events
-    this.subscribe('territory:claimStarted', (data) => {
+    this.subscribe('territory:claimStarted', (data: { territoryId: string; territoryName: string }) => {
       this.addTransaction({
-        hash: data.transactionHash || 'pending',
+        hash: 'pending_' + Date.now(),
         type: 'territory_claim',
         status: 'pending',
         timestamp: Date.now(),
@@ -115,14 +112,14 @@ export class TransactionStatus extends BaseService {
     });
 
     // Token events
-    this.subscribe('token:transferStarted', (data) => {
+    this.subscribe('token:transferStarted', (data: { transactionHash: string; amount: number; token: string }) => {
       this.addTransaction({
-        hash: data.transactionHash || 'pending',
+        hash: data.transactionHash,
         type: 'token_transfer',
         status: 'pending',
         timestamp: Date.now(),
         metadata: {
-          amount: data.amount,
+          amount: data.amount.toString(),
           token: data.token || 'REALM',
           description: `Transferring ${data.amount} ${data.token || 'REALM'}`
         }
@@ -130,14 +127,14 @@ export class TransactionStatus extends BaseService {
     });
 
     // Staking events
-    this.subscribe('staking:stakeStarted', (data) => {
+    this.subscribe('staking:stakeStarted', (data: { transactionHash: string; amount: number }) => {
       this.addTransaction({
-        hash: data.transactionHash || 'pending',
+        hash: data.transactionHash,
         type: 'stake',
         status: 'pending',
         timestamp: Date.now(),
         metadata: {
-          amount: data.amount,
+          amount: data.amount.toString(),
           token: 'REALM',
           description: `Staking ${data.amount} REALM tokens`
         }
@@ -206,8 +203,7 @@ export class TransactionStatus extends BaseService {
 
     this.uiService.showToast(message, { 
       type: toastType, 
-      duration: status === 'pending' ? 0 : 4000,
-      dismissible: true 
+      duration: status === 'pending' ? 0 : 4000
     });
   }
 
@@ -354,7 +350,7 @@ export class TransactionStatus extends BaseService {
       parent: document.body
     });
 
-    this.animationService.fadeIn(modal, 200);
+    this.animationService.fadeIn(modal, { duration: 200 });
   }
 
   private renderTransactionDetails(transaction: TransactionInfo): string {

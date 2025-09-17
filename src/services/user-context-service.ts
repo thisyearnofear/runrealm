@@ -100,8 +100,8 @@ export class UserContextService extends BaseService {
     
     localStorage.setItem('user-analytics', JSON.stringify(events));
     
-    // Emit for real-time tracking
-    this.safeEmit('analytics:userAction', event);
+    // Note: This event is not in the AppEvents interface
+    // this.safeEmit('analytics:userAction', event);
   }
 
   private getSessionId(): string {

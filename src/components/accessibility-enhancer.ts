@@ -238,7 +238,8 @@ export class AccessibilityEnhancer extends BaseService {
     // Close any open modals
     const modals = document.querySelectorAll('.modal-overlay, .location-modal-overlay, .wallet-modal-overlay');
     modals.forEach(modal => {
-      if (modal.style.display !== 'none') {
+      const htmlModal = modal as HTMLElement;
+      if (htmlModal.style.display !== 'none') {
         const closeBtn = modal.querySelector('.close-btn, .modal-close') as HTMLElement;
         closeBtn?.click();
       }

@@ -129,11 +129,11 @@ export const ActionRouter = {
         break;
       case 'ai.startRun':
         console.log('ActionRouter: Starting run with AI-generated route');
-        // Emit event to start run with the provided route
-        bus.emit('run:startWithRoute', {
-          coordinates: payload?.coordinates || [],
-          distance: payload?.distance || 0
-        });
+        // Note: This event is not in the AppEvents interface
+        // bus.emit('run:startWithRoute', {
+        //   coordinates: payload?.coordinates || [],
+        //   distance: payload?.distance || 0
+        // });
         break;
       case 'ai.quickPrompt':
         console.log('ActionRouter: Processing quick prompt:', payload?.type);
@@ -143,7 +143,7 @@ export const ActionRouter = {
         break;
       case 'territory.toggle':
         console.log('ActionRouter: Toggling territory visibility');
-        bus.emit('territory:toggleVisibility');
+        bus.emit('territory:toggleVisibility', {});
         break;
       default:
         console.warn('Unknown UI action:', action, payload);

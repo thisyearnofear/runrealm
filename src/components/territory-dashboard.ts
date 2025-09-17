@@ -218,12 +218,7 @@ export class TerritoryDashboard {
       closeBtn.addEventListener('click', () => this.hide());
     }
 
-    // Action buttons
-    const claimBtn = this.container.querySelector('#claim-territory-btn') as HTMLButtonElement;
-    if (claimBtn) {
-      claimBtn.addEventListener('click', () => this.handleClaimTerritory());
-    }
-
+    // Action buttons - claim button removed as claiming is now handled by TerritoryService
     const aiRouteBtn = this.container.querySelector('#ai-route-btn') as HTMLButtonElement;
     if (aiRouteBtn) {
       aiRouteBtn.addEventListener('click', () => this.requestAIRoute());
@@ -247,23 +242,6 @@ export class TerritoryDashboard {
         const geohash = target.getAttribute('data-geohash');
         if (geohash) this.visitTerritory(geohash);
       }
-    });
-  }
-
-  private handleClaimTerritory(): void {
-    // This will be triggered by the TerritoryService when a run is eligible
-    // The actual claiming is handled by the TerritoryService
-    this.eventBus.emit('territory:claimRequested', {
-      runId: 'current_run' // This should be the actual run ID
-    });
-  }
-
-  /**
-   * Claim a specific territory by ID
-   */
-  public claimTerritory(territoryId: string): void {
-    this.eventBus.emit('territory:claimRequested', {
-      runId: territoryId
     });
   }
 
@@ -365,9 +343,7 @@ export class TerritoryDashboard {
           Rarity: ${data.territory.metadata.rarity}<br>
           Estimated Reward: ${data.territory.metadata.estimatedReward} REALM
         </div>
-        <button onclick="this.claimTerritory('${data.territory.id}')" class="claim-btn">
-          Claim Territory
-        </button>
+        <p><em>Territory claiming is now handled automatically by the TerritoryService during fitness activity import.</em></p>
       </div>
     `);
   }
@@ -427,7 +403,6 @@ export class TerritoryDashboard {
     if (rand < 0.05) return 'legendary';
     if (rand < 0.15) return 'epic';
     if (rand < 0.35) return 'rare';
-    if (rand < 0.65) return 'uncommon';
     return 'common';
   }
 

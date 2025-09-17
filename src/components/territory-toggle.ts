@@ -27,7 +27,7 @@ export class TerritoryToggle extends BaseService {
     this.mapService.setTerritoriesVisible(newState);
     this.preferenceService.saveShowTerritories(newState);
     
-    this.safeEmit('territory:visibilityChanged', { visible: newState });
+    this.safeEmit('territory:toggleVisibility', {});
   }
 
   public isVisible(): boolean {

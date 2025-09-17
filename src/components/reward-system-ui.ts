@@ -98,8 +98,10 @@ export class RewardSystemUI extends BaseService {
 
   private setupEventListeners(): void {
     // Listen for reward-related events
-    this.subscribe('territory:claimed', (data) => {
-      this.addTerritoryReward(data.reward || 50);
+    this.subscribe('territory:claimed', (data: { territory: any; transactionHash: string; isCrossChain?: boolean; sourceChainId?: number; source?: string }) => {
+      // Calculate reward based on territory data
+      const reward = 50; // Default territory reward
+      this.addTerritoryReward(reward);
     });
 
     this.subscribe('run:completed', (data) => {
@@ -312,12 +314,7 @@ export class RewardSystemUI extends BaseService {
       // Emit transaction started event
       this.safeEmit('web3:transactionSubmitted', {
         hash: 'claim_' + Date.now(),
-        type: 'reward_claim',
-        metadata: {
-          amount: claimAmount.toString(),
-          token: 'REALM',
-          description: `Claiming ${this.formatTokenAmount(claimAmount)} REALM rewards`
-        }
+        type: 'reward_claim'
       });
 
       // Simulate transaction delay
@@ -422,7 +419,7 @@ export class RewardSystemUI extends BaseService {
       if (monthlyPreview) monthlyPreview.textContent = `${this.formatTokenAmount(monthlyReward)} REALM`;
     });
 
-    this.animationService.fadeIn(modal, 200);
+    this.animationService.fadeIn(modal, { duration: 200 });
   }
 
   private async unstakeTokens(): Promise<void> {

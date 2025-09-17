@@ -223,11 +223,6 @@ export class RunRealmApp {
       this.handleTerritoryClaimRequest(data);
     });
 
-    // Territory visibility toggle
-    this.eventBus.on("territory:toggleVisibility", () => {
-      this.territoryToggle.toggle();
-    });
-
     this.eventBus.on("ui:unitsToggled", (data) => {
       this.handleUnitsToggled(data.useMetric);
     });
@@ -736,23 +731,17 @@ export class RunRealmApp {
 
   // Old run tracking methods removed - now handled by RunTrackingService and TerritoryService
 
+  // Territory claiming is now handled by TerritoryService
+  // This method is deprecated and should be removed
   private async handleTerritoryClaimRequest(data: any): Promise<void> {
-    if (!this.web3) return;
-
-    try {
-      // Mock territory claiming - replace with actual contract interaction
-      const txHash = `0x${Math.random().toString(16).substring(2, 10)}`;
-      const result = txHash;
-
-      this.ui.showToast(
-        `Territory claim initiated! TX: ${result.slice(0, 8)}...`,
-        {
-          type: "success",
-        }
-      );
-    } catch (error) {
-      console.error("Territory claim failed:", error);
-      this.ui.showToast("Failed to claim territory", { type: "error" });
+    console.warn('RunRealmApp.handleTerritoryClaimRequest is deprecated. Territory claiming is now handled by TerritoryService.');
+    
+    // Redirect to territory service
+    if (this.territory) {
+      // Emit the claim request through the event system
+      this.eventBus.emit('territory:claimRequested', data);
+    } else {
+      this.ui.showToast("Territory service not available", { type: "error" });
     }
   }
 

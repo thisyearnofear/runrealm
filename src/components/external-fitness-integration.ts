@@ -218,12 +218,27 @@ export class ExternalFitnessIntegration extends BaseService {
           <div class="territory-reward">~${Math.floor(activity.distance / 100)} REALM</div>
         </div>
         
-        <button class="claim-btn" data-activity='${JSON.stringify(activity)}'>
+        <button class="preview-btn" data-activity='${JSON.stringify(activity)}'>
+          <span class="btn-icon">🗺️</span>
+          <span class="btn-text">Preview Territory</span>
+        </button>
+        
+        <button class="claim-btn" data-activity='${JSON.stringify(activity)}' style="display: none;">
           <span class="btn-icon">⚡</span>
           <span class="btn-text">Claim Territory</span>
         </button>
       </div>
     `).join('');
+
+    // Add preview listeners
+    grid.querySelectorAll('.preview-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const activityData = (e.target as HTMLElement).closest('.preview-btn')?.getAttribute('data-activity');
+        if (activityData) {
+          this.previewTerritoryForActivity(JSON.parse(activityData));
+        }
+      });
+    });
 
     // Add claim listeners
     grid.querySelectorAll('.claim-btn').forEach(btn => {
@@ -236,6 +251,83 @@ export class ExternalFitnessIntegration extends BaseService {
     });
 
     activitiesRealm.style.display = 'block';
+  }
+
+  private async previewTerritoryForActivity(activity: ExternalActivity): Promise<void> {
+    const runTrackingService = this.getService('RunTrackingService');
+    const mapService = this.getService('MapService');
+
+    if (!runTrackingService || !mapService) return;
+
+    const previewBtn = this.container.querySelector(`[data-activity-id="${activity.id}"] .preview-btn`) as HTMLElement;
+    const claimBtn = this.container.querySelector(`[data-activity-id="${activity.id}"] .claim-btn`) as HTMLElement;
+    const btnText = previewBtn.querySelector('.btn-text') as HTMLElement;
+    const btnIcon = previewBtn.querySelector('.btn-icon') as HTMLElement;
+    
+    // Animate preview process
+    btnIcon.textContent = '🔄';
+    btnText.textContent = 'Loading...';
+    previewBtn.classList.add('loading');
+
+    try {
+      // Import activity to generate run session and territory data
+      const runSession = await runTrackingService.importExternalActivity(activity);
+      
+      if (runSession.territoryEligible && runSession.geohash) {
+        // Create territory preview data
+        const territoryPreview = {
+          geohash: runSession.geohash,
+          bounds: {
+            center: runSession.points[0], // Use first point as center
+            radius: Math.max(runSession.totalDistance / 4, 100) // Dynamic radius based on run distance
+          },
+          isAvailable: true, // Assume available for preview
+          metadata: {
+            difficulty: Math.floor((runSession.totalDistance / 1000) * 10), // Rough difficulty calculation
+            rarity: runSession.totalDistance > 10000 ? 'Epic' : runSession.totalDistance > 5000 ? 'Rare' : 'Common',
+            estimatedReward: Math.floor(runSession.totalDistance / 100)
+          }
+        };
+
+        // Add territory preview to map
+        mapService.addTerritoryPreview(territoryPreview);
+        
+        // Focus map on territory
+        if (runSession.points.length > 0) {
+          const centerPoint = runSession.points[Math.floor(runSession.points.length / 2)];
+          mapService.focusOnLocation(centerPoint.lat, centerPoint.lng, 14);
+        }
+
+        // Update button states
+        btnIcon.textContent = '✅';
+        btnText.textContent = 'Territory Previewed';
+        previewBtn.classList.remove('loading');
+        previewBtn.classList.add('previewed');
+        
+        // Show claim button
+        claimBtn.style.display = 'block';
+        
+        // Add click handler for claim button
+        claimBtn.addEventListener('click', () => {
+          this.showTerritoryClaimConfirmation(activity, territoryPreview);
+        });
+        
+        // Emit territory preview event
+         this.safeEmit('territory:preview', {
+           territory: territoryPreview,
+           bounds: territoryPreview.bounds,
+           metadata: territoryPreview.metadata
+         });
+        
+      } else {
+        throw new Error('Activity not eligible for territory claiming');
+      }
+    } catch (error) {
+      console.error('Failed to preview territory:', error);
+      btnIcon.textContent = '❌';
+      btnText.textContent = 'Preview Failed';
+      previewBtn.classList.remove('loading');
+    }
   }
 
   private async importActivity(activity: ExternalActivity): Promise<void> {
@@ -325,6 +417,128 @@ export class ExternalFitnessIntegration extends BaseService {
   private getService(serviceName: string): any {
     const services = (window as any).RunRealm?.services;
     return services?.[serviceName];
+  }
+
+  /**
+   * Show territory claim confirmation dialog
+   */
+  private showTerritoryClaimConfirmation(activity: any, territoryPreview: any): void {
+    const confirmDialog = document.createElement('div');
+    confirmDialog.className = 'territory-claim-modal modal-overlay';
+    confirmDialog.innerHTML = `
+      <div class="territory-claim-dialog">
+        <div class="modal-header">
+          <h3>🗺️ Claim Territory</h3>
+          <button class="close-modal" id="close-claim-modal">×</button>
+        </div>
+        
+        <div class="territory-claim-content">
+          <div class="territory-info">
+            <h4>${activity.name}</h4>
+            <div class="territory-stats">
+              <div class="stat">
+                <span class="label">Distance:</span>
+                <span class="value">${(activity.distance / 1000).toFixed(2)} km</span>
+              </div>
+              <div class="stat">
+                <span class="label">Difficulty:</span>
+                <span class="value">${territoryPreview.metadata.difficulty}/100</span>
+              </div>
+              <div class="stat">
+                <span class="label">Rarity:</span>
+                <span class="value">${territoryPreview.metadata.rarity}</span>
+              </div>
+              <div class="stat">
+                <span class="label">Estimated Reward:</span>
+                <span class="value">${territoryPreview.metadata.estimatedReward} REALM</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="claim-actions">
+            <button class="cancel-btn" id="cancel-claim">Cancel</button>
+            <button class="confirm-claim-btn" id="confirm-claim">
+              <span class="btn-icon">⚡</span>
+              <span class="btn-text">Claim Territory</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(confirmDialog);
+    
+    // Setup event handlers
+    const closeBtn = confirmDialog.querySelector('#close-claim-modal');
+    const cancelBtn = confirmDialog.querySelector('#cancel-claim');
+    const confirmBtn = confirmDialog.querySelector('#confirm-claim');
+    
+    const closeDialog = () => {
+      document.body.removeChild(confirmDialog);
+    };
+    
+    closeBtn?.addEventListener('click', closeDialog);
+    cancelBtn?.addEventListener('click', closeDialog);
+    
+    confirmBtn?.addEventListener('click', async () => {
+      try {
+        const confirmBtnElement = confirmBtn as HTMLButtonElement;
+        const btnIcon = confirmBtnElement.querySelector('.btn-icon');
+        const btnText = confirmBtnElement.querySelector('.btn-text');
+        
+        // Update button state
+        if (btnIcon) btnIcon.textContent = '⏳';
+        if (btnText) btnText.textContent = 'Claiming...';
+        confirmBtnElement.disabled = true;
+        
+        // Get territory service and claim territory
+        const territoryService = this.getService('TerritoryService');
+        if (territoryService) {
+          const runTrackingService = this.getService('RunTrackingService');
+          const runSession = await runTrackingService.importExternalActivity(activity);
+          const result = await territoryService.claimTerritoryFromExternalActivity(runSession);
+          
+          if (result.success) {
+            this.safeEmit('territory:claimed', {
+              territory: result.territory,
+              transactionHash: result.transactionHash,
+              source: activity.source
+            });
+            
+            // Update UI to show success
+            if (btnIcon) btnIcon.textContent = '✅';
+            if (btnText) btnText.textContent = 'Claimed!';
+            
+            setTimeout(closeDialog, 2000);
+          } else {
+            throw new Error(result.error || 'Failed to claim territory');
+          }
+        } else {
+          throw new Error('Territory service not available');
+        }
+      } catch (error) {
+        console.error('Territory claim failed:', error);
+        const confirmBtnElement = confirmBtn as HTMLButtonElement;
+        const btnIcon = confirmBtnElement.querySelector('.btn-icon');
+        const btnText = confirmBtnElement.querySelector('.btn-text');
+        
+        if (btnIcon) btnIcon.textContent = '❌';
+        if (btnText) btnText.textContent = 'Failed';
+        
+        setTimeout(() => {
+          if (btnIcon) btnIcon.textContent = '⚡';
+          if (btnText) btnText.textContent = 'Claim Territory';
+          confirmBtnElement.disabled = false;
+        }, 3000);
+      }
+    });
+    
+    // Close on backdrop click
+    confirmDialog.addEventListener('click', (e) => {
+      if (e.target === confirmDialog) {
+        closeDialog();
+      }
+    });
   }
 
   /**
