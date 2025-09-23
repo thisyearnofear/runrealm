@@ -335,7 +335,7 @@ export class MainUI extends BaseService {
       this.handleFabAction(action!);
     });
 
-    this.domService.delegate(document.body, "#import-activities-btn", "click", () => {
+    this.domService.delegate(document.body, ".import-activities-btn", "click", () => {
       this.showExternalFitnessIntegration();
       this.trackUserAction("import_activities_clicked");
     });
@@ -1028,6 +1028,16 @@ export class MainUI extends BaseService {
         </div>
       </div>
 
+      <div class="widget-section">
+        <div class="widget-section-title">🔗 Integrations</div>
+        <div class="widget-buttons">
+          <button class="widget-button import-activities-btn">
+            <span class="btn-icon">🌟</span>
+            <span class="btn-text">Connect Strava</span>
+          </button>
+        </div>
+      </div>
+
       <div class="widget-section centered">
         <div class="widget-buttons">
           <button class="widget-button secondary" id="restart-onboarding-widget">🔁 Restart Tutorial</button>
@@ -1636,7 +1646,7 @@ export class MainUI extends BaseService {
         <button class="widget-button secondary" data-action="territory.toggle">
           👁️ Toggle View
         </button>
-        <button class="widget-button tertiary" id="import-activities-btn">
+        <button class="widget-button tertiary import-activities-btn">
           <span class="btn-icon">🌟</span>
           <span class="btn-text">Import Legendary Runs</span>
         </button>

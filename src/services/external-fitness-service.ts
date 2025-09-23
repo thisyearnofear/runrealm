@@ -173,12 +173,12 @@ export class ExternalFitnessService extends BaseService {
   /**
    * Fetch recent Strava activities
    */
-  public async getStravaActivities(limit = 10): Promise<ExternalActivity[]> {
+  public async getStravaActivities(page = 1, limit = 10): Promise<ExternalActivity[]> {
     try {
       const token = await this.ensureValidToken('strava');
       
       const response = await fetch(
-        `https://www.strava.com/api/v3/athlete/activities?per_page=${limit}`,
+        `https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${limit}`,
         { 
           headers: { 
             Authorization: `Bearer ${token}`,

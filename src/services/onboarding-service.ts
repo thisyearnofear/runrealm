@@ -72,6 +72,13 @@ export class OnboardingService extends BaseService {
         title: 'Welcome to RunRealm! 🏃‍♂️',
         description: 'Plan routes, track runs, discover your city.',
         targetElement: '.map-container'
+      },
+      {
+        id: 'strava-integration',
+        title: 'Connect with Strava 🔗',
+        description: 'Import your Strava activities to claim territories and see your runs on the map.',
+        targetElement: '.service-card.strava',
+        position: 'bottom'
       }
     ];
   }
@@ -426,23 +433,28 @@ export class OnboardingService extends BaseService {
       if (target) {
         const rect = target.getBoundingClientRect();
         const position = step.position || 'bottom';
+        this.tooltip.style.transform = ''; // Reset transform
 
         switch (position) {
           case 'top':
-            this.tooltip.style.left = `${rect.left + rect.width / 2 - this.tooltip.offsetWidth / 2}px`;
-            this.tooltip.style.top = `${rect.top - this.tooltip.offsetHeight - 10}px`;
+            this.tooltip.style.left = `${rect.left + rect.width / 2}px`;
+            this.tooltip.style.top = `${rect.top - 10}px`;
+            this.tooltip.style.transform = 'translate(-50%, -100%)';
             break;
           case 'bottom':
-            this.tooltip.style.left = `${rect.left + rect.width / 2 - this.tooltip.offsetWidth / 2}px`;
+            this.tooltip.style.left = `${rect.left + rect.width / 2}px`;
             this.tooltip.style.top = `${rect.bottom + 10}px`;
+            this.tooltip.style.transform = 'translateX(-50%)';
             break;
           case 'left':
-            this.tooltip.style.left = `${rect.left - this.tooltip.offsetWidth - 10}px`;
-            this.tooltip.style.top = `${rect.top + rect.height / 2 - this.tooltip.offsetHeight / 2}px`;
+            this.tooltip.style.left = `${rect.left - 10}px`;
+            this.tooltip.style.top = `${rect.top + rect.height / 2}px`;
+            this.tooltip.style.transform = 'translate(-100%, -50%)';
             break;
           case 'right':
             this.tooltip.style.left = `${rect.right + 10}px`;
-            this.tooltip.style.top = `${rect.top + rect.height / 2 - this.tooltip.offsetHeight / 2}px`;
+            this.tooltip.style.top = `${rect.top + rect.height / 2}px`;
+            this.tooltip.style.transform = 'translateY(-50%)';
             break;
         }
       }

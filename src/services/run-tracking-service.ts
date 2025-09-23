@@ -759,14 +759,59 @@ export class RunTrackingService extends BaseService {
   }
 
   /**
-   * Decode polyline to RunPoints (simplified implementation)
+   * Decode polyline to RunPoints
    */
-  private async decodePolylineToPoints(polyline?: string): Promise<RunPoint[]> {
+  public async decodePolylineToPoints(polyline?: string): Promise<RunPoint[]> {
     if (!polyline) return [];
-    
-    // Simplified polyline decoding - in production use proper polyline library
-    // This is a placeholder that would integrate with actual polyline decoding
-    return [];
+
+    const decoded = this.decodePolyline(polyline);
+
+    return decoded.map(point => ({
+      lat: point[0],
+      lng: point[1],
+      timestamp: 0 // Timestamp is not available from polyline
+    }));
+  }
+
+  /**
+   * Decodes an encoded polyline string into an array of lat/lng pairs.
+   * @param encoded The encoded polyline.
+   * @param precision The precision of the polyline encoding.
+   * @returns An array of [latitude, longitude] pairs.
+   */
+  private decodePolyline(encoded: string, precision: number = 5): number[][] {
+    const len = encoded.length;
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+    const array = [];
+    const factor = Math.pow(10, precision);
+
+    while (index < len) {
+      let b;
+      let shift = 0;
+      let result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      array.push([lat / factor, lng / factor]);
+    }
+    return array;
   }
 
   /**

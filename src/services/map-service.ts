@@ -14,6 +14,8 @@ const TERRITORY_INTENT_SOURCE_ID = 'territory-intent-source';
 const TERRITORY_INTENT_LAYER_ID = 'territory-intent-layer';
 const TERRITORY_SELECTION_SOURCE_ID = 'territory-selection-source';
 const TERRITORY_SELECTION_LAYER_ID = 'territory-selection-layer';
+const ACTIVITY_HIGHLIGHT_SOURCE_ID = 'activity-highlight-source';
+const ACTIVITY_HIGHLIGHT_LAYER_ID = 'activity-highlight-layer';
 
 export interface TerritoryMapOptions {
   showPreviews?: boolean;
@@ -40,13 +42,13 @@ export class MapService extends BaseService {
 
   public setMap(map: MapboxMap): void {
     this.map = map;
-    this.initializeTerritoryPreviewLayers();
+    this.initializeMapLayers();
   }
 
   /**
    * Initialize map layers for territory preview functionality
    */
-  private initializeTerritoryPreviewLayers(): void {
+  private initializeMapLayers(): void {
     if (!this.map) return;
 
     // Initialize territory preview layer
@@ -133,6 +135,68 @@ export class MapService extends BaseService {
       });
       this.map.on('mouseleave', TERRITORY_PREVIEW_LAYER_ID, () => {
         if (this.map) this.map.getCanvas().style.cursor = '';
+      });
+    }
+
+    // Initialize activity highlight layer
+    this.map.addSource(ACTIVITY_HIGHLIGHT_SOURCE_ID, {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: [],
+        },
+      },
+    });
+
+    this.map.addLayer({
+      id: ACTIVITY_HIGHLIGHT_LAYER_ID,
+      type: 'line',
+      source: ACTIVITY_HIGHLIGHT_SOURCE_ID,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+      },
+      paint: {
+        'line-color': '#00bdff',
+        'line-width': 4,
+        'line-opacity': 0.7,
+      },
+    });
+  }
+
+  public highlightActivity(points: RunPoint[]): void {
+    if (!this.map) return;
+
+    const coordinates = points.map(p => [p.lng, p.lat]);
+
+    const source = this.map.getSource(ACTIVITY_HIGHLIGHT_SOURCE_ID) as any;
+    if (source) {
+      source.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: coordinates,
+        },
+      });
+    }
+  }
+
+  public clearActivityHighlight(): void {
+    if (!this.map) return;
+
+    const source = this.map.getSource(ACTIVITY_HIGHLIGHT_SOURCE_ID) as any;
+    if (source) {
+      source.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: [],
+        },
       });
     }
   }
