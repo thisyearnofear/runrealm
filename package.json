@@ -76,6 +76,7 @@
     "nodemon": "2.0.12",
     "nyc": "15.1.0",
     "solidity-coverage": "^0.8.16",
+    "supertest": "^7.1.4",
     "to-ico": "^1.1.5",
     "ts-node": "10.2.1",
     "tslint": "5.18.0",

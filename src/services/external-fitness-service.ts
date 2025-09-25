@@ -1,12 +1,14 @@
 import { BaseService } from "../core/base-service";
 import { ConfigService, StravaConfig } from "../core/app-config";
 import { ExternalActivity } from "./run-tracking-service";
+import { RateLimiterFactory } from "../utils/rate-limiter";
 
 export class ExternalFitnessService extends BaseService {
   private configService: ConfigService;
   private accessTokens: Map<string, string> = new Map();
   private refreshTokens: Map<string, string> = new Map();
   private tokenExpirations: Map<string, number> = new Map();
+  private stravaRateLimiter = RateLimiterFactory.getStravaLimiter();
 
   constructor() {
     super();
@@ -175,6 +177,9 @@ export class ExternalFitnessService extends BaseService {
    */
   public async getStravaActivities(page = 1, limit = 10): Promise<ExternalActivity[]> {
     try {
+      // Apply rate limiting before making API call
+      await this.stravaRateLimiter.consume(1);
+      
       const token = await this.ensureValidToken('strava');
       
       const response = await fetch(
@@ -214,6 +219,14 @@ export class ExternalFitnessService extends BaseService {
       
     } catch (error) {
       console.error('Failed to fetch Strava activities:', error);
+      
+      // Check if it's a rate limit error
+      if (error instanceof Error && error.message.includes('429')) {
+        console.warn('Strava rate limit exceeded, backing off...');
+        // Reset rate limiter to prevent immediate retries
+        this.stravaRateLimiter.reset();
+      }
+      
       throw error;
     }
   }
@@ -262,6 +275,22 @@ export class ExternalFitnessService extends BaseService {
       apple_health: this.isConnected('apple_health'),
       google_fit: this.isConnected('google_fit')
     };
+  }
+
+  /**
+   * Get rate limiter status for debugging
+   */
+  public getRateLimiterStatus() {
+    return {
+      strava: this.stravaRateLimiter.getStatus()
+    };
+  }
+
+  /**
+   * Check if we can make a Strava API call without waiting
+   */
+  public canMakeStravaCall(): boolean {
+    return this.stravaRateLimiter.canConsume(1);
   }
 
   /**

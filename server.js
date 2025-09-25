@@ -4,6 +4,9 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Import webhook service (will be loaded after app setup)
+let StravaWebhookService;
+
 console.log("Starting server...");
 console.log(
   "MAPBOX_ACCESS_TOKEN:",
@@ -20,6 +23,10 @@ console.log(
 console.log(
   "STRAVA_CLIENT_SECRET:",
   process.env.STRAVA_CLIENT_SECRET ? "Set" : "Not set"
+);
+console.log(
+  "STRAVA_VERIFY_TOKEN:",
+  process.env.STRAVA_VERIFY_TOKEN ? "Set" : "Using default"
 );
 
 // Enable JSON parsing for POST requests
@@ -172,6 +179,68 @@ app.post("/api/strava/refresh", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// Strava Webhook endpoints
+app.get("/api/strava/webhook", (req, res) => {
+  console.log("Received Strava webhook validation request");
+  
+  const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
+  const verifyToken = process.env.STRAVA_VERIFY_TOKEN || 'runrealm_webhook_verify';
+  
+  if (mode === 'subscribe' && token === verifyToken) {
+    console.log('Strava webhook: Validation successful');
+    return res.json({ 'hub.challenge': challenge });
+  }
+  
+  console.warn('Strava webhook: Validation failed', { mode, token });
+  return res.status(403).json({ error: 'Validation failed' });
+});
+
+app.post("/api/strava/webhook", (req, res) => {
+  console.log("Received Strava webhook event");
+  
+  // Acknowledge immediately (required by Strava)
+  res.status(200).end();
+  
+  try {
+    const event = req.body;
+    console.log('Strava webhook event:', {
+      type: event.object_type,
+      aspect: event.aspect_type,
+      id: event.object_id,
+      owner: event.owner_id
+    });
+
+    // Handle different event types
+    switch (event.aspect_type) {
+      case 'create':
+        console.log(`New ${event.object_type} created: ${event.object_id}`);
+        break;
+      case 'update':
+        console.log(`${event.object_type} updated: ${event.object_id}`, event.updates);
+        // Handle privacy changes
+        if (event.updates?.private !== undefined) {
+          console.log(`Activity ${event.object_id} privacy changed to: ${event.updates.private}`);
+        }
+        break;
+      case 'delete':
+        console.log(`${event.object_type} deleted: ${event.object_id}`);
+        break;
+      default:
+        console.log('Unhandled webhook event type:', event.aspect_type);
+    }
+    
+    // Handle athlete deauthorization
+    if (event.object_type === 'athlete' && event.updates?.authorized === 'false') {
+      console.log(`Athlete ${event.owner_id} deauthorized the app`);
+      // TODO: Clean up stored tokens for this athlete
+    }
+    
+  } catch (error) {
+    console.error('Error processing Strava webhook event:', error);
+  }
+});
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -180,9 +249,70 @@ app.get("/index.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-const server = app.listen(port, () => {
+const server = app.listen(port, async () => {
   console.log(`Server running at http://localhost:${port}`);
+  
+  // Initialize Strava webhook subscription
+  if (process.env.STRAVA_CLIENT_ID && process.env.STRAVA_CLIENT_SECRET) {
+    try {
+      await initializeStravaWebhook();
+    } catch (error) {
+      console.error('⚠️  Failed to initialize Strava webhook:', error.message);
+    }
+  } else {
+    console.log('Strava webhook: Skipping initialization (missing credentials)');
+  }
 });
+
+// Initialize Strava webhook subscription
+async function initializeStravaWebhook() {
+  const clientId = process.env.STRAVA_CLIENT_ID;
+  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+  const verifyToken = process.env.STRAVA_VERIFY_TOKEN || 'runrealm_webhook_verify';
+  const callbackUrl = process.env.STRAVA_WEBHOOK_CALLBACK_URL || `http://localhost:${port}/api/strava/webhook`;
+  
+  try {
+    // Check for existing subscription
+    const listResponse = await fetch(
+      `https://www.strava.com/api/v3/push_subscriptions?client_id=${clientId}&client_secret=${clientSecret}`
+    );
+    
+    if (listResponse.ok) {
+      const subscriptions = await listResponse.json();
+      if (Array.isArray(subscriptions) && subscriptions.length > 0) {
+        console.log(`Strava webhook: Found existing subscription id=${subscriptions[0].id}`);
+        return;
+      }
+    }
+
+    // Create new subscription
+    const formData = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      callback_url: callbackUrl,
+      verify_token: verifyToken
+    });
+
+    const createResponse = await fetch('https://www.strava.com/api/v3/push_subscriptions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData
+    });
+
+    if (createResponse.ok) {
+      const subscription = await createResponse.json();
+      console.log(`✅ Strava webhook: Created subscription id=${subscription.id}`);
+    } else {
+      const errorText = await createResponse.text();
+      throw new Error(`HTTP ${createResponse.status}: ${errorText}`);
+    }
+    
+  } catch (error) {
+    throw new Error(`Webhook initialization failed: ${error.message}`);
+  }
+}
 
 // Handle shutdown gracefully
 process.on("SIGINT", () => {

@@ -35,6 +35,10 @@ STRAVA_CLIENT_ID=your_actual_client_id_here
 STRAVA_CLIENT_SECRET=your_actual_client_secret_here
 STRAVA_REDIRECT_URI=http://localhost:3000/auth/strava/callback
 
+# Strava Webhook Configuration (New!)
+STRAVA_VERIFY_TOKEN=your_secure_verify_token_here
+STRAVA_WEBHOOK_CALLBACK_URL=http://localhost:3000/api/strava/webhook
+
 # Other required variables
 MAPBOX_ACCESS_TOKEN=your_mapbox_token
 GOOGLE_GEMINI_API_KEY=your_gemini_key
@@ -47,6 +51,8 @@ Set these environment variables in your production environment:
 - `STRAVA_CLIENT_ID`: Your Strava app's Client ID
 - `STRAVA_CLIENT_SECRET`: Your Strava app's Client Secret (server-side only!)
 - `STRAVA_REDIRECT_URI`: Your production callback URL
+- `STRAVA_VERIFY_TOKEN`: Secure token for webhook validation (choose a random string)
+- `STRAVA_WEBHOOK_CALLBACK_URL`: Your production webhook URL (e.g., https://yourdomain.com/api/strava/webhook)
 
 ## Step 3: Security Implementation
 
@@ -124,6 +130,8 @@ The integration adds these new endpoints to your server:
 - `GET /auth/strava/callback` - Handles OAuth callback
 - `POST /api/strava/refresh` - Refreshes expired tokens
 - `GET /api/tokens` - Now includes Strava configuration
+- `GET /api/strava/webhook` - Webhook validation endpoint (NEW!)
+- `POST /api/strava/webhook` - Webhook event receiver (NEW!)
 
 ## Common Issues & Troubleshooting
 
@@ -153,7 +161,33 @@ Strava has the following rate limits:
 - **15-minute limit**: 200 requests
 - **Daily limit**: 2,000 requests
 
-The integration handles rate limiting gracefully and will show appropriate error messages if limits are exceeded.
+**✅ Rate Limiting Protection**: The integration now includes client-side rate limiting using a token bucket algorithm:
+- Conservative limit of 180 requests per 15 minutes (leaves buffer)
+- Automatic queuing of requests when limits are approached
+- Graceful backoff on 429 rate limit errors
+- Debug information available via `getRateLimiterStatus()`
+
+## Real-Time Updates with Webhooks
+
+**✅ Webhook Integration**: The app now supports Strava webhooks for real-time updates:
+
+### What Webhooks Provide:
+- **Real-time activity updates**: New runs appear immediately
+- **Privacy change notifications**: Respect when users make activities private
+- **Deauthorization events**: Clean up when users disconnect
+- **Activity modifications**: Track title changes, deletions, etc.
+
+### Webhook Setup:
+1. **Automatic Subscription**: Server creates webhook subscription on startup
+2. **Validation Endpoint**: `GET /api/strava/webhook` handles Strava's validation
+3. **Event Processing**: `POST /api/strava/webhook` receives real-time events
+4. **Secure Verification**: Uses `STRAVA_VERIFY_TOKEN` for security
+
+### Webhook Events Handled:
+- `activity.create` - New activities added
+- `activity.update` - Activity details changed
+- `activity.delete` - Activities removed
+- `athlete.update` - User deauthorization
 
 ## Next Steps
 

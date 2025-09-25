@@ -12,6 +12,10 @@ export const STRAVA_CLIENT_ID = "your_strava_client_id_here";
 export const STRAVA_CLIENT_SECRET = "your_strava_client_secret_here";
 export const STRAVA_REDIRECT_URI = "http://localhost:3000/auth/strava/callback"; // For development
 
+// Strava Webhook Configuration (NEW!)
+export const STRAVA_VERIFY_TOKEN = "your_secure_verify_token_here"; // Choose a random secure string
+export const STRAVA_WEBHOOK_CALLBACK_URL = "http://localhost:3000/api/strava/webhook"; // For development
+
 // Web3 Configuration - LIVE DEPLOYED CONTRACTS ON ZETACHAIN TESTNET
 export const ZETACHAIN_RPC_URL =
   "https://zetachain-athens-evm.blockpi.network/v1/rpc/public";
@@ -40,6 +44,8 @@ export const appSettings = {
     clientId: STRAVA_CLIENT_ID,
     clientSecret: STRAVA_CLIENT_SECRET,
     redirectUri: STRAVA_REDIRECT_URI,
+    verifyToken: STRAVA_VERIFY_TOKEN,
+    webhookCallbackUrl: STRAVA_WEBHOOK_CALLBACK_URL,
   },
   web3: {
     zetachain: {

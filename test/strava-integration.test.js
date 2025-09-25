@@ -81,12 +81,38 @@ describe("Strava Integration", () => {
   });
 });
 
+describe("Rate Limiting Integration", () => {
+  test("should have rate limiter configured for Strava", () => {
+    // Test that rate limiter factory creates Strava limiter
+    const { RateLimiterFactory } = require("../src/utils/rate-limiter");
+    const stravaLimiter = RateLimiterFactory.getStravaLimiter();
+    
+    expect(stravaLimiter).toBeDefined();
+    
+    const status = stravaLimiter.getStatus();
+    expect(status.capacity).toBe(180); // Conservative limit
+    expect(status.refillIntervalMs).toBe(15 * 60 * 1000); // 15 minutes
+  });
+
+  test("should consume tokens correctly", () => {
+    const { RateLimiter } = require("../src/utils/rate-limiter");
+    const testLimiter = new RateLimiter(5, 1000, 5);
+    
+    expect(testLimiter.canConsume(3)).toBe(true);
+    expect(testLimiter.tryConsume(3)).toBe(true);
+    expect(testLimiter.canConsume(3)).toBe(false);
+    expect(testLimiter.getTokenCount()).toBe(2);
+  });
+});
+
 /**
  * Manual Testing Checklist:
  *
  * 1. Environment Setup:
  *    - [ ] STRAVA_CLIENT_ID is set
  *    - [ ] STRAVA_CLIENT_SECRET is set (server-side only)
+ *    - [ ] STRAVA_VERIFY_TOKEN is set (for webhooks)
+ *    - [ ] STRAVA_WEBHOOK_CALLBACK_URL is set (production)
  *    - [ ] Server is running on correct port
  *
  * 2. OAuth Flow:
@@ -101,9 +127,23 @@ describe("Strava Integration", () => {
  *    - [ ] Token refresh works when expired
  *    - [ ] Disconnect clears stored tokens
  *
- * 4. Security Verification:
+ * 4. Rate Limiting (NEW!):
+ *    - [ ] Multiple rapid "Load More" clicks don't cause 429 errors
+ *    - [ ] Rate limiter status is accessible for debugging
+ *    - [ ] API calls are properly queued when approaching limits
+ *    - [ ] Graceful backoff on rate limit errors
+ *
+ * 5. Webhooks (NEW!):
+ *    - [ ] Webhook subscription created on server startup
+ *    - [ ] GET /api/strava/webhook validates correctly
+ *    - [ ] POST /api/strava/webhook receives events
+ *    - [ ] Activity create/update/delete events are logged
+ *    - [ ] Athlete deauthorization events are handled
+ *
+ * 6. Security Verification:
  *    - [ ] Client secret is never exposed in browser
  *    - [ ] Access tokens are stored securely
  *    - [ ] API calls use proper authentication
+ *    - [ ] Webhook verify token is secure
  *    - [ ] HTTPS is used in production
  */
