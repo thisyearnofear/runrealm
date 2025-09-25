@@ -52,7 +52,17 @@ Set these environment variables in your production environment:
 - `STRAVA_CLIENT_SECRET`: Your Strava app's Client Secret (server-side only!)
 - `STRAVA_REDIRECT_URI`: Your production callback URL
 - `STRAVA_VERIFY_TOKEN`: Secure token for webhook validation (choose a random string)
-- `STRAVA_WEBHOOK_CALLBACK_URL`: Your production webhook URL (e.g., https://yourdomain.com/api/strava/webhook)
+- `STRAVA_WEBHOOK_CALLBACK_URL`: Your production webhook URL
+
+**For RunRealm's Hetzner + Netlify Setup:**
+```bash
+# On your Hetzner server (via SSH)
+STRAVA_CLIENT_ID=your_production_client_id
+STRAVA_CLIENT_SECRET=your_production_client_secret
+STRAVA_REDIRECT_URI=https://runrealm.netlify.app/auth/strava/callback
+STRAVA_VERIFY_TOKEN=runrealm_webhook_secret_$(date +%s)
+STRAVA_WEBHOOK_CALLBACK_URL=https://runrealm.coupondj.fun/api/strava/webhook
+```
 
 ## Step 3: Security Implementation
 
@@ -115,13 +125,19 @@ The Strava integration follows RunRealm's security-first approach:
 
 ### Environment Variables:
 
-Ensure all production environment variables are set:
+Ensure all production environment variables are set on your **Hetzner server**:
 
 ```bash
+# SSH into your server: ssh snel-bot
+# Add to your .env file or environment:
 STRAVA_CLIENT_ID=your_production_client_id
 STRAVA_CLIENT_SECRET=your_production_client_secret
-STRAVA_REDIRECT_URI=https://yourdomain.com/auth/strava/callback
+STRAVA_REDIRECT_URI=https://runrealm.netlify.app/auth/strava/callback
+STRAVA_VERIFY_TOKEN=your_secure_random_token
+STRAVA_WEBHOOK_CALLBACK_URL=https://runrealm.coupondj.fun/api/strava/webhook
 ```
+
+**Note**: Your frontend is on Netlify, but webhooks go to your Hetzner backend server where the Node.js application runs.
 
 ## API Endpoints Added
 

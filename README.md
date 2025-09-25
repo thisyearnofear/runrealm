@@ -24,6 +24,7 @@ npm run dev
 - **Mapbox**: https://account.mapbox.com/access-tokens/
 - **Google Gemini**: https://makersuite.google.com/app/apikey
 - **Strava** (optional): https://developers.strava.com/
+  - Includes real-time webhooks and rate limiting protection
 
 ## ✨ **Features**
 
@@ -31,7 +32,7 @@ npm run dev
 - **Basic**: Route planning, GPS tracking, territory visualization
 - **AI Enhanced**: Smart route suggestions, personalized coaching, ghost runners
 - **Web3 GameFi**: Territory NFTs, REALM rewards, cross-chain interactions
-- **Fitness Integration**: Import activities from Strava, Garmin, Apple Health
+- **Fitness Integration**: Real-time Strava sync with webhooks, rate limiting, and territory claiming
 
 ### 🌐 **Cross-Chain Innovation**
 - Claim territories from any supported blockchain (Ethereum, BSC, Polygon)
