@@ -15,6 +15,23 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
     .catch(() => console.log('SW registration failed'));
 }
 
+// Handle script loading errors (cache busting)
+window.addEventListener('error', (event) => {
+  if (event.target && (event.target as any).tagName === 'SCRIPT') {
+    const script = event.target as HTMLScriptElement;
+    if (script.src && script.src.includes('.js')) {
+      console.warn('Script failed to load:', script.src);
+      
+      // If it's a main app script and we're in production, try cache bust
+      if (script.src.includes('/app.') && process.env.NODE_ENV === 'production') {
+        console.log('Attempting cache bust reload...');
+        // Force reload without cache
+        window.location.reload();
+      }
+    }
+  }
+}, true);
+
 // Filter out noisy browser extension errors and token exposure in production
 if (process.env.NODE_ENV === 'production') {
   const originalError = console.error;

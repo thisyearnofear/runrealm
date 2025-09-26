@@ -58,6 +58,14 @@
     Referrer-Policy = "no-referrer-when-downgrade"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
 
+# HTML files should not be cached to prevent stale references
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
 # Cache optimization for static assets
 [[headers]]
   for = "/favicon*"
