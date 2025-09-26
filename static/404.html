@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Not Found - RunRealm</title>
+</head>
+<body>
+    <h1>Asset Not Found</h1>
+    <p>The requested asset could not be found. This may indicate a deployment issue.</p>
+    <script>
+        // Log missing asset for debugging
+        console.error('Missing asset:', window.location.pathname);
+        // Redirect to main app after logging
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 1000);
+    </script>
+</body>
+</html>
