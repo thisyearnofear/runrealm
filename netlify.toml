@@ -66,6 +66,16 @@
     Pragma = "no-cache"
     Expires = "0"
 
+# Root index.html gets extra aggressive cache prevention
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate, max-age=0"
+    Pragma = "no-cache"
+    Expires = "0"
+    Last-Modified = "Thu, 01 Jan 1970 00:00:00 GMT"
+    ETag = ""
+
 # Cache optimization for static assets
 [[headers]]
   for = "/favicon*"
