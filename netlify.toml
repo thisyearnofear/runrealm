@@ -17,24 +17,8 @@
   status = 200
   force = false
 
-# Static assets should return 404 if not found (prevents MIME type issues)
-[[redirects]]
-  from = "/*.js"
-  to = "/404.html"
-  status = 404
-  force = false
-
-[[redirects]]
-  from = "/*.css"
-  to = "/404.html"
-  status = 404
-  force = false
-
-[[redirects]]
-  from = "/*.map"
-  to = "/404.html"
-  status = 404
-  force = false
+# Remove problematic asset redirects that cause MIME type issues
+# Let Netlify handle missing assets naturally with proper 404s
 
 [[redirects]]
   # SPA fallback - serve index.html for all client-side routes
