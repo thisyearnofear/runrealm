@@ -1,10 +1,13 @@
 <!doctype html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <title>RunRealm - Cross-Chain Running GameFi</title>
-    <meta name="description" content="Transform your runs into valuable NFT territories. Claim, trade, and defend real-world running territories on ZetaChain.">
+    <meta name="description"
+        content="Transform your runs into valuable NFT territories. Claim, trade, and defend real-world running territories on ZetaChain.">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -28,14 +31,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RunRealm">
     <!-- Cache busting meta tag -->
-    <meta name="cache-bust" content="v2.0.2-20250928">
+    <meta name="cache-bust" content="v2.0.3-20251007">
     <!-- Aggressive cache prevention -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.css" rel="stylesheet"/>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.css" rel="stylesheet" />
     <style>
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -43,7 +47,7 @@
             background: #1a1a1a;
             color: white;
         }
-        
+
         #mapbox-container {
             position: absolute;
             top: 0;
@@ -76,53 +80,59 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
+
 <body>
     <div id="loading" class="loading">
         <div class="loading-spinner"></div>
         <div>Loading RunRealm...</div>
     </div>
-    
+
     <!-- Cache detection and forced reload script -->
     <script>
-        (function() {
+        (function () {
             // Check if we're loading from cache by looking at the timestamp
             const cacheKey = 'runrealm_last_load';
             const currentVersion = 'v2.0.2-20250928';
             const lastVersion = localStorage.getItem(cacheKey);
-            
+
             // If version changed or this is first load, clear everything
             if (lastVersion !== currentVersion) {
                 console.log('Version change detected, clearing cache...');
                 localStorage.setItem(cacheKey, currentVersion);
-                
+
                 // Clear all caches
                 if ('caches' in window) {
                     caches.keys().then(names => {
                         names.forEach(name => caches.delete(name));
                     });
                 }
-                
+
                 // Force reload without cache if this isn't already a forced reload
                 if (!window.location.search.includes('cache_bust')) {
-                    window.location.href = window.location.href + 
-                        (window.location.search ? '&' : '?') + 
+                    window.location.href = window.location.href +
+                        (window.location.search ? '&' : '?') +
                         'cache_bust=' + Date.now();
                     return;
                 }
             }
-            
+
             // Monitor for script loading errors
             let scriptErrors = 0;
-            window.addEventListener('error', function(e) {
+            window.addEventListener('error', function (e) {
                 if (e.target && e.target.tagName === 'SCRIPT') {
                     scriptErrors++;
                     console.warn('Script loading error:', e.target.src);
-                    
+
                     // If we get multiple script errors, force a cache-busted reload
                     if (scriptErrors >= 2) {
                         console.log('Multiple script errors detected, forcing cache-busted reload...');
@@ -132,8 +142,9 @@
             }, true);
         })();
     </script>
-    
+
     <div id="mapbox-container"></div>
     <div id="territory-dashboard-root"></div>
 </body>
+
 </html>
