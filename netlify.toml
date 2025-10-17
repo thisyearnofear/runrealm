@@ -2,12 +2,18 @@
 # Minimal deployment config following Core Principles: ENHANCEMENT FIRST, DRY, CLEAN
 
 [build]
-  # Reuse existing build script (DRY principle)
-  command = "npm run build"
+  # Use specific web build command to avoid mobile app dependencies
+  command = "npm run build:web"
   # Webpack outputs to public/ directory
   publish = "public"
   # Skip builds for non-functional changes
   ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF || exit 1"
+
+# Exclude mobile app from web builds to avoid React Native dependency conflicts
+[build.environment]
+  # Only install dependencies needed for web build
+  NETLIFY_USE_YARN = "false"
+  NODE_VERSION = "18"
 
 # SPA Routing & API Proxy (order matters - specific rules first)
 [[redirects]]
