@@ -1,36 +1,33 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es6",
-    "lib": [
-      "es2015",
-      "es2017",
-      "dom"
-    ],
-    "sourceMap": true,
-    "moduleResolution": "Node",
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
     "esModuleInterop": true,
-    "allowJs": false,
-    "noImplicitAny": true,
-    "typeRoots": [
-      "node_modules/@types",
-      "./custom_typings",
-      "types"
-    ],
-    "jsx": "react",
-    "skipLibCheck": true
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@runrealm/shared-core/*": ["./packages/shared-core/*"],
+      "@runrealm/shared-types/*": ["./packages/shared-types/*"],
+      "@runrealm/shared-utils/*": ["./packages/shared-utils/*"],
+      "@runrealm/shared-blockchain/*": ["./packages/shared-blockchain/*"],
+      "@runrealm/web-app/*": ["./packages/web-app/*"],
+      // Maintain backward compatibility
+      "@/*": ["./packages/web-app/*"],
+      "@core/*": ["./packages/shared-core/*"],
+      "@services/*": ["./packages/shared-core/services/*"],
+      "@components/*": ["./packages/shared-core/components/*"]
+    }
   },
-  "include": [
-    "src/**/*",
-    "types/env.d.ts"
-  ],
-  "exclude": [
-    "webpack.config.js",
-    "webpack-build.config.js",
-    "webpack-service.config.js",
-    "node_modules/@types/mocha",
-    "src/legacy",
-    "**/*.spec.ts",
-    "**/*.test.ts"
+  // Add references to monorepo packages for TypeScript
+  "references": [
+    {"path": "./packages/shared-core"},
+    {"path": "./packages/shared-types"},
+    {"path": "./packages/shared-utils"},
+    {"path": "./packages/shared-blockchain"},
+    {"path": "./packages/web-app"}
   ]
 }

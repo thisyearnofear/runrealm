@@ -1,0 +1,488 @@
+/* RunRealm Core System - Consolidated Foundation
+ * CONSOLIDATES: z-index-system.css + base variables + utilities
+ * PRINCIPLE: DRY - Single source of truth for all shared logic
+ */
+
+/* ===== CORE VARIABLES ===== */
+:root {
+  /* Z-Index System - Clear layering for all UI elements */
+  --z-base: 0;
+  --z-map: 1;
+  --z-map-controls: 10;
+  --z-widgets: 1000;
+  --z-tooltips: 1100;
+  --z-dropdowns: 1200;
+  --z-modals-backdrop: 1900;
+  --z-modals: 2000;
+  --z-toasts: 2100;
+  --z-notifications: 2200;
+  --z-loading: 2300;
+
+  /* Enhanced Color System - Semantic colors with purpose */
+  --color-primary: #00ff88;
+  --color-primary-dark: #00cc6a;
+  --color-primary-light: #00ff88;
+  --color-secondary: #00bdff;
+  --color-success: #28a745;
+  --color-warning: #ffc107;
+  --color-error: #dc3545;
+  --color-info: #17a2b8;
+
+  /* Color Glows for Enhanced Visual Feedback */
+  --glow-primary: rgba(0, 255, 136, 0.4);
+  --glow-success: rgba(40, 167, 69, 0.4);
+  --glow-warning: rgba(255, 193, 7, 0.4);
+  --glow-error: rgba(220, 53, 69, 0.4);
+  --glow-info: rgba(23, 162, 184, 0.4);
+
+  /* Enhanced Animation System */
+  --animation-fast: 150ms;
+  --animation-normal: 300ms;
+  --animation-slow: 500ms;
+  --animation-spring: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --animation-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --animation-snappy: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Enhanced Elevation System */
+  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --elevation-2: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+  --elevation-3: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+  --elevation-4: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+  --elevation-5: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22);
+
+  /* Enhanced Spacing System */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+
+  /* Enhanced Typography System */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-xxl: 24px;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Enhanced Border Radius System */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-round: 50%;
+
+  /* Widget System Variables - Enhanced */
+  --widget-bg: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(0, 25, 50, 0.9));
+  --widget-border-color: rgba(0, 255, 0, 0.3);
+  --widget-border-color-hover: rgba(0, 255, 0, 0.5);
+  --widget-border-color-active: rgba(0, 255, 0, 0.3);
+  --widget-header-bg: rgba(0, 255, 0, 0.1);
+  --widget-header-bg-hover: rgba(0, 255, 0, 0.15);
+  --widget-header-bg-active: rgba(0, 255, 0, 0.2);
+  --widget-shadow: var(--elevation-2);
+  --widget-shadow-hover: var(--elevation-4);
+  --widget-shadow-active: var(--elevation-5);
+  --widget-transition: all var(--animation-normal) var(--animation-smooth);
+  --widget-max-height-collapsed: 48px;
+  --widget-max-height-expanded: 500px;
+
+  /* Chat Interface Variables */
+  --chat-bubble-bg: rgba(0, 123, 255, 0.1);
+  --chat-bubble-border: rgba(0, 123, 255, 0.3);
+  --chat-success-bg: rgba(40, 167, 69, 0.1);
+  --chat-success-border: rgba(40, 167, 69, 0.3);
+  --chat-error-bg: rgba(220, 53, 69, 0.1);
+  --chat-error-border: rgba(220, 53, 69, 0.3);
+  --chat-input-bg: rgba(255, 255, 255, 0.05);
+  --chat-input-border: rgba(255, 255, 255, 0.2);
+}
+
+/* ===== Z-INDEX SYSTEM APPLICATION ===== */
+
+/* Map Container */
+#mapbox-container {
+  z-index: var(--z-map);
+}
+
+/* Widget System */
+.widget-system {
+  z-index: var(--z-widgets);
+}
+
+.widget-zone {
+  z-index: calc(var(--z-widgets) + 1);
+}
+
+.widget {
+  z-index: calc(var(--z-widgets) + 2);
+}
+
+.widget.expanded {
+  z-index: calc(var(--z-widgets) + 3);
+}
+
+/* Modals */
+.location-modal-overlay,
+.wallet-modal-overlay,
+.install-modal-overlay,
+.wallet-info-modal-overlay {
+  z-index: var(--z-modals-backdrop);
+}
+
+.location-modal,
+.wallet-modal,
+.install-modal,
+.wallet-info-modal {
+  z-index: var(--z-modals);
+}
+
+/* Tooltips */
+.tooltip {
+  z-index: var(--z-tooltips);
+}
+
+/* Toasts & Notifications */
+.toast-container,
+.notifications-container {
+  z-index: var(--z-notifications);
+}
+
+/* Loading Overlay */
+#loading {
+  z-index: var(--z-loading);
+}
+
+/* ===== CORE ANIMATIONS ===== */
+
+/* Toast Animations */
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+}
+
+/* Enhanced Pulse Animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Enhanced Bounce Animation */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Slide Animations */
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+  to { opacity: 0; transform: translateX(100%); }
+}
+
+/* Celebration Animations */
+@keyframes celebrationPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes celebrationFloat {
+  0% { 
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% { 
+    transform: translateY(-50px) translateX(20px) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Loading Animations */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes loadingDot {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Animation Utilities */
+.animate-pulse { animation: pulse 1s infinite; }
+.animate-bounce { animation: bounce 1.5s infinite; }
+.animate-slideInRight { animation: slideInRight 0.3s ease; }
+.animate-slideInLeft { animation: slideInLeft 0.3s ease; }
+.animate-slideInUp { animation: slideInUp 0.3s ease; }
+.animate-slideInDown { animation: slideInDown 0.3s ease; }
+.animate-fadeInUp { animation: fadeInUp 0.4s var(--animation-smooth); }
+.animate-celebration { animation: celebrationPulse 0.6s var(--animation-spring); }
+
+/* Spacing Utilities */
+.m-xs { margin: var(--space-xs); }
+.m-sm { margin: var(--space-sm); }
+.m-md { margin: var(--space-md); }
+.m-lg { margin: var(--space-lg); }
+.m-xl { margin: var(--space-xl); }
+
+.p-xs { padding: var(--space-xs); }
+.p-sm { padding: var(--space-sm); }
+.p-md { padding: var(--space-md); }
+.p-lg { padding: var(--space-lg); }
+.p-xl { padding: var(--space-xl); }
+
+/* Typography Utilities */
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-md { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+.text-xxl { font-size: var(--font-size-xxl); }
+
+.font-light { font-weight: var(--font-weight-light); }
+.font-normal { font-weight: var(--font-weight-normal); }
+.font-medium { font-weight: var(--font-weight-medium); }
+.font-semibold { font-weight: var(--font-weight-semibold); }
+.font-bold { font-weight: var(--font-weight-bold); }
+
+/* Color Utilities */
+.text-primary { color: var(--color-primary); }
+.text-secondary { color: var(--color-secondary); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+.text-info { color: var(--color-info); }
+
+/* Border Radius Utilities */
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-full { border-radius: var(--radius-round); }
+
+/* Elevation Utilities */
+.elevation-1 { box-shadow: var(--elevation-1); }
+.elevation-2 { box-shadow: var(--elevation-2); }
+.elevation-3 { box-shadow: var(--elevation-3); }
+.elevation-4 { box-shadow: var(--elevation-4); }
+.elevation-5 { box-shadow: var(--elevation-5); }
+
+/* Transition Utilities */
+.transition-fast { transition: all var(--animation-fast) var(--animation-snappy); }
+.transition-normal { transition: all var(--animation-normal) var(--animation-smooth); }
+.transition-slow { transition: all var(--animation-slow) var(--animation-smooth); }
+
+/* ===== ACCESSIBILITY ENHANCEMENTS ===== */
+
+/* Focus States */
+.focus-ring:focus {
+  outline: 3px solid var(--glow-primary);
+  outline-offset: 2px;
+}
+
+.focus-ring:focus-visible {
+  outline: 3px solid var(--glow-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(0, 255, 136, 0.2);
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High Contrast Support */
+@media (prefers-contrast: high) {
+  :root {
+    --widget-border-color: #00ff00;
+    --color-primary: #00ff00;
+    --color-error: #ff0000;
+    --color-success: #00ff00;
+  }
+}
+
+/* Dark Mode Optimizations */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --widget-bg: linear-gradient(135deg, rgba(0, 0, 0, 0.98), rgba(0, 25, 50, 0.95));
+  }
+}
+
+/* ===== SCROLLBAR STYLING ===== */
+
+/* Custom Scrollbars */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--color-primary), var(--color-primary-dark));
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--color-primary-light), var(--color-primary));
+}
+
+/* ===== MODAL SYSTEM ENHANCEMENTS ===== */
+
+/* Modal Focus Trap */
+.modal-focus-trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Modal Open State */
+body.modal-open {
+  overflow: hidden;
+  pointer-events: none;
+}
+
+body.modal-open .modal-overlay {
+  pointer-events: auto;
+}
+
+/* ===== LOADING STATES ===== */
+
+/* Enhanced Loading Dots */
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xs);
+  margin: var(--space-md) 0;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary);
+  border-radius: var(--radius-round);
+  animation: loadingDot 1.4s infinite ease-in-out;
+  box-shadow: 0 0 4px var(--glow-primary);
+}
+
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+.loading-dots span:nth-child(3) { animation-delay: 0s; }
+
+/* Shimmer Effect */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: shimmer 2s infinite;
+}
+
+/* ===== PERFORMANCE OPTIMIZATIONS ===== */
+
+/* GPU Acceleration for Animations */
+.gpu-accelerated {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Contain Layout Shifts */
+.layout-contained {
+  contain: layout style paint;
+}
+
+/* ===== PRINT STYLES ===== */
+
+@media print {
+  .widget-system,
+  .gamefi-hud,
+  .floating-action-btn,
+  .notifications-container {
+    display: none !important;
+  }
+}

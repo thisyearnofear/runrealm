@@ -1,0 +1,422 @@
+/* External Fitness Integration - GameFi Portal Design */
+
+.fitness-portal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modals);
+  opacity: 0;
+  transition: opacity var(--animation-normal) var(--animation-smooth);
+}
+
+.fitness-portal.portal-active {
+  opacity: 1;
+}
+
+.portal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.portal-content {
+  position: relative;
+  background: linear-gradient(135deg, 
+    rgba(26, 26, 26, 0.95) 0%,
+    rgba(40, 40, 40, 0.95) 100%);
+  border: 2px solid rgba(0, 255, 136, 0.3);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 
+    var(--elevation-4),
+    0 0 40px rgba(0, 255, 136, 0.2);
+  transform: scale(0.9) translateY(20px);
+  transition: transform var(--animation-normal) var(--animation-spring);
+}
+
+.portal-active .portal-content {
+  transform: scale(1) translateY(0);
+}
+
+.portal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.portal-title {
+  flex: 1;
+}
+
+.portal-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.portal-title h3 {
+  color: var(--color-primary);
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+}
+
+.portal-title p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  margin: 0;
+}
+
+.portal-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all var(--animation-fast);
+}
+
+.portal-close:hover {
+  color: var(--color-primary);
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.connection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.service-card {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all var(--animation-normal) var(--animation-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.service-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(0, 255, 136, 0.1), 
+    transparent);
+  transition: left var(--animation-slow);
+}
+
+.service-card:hover::before {
+  left: 100%;
+}
+
+.service-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+  transform: translateY(-2px);
+}
+
+.service-card.connecting {
+  border-color: var(--color-warning);
+  box-shadow: 0 0 20px rgba(255, 193, 7, 0.2);
+}
+
+.service-card.connected {
+  border-color: var(--color-success);
+  box-shadow: 0 0 20px rgba(40, 167, 69, 0.2);
+}
+
+.service-card.coming-soon {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.service-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.service-info h4 {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.service-info p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  margin: 0;
+}
+
+.service-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--color-primary);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.service-card.connected .service-status {
+  background: rgba(40, 167, 69, 0.2);
+  color: var(--color-success);
+}
+
+.activities-realm {
+  margin-top: 24px;
+}
+
+.realm-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.realm-header h4 {
+  color: var(--color-primary);
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.realm-header p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  margin: 0;
+}
+
+.activities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.activity-card {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.03) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all var(--animation-normal);
+}
+
+.activity-card:hover {
+  border-color: rgba(0, 255, 136, 0.5);
+  box-shadow: 0 0 16px rgba(0, 255, 136, 0.1);
+}
+
+.activity-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.activity-icon {
+  font-size: 20px;
+}
+
+.activity-name {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.activity-date {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+}
+
+.activity-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  color: var(--color-primary);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.stat-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.territory-preview {
+  background: linear-gradient(135deg, 
+    rgba(0, 255, 136, 0.1) 0%,
+    rgba(0, 189, 255, 0.1) 100%);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.territory-rarity {
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.territory-reward {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+}
+
+.claim-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--color-primary), #00cc6a);
+  border: none;
+  border-radius: 8px;
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--animation-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+.claim-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+}
+
+.claim-btn.claiming {
+  background: linear-gradient(135deg, var(--color-warning), #e0a800);
+  animation: pulse 1.5s infinite;
+}
+
+.claim-btn.claimed {
+  background: linear-gradient(135deg, var(--color-success), #1e7e34);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.success-sparkles {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--color-primary);
+  font-size: 16px;
+  animation: sparkle 2s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes sparkle {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0) scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-20px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-40px) scale(1.2);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .portal-content {
+    padding: 20px;
+    margin: 20px;
+    max-height: 90vh;
+  }
+  
+  .connection-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .activities-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Persistent Error Message */
+.fitness-error-persistent {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(220, 53, 69, 0.1));
+  border: 1px solid var(--color-error);
+  border-left: 4px solid var(--color-error);
+  color: #ffaaaa;
+  padding: var(--space-md);
+  margin: 0 0 var(--space-md) 0;
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: errorPulseEnhanced 2s infinite;
+}
+
+.fitness-error-persistent .error-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.fitness-error-persistent .close-error {
+  background: none;
+  border: none;
+  color: #ffaaaa;
+  font-size: 20px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity var(--animation-fast) ease;
+}
+
+.fitness-error-persistent .close-error:hover {
+  opacity: 1;
+}

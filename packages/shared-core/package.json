@@ -1,0 +1,61 @@
+{
+  "name": "@runrealm/shared-core",
+  "version": "2.0.0",
+  "description": "Shared core logic for RunRealm platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./core/*": {
+      "import": "./dist/core/*.js",
+      "require": "./dist/core/*.js",
+      "types": "./dist/core/*.d.ts"
+    },
+    "./services/*": {
+      "import": "./dist/services/*.js",
+      "require": "./dist/services/*.js",
+      "types": "./dist/services/*.d.ts"
+    },
+    "./components/*": {
+      "import": "./dist/components/*.js",
+      "require": "./dist/components/*.js",
+      "types": "./dist/components/*.d.ts"
+    },
+    "./types/*": {
+      "import": "./dist/types/*.js",
+      "require": "./dist/types/*.js",
+      "types": "./dist/types/*.d.ts"
+    },
+    "./utils/*": {
+      "import": "./dist/utils/*.js",
+      "require": "./dist/utils/*.js",
+      "types": "./dist/utils/*.d.ts"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "dependencies": {
+    "mapbox-gl": "2.4.1",
+    "@turf/turf": "^6.5.0",
+    "ethers": "^6.13.0",
+    "@zetachain/protocol-contracts": "^13.0.0",
+    "@zetachain/toolkit": "^16.1.1",
+    "@google/generative-ai": "^0.17.0",
+    "@mapbox/mapbox-sdk": "0.13.2"
+  },
+  "devDependencies": {
+    "@types/mapbox-gl": "2.4.2",
+    "@types/geojson": "^7946.0.16",
+    "typescript": "^5.0.4"
+  }
+}

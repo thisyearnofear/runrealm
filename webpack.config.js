@@ -37,12 +37,12 @@ module.exports = (env, argv) => {
 
   // Entry points configuration
   const entry = {
-    app: path.resolve(__dirname, "src/index.ts"),
+    app: path.resolve(__dirname, "packages/web-app/index.ts"),
   };
 
   // Add development setup script only in development mode
   if (!isProduction) {
-    entry.devSetup = path.resolve(__dirname, "src/dev-setup.ts");
+    entry.devSetup = path.resolve(__dirname, "packages/web-app/dev-setup.ts");
   }
 
   return {
@@ -84,11 +84,21 @@ module.exports = (env, argv) => {
 
     resolve: {
       extensions: [".ts", ".tsx", ".js"],
+      modules: [
+        path.resolve(__dirname, "packages"),
+        path.resolve(__dirname, "node_modules"),
+        "node_modules"
+      ],
       alias: {
-        "@": path.resolve(__dirname, "src"),
-        "@core": path.resolve(__dirname, "src/core"),
-        "@services": path.resolve(__dirname, "src/services"),
-        "@components": path.resolve(__dirname, "src/components"),
+        "@": path.resolve(__dirname, "packages/web-app"),
+        "@core": path.resolve(__dirname, "packages/shared-core"),
+        "@services": path.resolve(__dirname, "packages/shared-core/services"),
+        "@components": path.resolve(__dirname, "packages/shared-core/components"),
+        "@runrealm/shared-core": path.resolve(__dirname, "packages/shared-core"),
+        "@runrealm/shared-types": path.resolve(__dirname, "packages/shared-types"),
+        "@runrealm/shared-utils": path.resolve(__dirname, "packages/shared-utils"),
+        "@runrealm/shared-blockchain": path.resolve(__dirname, "packages/shared-blockchain"),
+        "@runrealm/web-app": path.resolve(__dirname, "packages/web-app"),
       },
       fallback: {
         process: require.resolve("process/browser"),
@@ -177,7 +187,7 @@ module.exports = (env, argv) => {
 
     plugins: [
       new HtmlWebpackPlugin({
-        template: path.resolve(__dirname, "src/template.html"),
+        template: path.resolve(__dirname, "packages/web-app/template.html"),
         filename: "index.html",
         inject: "body",
         minify: isProduction
@@ -203,7 +213,7 @@ module.exports = (env, argv) => {
             noErrorOnMissing: true,
           },
           {
-            from: path.resolve(__dirname, "src/sw.js"),
+            from: path.resolve(__dirname, "packages/web-app/sw.js"),
             to: path.resolve(__dirname, "public/sw.js"),
             noErrorOnMissing: true,
           },
