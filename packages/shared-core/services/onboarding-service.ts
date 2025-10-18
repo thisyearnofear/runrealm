@@ -22,7 +22,8 @@ export interface OnboardingConfig {
   steps: OnboardingStep[];
   allowSkip?: boolean;
   showProgress?: boolean;
-  mode?: 'basic' | 'ai' | 'web3' | 'gamefi'; // Progressive complexity
+  mode?: 'basic' | 'ai' | 'web3' | 'gamefi' | 'mobile'; // Progressive complexity
+  platform?: 'web' | 'mobile'; // Platform-specific behavior
 }
 
 export class OnboardingService extends BaseService {
@@ -105,31 +106,74 @@ export class OnboardingService extends BaseService {
     ];
   }
 
+  private getMobileSteps(): OnboardingStep[] {
+    return [
+      {
+        id: 'mobile-welcome',
+        title: 'Welcome to RunRealm Mobile! 📱',
+        description: 'Track runs, claim territories, earn rewards.',
+        // Mobile doesn't use targetElement, handled by React component
+      },
+      {
+        id: 'mobile-gps',
+        title: 'GPS Tracking 🛰️',
+        description: 'Grant location permission to track your runs and discover nearby territories.',
+      },
+      {
+        id: 'mobile-first-run',
+        title: 'Start Your First Run 🏃‍♂️',
+        description: 'Tap "Start Run" to begin tracking. Complete loops to become eligible for territory claiming!',
+      },
+      {
+        id: 'mobile-territories',
+        title: 'Claim Territories 🏰',
+        description: 'Run in loops to create claimable territories. Territories are NFTs on the ZetaChain blockchain.',
+      }
+    ];
+  }
+
   /**
-   * Start the onboarding process
-   */
+  * Start the onboarding process
+  */
   public async start(config: OnboardingConfig): Promise<void> {
-    if (this.isActive) {
-      console.warn('Onboarding is already active');
-      return;
-    }
+  if (this.isActive) {
+  console.warn('Onboarding is already active');
+  return;
+  }
 
-    this.onboardingConfig = config;
-    this.currentStepIndex = 0;
-    this.isActive = true;
+  this.onboardingConfig = config;
+  this.currentStepIndex = 0;
+  this.isActive = true;
 
-    // Mark onboarding as in progress
-    localStorage.setItem('runrealm_onboarding_in_progress', 'true');
+  // Mark onboarding as in progress
+  localStorage.setItem('runrealm_onboarding_in_progress', 'true');
 
-    // Create overlay and tooltip
-    this.createOverlay();
+  // Platform-specific initialization
+  if (config.platform === 'mobile') {
+  // Mobile onboarding is handled by React component directly
+  // No events needed for mobile platform
+    return;
+    } else {
+    // Web onboarding with DOM manipulation
+      this.createOverlay();
     this.createTooltip();
-
-    // Show first step
     await this.showStep(0);
+      this.setupEventListeners();
+    }
+  }
 
-    // Listen for completion events
-    this.setupEventListeners();
+  /**
+    * Start mobile-specific onboarding
+    */
+  public async startMobileOnboarding(): Promise<void> {
+    const config: OnboardingConfig = {
+      steps: this.getMobileSteps(),
+      mode: 'mobile',
+      platform: 'mobile',
+      allowSkip: true,
+      showProgress: true
+    };
+    await this.start(config);
   }
 
   /**

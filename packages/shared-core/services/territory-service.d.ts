@@ -255,3 +255,4 @@ export declare class TerritoryService extends BaseService {
      */
     private getService;
 }
+//# sourceMappingURL=territory-service.d.ts.map

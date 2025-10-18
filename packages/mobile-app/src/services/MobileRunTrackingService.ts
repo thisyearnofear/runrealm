@@ -15,26 +15,39 @@ class MobileRunTrackingService {
   }
 
   /**
-   * Initialize location tracking with mobile-specific permissions and settings
-   */
+  * Initialize location tracking with mobile-specific permissions and settings
+  */
   async initializeLocationTracking(): Promise<void> {
     // Mobile-specific location initialization
-    // This would integrate with react-native-geolocation or similar
-    console.log('Initializing mobile location tracking');
-    
+    console.log('Initializing mobile location tracking with shared service');
+
     try {
-      // Request location permissions
-      // await this.requestLocationPermissions();
-      
-      // Set up location tracking with appropriate accuracy for running
-      // This is a simplified implementation - real implementation would use native modules
+      // Create a mobile-specific location service that integrates with React Native Geolocation
+      const mobileLocationService = {
+        async getCurrentLocation(highAccuracy: boolean = false) {
+          return new Promise((resolve, reject) => {
+            // This would be replaced with actual React Native Geolocation call
+            // For now, return mock data
+            resolve({
+              lat: 40.7128,
+              lng: -74.0060,
+              accuracy: 10,
+              timestamp: Date.now()
+            });
+          });
+        }
+      };
+
+      // Set the location service on the shared RunTrackingService
+      this.runTrackingService.setLocationService(mobileLocationService);
+
       this.locationTrackingEnabled = true;
-      console.log('Location tracking enabled');
+      console.log('Mobile location tracking enabled');
     } catch (error) {
       console.error('Failed to initialize location tracking:', error);
       throw error;
     }
-  }
+   }
 
   /**
    * Start a run with mobile-specific tracking

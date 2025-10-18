@@ -1,10 +1,10 @@
 import * as turf from '@turf/turf';
 
 export class DistanceResult {
-  public distance: number;
-  public units: string;
-  public formatted: string;
-  public roundedDistance: string;
+  public distance: number = 0;
+  public units: string = 'meters';
+  public formatted: string = '';
+  public roundedDistance: string = '';
 }
 
 /**

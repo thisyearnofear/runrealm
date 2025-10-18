@@ -32,6 +32,11 @@ access_token*
 .next/
 out/
 
+# Package-specific build outputs
+packages/*/dist/
+packages/*/build/
+packages/*/*.tsbuildinfo
+
 # Testing
 /spec/.working/
 .nyc_output/

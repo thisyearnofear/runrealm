@@ -1,5 +1,5 @@
 import { BaseService } from "@runrealm/shared-core/core/base-service";
-import { Web3Service } from "./web3-service";
+import { Web3Service } from "@runrealm/shared-core/services/web3-service";
 import { ContractService } from "./contract-service";
 
 // Type declaration for ZetaChainClient (external library)

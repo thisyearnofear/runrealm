@@ -15,11 +15,11 @@ export class RunTrackingService extends BaseService {
         this.lastLapDistance = 0;
         this.lastLapTime = 0;
         this.runConfig = {
-            minAccuracy: 20, // 20 meters
-            maxTimeBetweenPoints: 30000, // 30 seconds
-            minDistanceBetweenPoints: 5, // 5 meters
+            minAccuracy: 20,
+            maxTimeBetweenPoints: 30000,
+            minDistanceBetweenPoints: 5,
             smoothingFactor: 0.3,
-            territoryMinDistance: 500, // 500 meters minimum
+            territoryMinDistance: 500,
             territoryMaxDeviation: 50, // 50 meters from start point
         };
     }

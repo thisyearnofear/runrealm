@@ -1,5 +1,5 @@
 import { BaseService } from "../core/base-service";
-import { LocationInfo } from "../types/location";
+import { LocationInfo } from "@runrealm/shared-types/location";
 import { LngLat } from "mapbox-gl";
 import { calculateDistance } from "../utils/distance-formatter";
 

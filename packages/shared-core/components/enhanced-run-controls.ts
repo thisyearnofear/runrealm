@@ -461,7 +461,7 @@ export class EnhancedRunControls extends BaseService {
       
     } catch (error) {
       console.error('EnhancedRunControls: Error starting run:', error);
-      this.showFeedback(`❌ Failed to start run: ${error.message}`, 'error');
+      this.showFeedback(`❌ Failed to start run: ${error instanceof Error ? error.message : String(error)}`, 'error');
     }
   }
 
@@ -509,7 +509,7 @@ export class EnhancedRunControls extends BaseService {
         this.showFeedback('❌ GPS not available', 'error');
       }
     } catch (error) {
-      this.showFeedback(`❌ GPS check failed: ${error.message}`, 'error');
+      this.showFeedback(`❌ GPS check failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
     }
   }
 

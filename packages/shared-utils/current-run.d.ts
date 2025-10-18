@@ -24,3 +24,4 @@ export declare class CurrentRun {
     getLastPosition(): LngLat;
     getPoints(): LngLat[];
 }
+//# sourceMappingURL=current-run.d.ts.map

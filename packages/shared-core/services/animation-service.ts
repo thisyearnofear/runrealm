@@ -843,6 +843,7 @@ export class AnimationService extends BaseService {
       const progress = Math.min(elapsedTime / runDuration, 1);
 
       // Find the current segment
+      if (!ghost.route || ghost.route.length < 2) return;
       let currentSegmentIndex = -1;
       for (let i = 0; i < ghost.route.length - 1; i++) {
         if (elapsedTime >= (ghost.route[i].timestamp - ghost.route[0].timestamp) &&

@@ -3,7 +3,7 @@
  * Provides route optimization, ghost runners, and strategic territory analysis
  */
 import { BaseService } from '../core/base-service';
-import type { CurrentRun } from '../current-run';
+import type { CurrentRun } from '@runrealm/shared-utils/current-run';
 import { RunPoint } from './run-tracking-service';
 export interface RouteOptimization {
     suggestedRoute: {

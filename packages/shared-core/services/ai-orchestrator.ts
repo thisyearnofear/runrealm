@@ -203,8 +203,9 @@ export class AIOrchestrator {
       // });
       
     } catch (error) {
-      this.handleRequestError(requestId, 'route', error.message);
-      this.uiService.showToast(`Route generation failed: ${error.message}`, {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.handleRequestError(requestId, 'route', errorMessage);
+      this.uiService.showToast(`Route generation failed: ${errorMessage}`, {
         type: 'error',
         action: {
           text: 'Retry',
@@ -259,8 +260,9 @@ export class AIOrchestrator {
       await this.emitWithTimeout('ai:ghostRunnerRequested', requestParams, mergedOptions.timeout!);
       
     } catch (error) {
-      this.handleRequestError(requestId, 'ghostRunner', error.message);
-      this.uiService.showToast(`Ghost runner summoning failed: ${error.message}`, {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.handleRequestError(requestId, 'ghostRunner', errorMessage);
+      this.uiService.showToast(`Ghost runner summoning failed: ${errorMessage}`, {
         type: 'error',
         action: {
           text: 'Retry',

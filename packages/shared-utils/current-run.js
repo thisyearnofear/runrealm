@@ -38,3 +38,4 @@ export class CurrentRun {
         return [this.start.position, ...this.segments.map(s => s.position)];
     }
 }
+//# sourceMappingURL=current-run.js.map

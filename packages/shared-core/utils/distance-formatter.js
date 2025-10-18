@@ -1,5 +1,11 @@
 import * as turf from '@turf/turf';
 export class DistanceResult {
+    constructor() {
+        this.distance = 0;
+        this.units = 'meters';
+        this.formatted = '';
+        this.roundedDistance = '';
+    }
 }
 /**
  * Calculate distance between two geographic points using Turf.js

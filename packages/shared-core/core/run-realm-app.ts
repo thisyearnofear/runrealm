@@ -63,53 +63,52 @@ export class RunRealmApp {
     null;
 
   // Core services
-  private config: ConfigService;
-  private eventBus: EventBus;
+  private config!: ConfigService;
+  private eventBus!: EventBus;
 
   // Core service instances (CONSOLIDATED - single source of truth)
-  private preferenceService: PreferenceService;
-  private ui: UIService;
-  private location: LocationService;
-  private web3: Web3Service;
-  private ai: AIService;
-  private game: GameService;
-  private contractService: ContractService;
-  private territory: TerritoryService;
-  private territoryToggle: TerritoryToggle;
-  private runProgressFeedback: RunProgressFeedback;
-  private progression: ProgressionService;
-  private runTracking: RunTrackingService;
-  private onboarding: OnboardingService;
-  private navigation: NavigationService;
-  private animation: AnimationService;
-  private sound: SoundService;
-  private aiOrchestrator: AIOrchestrator;
-  private dom: DOMService;
-  private mapService: MapService;
-  private gamefiUI: GameFiUI;
+  private preferenceService!: PreferenceService;
+  private ui!: UIService;
+  private location!: LocationService;
+  private web3!: Web3Service;
+  private ai!: AIService;
+  private game!: GameService;
+  private contractService!: ContractService;
+  private territory!: TerritoryService;
+  private territoryToggle!: TerritoryToggle;
+  private runProgressFeedback!: RunProgressFeedback;
+  private progression!: ProgressionService;
+  private runTracking!: RunTrackingService;
+  private onboarding!: OnboardingService;
+  private navigation!: NavigationService;
+  private animation!: AnimationService;
+  private sound!: SoundService;
+  private aiOrchestrator!: AIOrchestrator;
+  private dom!: DOMService;
+  private mapService!: MapService;
+  private gamefiUI!: GameFiUI;
   private walletWidget?: WalletWidgetInterface;
-  private geocodingService: GeocodingService;
+  private geocodingService!: GeocodingService;
   private mainUI?: MainUIInterface;
-  private routeInfoPanel: RouteInfoPanel;
-  private enhancedRunControls: EnhancedRunControls;
-  private crossChainService: CrossChainService;
-  private crossChainDemo: CrossChainDemoComponent;
-  private externalFitnessService: ExternalFitnessService;
+  private routeInfoPanel!: RouteInfoPanel;
+  private enhancedRunControls!: EnhancedRunControls;
+  private crossChainService!: CrossChainService;
+  private crossChainDemo!: CrossChainDemoComponent;
+  private externalFitnessService!: ExternalFitnessService;
 
   // Platform-specific UI components (injected dependencies)
   private territoryDashboard?: TerritoryDashboardInterface;
 
   // Lazy-loaded services (PERFORMANT: created only when needed)
-  private nextSegmentService: NextSegmentService;
+  private nextSegmentService?: NextSegmentService;
 
   // Application state
-  private map: Map;
+  private map!: Map;
   // currentRun removed - now handled by RunTrackingService
   private isWaiting = false;
-  private useMetric: boolean;
-  private followRoads: boolean;
+  private useMetric!: boolean;
+  private followRoads!: boolean;
   private gameMode: boolean = true;
-  private territoryDashboard: TerritoryDashboard | null = null;
 
   private async loadMapbox(): Promise<void> {
     if (this.mapboxgl) return; // Already loaded

@@ -97,11 +97,11 @@ export class ConfigService {
         // Use webpack DefinePlugin injected environment variables (public only)
         try {
             const value = typeof __ENV__ !== 'undefined' ? __ENV__[name] : undefined;
-            return value || localStorage.getItem(`runrealm_${name.toLowerCase()}`);
+            return value || localStorage.getItem(`runrealm_${String(name).toLowerCase()}`);
         }
         catch (error) {
             console.warn(`Failed to access environment variable ${name}:`, error);
-            return localStorage.getItem(`runrealm_${name.toLowerCase()}`);
+            return localStorage.getItem(`runrealm_${String(name).toLowerCase()}`);
         }
     }
     getSecureEnvVar(name) {
@@ -230,7 +230,7 @@ export class ConfigService {
             zetachain: {
                 rpcUrl: this.getEnvVar("ZETACHAIN_RPC_URL") ||
                     "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
-                chainId: 7001, // Athens testnet
+                chainId: 7001,
                 contractAddresses: {
                     territoryNFT: this.getEnvVar("TERRITORY_NFT_ADDRESS"),
                     realmToken: this.getEnvVar("REALM_TOKEN_ADDRESS"),

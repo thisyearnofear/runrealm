@@ -15,12 +15,12 @@ export class DOMService {
     return DOMService.instance;
   }
 
+  private batchedUpdates!: (callback: () => void) => void;
+
   private setupPerformanceOptimizations(): void {
     // Batch DOM updates using requestAnimationFrame
     this.batchedUpdates = this.createBatchedUpdater();
   }
-
-  private batchedUpdates: (callback: () => void) => void;
 
   private createBatchedUpdater(): (callback: () => void) => void {
     let pending = false;

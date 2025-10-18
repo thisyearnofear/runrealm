@@ -130,7 +130,7 @@ export class WidgetSystem extends BaseService {
       // Restore state from previous session
       widget.minimized = existingState.minimized;
       widget.position = existingState.position;
-      widget.priority = existingState.priority;
+      widget.priority = existingState.priority ?? widget.priority;
     } else {
       // Set initial state
       this.widgetStateService.setWidgetState(widget.id, {

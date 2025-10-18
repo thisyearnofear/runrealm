@@ -11,4 +11,7 @@ export declare class GameService extends BaseService {
     endGame(): Promise<void>;
     updatePlayerStats(stats: any): Promise<void>;
     claimReward(reward: any): Promise<void>;
+    getPlayerLevel(): Promise<number>;
+    getPlayerStats(): Promise<any>;
 }
+//# sourceMappingURL=game-service.d.ts.map

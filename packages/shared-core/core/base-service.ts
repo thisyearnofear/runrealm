@@ -165,12 +165,12 @@ export abstract class BaseService {
     func: T,
     wait: number
   ): (...args: Parameters<T>) => void {
-    let timeout: NodeJS.Timeout;
+  let timeout: number | NodeJS.Timeout;
 
-    const debouncedFunction = (...args: Parameters<T>) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
+  const debouncedFunction = (...args: Parameters<T>) => {
+  clearTimeout(timeout as any);
+  timeout = setTimeout(() => func(...args), wait);
+  };
 
     this.registerCleanup(() => clearTimeout(timeout));
     return debouncedFunction;

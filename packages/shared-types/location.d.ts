@@ -18,3 +18,4 @@ export interface LocationUpdate {
     heading?: number;
     altitude?: number;
 }
+//# sourceMappingURL=location.d.ts.map

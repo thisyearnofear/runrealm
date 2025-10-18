@@ -5,7 +5,7 @@
 
 import { BaseService } from "../core/base-service";
 import { GeocodingService } from "../services/geocoding-service";
-import { PreferenceService } from "../preference-service";
+import { PreferenceService } from "./preference-service";
 import { DOMService } from "./dom-service";
 
 export interface LocationInfo {

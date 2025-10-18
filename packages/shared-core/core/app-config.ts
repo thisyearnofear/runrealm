@@ -1,6 +1,24 @@
 // Centralized application configuration
 import { EventBus } from './event-bus';
 
+// Global environment variables injected by webpack DefinePlugin
+declare const __ENV__: {
+NODE_ENV?: string;
+API_BASE_URL?: string;
+ENABLE_WEB3?: string;
+ENABLE_AI_FEATURES?: string;
+ENABLE_CROSS_CHAIN?: string;
+ENABLE_FITNESS?: string;
+AUTO_CONNECT_WALLET?: string;
+ZETACHAIN_RPC_URL?: string;
+ETHEREUM_RPC_URL?: string;
+POLYGON_RPC_URL?: string;
+TERRITORY_NFT_ADDRESS?: string;
+REALM_TOKEN_ADDRESS?: string;
+  TERRITORY_MANAGER_ADDRESS?: string;
+  GOOGLE_GEMINI_API_KEY?: string;
+};
+
 export interface StravaConfig {
   clientId: string;
   clientSecret?: string; // Only on server-side
@@ -185,10 +203,10 @@ export class ConfigService {
     // Use webpack DefinePlugin injected environment variables (public only)
     try {
       const value = typeof __ENV__ !== 'undefined' ? __ENV__[name] : undefined;
-      return value || localStorage.getItem(`runrealm_${name.toLowerCase()}`);
+      return value || localStorage.getItem(`runrealm_${String(name).toLowerCase()}`);
     } catch (error) {
       console.warn(`Failed to access environment variable ${name}:`, error);
-      return localStorage.getItem(`runrealm_${name.toLowerCase()}`);
+      return localStorage.getItem(`runrealm_${String(name).toLowerCase()}`);
     }
   }
 
