@@ -21,6 +21,7 @@ config/secrets.json
 **/appsettings.secrets.d.ts
 **/dev-setup.js
 **/dev-setup.ts
+**/dev-setup.d.ts
 access_token*
 *.token
 *.key
