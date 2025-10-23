@@ -1,38 +1,16 @@
-# RunRealm - Cross-Chain Fitness GameFi
+# RunRealm
 
-## Monorepo Architecture
+A cross-chain fitness GameFi platform that transforms your runs into NFT territories. Connect your Strava account, track runs with AI-powered coaching, and claim geospatial territories on ZetaChain.
 
-RunRealm follows a monorepo architecture with the following structure:
+## 🌟 Key Features
 
-```
-RunRealm/
-├── packages/
-│   ├── shared-core/          # Domain models, business logic
-│   ├── shared-types/         # TypeScript interfaces
-│   ├── shared-utils/         # Shared utilities
-│   ├── shared-blockchain/    # Web3 services, contract bindings
-│   ├── web-app/              # Web-specific UI and features
-│   ├── mobile-app/           # Mobile-specific UI and features  
-│   └── api-gateway/          # Backend services
-├── contracts/                # Smart contracts
-├── infrastructure/           # IaC, deployment configs
-└── scripts/                  # Build, test, deployment scripts
-```
+- **Strava Integration**: Import runs and claim them as NFT territories
+- **AI-Powered Coaching**: Smart route suggestions and personalized training with Google Gemini
+- **Cross-Chain GameFi**: Territory claiming and REALM token rewards on ZetaChain
+- **Dual Platform**: Web app for analysis & management, mobile app for performance & play
+- **Geospatial NFTs**: Own and trade location-based territories
 
-## Core Principles
-
-This architecture follows our Core Principles:
-
-- **ENHANCEMENT FIRST**: Always prioritize enhancing existing components over creating new ones
-- **AGGRESSIVE CONSOLIDATION**: Delete unnecessary code rather than deprecating
-- **PREVENT BLOAT**: Systematically audit and consolidate before adding new features
-- **DRY**: Single source of truth for all shared logic
-- **CLEAN**: Clear separation of concerns with explicit dependencies
-- **MODULAR**: Composable, testable, independent modules
-- **PERFORMANT**: Adaptive loading, caching, and resource optimization
-- **ORGANIZED**: Predictable file structure with domain-driven design
-
-## Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 16+
@@ -40,49 +18,43 @@ This architecture follows our Core Principles:
 
 ### Installation
 ```bash
+git clone https://github.com/thisyearnofear/runrealm.git
+cd runrealm
 npm install
-npm run install:all
+cp .env.example .env
+# Edit .env with your API keys (Mapbox, Google Gemini)
 ```
 
 ### Development
 ```bash
-# Start web development server
-npm run dev:web
-
-# Or start all services in development mode
-npm run dev
-
-# Build for production
-npm run build
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run test     # Run tests
 ```
 
-### Package Scripts
-- `npm run build:web` - Build web application
-- `npm run build:mobile` - Build mobile application
-- `npm run build:shared` - Build all shared packages
-- `npm run test` - Run tests across all packages
+## 📚 Documentation
 
-## Architecture Overview
+- [Setup Guide](docs/SETUP.md) - Complete installation and configuration
+- [Architecture](docs/ARCHITECTURE.md) - Technical architecture and design principles
+- [Strava Integration](docs/STRAVA_SETUP.md) - Connect your fitness data
+- [Deployment](docs/DEPLOYMENT.md) - Production deployment guides
+- [Testing Strategy](docs/TESTING_STRATEGY.md) - Development and testing workflows
 
-### Shared Packages
+## 🏗️ Architecture
 
-- **`shared-core`**: Core domain logic, services, and infrastructure
-- **`shared-types`**: Shared TypeScript types and interfaces
-- **`shared-utils`**: Common utilities and helper functions
-- **`shared-blockchain`**: Blockchain and Web3-specific logic
+RunRealm uses a monorepo structure with shared core packages:
 
-### Platform Packages
+```
+packages/
+├── shared-core/         # Domain logic and business rules
+├── shared-types/        # TypeScript interfaces
+├── shared-utils/        # Common utilities
+├── shared-blockchain/   # Web3 and contract services
+├── web-app/            # Web platform (analysis & manage)
+├── mobile-app/         # Mobile platform (performance & play)
+└── api-gateway/        # Backend services
+```
 
-- **`web-app`**: Web-specific UI and user experience
-- **`mobile-app`**: Mobile-specific UI and experience
+## 🤝 Contributing
 
-## Contributing Guidelines
-
-When adding new features or modifying existing code, please ensure you follow the Core Principles:
-
-1. **ENHANCEMENT FIRST**: Enhance existing components rather than creating new ones
-2. **AGGRESSIVE CONSOLIDATION**: Look for opportunities to consolidate duplicate code
-3. **DRY**: Maintain single sources of truth for shared logic
-4. **PERFORMANT**: Consider performance implications of your changes
-
-For more details, see the full [ARCHITECTURE.md](docs/ARCHITECTURE.md) document.
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed contribution guidelines.

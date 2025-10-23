@@ -492,7 +492,18 @@ export class AIService extends BaseService {
       console.log('AIService: Connection test successful, response length:', text.length);
     } catch (error) {
       console.error('AIService: Connection test failed:', error);
-      throw new Error(`API connection test failed: ${error instanceof Error ? error.message : String(error)}`);
+
+      // Check if it's a quota/rate limit error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Quota exceeded') || errorMessage.includes('429') || errorMessage.includes('Too Many Requests')) {
+        console.warn('AIService: Gemini API quota exceeded. AI features will be disabled until quota resets or billing is enabled.');
+        console.warn('To resolve: 1) Upgrade to paid Gemini API plan, or 2) Wait for free quota to reset');
+        // Don't throw error for quota issues - allow service to initialize in degraded mode
+        this.isEnabled = false;
+        return;
+      }
+
+      throw new Error(`API connection test failed: ${errorMessage}`);
     }
   }
 

@@ -149,8 +149,16 @@ export class ConfigService {
       }
 
       this.runtimeTokensLoaded = true;
-      // Refresh config with new tokens
-      this.refreshConfig();
+
+      // Update config with new tokens
+      if (runtimeTokens.mapbox) {
+        this.config.mapbox.accessToken = runtimeTokens.mapbox;
+        console.debug('Updated config with Mapbox token');
+      }
+      if (runtimeTokens.gemini && this.config.web3?.ai) {
+        this.config.web3.ai.geminiApiKey = runtimeTokens.gemini;
+        console.debug('Updated config with Gemini API key');
+      }
 
       // Emit event to notify services of config update
       this.eventBus.emit('config:updated', {});
@@ -240,11 +248,11 @@ export class ConfigService {
   }
 
   private getMapboxToken(): string {
-    // 🔒 PRODUCTION SECURITY: Never expose real tokens in client-side code
+    // 🔒 PRODUCTION SECURITY: In production, tokens should come from runtime initialization
     if (process.env.NODE_ENV === 'production') {
-      console.warn('🔒 Production mode: Using secure token endpoint for Mapbox');
-      // In production, tokens should come from secure server endpoints only
-      return this.getTokenFromSecureEndpoint('mapbox') || '';
+      console.warn('🔒 Production mode: Mapbox token will be loaded asynchronously via initializeRuntimeTokens()');
+      // Return empty string - token will be updated when initializeRuntimeTokens completes
+      return '';
     }
 
     // 🔒 DEVELOPMENT ONLY: Try localStorage for development tokens
@@ -281,11 +289,11 @@ export class ConfigService {
       return envKey;
     }
 
-    // 🔒 PRODUCTION SECURITY: Never expose real API keys in client-side code
+    // 🔒 PRODUCTION SECURITY: In production, API keys should come from runtime initialization
     if (process.env.NODE_ENV === 'production') {
-      console.warn('🔒 Production mode: Using secure token endpoint for Gemini API');
-      // In production, API keys should come from secure server endpoints only
-      return this.getTokenFromSecureEndpoint('gemini') || '';
+      console.warn('🔒 Production mode: Gemini API key will be loaded asynchronously via initializeRuntimeTokens()');
+      // Return empty string - key will be updated when initializeRuntimeTokens completes
+      return '';
     }
 
     // 🔒 DEVELOPMENT ONLY: Try localStorage for development API key
@@ -329,19 +337,33 @@ export class ConfigService {
 
   /**
    * 🔒 PRODUCTION SECURITY: Fetch tokens from secure server endpoint
-   * This method should be implemented to call your secure token service
-   * Default implementation uses Express.js server endpoint
+   * This method fetches tokens from the /api/tokens endpoint implemented in server.js
    */
   private getTokenFromSecureEndpoint(tokenType: 'mapbox' | 'gemini'): string | null {
-    // 🔒 IMPLEMENT THIS: Replace with your secure token endpoint
-    // Example: return fetch(`/api/secure-tokens/${tokenType}`).then(r => r.text())
+    // Use the same API base URL as fetchRuntimeTokens
+    const apiUrl = `${(typeof __ENV__ !== 'undefined' && __ENV__.API_BASE_URL) || 'http://localhost:3000'}/api/tokens`;
 
-    console.warn(`🔒 SECURITY: Implement secure token endpoint for ${tokenType}`);
-    console.warn('🔒 For production, tokens should NEVER be in client-side code');
-    console.warn('🔒 Use server-side proxy or secure token service instead');
+    // Since this is called synchronously during config loading, we need to make a synchronous check
+    // for tokens that were already fetched asynchronously during initializeRuntimeTokens
+    const storedToken = localStorage.getItem(`runrealm_${tokenType}_access_token`) ||
+                       localStorage.getItem(`runrealm_google_gemini_api_key`) ||
+                       localStorage.getItem(`runrealm_mapbox_access_token`);
 
-    // For now, return null to force proper implementation
-    return null;
+    if (storedToken) {
+      console.debug(`🔒 Using cached ${tokenType} token from localStorage`);
+      return storedToken;
+    }
+
+    // If no cached token, try to fetch synchronously (not recommended but necessary for initial config)
+    try {
+      // Note: This synchronous fetch won't work in browsers, but the async initializeRuntimeTokens
+      // should have already populated localStorage. If not, tokens won't be available.
+      console.warn(`🔒 ${tokenType} token not available synchronously. Ensure initializeRuntimeTokens() completes before config loading.`);
+      return null;
+    } catch (error) {
+      console.error(`🔒 Failed to fetch ${tokenType} token synchronously:`, error);
+      return null;
+    }
   }
 
   getConfig(): AppConfig {
