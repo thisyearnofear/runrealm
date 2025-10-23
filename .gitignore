@@ -16,6 +16,10 @@ pnpm-debug.log*
 /src/appsettings.secrets.ts
 /src/appsettings.secrets.dev.ts
 config/secrets.json
+**/appsettings.secrets.js
+**/appsettings.secrets.ts
+**/dev-setup.js
+**/dev-setup.ts
 access_token*
 *.token
 *.key
