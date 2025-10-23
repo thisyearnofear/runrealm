@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "ask": [
+      "Read(!/Users/udingethe/dev/runrealm/**)",
+      "Edit(!/Users/udingethe/dev/runrealm/**)"
+    ],
+    "allow": [
+      "Read(/Users/udingethe/dev/runrealm/**)",
+      "Edit(/Users/udingethe/dev/runrealm/**)"
+    ]
+  },
+  "memoryImport": {},
+  "monitoring": {}
+}
