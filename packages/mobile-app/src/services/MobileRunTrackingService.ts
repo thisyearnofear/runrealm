@@ -4,14 +4,17 @@
  * using shared core RunTrackingService
  */
 import { RunTrackingService, RunSession } from '@runrealm/shared-core/services/run-tracking-service';
+import { BackgroundTrackingService } from './BackgroundTrackingService';
 
 class MobileRunTrackingService {
   private runTrackingService: RunTrackingService;
+  private backgroundTrackingService: BackgroundTrackingService;
   private locationTrackingEnabled: boolean = false;
 
   constructor() {
     // Initialize with the shared core service
     this.runTrackingService = new RunTrackingService();
+    this.backgroundTrackingService = BackgroundTrackingService.getInstance();
   }
 
   /**
@@ -127,17 +130,27 @@ class MobileRunTrackingService {
   /**
    * Enable background location tracking
    */
-  enableBackgroundTracking(): void {
-    // Mobile-specific implementation for background tracking
-    console.log('Background tracking enabled');
+  async enableBackgroundTracking(): Promise<void> {
+    try {
+      await this.backgroundTrackingService.startBackgroundTracking();
+      console.log('Background tracking enabled');
+    } catch (error) {
+      console.error('Failed to enable background tracking:', error);
+      throw error;
+    }
   }
 
   /**
    * Disable background location tracking
    */
-  disableBackgroundTracking(): void {
-    // Mobile-specific implementation for background tracking
-    console.log('Background tracking disabled');
+  async disableBackgroundTracking(): Promise<void> {
+    try {
+      await this.backgroundTrackingService.stopBackgroundTracking();
+      console.log('Background tracking disabled');
+    } catch (error) {
+      console.error('Failed to disable background tracking:', error);
+      throw error;
+    }
   }
 }
 

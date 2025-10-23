@@ -1,8 +1,11 @@
 /**
  * Mobile App Entry Point
- * Uses shared core services with mobile-optimized UI
+ * ENHANCEMENT FIRST: Uses shared core services with mobile-optimized UI
+ * DRY: All business logic in shared-core, mobile only handles presentation
+ * CLEAN: Clear separation between services and UI components
+ * MODULAR: Composable components with clear responsibilities
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -11,17 +14,26 @@ import {
   Text,
   View,
   Alert,
-  Button,
+  Linking,
 } from 'react-native';
 
-// Import shared services
+// Import shared services (ENHANCEMENT FIRST: Reuse existing services)
 import { TerritoryService, Territory } from '@runrealm/shared-core/services/territory-service';
 import { GameService } from '@runrealm/shared-core/services/game-service';
 import { AchievementService, Achievement } from '@runrealm/shared-core/services/achievement-service';
+import { MapService } from '@runrealm/shared-core/services/map-service';
+import { Web3Service } from '@runrealm/shared-core/services/web3-service';
+import { ExternalFitnessService } from '@runrealm/shared-core/services/external-fitness-service';
 
-// Import mobile-specific components that use shared services
+// Import mobile-specific components and adapters (CLEAN: Platform-specific UI only)
 import GPSTrackingComponent from './components/GPSTrackingComponent';
 import MobileOnboarding from './components/MobileOnboarding';
+import TerritoryMapView from './components/TerritoryMapView';
+import { WalletButton } from './components/WalletButton';
+import { TerritoryClaimModal } from './components/TerritoryClaimModal';
+import { MobileMapAdapter } from './services/MobileMapAdapter';
+import { MobileWeb3Adapter } from './services/MobileWeb3Adapter';
+import { PushNotificationService } from './services/PushNotificationService';
 
 const MobileApp = () => {
   const [appStatus, setAppStatus] = React.useState('Initializing...');
@@ -29,20 +41,62 @@ const MobileApp = () => {
   const [territories, setTerritories] = React.useState<Territory[]>([]);
   const [achievements, setAchievements] = React.useState<Achievement[]>([]);
   const [showOnboarding, setShowOnboarding] = React.useState(false);
+  const [showClaimModal, setShowClaimModal] = React.useState(false);
+  const [walletConnected, setWalletConnected] = React.useState(false);
+  
+  // ENHANCEMENT FIRST: Reuse existing services from shared-core (DRY principle)
   const [territoryService] = React.useState(() => new TerritoryService());
   const [gameService] = React.useState(() => new GameService());
   const [achievementService] = React.useState(() => new AchievementService());
+  const [mapService] = React.useState(() => new MapService());
+  const [web3Service] = React.useState(() => Web3Service.getInstance());
+  const [fitnessService] = React.useState(() => new ExternalFitnessService());
+  
+  // CLEAN: Mobile-specific adapters for platform rendering
+  const [mapAdapter] = React.useState(() => new MobileMapAdapter(mapService));
+  const [web3Adapter] = React.useState(() => new MobileWeb3Adapter(web3Service));
 
   React.useEffect(() => {
     initializeApp();
+    
+    // Initialize push notifications
+    const pushService = PushNotificationService.getInstance();
+    pushService.setupNotificationListeners();
+    pushService.registerForPushNotifications();
+    
+    // Handle deep links for Strava OAuth callback
+    const handleOpenURL = (event: { url: string }) => {
+      // Handle Strava OAuth callback
+      if (event.url.includes('strava_success=true')) {
+        fitnessService.handleOAuthCallback();
+        Alert.alert('Success', 'Connected to Strava successfully!');
+      }
+    };
+
+    // Add event listener
+    Linking.addEventListener('url', handleOpenURL);
+    
+    // Check initial URL
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleOpenURL({ url });
+      }
+    });
+
+    // Cleanup
+    return () => {
+      Linking.removeAllListeners('url');
+    };
   }, []);
 
   const initializeApp = async () => {
     try {
-      // Initialize shared services
+      // MODULAR: Initialize services independently
       await territoryService.initialize();
       await gameService.initialize();
       await achievementService.initialize();
+      await web3Service.init(); // Initialize Web3 if enabled
+      await web3Adapter.initialize();
 
       // Load claimed territories
       const claimedTerritories = territoryService.getClaimedTerritories();
@@ -51,6 +105,9 @@ const MobileApp = () => {
       // Load achievements
       const userAchievements = achievementService.getAchievements();
       setAchievements(userAchievements);
+
+      // Check wallet connection status
+      setWalletConnected(web3Adapter.isConnected());
 
       // Check if onboarding is needed
       const hasCompletedOnboarding = localStorage.getItem('runrealm_onboarding_complete');
@@ -116,58 +173,61 @@ const MobileApp = () => {
   const handleRunStop = (runData: any) => {
     setCurrentRunData(runData);
 
+    // ENHANCEMENT FIRST: Use MapService to visualize completed run
+    if (runData?.path && runData.path.length > 0) {
+      mapAdapter.drawRunTrail(runData.path);
+      
+      if (runData.territoryEligible) {
+        mapAdapter.drawTerritory(runData.path);
+      }
+    }
+
     if (runData?.territoryEligible) {
       setAppStatus('Run completed! Territory eligible for claiming.');
-      Alert.alert(
-        'Territory Eligible!',
-        'Your run completed a loop and is eligible for territory claiming. Would you like to claim this territory?',
-        [
-          { text: 'Not Now', style: 'cancel' },
-          { text: 'Claim Territory', onPress: () => handleClaimTerritory(runData) },
-        ]
-      );
+      
+      // CLEAN: Show modal instead of alert for better UX
+      setShowClaimModal(true);
     } else {
       setAppStatus('Run completed. Keep running to create claimable territories!');
     }
 
     console.log('Run completed:', runData);
 
-      // Check for new achievements after run completion
-      setTimeout(() => checkForNewAchievements(), 1000);
+    // Check for new achievements after run completion
+    setTimeout(() => checkForNewAchievements(), 1000);
   };
 
-  const handleClaimTerritory = async (runData: any) => {
-    try {
-      setAppStatus('Claiming territory...');
+  const handleClaimSuccess = (territory: any) => {
+    // Update territories list
+    const updatedTerritories = territoryService.getClaimedTerritories();
+    setTerritories(updatedTerritories);
 
-      const claimResult = await territoryService.claimTerritoryFromExternalActivity(runData);
+    setAppStatus('Territory claimed successfully!');
+    console.log('Territory claimed:', territory);
 
-      if (claimResult.success) {
-        // Update territories list
-        const updatedTerritories = territoryService.getClaimedTerritories();
-        setTerritories(updatedTerritories);
+    // Check for new achievements after territory claim
+    setTimeout(() => checkForNewAchievements(), 1000);
+  };
 
-        setAppStatus('Territory claimed successfully!');
+  const handleClaimError = (error: string) => {
+    setAppStatus('Territory claim failed.');
+    console.error('Claim error:', error);
+  };
 
-        Alert.alert(
-          'Success!',
-          `Territory "${claimResult.territory?.metadata.name}" claimed successfully!`,
-          [{ text: 'OK' }]
-        );
+  const handleWalletConnect = (address: string) => {
+    setWalletConnected(true);
+    setAppStatus(`Wallet connected: ${address.slice(0, 6)}...${address.slice(-4)}`);
+    console.log('Wallet connected:', address);
+  };
 
-        console.log('Territory claimed:', claimResult);
+  const handleWalletDisconnect = () => {
+    setWalletConnected(false);
+    setAppStatus('Wallet disconnected');
+    console.log('Wallet disconnected');
+  };
 
-        // Check for new achievements after territory claim
-        setTimeout(() => checkForNewAchievements(), 1000);
-      } else {
-        setAppStatus('Territory claim failed.');
-        Alert.alert('Claim Failed', claimResult.error || 'Failed to claim territory.');
-      }
-    } catch (error) {
-      console.error('Error claiming territory:', error);
-      setAppStatus('Error claiming territory.');
-      Alert.alert('Error', 'Failed to claim territory. Please try again.');
-    }
+  const handleWalletError = (error: string) => {
+    Alert.alert('Wallet Error', error);
   };
 
   return (
@@ -189,6 +249,34 @@ const MobileApp = () => {
             <Text style={styles.sectionDescription}>
               {appStatus}
             </Text>
+            
+            {/* MODULAR: Wallet connection component */}
+            <View style={styles.walletContainer}>
+              <WalletButton
+                web3Adapter={web3Adapter}
+                onConnect={handleWalletConnect}
+                onDisconnect={handleWalletDisconnect}
+                onError={handleWalletError}
+              />
+              {!walletConnected && (
+                <Text style={styles.walletHint}>
+                  💡 Connect wallet to claim territories on blockchain
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* ENHANCEMENT FIRST: Map visualization using shared MapService */}
+          <View style={styles.mapContainer}>
+            <TerritoryMapView
+              mapAdapter={mapAdapter}
+              showUserLocation={true}
+              followUser={!!currentRunData}
+              onTerritoryPress={(territoryId) => {
+                console.log('Territory pressed:', territoryId);
+                // Could show territory details modal
+              }}
+            />
           </View>
 
           <View style={styles.trackingContainer}>
@@ -244,6 +332,17 @@ const MobileApp = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* CLEAN: Territory claiming modal (separate from main UI) */}
+      <TerritoryClaimModal
+        visible={showClaimModal}
+        runData={currentRunData}
+        territoryService={territoryService}
+        web3Adapter={web3Adapter}
+        onClose={() => setShowClaimModal(false)}
+        onSuccess={handleClaimSuccess}
+        onError={handleClaimError}
+      />
     </SafeAreaView>
   );
 };
@@ -263,8 +362,31 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 24,
   },
+  mapContainer: {
+    height: 300,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#e0e0e0',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
   trackingContainer: {
-    flex: 1,
+    paddingHorizontal: 16,
+  },
+  walletContainer: {
+    marginTop: 16,
+  },
+  walletHint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   sectionTitle: {
     fontSize: 18,
