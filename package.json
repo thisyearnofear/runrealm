@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "build": "npm run build --workspaces",
-    "build:web": "node --openssl-legacy-provider ./node_modules/.bin/webpack --mode production --config webpack.config.js",
+    "build:web": "webpack --mode production --config webpack.config.js",
     "build:mobile": "echo 'Mobile build requires React Native environment'",
     "build:shared": "npm run build --workspace=@runrealm/shared-core && npm run build --workspace=@runrealm/shared-types && npm run build --workspace=@runrealm/shared-utils && npm run build --workspace=@runrealm/shared-blockchain",
     "dev": "concurrently \"npm run dev:web\" \"npm run dev:backend\"",
