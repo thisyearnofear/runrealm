@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>User Dashboard Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Controls</h2>
+            <button id="initDashboard">Initialize Dashboard Service</button>
+            <button id="showDashboard">Show Dashboard</button>
+            <button id="hideDashboard">Hide Dashboard</button>
+            <button id="toggleDashboard">Toggle Dashboard</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>Output</h2>
+            <div id="output">Click buttons above to test dashboard functionality...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the dashboard service
+        import { UserDashboardService } from './packages/shared-core/services/user-dashboard-service.js';
+        
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.textContent += `\n${message}`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        // Test the dashboard service
+        document.getElementById('initDashboard').addEventListener('click', () => {
+            try {
+                const dashboardService = UserDashboardService.getInstance();
+                log('Dashboard service initialized successfully');
+                log(`Service instance: ${dashboardService.constructor.name}`);
+            } catch (error) {
+                log(`Error initializing dashboard service: ${error.message}`);
+                console.error(error);
+            }
+        });
+        
+        document.getElementById('showDashboard').addEventListener('click', () => {
+            try {
+                const dashboardService = UserDashboardService.getInstance();
+                dashboardService.show();
+                log('Dashboard show() called');
+            } catch (error) {
+                log(`Error showing dashboard: ${error.message}`);
+                console.error(error);
+            }
+        });
+        
+        document.getElementById('hideDashboard').addEventListener('click', () => {
+            try {
+                const dashboardService = UserDashboardService.getInstance();
+                dashboardService.hide();
+                log('Dashboard hide() called');
+            } catch (error) {
+                log(`Error hiding dashboard: ${error.message}`);
+                console.error(error);
+            }
+        });
+        
+        document.getElementById('toggleDashboard').addEventListener('click', () => {
+            try {
+                const dashboardService = UserDashboardService.getInstance();
+                dashboardService.toggle();
+                log('Dashboard toggle() called');
+            } catch (error) {
+                log(`Error toggling dashboard: ${error.message}`);
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

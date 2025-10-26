@@ -20,6 +20,7 @@ export * from './services/ui-service';
 export * from './services/web3-service';
 export * from './services/preference-service';
 export * from './services/achievement-service';
+export * from './services/user-dashboard-service';
 // export * from './services/next-segment-service'; // Removed - legacy/unused in mobile
 export * from './services/geocoding-service';
 

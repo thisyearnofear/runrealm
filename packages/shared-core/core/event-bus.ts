@@ -133,6 +133,9 @@ export interface AppEvents extends Web3Events {
   "staking:stakeStarted": { transactionHash: string; amount: number };
   "staking:rewardEarned": { amount: number };
   "rewards:settingsChanged": {};
+  // Dashboard events
+  "dashboard:dataUpdated": { data: any; state: any };
+  "dashboard:visibilityChanged": { visible: boolean; minimized: boolean };
   // Cross-chain events
   "crosschain:territoryClaimRequested": { territoryData: any; targetChainId: number };
   "crosschain:territoryClaimInitiated": { messageId: string; territoryData: any; targetChainId: number };

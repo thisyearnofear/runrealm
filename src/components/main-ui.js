@@ -127,6 +127,10 @@ export class MainUI extends BaseService {
         // Initialize run tracker widget now that widget system is ready
         // Use setTimeout to ensure services are fully registered
         setTimeout(() => this.initializeRunTrackerWidget(), 100);
+        
+        // Initialize user dashboard
+        this.initializeUserDashboard();
+        
         // Force widget system debug info
         console.log("MainUI: Widget system debug info:", this.widgetSystem.getDebugInfo());
         // Initial GPS and network status check
@@ -150,6 +154,7 @@ export class MainUI extends BaseService {
         // Run Controls are now handled by EnhancedRunControls service
         // (Removed old widget-based run controls to avoid duplication)
         const isMobile = this.config.getConfig().ui.isMobile;
+        
         // Location Widget (top-left) - minimized on mobile for map visibility
         this.widgetSystem.registerWidget({
             id: "location-info",
@@ -160,6 +165,7 @@ export class MainUI extends BaseService {
             priority: 9,
             content: this.getLocationContent(),
         });
+        
         // Wallet Widget (top-right) - minimized on mobile
         this.widgetSystem.registerWidget({
             id: "wallet-info",
@@ -169,6 +175,17 @@ export class MainUI extends BaseService {
             minimized: true, // Always start minimized
             priority: 9,
             content: this.walletWidget.getWidgetContent(),
+        });
+        
+        // User Dashboard Widget (centered, hidden by default)
+        this.widgetSystem.registerWidget({
+            id: "user-dashboard",
+            title: "Dashboard",
+            icon: "🎮",
+            position: "bottom-right",
+            minimized: true,
+            priority: 1,
+            content: '<div class="dashboard-placeholder" style="cursor: pointer; text-align: center; padding: 20px;">🎮 User Dashboard<br><small>Click to open</small></div>',
         });
     }
     /**
@@ -183,8 +200,29 @@ export class MainUI extends BaseService {
         if (oldControls)
             oldControls.remove();
     }
-    // Header removed - functionality moved to widgets for better mobile UX
-    // Removed old UI creation methods - now using widget system
+    /**
+     * Initialize and show the user dashboard
+     */
+    initializeUserDashboard() {
+        // Create container for user dashboard if it doesn't exist
+        let dashboardContainer = document.getElementById('user-dashboard-container');
+        if (!dashboardContainer) {
+            dashboardContainer = this.domService.createElement('div', {
+                id: 'user-dashboard-container',
+                parent: document.body
+            });
+        }
+        
+        // Import and initialize UserDashboard
+        import('./user-dashboard.js').then((module) => {
+            const { UserDashboard } = module;
+            const userDashboard = UserDashboard.getInstance();
+            userDashboard.initialize(dashboardContainer);
+            console.log("MainUI: User dashboard initialized");
+        }).catch((error) => {
+            console.error("MainUI: Failed to initialize user dashboard:", error);
+        });
+    }
     /**
      * Setup event handlers for the main UI
      */
@@ -218,6 +256,12 @@ export class MainUI extends BaseService {
             this.showExternalFitnessIntegration();
             this.trackUserAction("import_activities_clicked");
         });
+        
+        // User Dashboard widget click handler
+        this.domService.delegate(document.body, "#widget-user-dashboard", "click", () => {
+            this.showUserDashboard();
+        });
+        
         // Old run control button handlers removed - now handled by EnhancedRunControls
         this.domService.delegate(document.body, "#set-location-btn", "click", () => {
             this.locationService.getCurrentLocation();
@@ -1566,6 +1610,19 @@ export class MainUI extends BaseService {
             this.externalFitnessIntegration = new ExternalFitnessIntegration(container);
         }
         this.externalFitnessIntegration.show();
+    }
+    
+    /**
+     * Show the user dashboard
+     */
+    showUserDashboard() {
+        import('./user-dashboard.js').then((module) => {
+            const { UserDashboard } = module;
+            const userDashboard = UserDashboard.getInstance();
+            userDashboard.show();
+        }).catch((error) => {
+            console.error("MainUI: Failed to show user dashboard:", error);
+        });
     }
     /**
      * Toggle widget visibility (show/hide completely)
