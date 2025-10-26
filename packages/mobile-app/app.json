@@ -2,70 +2,29 @@
   "expo": {
     "name": "RunRealm",
     "slug": "runrealm",
-    "version": "1.0.0",
+    "version": "3.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
-    "scheme": "runrealm",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4CAF50"
+      "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.runrealm.app",
-      "buildNumber": "1",
-      "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "RunRealm needs your location to track your runs and show nearby territories.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "RunRealm needs background location access to track your runs even when the app is closed.",
-        "NSLocationAlwaysUsageDescription": "RunRealm needs background location access to track your runs even when the app is closed.",
-        "UIBackgroundModes": [
-          "location"
-        ]
-      },
-      "associatedDomains": ["applinks:runrealm.xyz"]
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4CAF50"
-      },
-      "package": "com.runrealm.app",
-      "versionCode": 1,
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION"
-      ],
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "runrealm.xyz",
-              "pathPrefix": "/strava/callback"
-            }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ]
+        "backgroundColor": "#ffffff"
+      }
     },
-    "plugins": [
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow RunRealm to track your runs in the background.",
-          "locationAlwaysPermission": "Allow RunRealm to track your runs in the background.",
-          "locationWhenInUsePermission": "Allow RunRealm to track your runs.",
-          "isIosBackgroundLocationEnabled": true
-        }
-      ]
-    ]
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
   }
 }

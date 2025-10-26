@@ -15,7 +15,23 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import Geolocation from '@react-native-community/geolocation';
+import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
+
+// Define background location task
+TaskManager.defineTask('LOCATION_TASK_NAME', async ({ data, error }) => {
+  if (error) {
+    console.error('Location task error:', error);
+    return;
+  }
+  if (data) {
+    const { locations } = data as { locations: Location.LocationObject[] };
+    const location = locations[0];
+    console.log('Location update:', location);
+    // Here you would update your state or call a callback
+    // For now, we'll just log it
+  }
+});
 
 // Import mobile service
 import MobileRunTrackingService from '../services/MobileRunTrackingService';
@@ -126,23 +142,22 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
         if (granted === PermissionsAndroid.RESULTS.GRANTED) {
           console.log('Location permission granted');
           // Get initial location to verify permissions work
-          Geolocation.getCurrentPosition(
-            (position) => {
-              setLocation({
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-              });
-              updateGPSAccuracy(position.coords.accuracy || 20);
-              setIsLoadingGPS(false);
-              console.log('Initial location obtained');
-            },
-            (error) => {
-              console.error('Error getting initial location:', error);
-              setIsLoadingGPS(false);
-              Alert.alert('Location Error', 'Unable to get your location. Please check permissions.');
-            },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-          );
+          try {
+            const position = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.High
+            });
+            setLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+            updateGPSAccuracy(position.coords.accuracy || 20);
+            setIsLoadingGPS(false);
+            console.log('Initial location obtained');
+          } catch (error) {
+            console.error('Error getting initial location:', error);
+            setIsLoadingGPS(false);
+            Alert.alert('Location Error', 'Unable to get your location. Please check permissions.');
+          }
         } else {
           console.log('Location permission denied');
           setIsLoadingGPS(false);
@@ -191,35 +206,29 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
     }
   };
 
-  const startLocationUpdates = () => {
+  const startLocationUpdates = async () => {
     // Start watching position for real-time UI updates
-    const watchId = Geolocation.watchPosition(
-      (position) => {
-        if (isTracking) {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-          // Update GPS accuracy with smooth animation
-          updateGPSAccuracy(position.coords.accuracy || 20);
-          // Update stats from the service
-          const stats = mobileTrackingService.getCurrentStats();
-          updateRunStats(stats);
-        }
-      },
-      (error) => {
-        console.error('Location watch error:', error);
-      },
-      {
-        enableHighAccuracy: true,
-        distanceFilter: 5, // Update every 5 meters
-        interval: 2000, // Update every 2 seconds
-        fastestInterval: 1000,
+    try {
+      // Request foreground permissions first
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.error('Permission to access location was denied');
+        return;
       }
-    );
 
-    // Store watchId for cleanup
-    (window as any).locationWatchId = watchId;
+      // Start location updates
+      await Location.startLocationUpdatesAsync('LOCATION_TASK_NAME', {
+        accuracy: Location.Accuracy.High,
+        distanceInterval: 5, // Update every 5 meters
+        timeInterval: 2000, // Update every 2 seconds
+        foregroundService: {
+          notificationTitle: 'RunRealm GPS Tracking',
+          notificationBody: 'Tracking your run in the background',
+        },
+      });
+    } catch (error) {
+      console.error('Location watch error:', error);
+    }
   };
 
   const handleStopRun = async () => {
@@ -232,9 +241,10 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
   stopPulseAnimation();
 
   // Clear location watch
-  if ((window as any).locationWatchId) {
-    Geolocation.clearWatch((window as any).locationWatchId);
-        (window as any).locationWatchId = null;
+  try {
+    await Location.stopLocationUpdatesAsync('LOCATION_TASK_NAME');
+  } catch (error) {
+    console.error('Error stopping location updates:', error);
   }
 
     console.log('Run stopped:', runData);
@@ -245,16 +255,17 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
     }
   };
 
-  const handlePauseRun = () => {
+  const handlePauseRun = async () => {
     animateButtonPress();
   mobileTrackingService.pauseRun();
   setIsTracking(false);
   stopPulseAnimation();
 
   // Clear location watch when paused
-    if ((window as any).locationWatchId) {
-      Geolocation.clearWatch((window as any).locationWatchId);
-      (window as any).locationWatchId = null;
+  try {
+    await Location.stopLocationUpdatesAsync('LOCATION_TASK_NAME');
+  } catch (error) {
+    console.error('Error stopping location updates:', error);
   }
   };
 

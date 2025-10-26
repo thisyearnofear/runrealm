@@ -113,15 +113,17 @@ export class ExternalFitnessService extends BaseService {
   /**
    * Initiate Strava OAuth flow
    */
-  public initiateStravaAuth(): string {
+  public initiateStravaAuth(callbackUrl?: string): string {
     const stravaConfig = this.configService.getStravaConfig();
     if (!stravaConfig?.clientId) {
       throw new Error("Strava configuration not found. Please check your credentials.");
     }
 
+    const redirect_uri = callbackUrl || stravaConfig.redirectUri;
+
     const params = new URLSearchParams({
       client_id: stravaConfig.clientId,
-      redirect_uri: stravaConfig.redirectUri,
+      redirect_uri: redirect_uri,
       response_type: "code",
       scope: "read,activity:read_all",
       approval_prompt: "auto"
@@ -130,6 +132,47 @@ export class ExternalFitnessService extends BaseService {
     const authUrl = `https://www.strava.com/oauth/authorize?${params.toString()}`;
     console.log('Initiating Strava OAuth with URL:', authUrl);
     return authUrl;
+  }
+
+  /**
+   * Complete the Strava connection by exchanging the authorization code for a token.
+   */
+  public async completeStravaConnection(url: string): Promise<{ success: boolean; error?: string }> {
+    const urlParams = new URLSearchParams(new URL(url).search);
+    const code = urlParams.get('code');
+    const error = urlParams.get('error');
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    if (!code) {
+      return { success: false, error: 'Authorization code not found in the URL.' };
+    }
+
+    try {
+      const response = await fetch('/api/strava/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Token exchange failed');
+      }
+
+      const tokenData = await response.json();
+      this.storeTokens('strava', tokenData.access_token, tokenData.refresh_token, tokenData.expires_at);
+      this.safeEmit("fitness:connected", { source: "strava" });
+      return { success: true };
+    } catch (err: any) {
+      console.error('Failed to exchange Strava code for token:', err);
+      this.safeEmit("fitness:connectionFailed", { source: "strava", error: err.message });
+      return { success: false, error: err.message };
+    }
   }
 
   /**

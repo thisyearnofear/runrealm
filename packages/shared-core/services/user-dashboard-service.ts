@@ -10,7 +10,7 @@ import { RunTrackingService, RunSession } from './run-tracking-service';
 import { Web3Service, WalletInfo } from './web3-service';
 import { TerritoryService, Territory } from './territory-service';
 import { AIService } from './ai-service';
-import { WidgetStateService } from './widget-state-service';
+import { WidgetStateService } from '../components/widget-state-service';
 
 export interface DashboardState {
   isVisible: boolean;
@@ -67,7 +67,7 @@ export class UserDashboardService extends BaseService {
   private updateInterval: number | null = null;
   private debouncedUpdate: (() => void) | null = null;
   private throttledRealTimeUpdate: (() => void) | null = null;
-  private realTimeUpdateInterval: number | null = null;
+  private realTimeUpdateInterval: any | null = null;
   private isDataLoaded: boolean = false;
   
   // Service references
@@ -79,11 +79,11 @@ export class UserDashboardService extends BaseService {
 
   private constructor() {
     super();
-    this.widgetStateService = WidgetStateService.getInstance();
+    this.widgetStateService = new WidgetStateService();
     this.progressionService = ProgressionService.getInstance();
-    this.runTrackingService = RunTrackingService.getInstance();
+    this.runTrackingService = new RunTrackingService();
     this.web3Service = Web3Service.getInstance();
-    this.territoryService = TerritoryService.getInstance();
+    this.territoryService = new TerritoryService();
     this.aiService = AIService.getInstance();
   }
 
@@ -94,7 +94,7 @@ export class UserDashboardService extends BaseService {
     return UserDashboardService.instance;
   }
 
-  private debounce(func: Function, wait: number): () => void {
+  protected debounce(func: Function, wait: number): () => void {
     let timeout: NodeJS.Timeout | null = null;
     return (...args: any[]) => {
       if (timeout) {
@@ -104,7 +104,7 @@ export class UserDashboardService extends BaseService {
     };
   }
 
-  private throttle(func: Function, wait: number): () => void {
+  protected throttle(func: Function, wait: number): () => void {
     let timeout: NodeJS.Timeout | null = null;
     let lastExecTime = 0;
     return (...args: any[]) => {
@@ -153,7 +153,6 @@ export class UserDashboardService extends BaseService {
       if (widgetState) {
         this.dashboardState.isVisible = widgetState.visible ?? false;
         this.dashboardState.isMinimized = widgetState.minimized ?? true;
-        this.dashboardState.lastUpdated = widgetState.lastAccessed ?? Date.now();
       }
     } catch (error) {
       console.warn('Failed to load widget state for user dashboard:', error);
@@ -164,8 +163,7 @@ export class UserDashboardService extends BaseService {
     try {
       this.widgetStateService.setWidgetState('user-dashboard', {
         visible: this.dashboardState.isVisible,
-        minimized: this.dashboardState.isMinimized,
-        lastAccessed: this.dashboardState.lastUpdated
+        minimized: this.dashboardState.isMinimized
       });
     } catch (error) {
       console.warn('Failed to save widget state for user dashboard:', error);
@@ -177,7 +175,7 @@ export class UserDashboardService extends BaseService {
   private async updateDashboardData(): Promise<void> {
     try {
       // Update user stats from progression service
-      const playerStats = this.progressionService.getPlayerStats();
+      const playerStats = this.progressionService.getStats();
       this.dashboardData.userStats = {
         level: playerStats.level,
         experience: playerStats.experience,
@@ -389,7 +387,7 @@ export class UserDashboardService extends BaseService {
   public hide(): void {
     this.dashboardState.isVisible = false;
     this.saveWidgetState();
-    this.safeEmit('dashboard:visibilityChanged', { visible: false, minimized: this.isMinimized });
+    this.safeEmit('dashboard:visibilityChanged', { visible: false, minimized: this.dashboardState.isMinimized });
   }
 
   public toggle(): void {

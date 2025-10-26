@@ -36,7 +36,7 @@ export const WalletButton: React.FC<WalletButtonProps> = React.memo(({
 
   // Subscribe to wallet state changes
   useEffect(() => {
-    const unsubscribe = web3Adapter.subscribe((state) => {
+    const unsubscribe = web3Adapter.subscribeToState((state) => {
       setWalletState(state);
     });
 

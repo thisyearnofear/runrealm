@@ -56,7 +56,13 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // API endpoint to provide tokens
 app.get("/api/tokens", (req, res) => {
-  console.log("Received request for /api/tokens");
+  console.log("Received request for /api/tokens from:", req.ip || req.connection.remoteAddress);
+  console.log("Request headers:", req.headers);
+  console.log("Environment variables status:", {
+    MAPBOX_ACCESS_TOKEN: process.env.MAPBOX_ACCESS_TOKEN ? "SET" : "NOT SET",
+    GOOGLE_GEMINI_API_KEY: process.env.GOOGLE_GEMINI_API_KEY ? "SET" : "NOT SET",
+    STRAVA_CLIENT_ID: process.env.STRAVA_CLIENT_ID ? "SET" : "NOT SET"
+  });
 
   // Only allow GET requests
   if (req.method !== "GET") {
@@ -71,7 +77,7 @@ app.get("/api/tokens", (req, res) => {
         clientId: process.env.STRAVA_CLIENT_ID || "",
         redirectUri:
           process.env.STRAVA_REDIRECT_URI ||
-          "http://localhost:3000/auth/strava/callback",
+          "https://runrealm.netlify.app/auth/strava/callback", // Updated for production
       },
     };
 
@@ -81,7 +87,7 @@ app.get("/api/tokens", (req, res) => {
     if (tokens.gemini) validTokens.gemini = tokens.gemini;
     if (tokens.strava.clientId) validTokens.strava = tokens.strava;
 
-    console.log("Sending tokens:", validTokens);
+    console.log("Sending tokens:", Object.keys(validTokens));
     res.json(validTokens);
   } catch (error) {
     console.error("Token retrieval error:", error);

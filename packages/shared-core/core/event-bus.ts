@@ -136,6 +136,7 @@ export interface AppEvents extends Web3Events {
   // Dashboard events
   "dashboard:dataUpdated": { data: any; state: any };
   "dashboard:visibilityChanged": { visible: boolean; minimized: boolean };
+  "dashboard:realTimeDataUpdated": { currentRun: any; lastUpdated: number };
   // Cross-chain events
   "crosschain:territoryClaimRequested": { territoryData: any; targetChainId: number };
   "crosschain:territoryClaimInitiated": { messageId: string; territoryData: any; targetChainId: number };
