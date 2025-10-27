@@ -43,6 +43,10 @@ packages/*/dist/
 packages/*/build/
 packages/*/*.tsbuildinfo
 tsconfig.tsbuildinfo
+# Additional build artifacts
+packages/*/*.js
+!packages/*/*.ts
+!packages/*/*.tsx
 
 # Auto-generated JS files from compilation
 **/*.js.map
@@ -50,6 +54,9 @@ public/*.js
 public/*.css
 public/*.html
 !public/index.html  # Keep the template file if it exists for build process
+src/**/*.js
+!src/**/*.ts
+!src/**/*.tsx
 
 # Testing
 /spec/.working/
@@ -171,3 +178,6 @@ docker-compose.override.yml
 # Production logs
 logs/
 *.log
+
+# Generated files and directories
+packages/*/types/
