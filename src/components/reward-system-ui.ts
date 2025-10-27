@@ -32,7 +32,7 @@ export class RewardSystemUI extends BaseService {
   private uiService: UIService;
   private animationService: AnimationService;
   private web3Service: Web3Service;
-  
+
   private rewardWidget: HTMLElement | null = null;
   private rewardData: RewardData = {
     totalEarned: 0,
@@ -259,7 +259,29 @@ export class RewardSystemUI extends BaseService {
   }
 
   private renderRewardHistory(): string {
-    // This would show recent reward transactions
+    // Show recent reward transactions or helpful onboarding content
+    const hasActivity = this.rewardData.totalEarned > 0;
+
+    if (!hasActivity) {
+      return `
+        <div class="reward-onboarding">
+          <h4>💡 Start Earning REALM</h4>
+          <div class="onboarding-tip">
+            <span class="tip-icon">🏃‍♂️</span>
+            <span class="tip-text">Complete runs to earn tokens</span>
+          </div>
+          <div class="onboarding-tip">
+            <span class="tip-icon">🏆</span>
+            <span class="tip-text">Claim territories for bonus rewards</span>
+          </div>
+          <div class="onboarding-tip">
+            <span class="tip-icon">📈</span>
+            <span class="tip-text">Stake tokens for passive income</span>
+          </div>
+        </div>
+      `;
+    }
+
     return `
       <div class="reward-history">
         <h4>Recent Activity</h4>
@@ -289,7 +311,7 @@ export class RewardSystemUI extends BaseService {
     if (!this.rewardWidget) return;
 
     const isCollapsed = this.rewardWidget.classList.contains('collapsed');
-    
+
     if (isCollapsed) {
       this.rewardWidget.classList.remove('collapsed');
       this.rewardWidget.classList.add('expanded');
@@ -307,10 +329,10 @@ export class RewardSystemUI extends BaseService {
 
     try {
       this.uiService.showToast('⏳ Claiming rewards...', { type: 'info' });
-      
+
       // Simulate claiming transaction
       const claimAmount = this.rewardData.availableToClaim;
-      
+
       // Emit transaction started event
       this.safeEmit('web3:transactionSubmitted', {
         hash: 'claim_' + Date.now(),
@@ -322,7 +344,7 @@ export class RewardSystemUI extends BaseService {
         // Update reward data
         this.rewardData.availableToClaim = 0;
         this.rewardData.lastClaimTimestamp = Date.now();
-        
+
         // Emit success
         this.safeEmit('web3:transactionConfirmed', {
           hash: 'claim_' + Date.now(),
@@ -331,10 +353,10 @@ export class RewardSystemUI extends BaseService {
 
         this.updateRewardDisplay();
         this.saveRewardData();
-        
-        this.uiService.showToast(`🎉 Successfully claimed ${this.formatTokenAmount(claimAmount)} REALM!`, { 
+
+        this.uiService.showToast(`🎉 Successfully claimed ${this.formatTokenAmount(claimAmount)} REALM!`, {
           type: 'success',
-          duration: 5000 
+          duration: 5000
         });
       }, 2000);
 
@@ -414,7 +436,7 @@ export class RewardSystemUI extends BaseService {
       const amount = parseFloat(stakeInput.value) || 0;
       const dailyReward = (amount * 0.125) / 365; // 12.5% APY
       const monthlyReward = dailyReward * 30;
-      
+
       if (dailyPreview) dailyPreview.textContent = `${this.formatTokenAmount(dailyReward)} REALM`;
       if (monthlyPreview) monthlyPreview.textContent = `${this.formatTokenAmount(monthlyReward)} REALM`;
     });
@@ -430,23 +452,23 @@ export class RewardSystemUI extends BaseService {
 
     try {
       this.uiService.showToast('⏳ Unstaking tokens...', { type: 'info' });
-      
+
       // Simulate unstaking transaction
       setTimeout(() => {
         const unstakedAmount = this.stakingInfo!.amount;
         const pendingReward = this.stakingInfo!.pendingReward;
-        
+
         // Update data
         this.rewardData.stakedAmount = 0;
         this.rewardData.availableToClaim += pendingReward;
         this.stakingInfo = null;
-        
+
         this.updateRewardDisplay();
         this.saveRewardData();
-        
-        this.uiService.showToast(`🎉 Unstaked ${this.formatTokenAmount(unstakedAmount)} REALM + ${this.formatTokenAmount(pendingReward)} rewards!`, { 
+
+        this.uiService.showToast(`🎉 Unstaked ${this.formatTokenAmount(unstakedAmount)} REALM + ${this.formatTokenAmount(pendingReward)} rewards!`, {
           type: 'success',
-          duration: 5000 
+          duration: 5000
         });
       }, 2000);
 
@@ -462,7 +484,7 @@ export class RewardSystemUI extends BaseService {
     this.rewardData.totalEarned += amount;
     this.updateRewardDisplay();
     this.saveRewardData();
-    
+
     this.showRewardNotification('🏆 Territory Reward', amount);
   }
 
@@ -472,7 +494,7 @@ export class RewardSystemUI extends BaseService {
     this.rewardData.totalEarned += amount;
     this.updateRewardDisplay();
     this.saveRewardData();
-    
+
     this.showRewardNotification('🏃‍♂️ Running Reward', amount);
   }
 
@@ -482,23 +504,23 @@ export class RewardSystemUI extends BaseService {
     this.rewardData.totalEarned += amount;
     this.updateRewardDisplay();
     this.saveRewardData();
-    
+
     this.showRewardNotification('📈 Staking Reward', amount);
   }
 
   private showRewardNotification(title: string, amount: number): void {
-    this.uiService.showToast(`${title}: +${this.formatTokenAmount(amount)} REALM`, { 
+    this.uiService.showToast(`${title}: +${this.formatTokenAmount(amount)} REALM`, {
       type: 'success',
-      duration: 4000 
+      duration: 4000
     });
 
     // Add visual effect to widget
     if (this.rewardWidget) {
       this.rewardWidget.classList.add('reward-earned');
-      
+
       // Add celebration effects
       this.addCelebrationEffects(this.rewardWidget, amount);
-      
+
       setTimeout(() => {
         this.rewardWidget?.classList.remove('reward-earned');
       }, 1000);
@@ -511,15 +533,15 @@ export class RewardSystemUI extends BaseService {
   private addCelebrationEffects(widget: HTMLElement, amount: number): void {
     // Create floating particles for celebration
     const particleCount = Math.min(Math.max(Math.floor(amount / 5), 5), 20); // More particles for larger rewards
-    
+
     for (let i = 0; i < particleCount; i++) {
       const particle = document.createElement('div');
       particle.className = 'celebration-particle';
-      
+
       // Random position around the widget
       const posX = Math.random() * 100;
       const posY = Math.random() * 100;
-      
+
       particle.style.cssText = `
         position: absolute;
         width: 8px;
@@ -533,9 +555,9 @@ export class RewardSystemUI extends BaseService {
         animation: celebrationFloat 1.5s ease-out forwards;
         box-shadow: 0 0 8px rgba(0, 255, 136, 0.8);
       `;
-      
+
       widget.appendChild(particle);
-      
+
       // Remove particle after animation
       setTimeout(() => {
         if (particle.parentNode) {
@@ -543,7 +565,7 @@ export class RewardSystemUI extends BaseService {
         }
       }, 1500);
     }
-    
+
     // Add a special glow effect for larger rewards
     if (amount > 20) {
       widget.style.boxShadow = '0 0 30px rgba(0, 255, 136, 0.6)';
@@ -556,14 +578,14 @@ export class RewardSystemUI extends BaseService {
   private calculateRunReward(distance: number, duration: number): number {
     // Base reward: 0.01 REALM per 100m
     const baseReward = (distance / 100) * 0.01;
-    
+
     // Bonus for longer runs
     const distanceBonus = distance > 5000 ? (distance - 5000) / 1000 * 0.5 : 0;
-    
+
     // Bonus for sustained pace (duration vs distance)
     const pace = duration / distance; // ms per meter
     const paceBonus = pace < 0.2 ? 2 : pace < 0.3 ? 1 : 0; // Bonus for good pace
-    
+
     return Math.round((baseReward + distanceBonus + paceBonus) * 100) / 100;
   }
 
@@ -632,20 +654,20 @@ export class RewardSystemUI extends BaseService {
       id: 'reward-system-styles',
       textContent: `
         .reward-widget {
-          position: fixed;
-          top: 80px;
-          right: 20px;
-          width: 320px;
-          background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(0, 25, 50, 0.9));
-          border: 2px solid rgba(0, 255, 136, 0.3);
-          border-radius: 16px;
-          color: white;
-          z-index: 1000;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-          backdrop-filter: blur(10px);
-          transition: all 0.3s ease;
-          overflow: hidden;
-          transform-origin: center;
+           position: fixed;
+           top: 80px;
+           right: 20px;
+           width: 280px;
+           background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(0, 25, 50, 0.9));
+           border: 2px solid rgba(0, 255, 136, 0.3);
+           border-radius: 16px;
+           color: white;
+           z-index: 1000;
+           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+           backdrop-filter: blur(10px);
+           transition: all 0.3s ease;
+           overflow: hidden;
+           transform-origin: center;
         }
 
         .reward-widget.collapsed .reward-widget-content {
@@ -895,6 +917,38 @@ export class RewardSystemUI extends BaseService {
         .history-time {
           color: rgba(255, 255, 255, 0.5);
           font-size: 10px;
+        }
+
+        .reward-onboarding {
+          padding: 16px 20px;
+        }
+
+        .reward-onboarding h4 {
+          margin: 0 0 12px 0;
+          font-size: 14px;
+          color: #00ff88;
+        }
+
+        .onboarding-tip {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 8px;
+          font-size: 12px;
+          padding: 8px;
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 6px;
+          border-left: 3px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .tip-icon {
+          font-size: 16px;
+          width: 20px;
+        }
+
+        .tip-text {
+          flex: 1;
+          color: rgba(255, 255, 255, 0.8);
         }
 
         .reward-connect-prompt {

@@ -1,0 +1,595 @@
+/* RunRealm Responsive Design - Mobile-First Adaptive Layout
+ * PRINCIPLE: PERFORMANT - Adaptive loading, caching, and resource optimization
+ * PRINCIPLE: ORGANIZED - Predictable responsive patterns with domain-driven breakpoints
+ */
+
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+:root {
+  /* Breakpoint System */
+  --breakpoint-xs: 320px;  /* Small phones */
+  --breakpoint-sm: 480px;  /* Large phones */
+  --breakpoint-md: 768px;  /* Tablets */
+  --breakpoint-lg: 1024px; /* Small laptops */
+  --breakpoint-xl: 1200px; /* Large laptops */
+  --breakpoint-xxl: 1440px; /* Desktops */
+
+  /* Responsive Spacing */
+  --space-mobile-xs: 2px;
+  --space-mobile-sm: 4px;
+  --space-mobile-md: 8px;
+  --space-mobile-lg: 12px;
+  --space-mobile-xl: 16px;
+
+  /* Responsive Typography */
+  --font-mobile-xs: 10px;
+  --font-mobile-sm: 11px;
+  --font-mobile-md: 12px;
+  --font-mobile-lg: 14px;
+  --font-mobile-xl: 16px;
+}
+
+/* ===== MOBILE-FIRST BASE STYLES ===== */
+
+/* Ultra-small devices (320px and up) */
+@media (min-width: 320px) {
+  .widget-zone {
+    gap: var(--space-mobile-sm);
+  }
+
+  .widget {
+    min-width: 100px;
+    font-size: var(--font-mobile-md);
+  }
+
+  .widget-header {
+    padding: var(--space-mobile-sm) var(--space-mobile-md);
+    min-height: 28px;
+  }
+
+  .widget-title {
+    font-size: var(--font-mobile-sm);
+  }
+
+  .widget-content {
+    padding: var(--space-mobile-sm) var(--space-mobile-md);
+    font-size: var(--font-mobile-xs);
+  }
+}
+
+/* Small devices (480px and up) */
+@media (min-width: 480px) {
+  .widget {
+    min-width: 120px;
+    font-size: var(--font-mobile-md);
+  }
+
+  .widget-header {
+    padding: var(--space-mobile-md) var(--space-mobile-lg);
+    min-height: 32px;
+  }
+
+  .widget-title {
+    font-size: var(--font-mobile-md);
+  }
+
+  .widget-content {
+    padding: var(--space-mobile-md) var(--space-mobile-lg);
+    font-size: var(--font-mobile-sm);
+  }
+
+  .widget-button {
+    min-height: 36px;
+    padding: var(--space-mobile-md) var(--space-mobile-lg);
+    font-size: var(--font-mobile-sm);
+  }
+}
+
+/* ===== TABLET OPTIMIZATIONS (768px and up) ===== */
+
+@media (min-width: 768px) {
+  /* Restore desktop spacing */
+  .widget-zone {
+    gap: var(--space-sm);
+  }
+
+  .widget {
+    min-width: 200px;
+    font-size: var(--font-size-md);
+  }
+
+  .widget-header {
+    padding: var(--space-md) var(--space-md);
+    min-height: 48px;
+  }
+
+  .widget-title {
+    font-size: var(--font-size-md);
+  }
+
+  .widget-content {
+    padding: var(--space-md);
+    font-size: var(--font-size-md);
+  }
+
+  .widget-button {
+    min-height: 40px;
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-md);
+  }
+
+  /* Enhanced tablet layout */
+  .widget-zone.top-left,
+  .widget-zone.top-right {
+    max-width: 280px;
+  }
+
+  .widget-zone.bottom-left,
+  .widget-zone.bottom-right {
+    max-width: 320px;
+  }
+
+  /* Tablet-specific modal adjustments */
+  .location-modal,
+  .wallet-modal,
+  .cross-chain-demo {
+    max-width: 600px;
+    padding: var(--space-xl);
+  }
+
+  /* Enhanced header for tablets */
+  .main-header {
+    height: 64px;
+    padding: 0 var(--space-xl);
+  }
+
+  .header-btn {
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  .header-btn .btn-text {
+    display: inline;
+  }
+}
+
+/* ===== DESKTOP OPTIMIZATIONS (1024px and up) ===== */
+
+@media (min-width: 1024px) {
+  /* Full desktop experience */
+  .widget-zone {
+    max-width: 320px;
+  }
+
+  .widget {
+    max-width: 320px;
+  }
+
+  /* Enhanced hover effects for desktop */
+  .widget:hover {
+    transform: translateY(-2px) scale(1.01);
+  }
+
+  .widget-button:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Desktop-specific layouts */
+  .main-header {
+    height: 70px;
+  }
+
+  .logo-text {
+    display: inline;
+  }
+
+  /* Enhanced desktop modals */
+  .location-modal,
+  .wallet-modal {
+    max-width: 700px;
+  }
+
+  .cross-chain-demo {
+    max-width: 800px;
+  }
+}
+
+/* ===== LARGE DESKTOP OPTIMIZATIONS (1200px and up) ===== */
+
+@media (min-width: 1200px) {
+  /* Wider layouts for large screens */
+  .widget-zone {
+    max-width: 360px;
+  }
+
+  .widget {
+    max-width: 360px;
+  }
+
+  /* Enhanced spacing for large screens */
+  .widget-zone.top-left,
+  .widget-zone.bottom-left {
+    left: 40px;
+  }
+
+  .widget-zone.top-right,
+  .widget-zone.bottom-right {
+    right: 40px;
+  }
+
+  .widget-zone.top-left,
+  .widget-zone.top-right {
+    top: 40px;
+  }
+
+  .widget-zone.bottom-left,
+  .widget-zone.bottom-right {
+    bottom: 40px;
+  }
+}
+
+/* ===== MOBILE-SPECIFIC OPTIMIZATIONS ===== */
+
+/* Touch-optimized interactions */
+@media (hover: none) and (pointer: coarse) {
+  /* Mobile touch optimizations */
+  .widget-header {
+    padding: 14px 16px; /* Larger touch targets */
+    min-height: 48px;
+  }
+
+  .widget-button {
+    min-height: 44px; /* iOS recommended minimum */
+    min-width: 44px;
+    touch-action: manipulation; /* Prevent double-tap zoom */
+  }
+
+  .widget-toggle {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Reduce hover effects on touch devices */
+  .widget:hover {
+    transform: none;
+  }
+
+  .widget-header:hover {
+    transform: none;
+  }
+
+  /* Faster transitions for mobile */
+  .widget,
+  .widget-button,
+  .widget-header {
+    transition: all 0.2s ease-out;
+  }
+
+  /* Remove complex animations on mobile */
+  .widget-icon {
+    transition: transform 0.1s ease;
+  }
+
+  .widget-header:hover .widget-icon {
+    transform: scale(1.05);
+  }
+
+  /* Mobile-specific drag behavior */
+  .widget.dragging {
+    transform: scale(1.02); /* Subtle scale instead of complex transforms */
+    opacity: 0.9;
+  }
+
+  /* Optimize scrolling for mobile */
+  .widget-content {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Remove tap highlights */
+  .widget-header,
+  .widget-button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ===== LANDSCAPE MOBILE OPTIMIZATIONS ===== */
+
+@media (max-width: 768px) and (orientation: landscape) {
+  /* Compact layout for landscape mobile */
+  .widget-zone {
+    gap: 4px;
+  }
+
+  .widget-zone.top-left,
+  .widget-zone.bottom-left {
+    left: 8px;
+    max-width: 120px;
+  }
+
+  .widget-zone.top-right,
+  .widget-zone.bottom-right {
+    right: 8px;
+    max-width: 120px;
+  }
+
+  .widget-zone.top-left,
+  .widget-zone.top-right {
+    top: 8px;
+  }
+
+  .widget-zone.bottom-left,
+  .widget-zone.bottom-right {
+    bottom: 8px;
+  }
+
+  .widget.expanded {
+    max-height: 50vh; /* Prevent viewport domination */
+  }
+
+  /* Compact header for landscape */
+  .main-header {
+    height: 48px;
+    padding: 0 var(--space-md);
+  }
+
+  .header-btn {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .header-btn .btn-text {
+    display: none;
+  }
+}
+
+/* ===== ULTRA-WIDE DISPLAY OPTIMIZATIONS (1440px and up) ===== */
+
+@media (min-width: 1440px) {
+  /* Ultra-wide specific optimizations */
+  .widget-zone {
+    max-width: 400px;
+  }
+
+  .widget {
+    max-width: 400px;
+  }
+
+  /* Enhanced spacing for ultra-wide */
+  .widget-zone.top-left,
+  .widget-zone.bottom-left {
+    left: 60px;
+  }
+
+  .widget-zone.top-right,
+  .widget-zone.bottom-right {
+    right: 60px;
+  }
+
+  /* Larger modals for ultra-wide */
+  .cross-chain-demo {
+    max-width: 900px;
+  }
+
+  .location-modal,
+  .wallet-modal {
+    max-width: 800px;
+  }
+}
+
+/* ===== PERFORMANCE OPTIMIZATIONS ===== */
+
+/* Reduce animations on low-end devices */
+@media (prefers-reduced-motion: reduce) {
+  .widget,
+  .widget-button,
+  .widget-header,
+  .widget-icon {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .widget:hover,
+  .widget-button:hover {
+    transform: none !important;
+  }
+
+  .widget-header:hover .widget-icon {
+    transform: none !important;
+  }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  .widget {
+    border-width: 3px;
+    border-color: var(--color-primary);
+  }
+
+  .widget-button {
+    border: 2px solid var(--color-primary);
+  }
+
+  .widget-stat-value {
+    color: var(--color-primary);
+    text-shadow: none;
+  }
+}
+
+/* Dark mode specific responsive adjustments */
+@media (prefers-color-scheme: dark) {
+  .widget {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.98), rgba(0, 25, 50, 0.95));
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .widget-content {
+    color: #e0e0e0;
+  }
+
+  .widget-stat-label {
+    color: #a0a0a0;
+  }
+}
+
+/* ===== PRINT OPTIMIZATIONS ===== */
+
+@media print {
+  /* Hide interactive elements when printing */
+  .widget-system,
+  .gamefi-hud,
+  .main-header,
+  .floating-action-btn,
+  .notifications-container {
+    display: none !important;
+  }
+
+  /* Optimize map for printing */
+  #mapbox-container {
+    position: static !important;
+    height: 400px !important;
+    width: 100% !important;
+  }
+
+  /* Print-friendly colors */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* ===== ACCESSIBILITY RESPONSIVE FEATURES ===== */
+
+/* Large text support */
+@media (min-resolution: 2dppx) {
+  .widget-title,
+  .widget-content {
+    font-weight: var(--font-weight-medium);
+  }
+}
+
+/* Focus improvements for keyboard navigation */
+@media (prefers-reduced-motion: no-preference) {
+  .widget-header:focus-visible {
+    animation: focusPulse 0.3s ease;
+  }
+
+  @keyframes focusPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+}
+
+/* ===== CONTAINER QUERIES (Future-proofing) ===== */
+
+/* When container queries are widely supported, these will provide even better responsive design */
+@supports (container-type: inline-size) {
+  .widget-zone {
+    container-type: inline-size;
+  }
+
+  @container (max-width: 200px) {
+    .widget {
+      min-width: 100%;
+    }
+
+    .widget-title {
+      font-size: var(--font-size-sm);
+    }
+
+    .widget-content {
+      font-size: var(--font-size-xs);
+    }
+  }
+
+  @container (min-width: 300px) {
+    .widget {
+      min-width: 280px;
+    }
+  }
+}
+
+/* ===== ADAPTIVE LOADING OPTIMIZATIONS ===== */
+
+/* Optimize for slow connections */
+@media (prefers-reduced-data: reduce) {
+  /* Reduce animation complexity */
+  .widget {
+    backdrop-filter: none;
+  }
+
+  /* Simplify shadows */
+  .widget,
+  .widget-button {
+    box-shadow: var(--elevation-1);
+  }
+
+  /* Reduce gradient complexity */
+  .widget {
+    background: rgba(0, 0, 0, 0.9);
+  }
+
+  .widget-button {
+    background: var(--color-primary);
+  }
+}
+
+/* ===== RESPONSIVE UTILITY CLASSES ===== */
+
+/* Show/hide utilities for different screen sizes */
+.show-mobile { display: none; }
+.show-tablet { display: none; }
+.show-desktop { display: none; }
+
+@media (max-width: 767px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: block; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hide-tablet { display: none !important; }
+  .show-tablet { display: block; }
+}
+
+@media (min-width: 1024px) {
+  .hide-desktop { display: none !important; }
+  .show-desktop { display: block; }
+}
+
+/* Responsive spacing utilities */
+@media (max-width: 767px) {
+  .p-mobile-sm { padding: var(--space-mobile-sm); }
+  .p-mobile-md { padding: var(--space-mobile-md); }
+  .p-mobile-lg { padding: var(--space-mobile-lg); }
+  
+  .m-mobile-sm { margin: var(--space-mobile-sm); }
+  .m-mobile-md { margin: var(--space-mobile-md); }
+  .m-mobile-lg { margin: var(--space-mobile-lg); }
+}
+
+/* Responsive text utilities */
+@media (max-width: 767px) {
+  .text-mobile-xs { font-size: var(--font-mobile-xs); }
+  .text-mobile-sm { font-size: var(--font-mobile-sm); }
+  .text-mobile-md { font-size: var(--font-mobile-md); }
+  .text-mobile-lg { font-size: var(--font-mobile-lg); }
+}
+
+/* ===== PERFORMANCE MONITORING HELPERS ===== */
+
+/* Mark critical responsive elements for performance monitoring */
+.widget-zone,
+.widget,
+.widget-header,
+.widget-content {
+  contain: layout style;
+}
+
+/* Optimize repaints for frequently changing elements */
+.widget.expanded,
+.widget.dragging {
+  will-change: transform, opacity;
+}
+
+/* Reset will-change after animations */
+.widget:not(.expanded):not(.dragging) {
+  will-change: auto;
+}

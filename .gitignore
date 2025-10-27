@@ -42,6 +42,14 @@ out/
 packages/*/dist/
 packages/*/build/
 packages/*/*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Auto-generated JS files from compilation
+**/*.js.map
+public/*.js
+public/*.css
+public/*.html
+!public/index.html  # Keep the template file if it exists for build process
 
 # Testing
 /spec/.working/
