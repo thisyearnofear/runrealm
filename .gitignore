@@ -14,6 +14,9 @@ pnpm-debug.log*
 
 # Sensitive configuration
 /src/appsettings.secrets.ts
+/src/appsettings.secrets.d.ts
+/src/dev-setup.d.ts
+/src/dev-setup.ts
 /src/appsettings.secrets.dev.ts
 config/secrets.json
 **/appsettings.secrets.js

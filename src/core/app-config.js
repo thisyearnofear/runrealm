@@ -4,7 +4,13 @@ export class ConfigService {
     constructor() {
         this.runtimeTokensLoaded = false;
         this.eventBus = EventBus.getInstance();
-        this.config = this.loadConfig();
+        // Initialize config asynchronously
+        this.config = {};
+        this.initializeConfig();
+    }
+    
+    async initializeConfig() {
+        this.config = await this.loadConfig();
     }
     static getInstance() {
         if (!ConfigService.instance) {
@@ -51,7 +57,7 @@ export class ConfigService {
             }
             this.runtimeTokensLoaded = true;
             // Refresh config with new tokens
-            this.refreshConfig();
+            this.config = await this.loadConfig();
             // Emit event to notify services of config update
             this.eventBus.emit('config:updated', {});
             // Log success without exposing token values
@@ -63,15 +69,15 @@ export class ConfigService {
             this.runtimeTokensLoaded = true; // Mark as attempted
         }
     }
-    refreshConfig() {
+    async refreshConfig() {
         // Reload config with updated tokens
-        this.config = this.loadConfig();
+        this.config = await this.loadConfig();
     }
-    loadConfig() {
+    async loadConfig() {
         const isMobile = this.detectMobile();
         return {
             mapbox: {
-                accessToken: this.getMapboxToken(),
+                accessToken: await this.getMapboxToken(),
                 defaultStyle: "streets-v11",
                 defaultZoom: 13,
             },
@@ -89,7 +95,7 @@ export class ConfigService {
                 enableFitness: this.getEnvVar("ENABLE_FITNESS") !== "false" &&
                     localStorage.getItem("runrealm_fitness_enabled") !== "false",
             },
-            web3: this.loadWeb3Config(),
+            web3: await this.loadWeb3Config(),
             fitness: this.loadFitnessConfig(),
         };
     }
@@ -135,12 +141,13 @@ export class ConfigService {
         }
         return {};
     }
-    getMapboxToken() {
+    async getMapboxToken() {
         // 🔒 PRODUCTION SECURITY: Never expose real tokens in client-side code
         if (process.env.NODE_ENV === 'production') {
             console.warn('🔒 Production mode: Using secure token endpoint for Mapbox');
             // In production, tokens should come from secure server endpoints only
-            return this.getTokenFromSecureEndpoint('mapbox') || '';
+            const token = await this.getTokenFromSecureEndpoint('mapbox');
+            return token || '';
         }
         // 🔒 DEVELOPMENT ONLY: Try localStorage for development tokens
         const devToken = localStorage.getItem('runrealm_dev_mapbox_token');
@@ -163,7 +170,7 @@ export class ConfigService {
         }
         return token;
     }
-    getGeminiApiKey() {
+    async getGeminiApiKey() {
         // Try environment variables first (from .env via webpack DefinePlugin)
         const envKey = this.getEnvVar("GOOGLE_GEMINI_API_KEY");
         if (envKey) {
@@ -173,7 +180,8 @@ export class ConfigService {
         if (process.env.NODE_ENV === 'production') {
             console.warn('🔒 Production mode: Using secure token endpoint for Gemini API');
             // In production, API keys should come from secure server endpoints only
-            return this.getTokenFromSecureEndpoint('gemini') || '';
+            const apiKey = await this.getTokenFromSecureEndpoint('gemini');
+            return apiKey || '';
         }
         // 🔒 DEVELOPMENT ONLY: Try localStorage for development API key
         const devKey = localStorage.getItem('runrealm_dev_gemini_key');
@@ -204,17 +212,42 @@ export class ConfigService {
     }
     /**
      * 🔒 PRODUCTION SECURITY: Fetch tokens from secure server endpoint
-     * This method should be implemented to call your secure token service
-     * Default implementation uses Express.js server endpoint
+     * This method calls the secure token service endpoint
      */
-    getTokenFromSecureEndpoint(tokenType) {
-        // 🔒 IMPLEMENT THIS: Replace with your secure token endpoint
-        // Example: return fetch(`/api/secure-tokens/${tokenType}`).then(r => r.text())
-        console.warn(`🔒 SECURITY: Implement secure token endpoint for ${tokenType}`);
-        console.warn('🔒 For production, tokens should NEVER be in client-side code');
-        console.warn('🔒 Use server-side proxy or secure token service instead');
-        // For now, return null to force proper implementation
-        return null;
+    async getTokenFromSecureEndpoint(tokenType) {
+        try {
+            // In production, use relative URL to leverage Netlify proxy
+            // In development, use full API base URL
+            const isProduction = process.env.NODE_ENV === 'production';
+            const apiUrl = isProduction
+                ? '/api/tokens' // Netlify will proxy this to Hetzner backend
+                : `${(typeof __ENV__ !== 'undefined' && __ENV__.API_BASE_URL) || 'http://localhost:3000'}/api/tokens`;
+            
+            console.debug(`🔒 Fetching ${tokenType} token from secure endpoint: ${apiUrl}`);
+            
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // Don't send credentials to prevent CSRF issues
+                credentials: 'omit'
+            });
+            
+            if (!response.ok) {
+                console.error(`🔒 Secure token endpoint failed with status: ${response.status}`);
+                return null;
+            }
+            
+            const tokens = await response.json();
+            console.debug(`🔒 Successfully fetched tokens, available: ${Object.keys(tokens).join(', ')}`);
+            
+            // Return the requested token type
+            return tokens[tokenType] || null;
+        } catch (error) {
+            console.error(`🔒 Failed to fetch ${tokenType} token from secure endpoint:`, error);
+            return null;
+        }
     }
     getConfig() {
         return { ...this.config }; // Return copy to prevent mutation
@@ -222,7 +255,7 @@ export class ConfigService {
     updateConfig(updates) {
         this.config = { ...this.config, ...updates };
     }
-    loadWeb3Config() {
+    async loadWeb3Config() {
         // Check if Web3 is enabled via environment or feature flags
         const web3Enabled = this.getEnvVar("ENABLE_WEB3") === "true" ||
             localStorage.getItem("runrealm_web3_enabled") === "true";
@@ -255,7 +288,7 @@ export class ConfigService {
             },
             ai: {
                 enabled: this.getEnvVar("ENABLE_AI_FEATURES") === "true",
-                geminiApiKey: this.getGeminiApiKey(),
+                geminiApiKey: await this.getGeminiApiKey(),
             },
         };
     }

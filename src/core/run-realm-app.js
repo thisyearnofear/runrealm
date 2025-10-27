@@ -117,7 +117,8 @@ export class RunRealmApp {
     }
     initializeTokenDependentServices() {
         // Initialize services that depend on API tokens (CONSOLIDATED)
-        this.geocodingService = new GeocodingService(this.config.getConfig().mapbox.accessToken);
+        const config = this.config.getConfig();
+        this.geocodingService = new GeocodingService(config.mapbox.accessToken);
         this.walletWidget = new WalletWidget(this.dom, this.ui, this.animation, this.web3);
         // Initialize main UI (single UI system - AGGRESSIVE CONSOLIDATION)
         this.mainUI = new MainUI(this.dom, this.location, // Use direct reference - no duplicate locationService
@@ -355,6 +356,7 @@ export class RunRealmApp {
     async initializeMap() {
         // Load Mapbox dynamically
         await this.loadMapbox();
+        // Ensure config is loaded before accessing it
         const config = this.config.getConfig();
         const initialFocus = this.preferenceService.getLastOrDefaultFocus();
         const mapStyle = getStyleById(this.preferenceService.getMapStyle());
@@ -532,7 +534,8 @@ export class RunRealmApp {
     async addSegmentFromDirections(previousLngLat, lngLat) {
         // LAZY INITIALIZATION: Create service only when needed (PERFORMANT)
         if (!this.nextSegmentService) {
-            this.nextSegmentService = new NextSegmentService(this.config.getConfig().mapbox.accessToken);
+            const config = this.config.getConfig();
+            this.nextSegmentService = new NextSegmentService(config.mapbox.accessToken);
         }
         const newSegment = await this.nextSegmentService.getSegmentFromDirectionsService(previousLngLat, lngLat);
         if (this.config.getConfig().ui.enableAnimations) {

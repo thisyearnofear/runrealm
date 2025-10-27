@@ -80,7 +80,7 @@ export class AIService extends BaseService {
             console.log('AIService: Initializing Gemini client...');
             this.genAI = new GoogleGenerativeAI(apiKey);
             this.model = this.genAI.getGenerativeModel({
-                model: 'gemini-1.5-flash',
+                model: 'gemini-1.5-flash-001',
                 generationConfig: {
                     temperature: 0.7,
                     topK: 40,
