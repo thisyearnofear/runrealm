@@ -26,6 +26,10 @@ access_token*
 *.token
 *.key
 
+# Additional secret files
+**/appsettings.secrets.*
+**/dev-setup.*
+
 # Build outputs
 /public/*.js
 /public/*.js.map
