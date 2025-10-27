@@ -1,4 +1,4 @@
-import { getFormattedDistance, DistanceResult } from './utils/distance-formatter';
+import { getFormattedDistance, DistanceResult } from '@runrealm/shared-core/utils/distance-formatter';
 
 describe('Distance formatter', () => {
   it('formats under 1km correctly in metric', () => {

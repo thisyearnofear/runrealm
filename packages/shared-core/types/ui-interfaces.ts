@@ -21,6 +21,6 @@ export interface WalletWidget extends UIInitializer {
 
 // Interface for territory dashboard
 export interface TerritoryDashboard extends UIInitializer {
-  initialize(container: HTMLElement): void;
+  initialize(container?: HTMLElement): Promise<void>;
   cleanup(): void;
 }

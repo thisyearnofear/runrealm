@@ -14,7 +14,8 @@ export class PreferenceService {
   private SHOW_TERRITORIES_KEY = 'runmap-show_territories';
 
   public getLastOrDefaultFocus(): MapFocus {
-    let initialPosition = JSON.parse(localStorage.getItem(this.LAST_FOCUS_KEY)) as MapFocus;
+    const lastFocus = localStorage.getItem(this.LAST_FOCUS_KEY);
+    let initialPosition = lastFocus ? JSON.parse(lastFocus) as MapFocus : null;
     if (initialPosition === null) {
       initialPosition = {
         lng: -79.93775232392454,

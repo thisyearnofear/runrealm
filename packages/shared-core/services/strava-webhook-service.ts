@@ -170,7 +170,7 @@ export class StravaWebhookService extends BaseService {
     this.safeEmit('strava:activity:updated', {
       activityId: event.object_id,
       ownerId: event.owner_id,
-      updates: event.updates,
+      updates: event.updates || {},
       eventTime: event.event_time
     });
   }

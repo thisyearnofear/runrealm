@@ -26,7 +26,7 @@ Required API keys:
 ### Development
 ```bash
 npm run dev        # Start development server
-npm run build      # Build for production
+npm run build      # Build for production (shared packages + web app)
 npm run server     # Run production server
 ```
 

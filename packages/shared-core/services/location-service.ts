@@ -90,12 +90,14 @@ export class LocationService extends BaseService {
 
           // Try to get address for this location
           try {
-            const address = await this.geocodingService.reverseGeocode([
-              locationInfo.lng,
-              locationInfo.lat,
-            ]);
-            if (address) {
-              locationInfo.address = address;
+            if (this.geocodingService) {
+              const address = await this.geocodingService.reverseGeocode([
+                locationInfo.lng,
+                locationInfo.lat,
+              ]);
+              if (address) {
+                locationInfo.address = address;
+              }
             }
           } catch (error) {
             console.warn("Failed to get address for location:", error);
@@ -129,6 +131,10 @@ export class LocationService extends BaseService {
    */
   public async searchLocations(query: string): Promise<LocationSearchResult[]> {
     try {
+      if (!this.geocodingService) {
+        console.warn("Geocoding service not initialized");
+        return [];
+      }
       const results = await this.geocodingService.searchPlaces(query, 10);
       return results.map((result) => ({
         name: result.name,
@@ -247,15 +253,17 @@ export class LocationService extends BaseService {
     this.currentLocation = locationInfo;
 
     // Save to preferences
-    this.preferenceService.saveCurrentFocus(
-      {
-        coords: {
-          latitude: locationInfo.lat,
-          longitude: locationInfo.lng,
-        },
-      } as GeolocationPosition,
-      13 // Default zoom
-    );
+    if (this.preferenceService) {
+      this.preferenceService.saveCurrentFocus(
+        {
+          coords: {
+            latitude: locationInfo.lat,
+            longitude: locationInfo.lng,
+          },
+        } as GeolocationPosition,
+        13 // Default zoom
+      );
+    }
 
     // Update location marker on map if AnimationService is available
     try {
@@ -272,6 +280,10 @@ export class LocationService extends BaseService {
   }
 
   private async loadLastKnownLocation(): Promise<void> {
+    if (!this.preferenceService) {
+      console.warn("Preference service not initialized, cannot load last known location");
+      return;
+    }
     const lastFocus = this.preferenceService.getLastOrDefaultFocus();
 
     this.currentLocation = {
@@ -420,7 +432,8 @@ export class LocationService extends BaseService {
           gpsBtn.textContent = "🛰️ Use GPS Location";
           gpsBtn.disabled = false;
         } catch (error) {
-          alert(`Failed to get GPS location: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          alert(`Failed to get GPS location: ${errorMessage}`);
           const gpsBtn = document.getElementById(
             "use-gps-btn"
           ) as HTMLButtonElement;
@@ -517,23 +530,25 @@ export class LocationService extends BaseService {
       .join("");
 
     // Add click handlers for results
-    this.domService.delegate(
-      resultsContainer,
-      ".search-result-item",
-      "click",
-      (event) => {
-        const item = event.currentTarget as HTMLElement;
-        const lat = parseFloat(item.dataset.lat!);
-        const lng = parseFloat(item.dataset.lng!);
-        const name = item.dataset.name!;
+    if (this.domService) {
+      this.domService.delegate(
+        resultsContainer,
+        ".search-result-item",
+        "click",
+        (event) => {
+          const item = event.currentTarget as HTMLElement;
+          const lat = parseFloat(item.dataset.lat!);
+          const lng = parseFloat(item.dataset.lng!);
+          const name = item.dataset.name!;
 
-        console.log(
-          `LocationService: Setting location to ${name} (${lat}, ${lng})`
-        );
-        this.setManualLocation(lat, lng, name);
-        this.hideLocationModal();
-      }
-    );
+          console.log(
+            `LocationService: Setting location to ${name} (${lat}, ${lng})`
+          );
+          this.setManualLocation(lat, lng, name);
+          this.hideLocationModal();
+        }
+      );
+    }
   }
 
   private clearSearchResults(): void {

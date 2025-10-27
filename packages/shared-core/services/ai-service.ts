@@ -5,11 +5,14 @@
 
 // Dynamically import Google Generative AI to reduce initial bundle size
 // import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import { Territory } from './territory-service';
 import { BaseService } from '../core/base-service';
 import type { CurrentRun } from '@runrealm/shared-utils/current-run';
 import { RunPoint } from './run-tracking-service';
 
+
 export interface RouteOptimization {
+
   suggestedRoute: {
     coordinates: [number, number][];
     distance: number;
@@ -145,7 +148,7 @@ export class AIService extends BaseService {
       console.log('AIService: Initializing Gemini client...');
       this.genAI = new GoogleGenerativeAI(apiKey);
       this.model = this.genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-pro',
         generationConfig: {
           temperature: 0.7,
           topK: 40,
@@ -647,7 +650,7 @@ export class AIService extends BaseService {
       
       const currentWallet = web3Service.getCurrentWallet();
       // Return mock data for now due to architectural violation
-      const territories = [];
+      const territories: Territory[] = [];
       const playerStats = { level: 1, experience: 0, territoriesOwned: 0 };
       
       const walletHistory = {

@@ -70,13 +70,13 @@ export class NextSegmentService {
           uuid(),
           nextLngLat,
           route.distance,
-          route.geometry as LineString,
+          route.geometry as unknown as LineString,
           true
         );
       } else {
         throw new Error(`Non-successful status code when getting directions: ${JSON.stringify(res)}`);
       }
-    }, err => {
+    }, (err: any) => {
       throw new Error(`An error occurred: ${JSON.stringify(err)}`);
     });
   }

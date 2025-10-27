@@ -215,7 +215,7 @@ export class RunTrackingService extends BaseService {
       return runId;
     } catch (error) {
       console.error("RunTrackingService: Failed to start run:", error);
-      throw new Error(`Failed to start run: ${error.message}`);
+      throw new Error(`Failed to start run: ${(error as Error).message}`);
     }
   }
 
@@ -301,7 +301,7 @@ export class RunTrackingService extends BaseService {
       return runId;
     } catch (error) {
       console.error("RunTrackingService: Failed to start run with route:", error);
-      throw new Error(`Failed to start run with route: ${error.message}`);
+      throw new Error(`Failed to start run with route: ${(error as Error).message}`);
     }
   }
 
@@ -587,7 +587,9 @@ export class RunTrackingService extends BaseService {
    */
   private checkTerritoryEligibility(): void {
     if (!this.currentRun || this.currentRun.points.length < 2) {
-      this.currentRun.territoryEligible = false;
+      if (this.currentRun) {
+        this.currentRun.territoryEligible = false;
+      }
       return;
     }
 

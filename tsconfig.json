@@ -7,8 +7,8 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "composite": true,
     "baseUrl": ".",
+    "typeRoots": ["./types", "./node_modules/@types"],
     "paths": {
       "@runrealm/shared-core/*": ["./packages/shared-core/*"],
       "@runrealm/shared-types/*": ["./packages/shared-types/*"],
@@ -21,13 +21,5 @@
       "@services/*": ["./packages/shared-core/services/*"],
       "@components/*": ["./packages/shared-core/components/*"]
     }
-  },
-  // Add references to monorepo packages for TypeScript
-  "references": [
-    {"path": "./packages/shared-core"},
-    {"path": "./packages/shared-types"},
-    {"path": "./packages/shared-utils"},
-    {"path": "./packages/shared-blockchain"},
-    {"path": "./packages/web-app"}
-  ]
+  }
 }

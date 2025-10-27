@@ -154,6 +154,12 @@ export interface AppEvents extends Web3Events {
   "fitness:activities": { activities: any[]; source: string };
   "fitness:tokens:updated": { source: string };
   "fitness:tokens:cleared": { source: string };
+  // Strava events
+  "strava:activity:created": { activityId: number; ownerId: number; eventTime: number };
+  "strava:activity:privacy_changed": { activityId: number; ownerId: number; isPrivate: boolean };
+  "strava:activity:updated": { activityId: number; ownerId: number; updates?: Record<string, any>; eventTime: number };
+  "strava:activity:deleted": { activityId: number; ownerId: number; eventTime: number };
+  "strava:athlete:deauthorized": { athleteId: number; eventTime: number };
 }
 
 export class EventBus {

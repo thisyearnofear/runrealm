@@ -19,7 +19,7 @@ export interface PlayerStats {
   lastActiveDate?: string; // YYYY-MM-DD
 }
 
-export interface Achievement {
+export interface PlayerAchievement {
   id: string;
   name: string;
   description: string;
@@ -60,11 +60,11 @@ export class ProgressionService extends BaseService {
     streak: 0
   };
   
-  private achievements: Map<string, Achievement> = new Map();
+  private achievements: Map<string, PlayerAchievement> = new Map();
   private levelConfigs: LevelConfig[] = [];
   
   // Default achievements
-  private defaultAchievements: Achievement[] = [
+  private defaultAchievements: PlayerAchievement[] = [
     {
       id: 'first-run',
       name: 'First Steps',
@@ -495,16 +495,16 @@ export class ProgressionService extends BaseService {
   /**
    * Get unlocked achievements
    */
-  public getUnlockedAchievements(): Achievement[] {
+  public getUnlockedAchievements(): PlayerAchievement[] {
     return this.stats.achievements
       .map(id => this.achievements.get(id))
-      .filter((a): a is Achievement => a !== undefined);
+      .filter((a): a is PlayerAchievement => a !== undefined);
   }
 
   /**
    * Get locked achievements
    */
-  public getLockedAchievements(): Achievement[] {
+  public getLockedAchievements(): PlayerAchievement[] {
     return Array.from(this.achievements.values())
       .filter(a => !this.stats.achievements.includes(a.id));
   }
@@ -512,7 +512,7 @@ export class ProgressionService extends BaseService {
   /**
    * Get achievement by ID
    */
-  public getAchievement(id: string): Achievement | undefined {
+  public getAchievement(id: string): PlayerAchievement | undefined {
     return this.achievements.get(id);
   }
 

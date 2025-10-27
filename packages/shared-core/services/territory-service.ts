@@ -394,11 +394,11 @@ export class TerritoryService extends BaseService {
       if (result.success) {
         this.safeEmit("territory:claimed", {
           territory: result.territory,
-          transactionHash: result.transactionHash,
+          transactionHash: result.transactionHash || "",
         });
       } else {
         this.safeEmit("territory:claimFailed", {
-          error: result.error,
+          error: result.error || "Unknown error",
           territory,
         });
       }
@@ -534,7 +534,7 @@ export class TerritoryService extends BaseService {
     } catch (error) {
       console.error("Failed to process eligible run:", error);
       this.safeEmit("territory:claimFailed", {
-        error: error.message || "Unknown error",
+        error: (error as Error).message || "Unknown error",
         territory: {} as Territory,
         runId: "unknown",
       });

@@ -42,7 +42,6 @@ export interface DashboardData {
 
 export class UserDashboardService extends BaseService {
   private static instance: UserDashboardService;
-  protected eventBus: EventBus;
   private widgetStateService: WidgetStateService;
   private dashboardState: DashboardState = {
     isVisible: false,

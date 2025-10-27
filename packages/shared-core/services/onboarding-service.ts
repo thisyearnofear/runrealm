@@ -212,7 +212,7 @@ export class OnboardingService extends BaseService {
   public async goToStep(stepIndex: number): Promise<void> {
     if (!this.isActive || !this.config) return;
 
-    if (stepIndex < 0 || stepIndex >= this.onboardingConfig.steps.length) {
+    if (!this.onboardingConfig || stepIndex < 0 || stepIndex >= this.onboardingConfig.steps.length) {
       console.warn('Invalid step index');
       return;
     }
@@ -228,7 +228,7 @@ export class OnboardingService extends BaseService {
   public async nextStep(): Promise<void> {
     if (!this.isActive || !this.config) return;
 
-    if (this.currentStepIndex < this.onboardingConfig.steps.length - 1) {
+    if (this.onboardingConfig && this.currentStepIndex < this.onboardingConfig.steps.length - 1) {
       await this.goToStep(this.currentStepIndex + 1);
     } else {
       this.complete();
