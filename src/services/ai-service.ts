@@ -145,7 +145,7 @@ export class AIService extends BaseService {
       console.log('AIService: Initializing Gemini client...');
       this.genAI = new GoogleGenerativeAI(apiKey);
       this.model = this.genAI.getGenerativeModel({
-        model: 'gemini-pro',
+        model: 'gemini-2.0-flash-exp',
         generationConfig: {
           temperature: 0.7,
           topK: 40,
@@ -197,24 +197,24 @@ export class AIService extends BaseService {
 
     // Wire EventBus listeners for AI triggers
     // Listen for route requests
-    this.subscribe('ai:routeRequested', async (data: { requestId?: string; distance?: number; difficulty?: number; goals?: string[]; quickPromptType?: string; contextPrompt?: string; [key: string]: any }) => {
+    this.subscribe('ai:routeRequested', async (data: { requestId?: string; distance?: number; difficulty?: number; goals?: string[]; quickPromptType?: string; contextPrompt?: string;[key: string]: any }) => {
       console.log('AIService: Received ai:routeRequested event:', data);
       try {
         // Note: Dynamic event emission is not supported
         // if (data.requestId) {
         //   this.safeEmit(`${data.requestId}:progress`, { progress: 10 });
         // }
-        
+
         // Initialize if needed
         if (!this.isInitialized) {
           await this.init();
         }
-        
+
         // Note: Dynamic event emission is not supported
         // if (data.requestId) {
         //   this.safeEmit(`${data.requestId}:progress`, { progress: 20 });
         // }
-        
+
         const goals: AIGoals = {};
         if (Array.isArray(data?.goals) && data.goals.length) {
           // If goals provided as strings, map a couple of simple flags
@@ -297,12 +297,12 @@ export class AIService extends BaseService {
         // }
 
         const optimization = await this.suggestRoute(currentLocation, goals, []);
-        
+
         // Note: Dynamic event emission is not supported
         // if (data.requestId) {
         //   this.safeEmit(`${data.requestId}:progress`, { progress: 80 });
         // }
-        
+
         const coords = optimization.suggestedRoute.coordinates || [];
         const waypoints = coords.map(([lng, lat]) => ({ lat, lng }));
 
@@ -368,7 +368,7 @@ export class AIService extends BaseService {
             }
           });
         }
-        
+
         // Note: Dynamic event emission is not supported
         // if (data.requestId) {
         //   this.safeEmit(`${data.requestId}:progress`, { progress: 100 });
@@ -376,7 +376,7 @@ export class AIService extends BaseService {
         // }
       } catch (err) {
         console.error('AI route request failed', err);
-        this.safeEmit('ai:routeFailed', { 
+        this.safeEmit('ai:routeFailed', {
           message: 'Failed to generate route. Please try again.'
         });
       }
@@ -404,7 +404,7 @@ export class AIService extends BaseService {
           difficulty: ghost.difficulty,
           success: true
         });
-        
+
         // Note: Dynamic event emission is not supported
         // if (data.requestId) {
         //   this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
@@ -415,7 +415,7 @@ export class AIService extends BaseService {
         console.error('AIService:', errorMsg, err);
 
         // Emit both specific error and general service error
-        this.safeEmit('ai:ghostRunnerFailed', { 
+        this.safeEmit('ai:ghostRunnerFailed', {
           message: errorMsg
         });
         this.safeEmit('service:error', {
@@ -632,11 +632,11 @@ export class AIService extends BaseService {
     try {
       const web3Service = (await import('../services/web3-service')).Web3Service.getInstance();
       const territoryDashboard = (await import('../components/territory-dashboard')).default.getInstance();
-      
+
       const currentWallet = web3Service.getCurrentWallet();
       const territories = territoryDashboard.getTerritories();
       const playerStats = territoryDashboard.getPlayerStats();
-      
+
       const walletHistory = {
         address: currentWallet?.address,
         chainId: currentWallet?.chainId,
@@ -644,7 +644,7 @@ export class AIService extends BaseService {
         balance: currentWallet?.balance,
         connectedAt: new Date().toISOString()
       };
-      
+
       return {
         walletHistory,
         territories,
@@ -686,14 +686,14 @@ export class AIService extends BaseService {
     // Get enhanced user context
     const userContext = await this.getUserContext();
     const prompt = this.buildTerritoryAnalysisPrompt(territoryData, contextData, userContext);
-    
+
     return this.retry(async () => {
       const result = await this.model!.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
+
       const analysis = this.parseTerritoryAnalysis(text, territoryData);
-      
+
       this.safeEmit('ai:territoryAnalyzed', {
         tokenId: geohash,
         analysis,
@@ -724,12 +724,12 @@ export class AIService extends BaseService {
     }
 
     const prompt = this.buildCoachingPrompt(currentRun, userGoals, weatherConditions);
-    
+
     return this.retry(async () => {
       const result = await this.model!.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
+
       return this.parseCoachingAdvice(text, currentRun);
     }, 3, 1000, 'coaching advice');
   }
@@ -1067,7 +1067,7 @@ Make this feel like a personal AI running coach in a game world!
     ];
 
     const runner = runners[Math.floor(Math.random() * runners.length)];
-    
+
     return {
       id: `ghost_${Date.now()}_${difficulty}`,
       name: runner.name,
@@ -1081,7 +1081,7 @@ Make this feel like a personal AI running coach in a game world!
 
   private createFallbackAnalysis(territoryData: any): TerritoryAnalysis {
     const baseDifficulty = territoryData.difficulty || 50;
-    
+
     return {
       value: Math.min(95, baseDifficulty + Math.floor(Math.random() * 20)),
       rarity: Math.floor(Math.random() * 40) + 30,
@@ -1134,21 +1134,21 @@ Make this feel like a personal AI running coach in a game world!
     const points: [number, number][] = [];
     const radius = distance / (2 * Math.PI * 111000);
     const numPoints = 8;
-    
+
     for (let i = 0; i <= numPoints; i++) {
       const angle = (i / numPoints) * 2 * Math.PI;
       const lat = center.lat + radius * Math.cos(angle);
       const lng = center.lng + radius * Math.sin(angle);
       points.push([lng, lat]);
     }
-    
+
     return points;
   }
 
   private generateCircularWaypoints(center: { lat: number; lng: number }, distance: number): [number, number][] {
     const radius = distance / (2 * Math.PI * 111000);
     const waypoints: [number, number][] = [];
-    
+
     // Generate 4 waypoints for a roughly circular route
     for (let i = 0; i < 4; i++) {
       const angle = (i / 4) * 2 * Math.PI;
@@ -1157,31 +1157,31 @@ Make this feel like a personal AI running coach in a game world!
       waypoints.push([lng, lat]);
     }
     waypoints.push(waypoints[0]); // Close the loop
-    
+
     return waypoints;
   }
 
   private async getMapboxRoute(waypoints: [number, number][]): Promise<[number, number][]> {
     const config = this.config.getConfig();
     const token = config.mapbox?.accessToken;
-    
+
     if (!token) {
       throw new Error('No Mapbox token available');
     }
 
     const coordinates = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(';');
     const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?geometries=geojson&access_token=${token}`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Mapbox API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
     if (data.routes && data.routes[0] && data.routes[0].geometry) {
       return data.routes[0].geometry.coordinates;
     }
-    
+
     throw new Error('No route found');
   }
 
@@ -1222,7 +1222,7 @@ Make this feel like a personal AI running coach in a game world!
   public async refreshConfig(): Promise<void> {
     // Clean up existing resources
     this.cleanup();
-    
+
     // Re-initialize with new configuration
     await this.init();
   }
