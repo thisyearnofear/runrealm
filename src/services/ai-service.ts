@@ -177,7 +177,7 @@ export class AIService extends BaseService {
       this.safeEmit('service:initialized', { service: 'AIService', success: true });
 
     } catch (error) {
-      const errorMsg = `Failed to initialize Google Generative AI: ${error.message}`;
+      const errorMsg = `Failed to initialize Google Generative AI: ${error instanceof Error ? error.message : String(error)}`;
       console.error('AIService:', errorMsg, error);
       this.isEnabled = false;
       this.isInitialized = false;
@@ -411,7 +411,7 @@ export class AIService extends BaseService {
         // }
 
       } catch (err) {
-        const errorMsg = `Ghost runner generation failed: ${err.message || err}`;
+        const errorMsg = `Ghost runner generation failed: ${err instanceof Error ? err.message : String(err)}`;
         console.error('AIService:', errorMsg, err);
 
         // Emit both specific error and general service error
@@ -492,7 +492,7 @@ export class AIService extends BaseService {
       console.log('AIService: Connection test successful, response length:', text.length);
     } catch (error) {
       console.error('AIService: Connection test failed:', error);
-      throw new Error(`API connection test failed: ${error.message}`);
+      throw new Error(`API connection test failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -555,7 +555,7 @@ export class AIService extends BaseService {
       return optimization;
 
     } catch (error) {
-      const errorMsg = `Route suggestion failed: ${error.message}`;
+      const errorMsg = `Route suggestion failed: ${error instanceof Error ? error.message : String(error)}`;
       console.error('AIService:', errorMsg, error);
       this.safeEmit('ai:routeFailed', { message: errorMsg });
       throw error;
@@ -978,7 +978,7 @@ Make this feel like a personal AI running coach in a game world!
       return parsed;
 
     } catch (error) {
-      console.warn('AIService: Failed to parse route optimization, using fallback:', error.message);
+      console.warn('AIService: Failed to parse route optimization, using fallback:', error instanceof Error ? error.message : String(error));
 
       // Fallback if JSON parsing fails
       return {
@@ -1036,7 +1036,7 @@ Make this feel like a personal AI running coach in a game world!
       return ghostRunner;
 
     } catch (error) {
-      console.warn('AIService: Failed to parse ghost runner, using fallback:', error.message);
+      console.warn('AIService: Failed to parse ghost runner, using fallback:', error instanceof Error ? error.message : String(error));
       return this.createFallbackGhostRunner(difficulty);
     }
   }
