@@ -21,5 +21,22 @@
       "@services/*": ["./packages/shared-core/services/*"],
       "@components/*": ["./packages/shared-core/components/*"]
     }
-  }
+  },
+  "include": [
+    "packages/**/*",
+    "src/**/*",
+    "types/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "config",
+    "docs",
+    "static",
+    "public",
+    "build",
+    "artifacts",
+    "tools",
+    "infrastructure",
+    "test"
+  ]
 }

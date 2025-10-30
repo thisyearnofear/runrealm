@@ -37,7 +37,7 @@ module.exports = (env, argv) => {
 
   // Entry points configuration
   const entry = {
-    app: path.resolve(__dirname, "packages/web-app/index.ts"),
+    app: path.resolve(__dirname, "../../packages/web-app/index.ts"),
   };
 
   // Development setup no longer needed - using secure environment variables
@@ -49,7 +49,7 @@ module.exports = (env, argv) => {
     entry: entry,
 
     output: {
-      path: path.join(__dirname, "public"),
+      path: path.join(__dirname, "../../public"),
       publicPath: "/",
       filename: isProduction ? "[name].[contenthash].js" : "[name].js",
       chunkFilename: isProduction ? "[name].[contenthash].js" : "[name].js",
@@ -65,6 +65,7 @@ module.exports = (env, argv) => {
             {
               loader: "ts-loader",
               options: {
+                configFile: path.resolve(__dirname, "../../tsconfig.json"),
                 transpileOnly: true,
                 experimentalWatchApi: true,
               },
@@ -82,20 +83,20 @@ module.exports = (env, argv) => {
     resolve: {
       extensions: [".ts", ".tsx", ".js"],
       modules: [
-        path.resolve(__dirname, "packages"),
-        path.resolve(__dirname, "node_modules"),
+        path.resolve(__dirname, "../../packages"),
+        path.resolve(__dirname, "../../node_modules"),
         "node_modules"
       ],
       alias: {
-        "@": path.resolve(__dirname, "packages/web-app"),
-        "@core": path.resolve(__dirname, "packages/shared-core"),
-        "@services": path.resolve(__dirname, "packages/shared-core/services"),
-        "@components": path.resolve(__dirname, "packages/shared-core/components"),
-        "@runrealm/shared-core": path.resolve(__dirname, "packages/shared-core"),
-        "@runrealm/shared-types": path.resolve(__dirname, "packages/shared-types"),
-        "@runrealm/shared-utils": path.resolve(__dirname, "packages/shared-utils"),
-        "@runrealm/shared-blockchain": path.resolve(__dirname, "packages/shared-blockchain"),
-        "@runrealm/web-app": path.resolve(__dirname, "packages/web-app"),
+        "@": path.resolve(__dirname, "../../packages/web-app"),
+        "@core": path.resolve(__dirname, "../../packages/shared-core"),
+        "@services": path.resolve(__dirname, "../../packages/shared-core/services"),
+        "@components": path.resolve(__dirname, "../../packages/shared-core/components"),
+        "@runrealm/shared-core": path.resolve(__dirname, "../../packages/shared-core"),
+        "@runrealm/shared-types": path.resolve(__dirname, "../../packages/shared-types"),
+        "@runrealm/shared-utils": path.resolve(__dirname, "../../packages/shared-utils"),
+        "@runrealm/shared-blockchain": path.resolve(__dirname, "../../packages/shared-blockchain"),
+        "@runrealm/web-app": path.resolve(__dirname, "../../packages/web-app"),
       },
       fallback: {
         process: require.resolve("process/browser"),
@@ -184,7 +185,7 @@ module.exports = (env, argv) => {
 
     plugins: [
       new HtmlWebpackPlugin({
-        template: path.resolve(__dirname, "packages/web-app/template.html"),
+        template: path.resolve(__dirname, "../../packages/web-app/template.html"),
         filename: "index.html",
         inject: "body",
         minify: isProduction
@@ -205,13 +206,13 @@ module.exports = (env, argv) => {
       new CopyWebpackPlugin({
         patterns: [
           {
-            from: path.resolve(__dirname, "static"),
-            to: path.resolve(__dirname, "public"),
+            from: path.resolve(__dirname, "../../static"),
+            to: path.resolve(__dirname, "../../public"),
             noErrorOnMissing: true,
           },
           {
-            from: path.resolve(__dirname, "packages/web-app/sw.js"),
-            to: path.resolve(__dirname, "public/sw.js"),
+            from: path.resolve(__dirname, "../../packages/web-app/sw.js"),
+            to: path.resolve(__dirname, "../../public/sw.js"),
             noErrorOnMissing: true,
           },
         ],
@@ -234,7 +235,7 @@ module.exports = (env, argv) => {
 
     devServer: {
       static: {
-        directory: path.join(__dirname, "public"),
+        directory: path.join(__dirname, "../../public"),
       },
       compress: true,
       port: 8080,

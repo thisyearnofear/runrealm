@@ -42,8 +42,11 @@ access_token*
 /public/index.html
 /dist/
 /build/
-.next/
-out/
+/.next/
+/out/
+/artifacts/
+/.tmp/
+/temp/
 
 # Package-specific build outputs
 packages/*/dist/
