@@ -17,23 +17,7 @@
   # Install devDependencies for build
   NPM_FLAGS = "--include=dev"
 
-# SPA Routing & API Proxy (order matters - specific rules first)
-[[redirects]]
-  # Proxy API calls to Hetzner backend (now with SSL)
-  from = "/api/*"
-  to = "https://runrealm.coupondj.fun/api/:splat"
-  status = 200
-  force = false
-
-# Remove problematic asset redirects that cause MIME type issues
-# Let Netlify handle missing assets naturally with proper 404s
-
-[[redirects]]
-  # SPA fallback - serve index.html for all client-side routes
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = false
+# Redirects are now handled by public/_redirects file
 
 # Security & Performance Headers
 [[headers]]
