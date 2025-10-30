@@ -36,7 +36,7 @@ export class EnhancedOnboarding extends BaseService {
   private animationService: AnimationService;
   private uiService: UIService;
   private options: OnboardingOptions;
-  
+
   private currentStep: number = 0;
   private steps: OnboardingStep[] = [];
   private overlay: HTMLElement | null = null;
@@ -78,24 +78,25 @@ export class EnhancedOnboarding extends BaseService {
         title: '🏃‍♂️ Welcome to RunRealm!',
         description: 'Transform your runs into an epic Web3 adventure. Claim territories, earn rewards, and compete with runners worldwide.',
         position: 'center',
-        skippable: false
+        skippable: true
       },
       {
         id: 'location-setup',
         title: '📍 Enable Location Services',
-        description: 'We need your location to track your runs and help you claim territories. Your privacy is protected.',
+        description: 'We need your location to track your runs and help you claim territories. Your privacy is protected and location data stays on your device.',
         target: '#location-info',
         position: 'bottom',
         action: {
           type: 'click',
           element: '#set-location-btn'
         },
-        validation: () => this.checkLocationPermission()
+        validation: () => this.checkLocationPermission(),
+        skippable: true
       },
       {
         id: 'wallet-connect',
-        title: '🦊 Connect Your Wallet',
-        description: 'Connect your Web3 wallet to claim territories as NFTs and earn $REALM tokens. You can do this now or later.',
+        title: '🦊 Connect Your Wallet (Optional)',
+        description: 'Connect your Web3 wallet to claim territories as NFTs and earn $REALM tokens. You can skip this and connect later from settings.',
         target: '#wallet-info',
         position: 'bottom',
         action: {
@@ -106,24 +107,26 @@ export class EnhancedOnboarding extends BaseService {
       },
       {
         id: 'run-controls',
-        title: '🎮 Run Controls',
-        description: 'Use these controls to start tracking your runs. GPS accuracy and real-time stats help you optimize performance.',
+        title: '🎮 Start Your First Run',
+        description: 'Use these controls to start tracking your runs. GPS accuracy and real-time stats help you optimize performance and claim territories.',
         target: '.run-controls-widget',
-        position: 'top'
+        position: 'top',
+        skippable: true
       },
       {
         id: 'territory-system',
-        title: '🏆 Territory System',
-        description: 'Complete runs to become eligible for territory claims. Each territory is a unique NFT with special rewards!',
+        title: '🏆 AI Coach & Territory System',
+        description: 'Get personalized route suggestions and tips. Complete runs to become eligible for territory claims - each territory is a unique NFT!',
         target: '#ai-coach',
-        position: 'left'
+        position: 'left',
+        skippable: true
       },
       {
         id: 'ready-to-run',
         title: '🚀 Ready to Run!',
-        description: 'You\'re all set! Start your first run to begin your RunRealm journey. Remember: every step counts!',
+        description: 'You\'re all set! Start exploring the map, plan your routes, and begin your RunRealm journey. Every step counts towards claiming territories!',
         position: 'center',
-        skippable: false
+        skippable: true
       }
     ];
   }
@@ -139,10 +142,10 @@ export class EnhancedOnboarding extends BaseService {
 
     this.isActive = true;
     this.currentStep = 0;
-    
+
     await this.createOverlay();
     await this.showStep(this.currentStep);
-    
+
     this.safeEmit('onboarding:started' as any, {});
   }
 
@@ -205,10 +208,10 @@ export class EnhancedOnboarding extends BaseService {
       const element = document.querySelector(target);
       if (element) {
         element.classList.add('onboarding-highlight');
-        
+
         // Scroll element into view
-        element.scrollIntoView({ 
-          behavior: 'smooth', 
+        element.scrollIntoView({
+          behavior: 'smooth',
           block: 'center',
           inline: 'center'
         });
@@ -218,7 +221,7 @@ export class EnhancedOnboarding extends BaseService {
 
   private async createTooltip(step: OnboardingStep): Promise<void> {
     const position = step.position || 'center';
-    const progress = this.options.showProgress ? 
+    const progress = this.options.showProgress ?
       `<div class="onboarding-progress">
         <div class="progress-bar">
           <div class="progress-fill" style="width: ${((this.currentStep + 1) / this.steps.length) * 100}%"></div>
@@ -232,19 +235,25 @@ export class EnhancedOnboarding extends BaseService {
         <div class="tooltip-content">
           <div class="tooltip-header">
             <h3 class="tooltip-title">${step.title}</h3>
-            ${this.options.allowSkip && step.skippable !== false ? 
-              '<button class="tooltip-skip" aria-label="Skip">×</button>' : ''}
+            ${this.options.allowSkip ?
+          '<button class="tooltip-skip" aria-label="Skip Tutorial">Skip</button>' : ''}
           </div>
           <div class="tooltip-body">
             <p class="tooltip-description">${step.description}</p>
             ${progress}
           </div>
           <div class="tooltip-footer">
-            ${this.currentStep > 0 ? 
-              '<button class="tooltip-btn secondary" id="onboarding-prev">Previous</button>' : ''}
-            <button class="tooltip-btn primary" id="onboarding-next">
-              ${this.currentStep === this.steps.length - 1 ? 'Get Started!' : 'Next'}
-            </button>
+            <div class="footer-left">
+              ${this.options.allowSkip ?
+          '<button class="tooltip-btn tertiary" id="onboarding-skip-all">Skip Tutorial</button>' : ''}
+            </div>
+            <div class="footer-right">
+              ${this.currentStep > 0 ?
+          '<button class="tooltip-btn secondary" id="onboarding-prev">Previous</button>' : ''}
+              <button class="tooltip-btn primary" id="onboarding-next">
+                ${this.currentStep === this.steps.length - 1 ? 'Get Started!' : 'Next'}
+              </button>
+            </div>
           </div>
         </div>
       `,
@@ -270,8 +279,10 @@ export class EnhancedOnboarding extends BaseService {
     if (!this.tooltip) return;
 
     const position = step.position || 'center';
-    
-    if (position === 'center') {
+    const isMobile = window.innerWidth <= 768;
+
+    // On mobile or for intro/outro steps, always center
+    if (position === 'center' || isMobile || step.id === 'welcome' || step.id === 'ready-to-run') {
       this.tooltip.style.position = 'fixed';
       this.tooltip.style.top = '50%';
       this.tooltip.style.left = '50%';
@@ -284,25 +295,64 @@ export class EnhancedOnboarding extends BaseService {
       if (targetElement) {
         const rect = targetElement.getBoundingClientRect();
         const tooltipRect = this.tooltip.getBoundingClientRect();
-        
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Smart positioning that avoids viewport edges
+        let finalPosition = position;
+        let top = 0;
+        let left = 0;
+
         switch (position) {
           case 'top':
-            this.tooltip.style.top = `${rect.top - tooltipRect.height - 20}px`;
-            this.tooltip.style.left = `${rect.left + (rect.width - tooltipRect.width) / 2}px`;
+            top = rect.top - tooltipRect.height - 20;
+            left = rect.left + (rect.width - tooltipRect.width) / 2;
+            // Fallback to bottom if not enough space above
+            if (top < 20) {
+              finalPosition = 'bottom';
+              top = rect.bottom + 20;
+            }
             break;
           case 'bottom':
-            this.tooltip.style.top = `${rect.bottom + 20}px`;
-            this.tooltip.style.left = `${rect.left + (rect.width - tooltipRect.width) / 2}px`;
+            top = rect.bottom + 20;
+            left = rect.left + (rect.width - tooltipRect.width) / 2;
+            // Fallback to top if not enough space below
+            if (top + tooltipRect.height > viewportHeight - 20) {
+              finalPosition = 'top';
+              top = rect.top - tooltipRect.height - 20;
+            }
             break;
           case 'left':
-            this.tooltip.style.top = `${rect.top + (rect.height - tooltipRect.height) / 2}px`;
-            this.tooltip.style.left = `${rect.left - tooltipRect.width - 20}px`;
+            top = rect.top + (rect.height - tooltipRect.height) / 2;
+            left = rect.left - tooltipRect.width - 20;
+            // Fallback to right if not enough space left
+            if (left < 20) {
+              finalPosition = 'right';
+              left = rect.right + 20;
+            }
             break;
           case 'right':
-            this.tooltip.style.top = `${rect.top + (rect.height - tooltipRect.height) / 2}px`;
-            this.tooltip.style.left = `${rect.right + 20}px`;
+            top = rect.top + (rect.height - tooltipRect.height) / 2;
+            left = rect.right + 20;
+            // Fallback to left if not enough space right
+            if (left + tooltipRect.width > viewportWidth - 20) {
+              finalPosition = 'left';
+              left = rect.left - tooltipRect.width - 20;
+            }
             break;
         }
+
+        // Ensure tooltip stays within viewport bounds
+        left = Math.max(20, Math.min(left, viewportWidth - tooltipRect.width - 20));
+        top = Math.max(20, Math.min(top, viewportHeight - tooltipRect.height - 20));
+
+        this.tooltip.style.position = 'fixed';
+        this.tooltip.style.top = `${top}px`;
+        this.tooltip.style.left = `${left}px`;
+        this.tooltip.style.transform = 'none';
+
+        // Add positioning class for styling
+        this.tooltip.classList.add(`positioned-${finalPosition}`);
       }
     }
   }
@@ -321,6 +371,10 @@ export class EnhancedOnboarding extends BaseService {
     // Skip button
     const skipBtn = this.tooltip.querySelector('.tooltip-skip');
     skipBtn?.addEventListener('click', () => this.skipOnboarding());
+
+    // Skip all button
+    const skipAllBtn = this.tooltip.querySelector('#onboarding-skip-all');
+    skipAllBtn?.addEventListener('click', () => this.skipOnboarding());
 
     // Keyboard navigation
     document.addEventListener('keydown', this.handleKeydown.bind(this));
@@ -356,7 +410,7 @@ export class EnhancedOnboarding extends BaseService {
           if (element) {
             // Add visual indicator
             element.classList.add('onboarding-action-target');
-            
+
             // Auto-advance when clicked
             element.addEventListener('click', () => {
               if (this.options.autoAdvance) {
@@ -380,7 +434,7 @@ export class EnhancedOnboarding extends BaseService {
 
   public async nextStep(): Promise<void> {
     const currentStepData = this.steps[this.currentStep];
-    
+
     // Validate step if required
     if (currentStepData.validation && !currentStepData.validation()) {
       this.uiService.showToast('Please complete this step before continuing', { type: 'warning' });
@@ -389,7 +443,7 @@ export class EnhancedOnboarding extends BaseService {
 
     // Mark step as completed
     this.completedSteps.add(currentStepData.id);
-    
+
     // Add haptic feedback
     if (this.options.hapticFeedback) {
       this.hapticFeedback('light');
@@ -436,9 +490,9 @@ export class EnhancedOnboarding extends BaseService {
 
     // Show completion message
     if (!skipped) {
-      this.uiService.showToast('🎉 Welcome to RunRealm! Ready to start your adventure?', { 
-        type: 'success', 
-        duration: 4000 
+      this.uiService.showToast('🎉 Welcome to RunRealm! Ready to start your adventure?', {
+        type: 'success',
+        duration: 4000
       });
     }
 
@@ -451,7 +505,7 @@ export class EnhancedOnboarding extends BaseService {
 
   private hapticFeedback(type: 'light' | 'medium' | 'heavy' = 'light'): void {
     if (!navigator.vibrate) return;
-    
+
     switch (type) {
       case 'light':
         navigator.vibrate(10);
@@ -540,19 +594,23 @@ export class EnhancedOnboarding extends BaseService {
         }
 
         .tooltip-skip {
-          background: none;
-          border: none;
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 24px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 12px;
+          font-weight: 500;
           cursor: pointer;
-          padding: 4px;
-          border-radius: 4px;
+          padding: 6px 12px;
+          border-radius: 6px;
           transition: all 0.2s ease;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .tooltip-skip:hover {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.2);
           color: white;
+          border-color: rgba(255, 255, 255, 0.4);
         }
 
         .tooltip-description {
@@ -591,8 +649,18 @@ export class EnhancedOnboarding extends BaseService {
 
         .tooltip-footer {
           display: flex;
+          justify-content: space-between;
+          align-items: center;
           gap: 12px;
-          justify-content: flex-end;
+        }
+
+        .footer-left {
+          flex: 1;
+        }
+
+        .footer-right {
+          display: flex;
+          gap: 12px;
         }
 
         .tooltip-btn {
@@ -626,6 +694,21 @@ export class EnhancedOnboarding extends BaseService {
           background: rgba(255, 255, 255, 0.2);
         }
 
+        .tooltip-btn.tertiary {
+          background: transparent;
+          color: rgba(255, 255, 255, 0.6);
+          border: none;
+          font-size: 12px;
+          text-decoration: underline;
+          min-width: auto;
+          padding: 8px 0;
+        }
+
+        .tooltip-btn.tertiary:hover {
+          color: rgba(255, 255, 255, 0.8);
+          background: transparent;
+        }
+
         /* Mobile responsiveness */
         @media (max-width: 768px) {
           .onboarding-tooltip {
@@ -657,8 +740,17 @@ export class EnhancedOnboarding extends BaseService {
 
           .tooltip-footer {
             flex-direction: column;
-            gap: 8px;
+            gap: 12px;
             margin-top: 16px;
+          }
+
+          .footer-left, .footer-right {
+            width: 100%;
+          }
+
+          .footer-right {
+            flex-direction: column;
+            gap: 8px;
           }
 
           .tooltip-btn {
