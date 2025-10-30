@@ -225,7 +225,6 @@ console.log('✅ Core modules test passed');
   await tester.test("Configuration Validation", async () => {
     const configFiles = [
       "src/config/contracts.ts",
-      "src/appsettings.secrets.ts",
       "hardhat.config.js",
       "package.json",
     ];
@@ -236,18 +235,10 @@ console.log('✅ Core modules test passed');
       }
     }
 
-    // Check if appsettings has the right contracts (this is the source of truth)
-    const appSettings = fs.readFileSync("src/appsettings.secrets.ts", "utf8");
-    if (!appSettings.includes("0x7A52d845Dc37aC5213a546a59A43148308A88983")) {
-      throw new Error(
-        "App settings contract addresses not properly configured"
-      );
-    }
-
-    // Check if contract config properly imports from appSettings
+    // Check if contract config properly uses runtime configuration
     const contractsConfig = fs.readFileSync("src/config/contracts.ts", "utf8");
-    if (!contractsConfig.includes("appSettings")) {
-      throw new Error("Contract config not properly linked to app settings");
+    if (contractsConfig.includes("appSettings")) {
+      throw new Error("Contract config still references deprecated appSettings");
     }
   });
 

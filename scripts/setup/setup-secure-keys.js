@@ -3,9 +3,8 @@
 /**
  * 🔒 Secure API Key Setup Script
  * 
- * This script helps you set up API keys securely without exposing them
- * in the client-side bundle. It creates the appsettings.secrets.ts file
- * which is git-ignored and only used during development.
+ * This script helps you set up API keys securely using environment variables.
+ * API keys should be set via environment variables or runtime configuration.
  */
 
 const fs = require('fs');
@@ -24,18 +23,17 @@ function question(prompt) {
 }
 
 async function setupSecureKeys() {
-  console.log('🔒 RunRealm Secure API Key Setup');
+  console.log('🔒 RunRealm Environment Variables Setup');
   console.log('=====================================\n');
   
-  console.log('This script will help you set up API keys securely.');
-  console.log('Your keys will be stored in src/appsettings.secrets.ts');
-  console.log('which is git-ignored and never committed to version control.\n');
+  console.log('This script helps you set up environment variables for API keys securely.');
+  console.log('For production, set these as environment variables on your hosting platform.\n');
   
-  const secretsPath = path.join(__dirname, '..', 'src', 'appsettings.secrets.ts');
+  const envPath = path.join(__dirname, '..', '.env');
   
-  // Check if secrets file already exists
-  if (fs.existsSync(secretsPath)) {
-    const overwrite = await question('⚠️  Secrets file already exists. Overwrite? (y/N): ');
+  // Check if .env file already exists
+  if (fs.existsSync(envPath)) {
+    const overwrite = await question('⚠️  .env file already exists. Overwrite? (y/N): ');
     if (overwrite.toLowerCase() !== 'y') {
       console.log('Setup cancelled.');
       rl.close();
@@ -51,38 +49,28 @@ async function setupSecureKeys() {
   console.log('Get one at: https://aistudio.google.com/app/apikey');
   const geminiKey = await question('Enter your Google Gemini API key (or press Enter to skip): ');
   
-  // Create the secrets file
-  const secretsContent = `/*
- * 🔒 RunRealm API Secrets
- * 
- * ⚠️ WARNING: This file contains sensitive API keys!
- * - Never commit this file to version control
- * - Never share these keys publicly
- * - Regenerate keys if they are ever exposed
- * 
- * This file is automatically git-ignored.
- */
+  // Create the .env file
+  const envContent = `# RunRealm Environment Variables
+# Copy this file to .env and add your actual values
 
-// Mapbox Access Token (required for map functionality)
-// Get one at https://account.mapbox.com/access-tokens/
-export const MAPBOX_ACCESS_TOKEN = '${mapboxToken}';
+# Mapbox Access Token (required for map functionality)
+MAPBOX_ACCESS_TOKEN=${mapboxToken}
 
-// Google Generative AI API Key (for AI features)
-// Get one at https://aistudio.google.com/app/apikey
-export const GOOGLE_GEMINI_API_KEY = '${geminiKey || 'your_google_gemini_api_key_here'}';
+# Google Gemini API Key (for AI features)
+GOOGLE_GEMINI_API_KEY=${geminiKey || ''}
 
-// Additional secure configuration can be added here
-// export const OTHER_SECRET_KEY = 'your_secret_here';
+# Additional environment variables can be added here
+# OTHER_SECRET_KEY=your_secret_here
 `;
 
-  fs.writeFileSync(secretsPath, secretsContent);
+  fs.writeFileSync(envPath, envContent);
   
-  console.log('\n✅ Secure API keys saved successfully!');
-  console.log(`📁 File created: ${secretsPath}`);
+  console.log('\n✅ Environment variables file created successfully!');
+  console.log(`📁 File created: ${envPath}`);
   console.log('\n🔒 Security Notes:');
   console.log('- This file is git-ignored and will not be committed');
-  console.log('- Your API keys are NOT exposed in the client-side bundle');
   console.log('- For production, use environment variables on your hosting platform');
+  console.log('- API keys are no longer hardcoded in source files');
   
   console.log('\n🚀 Next steps:');
   console.log('1. Run: npm run serve (for development)');

@@ -5,14 +5,8 @@
  */
 
 // Conditional import for development vs production
-let appSettings: any = null;
-try {
-  // Only available in development - will fail gracefully in production
-  appSettings = require('../appsettings.secrets').appSettings;
-} catch (error) {
-  // Production mode - use environment variables and runtime config
-  console.log('Production mode: Using runtime configuration instead of secrets file');
-}
+// Use environment variables and runtime config (secure approach)
+// No more hardcoded secrets - everything comes from environment or token endpoint
 
 export interface ContractConfig {
   address: string;
@@ -34,17 +28,17 @@ export interface NetworkConfig {
 const UNIVERSAL_CONTRACT_ABI = [
   {
     "inputs": [
-      {"internalType": "address", "name": "_realmTokenAddress", "type": "address"}
+      { "internalType": "address", "name": "_realmTokenAddress", "type": "address" }
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
   },
   {
     "inputs": [
-      {"internalType": "string", "name": "geohash", "type": "string"},
-      {"internalType": "uint256", "name": "difficulty", "type": "uint256"},
-      {"internalType": "uint256", "name": "distance", "type": "uint256"},
-      {"internalType": "string[]", "name": "landmarks", "type": "string[]"}
+      { "internalType": "string", "name": "geohash", "type": "string" },
+      { "internalType": "uint256", "name": "difficulty", "type": "uint256" },
+      { "internalType": "uint256", "name": "distance", "type": "uint256" },
+      { "internalType": "string[]", "name": "landmarks", "type": "string[]" }
     ],
     "name": "mintTerritory",
     "outputs": [],
@@ -53,52 +47,52 @@ const UNIVERSAL_CONTRACT_ABI = [
   },
   {
     "inputs": [
-      {"internalType": "string", "name": "geohash", "type": "string"}
+      { "internalType": "string", "name": "geohash", "type": "string" }
     ],
     "name": "isGeohashClaimed",
-    "outputs": [{"internalType": "bool", "name": "claimed", "type": "bool"}],
+    "outputs": [{ "internalType": "bool", "name": "claimed", "type": "bool" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      {"internalType": "address", "name": "player", "type": "address"}
+      { "internalType": "address", "name": "player", "type": "address" }
     ],
     "name": "getPlayerTerritories",
-    "outputs": [{"internalType": "uint256[]", "name": "tokenIds", "type": "uint256[]"}],
+    "outputs": [{ "internalType": "uint256[]", "name": "tokenIds", "type": "uint256[]" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      {"internalType": "uint256", "name": "tokenId", "type": "uint256"}
+      { "internalType": "uint256", "name": "tokenId", "type": "uint256" }
     ],
     "name": "getTerritoryInfo",
     "outputs": [
-      {"internalType": "string", "name": "geohash", "type": "string"},
-      {"internalType": "uint256", "name": "difficulty", "type": "uint256"},
-      {"internalType": "uint256", "name": "distance", "type": "uint256"},
-      {"internalType": "string[]", "name": "landmarks", "type": "string[]"},
-      {"internalType": "address", "name": "creator", "type": "address"},
-      {"internalType": "uint256", "name": "sourceChainId", "type": "uint256"},
-      {"internalType": "uint256", "name": "createdAt", "type": "uint256"},
-      {"internalType": "uint256", "name": "totalRewards", "type": "uint256"},
-      {"internalType": "bool", "name": "isActive", "type": "bool"}
+      { "internalType": "string", "name": "geohash", "type": "string" },
+      { "internalType": "uint256", "name": "difficulty", "type": "uint256" },
+      { "internalType": "uint256", "name": "distance", "type": "uint256" },
+      { "internalType": "string[]", "name": "landmarks", "type": "string[]" },
+      { "internalType": "address", "name": "creator", "type": "address" },
+      { "internalType": "uint256", "name": "sourceChainId", "type": "uint256" },
+      { "internalType": "uint256", "name": "createdAt", "type": "uint256" },
+      { "internalType": "uint256", "name": "totalRewards", "type": "uint256" },
+      { "internalType": "bool", "name": "isActive", "type": "bool" }
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      {"internalType": "address", "name": "player", "type": "address"}
+      { "internalType": "address", "name": "player", "type": "address" }
     ],
     "name": "getPlayerStats",
     "outputs": [
-      {"internalType": "uint256", "name": "totalDistance", "type": "uint256"},
-      {"internalType": "uint256", "name": "territoriesOwned", "type": "uint256"},
-      {"internalType": "uint256", "name": "totalRewards", "type": "uint256"},
-      {"internalType": "uint256", "name": "level", "type": "uint256"},
-      {"internalType": "uint256", "name": "lastActivity", "type": "uint256"}
+      { "internalType": "uint256", "name": "totalDistance", "type": "uint256" },
+      { "internalType": "uint256", "name": "territoriesOwned", "type": "uint256" },
+      { "internalType": "uint256", "name": "totalRewards", "type": "uint256" },
+      { "internalType": "uint256", "name": "level", "type": "uint256" },
+      { "internalType": "uint256", "name": "lastActivity", "type": "uint256" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -106,29 +100,29 @@ const UNIVERSAL_CONTRACT_ABI = [
   {
     "inputs": [],
     "name": "getTotalTerritories",
-    "outputs": [{"internalType": "uint256", "name": "total", "type": "uint256"}],
+    "outputs": [{ "internalType": "uint256", "name": "total", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      {"internalType": "uint256", "name": "difficulty", "type": "uint256"},
-      {"internalType": "uint256", "name": "distance", "type": "uint256"}
+      { "internalType": "uint256", "name": "difficulty", "type": "uint256" },
+      { "internalType": "uint256", "name": "distance", "type": "uint256" }
     ],
     "name": "calculateTerritoryReward",
-    "outputs": [{"internalType": "uint256", "name": "reward", "type": "uint256"}],
+    "outputs": [{ "internalType": "uint256", "name": "reward", "type": "uint256" }],
     "stateMutability": "pure",
     "type": "function"
   },
   {
     "anonymous": false,
     "inputs": [
-      {"indexed": true, "internalType": "uint256", "name": "tokenId", "type": "uint256"},
-      {"indexed": true, "internalType": "address", "name": "creator", "type": "address"},
-      {"indexed": false, "internalType": "string", "name": "geohash", "type": "string"},
-      {"indexed": false, "internalType": "uint256", "name": "difficulty", "type": "uint256"},
-      {"indexed": false, "internalType": "uint256", "name": "distance", "type": "uint256"},
-      {"indexed": false, "internalType": "uint256", "name": "sourceChainId", "type": "uint256"}
+      { "indexed": true, "internalType": "uint256", "name": "tokenId", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "creator", "type": "address" },
+      { "indexed": false, "internalType": "string", "name": "geohash", "type": "string" },
+      { "indexed": false, "internalType": "uint256", "name": "difficulty", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "distance", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "sourceChainId", "type": "uint256" }
     ],
     "name": "TerritoryCreated",
     "type": "event"
@@ -136,10 +130,10 @@ const UNIVERSAL_CONTRACT_ABI = [
   {
     "anonymous": false,
     "inputs": [
-      {"indexed": true, "internalType": "address", "name": "player", "type": "address"},
-      {"indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256"},
-      {"indexed": true, "internalType": "uint256", "name": "territoryId", "type": "uint256"},
-      {"indexed": false, "internalType": "string", "name": "reason", "type": "string"}
+      { "indexed": true, "internalType": "address", "name": "player", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" },
+      { "indexed": true, "internalType": "uint256", "name": "territoryId", "type": "uint256" },
+      { "indexed": false, "internalType": "string", "name": "reason", "type": "string" }
     ],
     "name": "RewardsDistributed",
     "type": "event"
@@ -150,67 +144,67 @@ const REALM_TOKEN_ABI = [
   {
     "inputs": [],
     "name": "name",
-    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "symbol",
-    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "decimals",
-    "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
+    "outputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "totalSupply",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      {"internalType": "address", "name": "account", "type": "address"}
+      { "internalType": "address", "name": "account", "type": "address" }
     ],
     "name": "balanceOf",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      {"internalType": "address", "name": "to", "type": "address"},
-      {"internalType": "uint256", "name": "value", "type": "uint256"}
+      { "internalType": "address", "name": "to", "type": "address" },
+      { "internalType": "uint256", "name": "value", "type": "uint256" }
     ],
     "name": "transfer",
-    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
-      {"internalType": "address", "name": "owner", "type": "address"},
-      {"internalType": "address", "name": "spender", "type": "address"}
+      { "internalType": "address", "name": "owner", "type": "address" },
+      { "internalType": "address", "name": "spender", "type": "address" }
     ],
     "name": "allowance",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      {"internalType": "address", "name": "spender", "type": "address"},
-      {"internalType": "uint256", "name": "value", "type": "uint256"}
+      { "internalType": "address", "name": "spender", "type": "address" },
+      { "internalType": "uint256", "name": "value", "type": "uint256" }
     ],
     "name": "approve",
-    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
     "stateMutability": "nonpayable",
     "type": "function"
   }
@@ -218,31 +212,10 @@ const REALM_TOKEN_ABI = [
 
 /**
  * Get current network configuration
- * DRY: Single source of truth from appsettings (dev) or environment (prod)
+ * Uses environment variables and webpack-injected config (secure approach)
  */
 export function getCurrentNetworkConfig(): NetworkConfig {
-  // Development mode - use appsettings.secrets.ts
-  if (appSettings?.web3?.zetachain) {
-    const zetaConfig = appSettings.web3.zetachain;
-    return {
-      chainId: zetaConfig.chainId,
-      name: zetaConfig.chainId === 7001 ? 'ZetaChain Athens Testnet' : 'ZetaChain Mainnet',
-      rpcUrl: zetaConfig.rpcUrl,
-      explorerUrl: zetaConfig.explorerUrl,
-      contracts: {
-        universal: {
-          address: zetaConfig.contracts.universal,
-          abi: UNIVERSAL_CONTRACT_ABI
-        },
-        realmToken: {
-          address: zetaConfig.contracts.realmToken,
-          abi: REALM_TOKEN_ABI
-        }
-      }
-    };
-  }
-
-  // Production mode - use environment variables and known deployed addresses
+  // Use environment variables from webpack DefinePlugin (__ENV__)
   const chainId = 7001; // ZetaChain Athens Testnet
   return {
     chainId,

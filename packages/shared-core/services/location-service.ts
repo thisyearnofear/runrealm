@@ -26,6 +26,7 @@ export interface LocationSearchResult {
 }
 
 export class LocationService extends BaseService {
+  private static instance: LocationService;
   private geocodingService: GeocodingService | null = null;
   private preferenceService: PreferenceService | null = null;
   private domService: DOMService | null = null;
@@ -33,8 +34,15 @@ export class LocationService extends BaseService {
   private watchId: number | null = null;
   private locationModal: HTMLElement | null = null;
 
-  constructor() {
+  public constructor() {
     super();
+  }
+
+  static getInstance(): LocationService {
+    if (!LocationService.instance) {
+      LocationService.instance = new LocationService();
+    }
+    return LocationService.instance;
   }
 
   protected async onInitialize(): Promise<void> {
@@ -353,21 +361,19 @@ export class LocationService extends BaseService {
             </div>
 
             <div class="current-location-info" id="current-location-info">
-              ${
-                this.currentLocation
-                  ? `
+              ${this.currentLocation
+          ? `
                 <div class="location-display">
-                  <strong>Current:</strong> ${
-                    this.currentLocation.address ||
-                    `${this.currentLocation.lat.toFixed(
-                      4
-                    )}, ${this.currentLocation.lng.toFixed(4)}`
-                  }
+                  <strong>Current:</strong> ${this.currentLocation.address ||
+          `${this.currentLocation.lat.toFixed(
+            4
+          )}, ${this.currentLocation.lng.toFixed(4)}`
+          }
                   <small>(${this.currentLocation.source})</small>
                 </div>
               `
-                  : ""
-              }
+          : ""
+        }
             </div>
           </div>
         </div>
@@ -513,17 +519,15 @@ export class LocationService extends BaseService {
     resultsContainer.innerHTML = results
       .map(
         (result) => `
-      <div class="search-result-item" data-lat="${result.lat}" data-lng="${
-          result.lng
-        }" data-name="${result.name}">
+      <div class="search-result-item" data-lat="${result.lat}" data-lng="${result.lng
+          }" data-name="${result.name}">
         <div class="result-name">${result.name}</div>
-        ${
-          result.region || result.country
+        ${result.region || result.country
             ? `<div class="result-details">${[result.region, result.country]
-                .filter(Boolean)
-                .join(", ")}</div>`
+              .filter(Boolean)
+              .join(", ")}</div>`
             : ""
-        }
+          }
       </div>
     `
       )

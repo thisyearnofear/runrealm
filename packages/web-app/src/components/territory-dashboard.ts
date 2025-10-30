@@ -3,11 +3,11 @@
  * Gamified interface for territory management with AI integration
  */
 
-import { AIService } from '../services/ai-service';
-import { Web3Service } from '../services/web3-service';
-import { TerritoryService, Territory } from '../services/territory-service';
-import { EventBus } from '../core/event-bus';
-import { DOMService } from '../services/dom-service';
+import { AIService } from '@runrealm/shared-core/services/ai-service';
+import { Web3Service } from '@runrealm/shared-core/services/web3-service';
+import { TerritoryService, Territory } from '@runrealm/shared-core/services/territory-service';
+import { EventBus } from '@runrealm/shared-core/core/event-bus';
+import { DOMService } from '@runrealm/shared-core/services/dom-service';
 
 // Territory interface is now imported from TerritoryService
 
@@ -192,10 +192,10 @@ export class TerritoryDashboard {
           </div>
           <div class="cross-chain-info">
             <span class="origin-chain">🌐 Origin: ${territory.originChain}</span>
-            ${territory.crossChainHistory.length > 0 ? 
-              `<span class="cross-chain-badge">⚡ ${territory.crossChainHistory.length} Cross-Chain Transfer${territory.crossChainHistory.length > 1 ? 's' : ''}</span>` : 
-              '<span class="native-badge">🏠 Native Territory</span>'
-            }
+            ${territory.crossChainHistory.length > 0 ?
+        `<span class="cross-chain-badge">⚡ ${territory.crossChainHistory.length} Cross-Chain Transfer${territory.crossChainHistory.length > 1 ? 's' : ''}</span>` :
+        '<span class="native-badge">🏠 Native Territory</span>'
+      }
           </div>
           <div class="territory-landmarks">
             ${territory.landmarks.map(landmark => `<span class="landmark-tag">${landmark}</span>`).join('')}
@@ -487,7 +487,7 @@ export class TerritoryDashboard {
 
   private calculateTerritoryValue(territory: Territory): number {
     let score = territory.estimatedReward;
-    
+
     // Rarity multiplier
     const rarityMultiplier = {
       'common': 1,
@@ -496,13 +496,13 @@ export class TerritoryDashboard {
       'epic': 3,
       'legendary': 5
     }[territory.rarity] || 1;
-    
+
     // Cross-chain bonus
     const crossChainBonus = territory.crossChainHistory.length * 0.2;
-    
+
     // Landmark bonus
     const landmarkBonus = territory.landmarks.length * 0.1;
-    
+
     return Math.round(score * rarityMultiplier * (1 + crossChainBonus + landmarkBonus));
   }
 

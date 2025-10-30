@@ -4,11 +4,11 @@
  * Integrates cleanly with the widget system
  */
 
-import { BaseService } from '../core/base-service';
-import { DOMService } from '../services/dom-service';
-import { UIService } from '../services/ui-service';
-import { AnimationService } from '../services/animation-service';
-import { Web3Service, WalletInfo } from '../services/web3-service';
+import { BaseService } from '@runrealm/shared-core/core/base-service';
+import { DOMService } from '@runrealm/shared-core/services/dom-service';
+import { UIService } from '@runrealm/shared-core/services/ui-service';
+import { AnimationService } from '@runrealm/shared-core/services/animation-service';
+import { Web3Service, WalletInfo } from '@runrealm/shared-core/services/web3-service';
 
 export interface WalletProvider {
   id: string;
@@ -33,7 +33,7 @@ export class WalletWidget extends BaseService {
   private uiService: UIService;
   private animationService: AnimationService;
   private web3Service: Web3Service;
-  
+
   private walletState: WalletState = { status: 'disconnected' };
   private retryCount: number = 0;
   private maxRetries: number = 3;
@@ -129,9 +129,9 @@ export class WalletWidget extends BaseService {
   private setupEventListeners(): void {
     // Listen for Web3 events
     this.subscribe('web3:walletConnected', (data) => {
-      this.updateWalletState({ 
-        status: 'connected', 
-        wallet: data as WalletInfo 
+      this.updateWalletState({
+        status: 'connected',
+        wallet: data as WalletInfo
       });
       this.uiService.showToast('🎉 Wallet connected successfully!', { type: 'success' });
     });
@@ -143,9 +143,9 @@ export class WalletWidget extends BaseService {
 
     this.subscribe('web3:networkChanged', (data) => {
       if (this.walletState.wallet) {
-        this.updateWalletState({ 
-          status: 'connected', 
-          wallet: { ...this.walletState.wallet, chainId: data.chainId } 
+        this.updateWalletState({
+          status: 'connected',
+          wallet: { ...this.walletState.wallet, chainId: data.chainId }
         });
       }
     });
@@ -228,10 +228,10 @@ export class WalletWidget extends BaseService {
     try {
       this.updateWalletState({ status: 'connecting', lastProvider: providerId });
       this.retryCount = 0;
-      
+
       await provider.connect();
       this.hideWalletModal();
-      
+
     } catch (error) {
       console.error(`Failed to connect to ${provider.name}:`, error);
       this.handleConnectionError(error, provider);
@@ -274,10 +274,10 @@ export class WalletWidget extends BaseService {
                   <div class="provider-description">${provider.description}</div>
                 </div>
                 <div class="provider-status">
-                  ${provider.isInstalled() ? 
-                    '<span class="status-installed">✅ Installed</span>' : 
-                    '<span class="status-not-installed">📥 Install</span>'
-                  }
+                  ${provider.isInstalled() ?
+          '<span class="status-installed">✅ Installed</span>' :
+          '<span class="status-not-installed">📥 Install</span>'
+        }
                 </div>
               </div>
             `).join('')}
@@ -355,7 +355,7 @@ export class WalletWidget extends BaseService {
 
   private renderConnectedState(wallet: WalletInfo): string {
     const shortAddress = `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`;
-    
+
     return `
       <div class="wallet-status connected">
         <div class="wallet-icon">✅</div>
@@ -416,7 +416,7 @@ export class WalletWidget extends BaseService {
 
     this.retryCount++;
     const lastProvider = this.walletState.lastProvider || 'metamask';
-    
+
     this.uiService.showToast(`Retrying connection... (${this.retryCount}/${this.maxRetries})`, { type: 'info' });
     await this.connectWallet(lastProvider);
   }
@@ -424,12 +424,12 @@ export class WalletWidget extends BaseService {
   private async switchToSupportedNetwork(): Promise<void> {
     try {
       this.updateWalletState({ status: 'switching' });
-      
+
       // Switch to ZetaChain testnet (primary network)
       await this.web3Service.switchNetwork(7001);
-      
+
       this.uiService.showToast('Network switched successfully!', { type: 'success' });
-      
+
     } catch (error) {
       console.error('Failed to switch network:', error);
       this.uiService.showToast('Failed to switch network', { type: 'error' });
@@ -450,10 +450,10 @@ export class WalletWidget extends BaseService {
       errorMessage = 'Wallet authorization failed';
     }
 
-    this.updateWalletState({ 
-      status: 'error', 
+    this.updateWalletState({
+      status: 'error',
       error: errorMessage,
-      lastProvider: provider.id 
+      lastProvider: provider.id
     });
 
     this.uiService.showToast(errorMessage, { type: 'error' });

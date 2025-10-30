@@ -258,15 +258,15 @@ app.get("/index.html", (req, res) => {
 const server = app.listen(port, async () => {
   console.log(`Server running at http://localhost:${port}`);
   
-  // Initialize Strava webhook subscription
-  if (process.env.STRAVA_CLIENT_ID && process.env.STRAVA_CLIENT_SECRET) {
+  // Initialize Strava webhook subscription (only in production)
+  if (process.env.NODE_ENV === 'production' && process.env.STRAVA_CLIENT_ID && process.env.STRAVA_CLIENT_SECRET) {
     try {
       await initializeStravaWebhook();
     } catch (error) {
       console.error('⚠️  Failed to initialize Strava webhook:', error.message);
     }
   } else {
-    console.log('Strava webhook: Skipping initialization (missing credentials)');
+    console.log('Strava webhook: Skipping initialization (development mode or missing credentials)');
   }
 });
 

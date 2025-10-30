@@ -14,7 +14,7 @@ module.exports = (env, argv) => {
   const exposedEnvVariables = {
     NODE_ENV: argv.mode || "development",
     // API base URL for token endpoint (dev → local express, prod → hetzner backend)
-    API_BASE_URL: argv.mode === "production" ? "https://runrealm.coupondj.fun" : "http://localhost:3000",
+    API_BASE_URL: argv.mode === "production" ? "https://runrealm.coupondj.fun" : `http://localhost:${process.env.PORT || 3000}`,
     // Public configuration only
     ENABLE_WEB3: process.env.ENABLE_WEB3 || "true",
     ENABLE_AI_FEATURES: process.env.ENABLE_AI_FEATURES || "true",
@@ -40,10 +40,7 @@ module.exports = (env, argv) => {
     app: path.resolve(__dirname, "packages/web-app/index.ts"),
   };
 
-  // Add development setup script only in development mode
-  if (!isProduction) {
-    entry.devSetup = path.resolve(__dirname, "packages/web-app/dev-setup.ts");
-  }
+  // Development setup no longer needed - using secure environment variables
 
   return {
     mode: isProduction ? "production" : "development",
@@ -248,7 +245,7 @@ module.exports = (env, argv) => {
       proxy: [
         {
           context: ['/api'],
-          target: 'http://localhost:3000',
+          target: `http://localhost:${process.env.PORT || 3000}`,
           changeOrigin: true,
         },
       ],

@@ -89,17 +89,12 @@ try {
 // Test 4: Check environment setup
 console.log('\n4️⃣ Checking environment setup...');
 const envExample = path.join(__dirname, '..', '.env.example');
-const secretsExample = path.join(__dirname, '..', 'src', 'appsettings.secrets.example.ts');
 
 if (!fs.existsSync(envExample)) {
   console.warn('⚠️  .env.example not found - users may need setup guidance');
 }
 
-if (!fs.existsSync(secretsExample)) {
-  console.warn('⚠️  appsettings.secrets.example.ts not found');
-} else {
-  console.log('✅ Configuration examples present');
-}
+console.log('✅ Environment setup checked');
 
 // Test 5: Bundle size check
 console.log('\n5️⃣ Checking bundle size...');

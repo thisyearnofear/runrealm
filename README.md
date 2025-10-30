@@ -34,11 +34,10 @@ npm run test     # Run tests
 
 ## 📚 Documentation
 
-- [Setup Guide](docs/SETUP.md) - Complete installation and configuration
-- [Architecture](docs/ARCHITECTURE.md) - Technical architecture and design principles
-- [Strava Integration](docs/STRAVA_SETUP.md) - Connect your fitness data
-- [Deployment](docs/DEPLOYMENT.md) - Production deployment guides
-- [Testing Strategy](docs/TESTING_STRATEGY.md) - Development and testing workflows
+- [Architecture](docs/ARCHITECTURE.md) - System architecture, platform design, and smart contracts
+- [Setup and Deployment](docs/SETUP_AND_DEPLOYMENT.md) - Installation, deployment, and Strava integration
+- [Mobile and Testing](docs/MOBILE_AND_TESTING.md) - Mobile implementation and testing strategies
+- [Implementation Guides](docs/IMPLEMENTATION_GUIDES.md) - Dashboard implementation and UI recommendations
 
 ## 🏗️ Architecture
 

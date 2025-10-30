@@ -51,7 +51,7 @@ export class AIService extends BaseService {
         // Get API key with improved fallback logic
         let apiKey = this.getApiKey(web3Config);
         if (!apiKey) {
-            const errorMsg = 'No valid Gemini API key found. Check your .env file or appsettings.secrets.ts';
+            const errorMsg = 'No valid Gemini API key found. Check your .env file or /api/tokens endpoint';
             console.error('AIService:', errorMsg);
             this.isEnabled = false;
             this.safeEmit('service:error', {
@@ -355,19 +355,12 @@ export class AIService extends BaseService {
                 return localKey;
             }
         }
-        // 3. Try to load from secrets file (development fallback)
-        try {
-            // This will be handled by webpack at build time
-            const secrets = require('../appsettings.secrets');
-            if (secrets?.GOOGLE_GEMINI_API_KEY) {
-                console.log('AIService: Using secrets file Gemini API key');
-                return secrets.GOOGLE_GEMINI_API_KEY;
-            }
+        // 3. Check webpack-injected environment variables (fallback)
+        if ((globalThis).__ENV__?.GOOGLE_GEMINI_API_KEY) {
+            console.log('AIService: Using webpack environment variable');
+            return (globalThis).__ENV__.GOOGLE_GEMINI_API_KEY;
         }
-        catch (error) {
-            // This is normal in production - secrets file doesn't exist
-            console.log('AIService: Could not load from secrets file (this is normal in production)');
-        }
+
         return '';
     }
     /**

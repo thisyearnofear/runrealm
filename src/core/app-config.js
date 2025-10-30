@@ -111,7 +111,7 @@ export class ConfigService {
         }
     }
     getSecureEnvVar(name) {
-        // For sensitive variables, only check localStorage and secrets file
+        // For sensitive variables, only check localStorage
         // These are NOT exposed via webpack DefinePlugin for security
         return localStorage.getItem(`runrealm_${name.toLowerCase()}`);
     }
@@ -161,8 +161,7 @@ export class ConfigService {
             // Only show warning if runtime tokens have been attempted
             if (this.runtimeTokensLoaded) {
                 console.warn("🔒 Mapbox access token not found. For security, provide it via:\n" +
-                    "1. src/appsettings.secrets.ts (recommended for development)\n" +
-                    "2. localStorage.setItem('runrealm_mapbox_access_token', 'your_token')\n" +
+                    "1. localStorage.setItem('runrealm_mapbox_access_token', 'your_token')\n" +
                     "3. Runtime token endpoint (production)\n" +
                     "4. Environment variables are NO LONGER exposed to client for security");
             }
@@ -196,8 +195,7 @@ export class ConfigService {
             if (this.runtimeTokensLoaded) {
                 console.warn("🔒 Google Gemini API key not found. For security, provide it via:\n" +
                     "1. Environment variables (.env file)\n" +
-                    "2. src/appsettings.secrets.ts (recommended for development)\n" +
-                    "3. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
+                    "2. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
                     "4. Runtime token endpoint (production)");
             }
             return "";

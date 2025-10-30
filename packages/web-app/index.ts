@@ -1,9 +1,9 @@
 // Clean, modular entry point for RunRealm
 import { RunRealmApp } from '@runrealm/shared-core/core/run-realm-app';
 import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
-import { MainUI } from './components/main-ui';
-import { WalletWidget } from './components/wallet-widget';
-import TerritoryDashboard from './components/territory-dashboard';
+import { MainUI } from './src/components/main-ui';
+import { WalletWidget } from './src/components/wallet-widget';
+import TerritoryDashboard from './src/components/territory-dashboard';
 // CONSOLIDATED CSS - Following AGGRESSIVE CONSOLIDATION principle
 import './styles/core-system.css';     // Variables, z-index, animations, utilities
 import './styles/components.css';      // Widgets, GameFi UI, controls, rewards
@@ -24,7 +24,7 @@ window.addEventListener('error', (event) => {
     const script = event.target as HTMLScriptElement;
     if (script.src && script.src.includes('.js')) {
       console.warn('Script failed to load:', script.src);
-      
+
       // If it's a main app script and we're in production, try cache bust
       if (script.src.includes('/app.') && process.env.NODE_ENV === 'production') {
         console.log('Attempting cache bust reload...');
@@ -44,8 +44,8 @@ if (process.env.NODE_ENV === 'production') {
   // Helper function to check if message contains sensitive tokens
   const containsToken = (message: string) => {
     return message.includes('access_token=') ||
-           message.includes('pk.eyJ') || // Mapbox token prefix
-           message.includes('AIzaSy'); // Google API key prefix
+      message.includes('pk.eyJ') || // Mapbox token prefix
+      message.includes('AIzaSy'); // Google API key prefix
   };
 
   // Helper function to sanitize messages with tokens
@@ -112,6 +112,37 @@ if (process.env.NODE_ENV === 'production') {
 async function initializeApp(): Promise<void> {
   try {
     const app = RunRealmApp.getInstance();
+
+    // Initialize platform-specific UI components
+    const { DOMService } = await import('@runrealm/shared-core/services/dom-service');
+    const { LocationService } = await import('@runrealm/shared-core/services/location-service');
+    const { UIService } = await import('@runrealm/shared-core/services/ui-service');
+    const { GameFiUI } = await import('@runrealm/shared-core/components/gamefi-ui');
+    const { Web3Service } = await import('@runrealm/shared-core/services/web3-service');
+    const { ConfigService } = await import('@runrealm/shared-core/core/app-config');
+
+    const domService = new DOMService();
+    const locationService = LocationService.getInstance();
+    const uiService = new UIService(domService);
+    const gamefiUI = new GameFiUI(domService, uiService);
+    const web3Service = Web3Service.getInstance();
+    const configService = ConfigService.getInstance();
+
+    // Create MainUI with required dependencies
+    const walletWidget = new WalletWidget(domService, uiService, null, web3Service);
+    const mainUI = new MainUI(
+      domService,
+      locationService,
+      walletWidget,
+      uiService,
+      gamefiUI,
+      web3Service,
+      configService
+    );
+
+    // Initialize platform UI with RunRealmApp
+    app.initializePlatformUI(mainUI, walletWidget, new TerritoryDashboard());
+
     await app.initialize();
 
     // Remove loading indicator from template
@@ -136,20 +167,20 @@ async function initializeApp(): Promise<void> {
         return null;
       };
 
-      // Import widget debug utility
-      import('./utils/widget-debug').then(() => {
-        console.log('🔧 Widget debug utility available: WidgetDebug');
-        console.log('🔧 Debug widgets with: debugWidgets()');
-      });
+      // TODO: Import widget debug utility when available
+      // import('./utils/widget-debug').then(() => {
+      //   console.log('🔧 Widget debug utility available: WidgetDebug');
+      //   console.log('🔧 Debug widgets with: debugWidgets()');
+      // });
 
-      // Import widget test utility
-      import('./utils/widget-test').then(() => {
-        console.log('🧪 Widget test utility loaded');
-        // Auto-run tests after a short delay to let everything initialize
-        setTimeout(() => {
-          (window as any).WidgetTest?.runAllTests();
-        }, 3000);
-      });
+      // TODO: Import widget test utility when available
+      // import('./utils/widget-test').then(() => {
+      //   console.log('🧪 Widget test utility loaded');
+      //   // Auto-run tests after a short delay to let everything initialize
+      //   setTimeout(() => {
+      //     (window as any).WidgetTest?.runAllTests();
+      //   }, 3000);
+      // });
 
       // Only show debug panel if explicitly requested (URL param)
       const urlParams = new URLSearchParams(window.location.search);
@@ -158,26 +189,26 @@ async function initializeApp(): Promise<void> {
         debugUI.createDebugPanel();
         debugUI.startDOMMonitoring();
       }
-      
+
       // Add cross-chain demo function for Google Buildathon judges
-      (window as any).demoCrossChainFunctionality = async function() {
+      (window as any).demoCrossChainFunctionality = async function () {
         console.log('%c\n🌟 RunRealm Cross-Chain Demo Ready!', 'color: #00ff88; font-size: 16px; font-weight: bold;');
         console.log('%c🚀 Demonstrating ZetaChain Universal Contract capabilities...', 'color: #00cc6a;');
-        
+
         // Get services
         const services = (window as any).RunRealm?.services;
         if (!services) {
           console.error('❌ Services not available');
           return;
         }
-        
+
         const { web3, crossChain } = services;
-        
+
         if (!web3 || !crossChain) {
           console.error('❌ Required services not available');
           return;
         }
-        
+
         try {
           // 1. Check if wallet is connected
           if (!web3.isConnected()) {
@@ -189,22 +220,22 @@ async function initializeApp(): Promise<void> {
             }
             return;
           }
-          
+
           const wallet = web3.getCurrentWallet();
           console.log(`✅ Wallet connected: ${wallet.address} on chain ${wallet.chainId}`);
-          
+
           // 2. Check if this is a cross-chain scenario
           const isCrossChain = wallet.chainId !== 7001; // Not on ZetaChain testnet
           console.log(`🌐 Current chain: ${crossChain.getChainName(wallet.chainId)} (${wallet.chainId})`);
           console.log(`🔗 Cross-chain scenario: ${isCrossChain ? 'Yes' : 'No (on ZetaChain)'}`);
-          
+
           // 3. Demonstrate ZetaChain API usage
           console.log('\n🔧 ZetaChain Gateway API Demonstration:');
           crossChain.demonstrateZetaChainAPI();
-          
+
           // 4. Simulate cross-chain territory claim
           console.log('\n📍 Simulating cross-chain territory claim...');
-          
+
           // Create mock territory data
           const mockTerritory = {
             geohash: 'u4pruydqqvj',
@@ -214,9 +245,9 @@ async function initializeApp(): Promise<void> {
             originChainId: wallet.chainId,
             originAddress: wallet.address
           };
-          
+
           console.log('🗺️ Territory data:', mockTerritory);
-          
+
           // 5. Emit cross-chain claim event
           const eventBus = (window as any).RunRealm?.services?.eventBus;
           if (eventBus) {
@@ -226,13 +257,13 @@ async function initializeApp(): Promise<void> {
               targetChainId: 7001 // ZetaChain testnet
             });
           }
-          
+
           // 6. Show demo UI updates
           console.log('\n📱 UI Updates:');
           console.log('  - Cross-chain widget shows pending claim');
           console.log('  - Territory marked as "claimable" with cross-chain status');
           console.log('  - Activity log shows claim initiation');
-          
+
           // 7. Simulate cross-chain confirmation
           setTimeout(() => {
             console.log('\n✅ Simulating cross-chain confirmation...');
@@ -243,12 +274,12 @@ async function initializeApp(): Promise<void> {
                 originChainId: mockTerritory.originChainId
               });
             }
-            
+
             console.log('\n🎉 Cross-chain territory claim completed!');
             console.log('📊 Territory now owned on ZetaChain with cross-chain history');
             console.log('💰 Rewards distributed to user');
             console.log('📈 Player stats updated with cross-chain activity');
-            
+
             // 8. Show final state
             console.log('\n📋 Final State:');
             console.log('  - Territory status: "claimed"');
@@ -256,7 +287,7 @@ async function initializeApp(): Promise<void> {
             console.log('  - Cross-chain history: 1 entry');
             console.log('  - Rewards: Available for claiming');
             console.log('  - UI: Shows cross-chain badge and chain indicator');
-            
+
             console.log('\n✨ Cross-Chain Demo Complete!');
             console.log('\n🎯 Key Features Demonstrated:');
             console.log('  - Cross-chain territory claiming');
@@ -264,14 +295,14 @@ async function initializeApp(): Promise<void> {
             console.log('  - Cross-chain activity tracking');
             console.log('  - Unified UI for multi-chain interactions');
             console.log('  - Real-time status updates');
-            
+
           }, 3000);
-          
+
         } catch (error) {
           console.error('❌ Demo failed:', error);
         }
       };
-      
+
       console.log('%c\n🌟 RunRealm Cross-Chain Demo Ready!', 'color: #00ff88; font-size: 16px; font-weight: bold;');
       console.log('%c🚀 Run `demoCrossChainFunctionality()` in console to see cross-chain features in action', 'color: #00cc6a;');
       console.log('%c🔗 Make sure your wallet is connected to a non-ZetaChain network for full demo', 'color: #00aaff;');

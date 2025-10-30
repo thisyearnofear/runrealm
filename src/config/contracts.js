@@ -3,16 +3,10 @@
  * Single source of truth for all contract addresses and ABIs
  * Following DRY principle - update once, use everywhere
  */
-// Conditional import for development vs production
-let appSettings = null;
-try {
-    // Only available in development - will fail gracefully in production
-    appSettings = require('../appsettings.secrets').appSettings;
-}
-catch (error) {
-    // Production mode - use environment variables and runtime config
-    console.log('Production mode: Using runtime configuration instead of secrets file');
-}
+
+// Production mode - use environment variables and runtime configuration
+console.log('Contract configuration: Using runtime configuration');
+
 // Contract ABIs - extracted from actual deployed contracts
 const UNIVERSAL_CONTRACT_ABI = [
     {
@@ -199,29 +193,9 @@ const REALM_TOKEN_ABI = [
 ];
 /**
  * Get current network configuration
- * DRY: Single source of truth from appsettings (dev) or environment (prod)
+ * DRY: Single source of truth from environment variables and known deployed addresses
  */
 export function getCurrentNetworkConfig() {
-    // Development mode - use appsettings.secrets.ts
-    if (appSettings?.web3?.zetachain) {
-        const zetaConfig = appSettings.web3.zetachain;
-        return {
-            chainId: zetaConfig.chainId,
-            name: zetaConfig.chainId === 7001 ? 'ZetaChain Athens Testnet' : 'ZetaChain Mainnet',
-            rpcUrl: zetaConfig.rpcUrl,
-            explorerUrl: zetaConfig.explorerUrl,
-            contracts: {
-                universal: {
-                    address: zetaConfig.contracts.universal,
-                    abi: UNIVERSAL_CONTRACT_ABI
-                },
-                realmToken: {
-                    address: zetaConfig.contracts.realmToken,
-                    abi: REALM_TOKEN_ABI
-                }
-            }
-        };
-    }
     // Production mode - use environment variables and known deployed addresses
     const chainId = 7001; // ZetaChain Athens Testnet
     return {

@@ -198,19 +198,19 @@ export class ConfigService {
     return localStorage.getItem(`runrealm_${name.toLowerCase()}`);
   }
 
-  private async fetchRuntimeTokens(): Promise<{mapbox?: string, gemini?: string, strava?: StravaConfig}> {
+  private async fetchRuntimeTokens(): Promise<{ mapbox?: string, gemini?: string, strava?: StravaConfig }> {
     try {
       // In production, use relative URL to leverage Netlify proxy
       // In development, use full API base URL
       const isProduction = process.env.NODE_ENV === 'production';
-      const apiUrl = isProduction 
+      const apiUrl = isProduction
         ? '/api/tokens'  // Netlify will proxy this to Hetzner backend
         : `${(typeof __ENV__ !== 'undefined' && __ENV__.API_BASE_URL) || 'http://localhost:3000'}/api/tokens`;
-      
+
       console.debug(`Fetching tokens from: ${apiUrl} (production: ${isProduction})`);
       const response = await fetch(apiUrl);
       console.debug(`Response status: ${response.status}, ok: ${response.ok}`);
-      
+
       if (response.ok) {
         const tokens = await response.json();
         console.debug('Successfully fetched runtime tokens, keys:', Object.keys(tokens));
@@ -248,7 +248,7 @@ export class ConfigService {
       if (this.runtimeTokensLoaded) {
         console.warn(
           "🔒 Mapbox access token not found. For security, provide it via:\n" +
-          "1. src/appsettings.secrets.ts (recommended for development)\n" +
+          "1. Environment variables (.env file)\n" +
           "2. localStorage.setItem('runrealm_mapbox_access_token', 'your_token')\n" +
           "3. Runtime token endpoint (production)\n" +
           "4. Environment variables are NO LONGER exposed to client for security"
@@ -290,7 +290,7 @@ export class ConfigService {
         console.warn(
           "🔒 Google Gemini API key not found. For security, provide it via:\n" +
           "1. Environment variables (.env file)\n" +
-          "2. src/appsettings.secrets.ts (recommended for development)\n" +
+          "2. Runtime token endpoint (production)\n" +
           "3. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
           "4. Runtime token endpoint (production)"
         );
@@ -380,11 +380,11 @@ export class ConfigService {
     };
   }
 
-  
+
 
   private loadFitnessConfig(): ExternalFitnessConfig | undefined {
     const fitnessEnabled = this.config?.features?.enableFitness !== false;
-    
+
     if (!fitnessEnabled) {
       return undefined;
     }
@@ -404,20 +404,20 @@ export class ConfigService {
   }
 
   private loadStravaConfig(): StravaConfig | undefined {
-    const clientId = 
+    const clientId =
       this.getSecureEnvVar("STRAVA_CLIENT_ID") ||
       localStorage.getItem('runrealm_strava_client_id');
-    
-    const redirectUri = 
+
+    const redirectUri =
       this.getSecureEnvVar("STRAVA_REDIRECT_URI") ||
       localStorage.getItem('runrealm_strava_redirect_uri') ||
       'http://localhost:3000/auth/strava/callback';
-    
+
     if (!clientId) {
       console.debug('Strava client ID not found. Strava integration disabled.');
       return undefined;
     }
-    
+
     return {
       clientId,
       redirectUri,
@@ -444,14 +444,14 @@ export class ConfigService {
     localStorage.setItem('runrealm_strava_access_token', accessToken);
     localStorage.setItem('runrealm_strava_refresh_token', refreshToken);
     localStorage.setItem('runrealm_strava_expires_at', expiresAt.toString());
-    
+
     // Update config
     if (this.config.fitness?.strava) {
       this.config.fitness.strava.accessToken = accessToken;
       this.config.fitness.strava.refreshToken = refreshToken;
       this.config.fitness.strava.expiresAt = expiresAt;
     }
-    
+
     // Emit event
     this.eventBus.emit('fitness:tokens:updated', { source: 'strava' });
   }
@@ -460,13 +460,13 @@ export class ConfigService {
     localStorage.removeItem('runrealm_strava_access_token');
     localStorage.removeItem('runrealm_strava_refresh_token');
     localStorage.removeItem('runrealm_strava_expires_at');
-    
+
     if (this.config.fitness?.strava) {
       delete this.config.fitness.strava.accessToken;
       delete this.config.fitness.strava.refreshToken;
       delete this.config.fitness.strava.expiresAt;
     }
-    
+
     this.eventBus.emit('fitness:tokens:cleared', { source: 'strava' });
   }
 

@@ -2,7 +2,7 @@
 
 ## System Overview
 
-RunRealm is a cross-chain fitness GameFi platform built with TypeScript, featuring AI-powered route optimization and geospatial NFT territories on ZetaChain. The platform follows a complementary platform approach where web and mobile serve distinct but interconnected purposes: Web Platform for "Analysis & Manage" and Mobile Platform for "Performance & Play".
+RunRealm is a cross-chain fitness GameFi platform built with TypeScript, featuring AI-powered route optimization and geospatial NFT territories on ZetaChain. The platform follows a complementary platform approach where web and mobile serve distinct but interconnected purposes.
 
 ### Core Principles
 - **ENHANCEMENT FIRST**: Always prioritize enhancing existing components over creating new ones
@@ -13,6 +13,35 @@ RunRealm is a cross-chain fitness GameFi platform built with TypeScript, featuri
 - **MODULAR**: Composable, testable, independent modules
 - **PERFORMANT**: Adaptive loading, caching, and resource optimization
 - **ORGANIZED**: Predictable file structure with domain-driven design
+
+## Complementary Platform Architecture
+
+### Platform Strategy
+```
+┌─────────────────────┐    ┌──────────────────────┐
+│     Web Platform    │    │   Mobile Platform    │
+│  (Analysis & Manage)│    │ (Performance & Play) │
+└──────────┬──────────┘    └──────────┬───────────┘
+           │                          │
+           └──────────────────────────┘
+                        │
+              ┌─────────▼─────────┐
+              │   Shared Backend  │
+              │  & Smart Contracts│
+              └───────────────────┘
+```
+
+### Web Platform Features (Analysis & Manage)
+- **Deep Analytics Dashboard**: Route performance analysis, training load monitoring, historical progress tracking
+- **Territory Management**: NFT portfolio overview, territory trading interface, value assessment tools
+- **Social Hub**: Community forums, leaderboards, route sharing platform
+- **Content Creation**: Blog platform, route planning tools, training methodology sharing
+
+### Mobile Platform Features (Performance & Play)
+- **Real-Time GPS Tracking**: Precise location tracking, turn-by-turn navigation, real-time performance metrics
+- **Gamification Engine**: Territory claiming mechanics, REALM token rewards, achievement system
+- **Social Interaction**: Real-time friend tracking, location-based encounters, instant messaging
+- **AI Coaching**: Real-time route suggestions, pace adjustment recommendations, milestone celebrations
 
 ## Monorepo Architecture
 
@@ -36,73 +65,37 @@ RunRealm/
 
 #### 1. Shared Core Layer
 **Domain Logic** (`packages/shared-core/`)
-- `RunTrackingService`: GPS tracking and run management (ENHANCEMENT FIRST: Single source of truth)
-- `TerritoryService`: Geospatial NFT logic and proximity detection (DRY: Single implementation)
-- `LocationService`: GPS tracking and geolocation (MODULAR: Independent, testable module)
-- `GameService`: GameFi mechanics and progression (CLEAN: Clear responsibilities)
+- `RunTrackingService`: GPS tracking and run management
+- `TerritoryService`: Geospatial NFT logic and proximity detection
+- `LocationService`: GPS tracking and geolocation
+- `GameService`: GameFi mechanics and progression
 
 **Blockchain Integration** (`packages/shared-blockchain/`)
-- `Web3Service`: Wallet connection and network management (PERFORMANT: Optimized cross-chain operations)
-- `ContractService`: Smart contract interactions (AGGRESSIVE CONSOLIDATION: Single contract interface)
-- `CrossChainService`: ZetaChain Universal Contract integration (DRY: Shared cross-chain logic)
+- `Web3Service`: Wallet connection and network management
+- `ContractService`: Smart contract interactions
+- `CrossChainService`: ZetaChain Universal Contract integration
 
 **AI & Route Management** (`packages/shared-core/`)
-- `AIOrchestrator`: Centralized AI request management with caching (PREVENT BLOAT: Centralized caching)
-- `AIService`: Google Gemini API integration (MODULAR: Independent service)
+- `AIOrchestrator`: Centralized AI request management with caching
+- `AIService`: Google Gemini API integration
 
 #### 2. Platform-Specific Presentation Layers
 
 **Web Presentation Layer** (`packages/web-app/`)
-- `MainUI`: Analysis & Management interface (ORGANIZED: Domain-driven design)
+- `MainUI`: Analysis & Management interface
 - `TerritoryDashboard`: Territory management and trading interface
 - `AnalyticsDashboard`: Deep performance analysis tools
-- `SocialHub`: Community forums and leaderboards
 
 **Mobile Presentation Layer** (`packages/mobile-app/`)
-- `RunTracker`: GPS tracking and real-time performance metrics (PERFORMANT: Battery optimized)
-- `GamificationEngine`: Territory claiming and reward system (MODULAR: Independent game features)
+- `RunTracker`: GPS tracking and real-time performance metrics
+- `GamificationEngine`: Territory claiming and reward system
 - `SocialPlay`: Real-time friend tracking and location-based challenges
-
-**Shared UI Infrastructure** (`packages/shared-core/`)
-- `WidgetSystem`: Mobile and web widget infrastructure (DRY: Single widget solution)
-- `TouchGestureService`: Gesture recognition for mobile (ENHANCEMENT FIRST: Enhance existing service)
-- `MobileWidgetService`: Mobile-specific optimizations (AGGRESSIVE CONSOLIDATION: Consolidated mobile logic)
 
 #### 3. Core Infrastructure Layer
 **Base Infrastructure** (`packages/shared-core/`)
-- `BaseService`: Service lifecycle and event handling (MODULAR: Composable base class)
-- `EventBus`: Pub/sub communication system (CLEAN: Loose coupling)
-- `AppConfig`: Configuration and API key management (ORGANIZED: Predictable structure)
-
-## Data Flow
-
-### Cross-Platform Data Flow
-```
-Mobile GPS Data → Shared RunTrackingService → Analytics Service → Web Dashboard
-Mobile Territory Claim → Shared TerritoryService → Blockchain → Web Portfolio
-Web Territory Management → Shared TerritoryService → Mobile Notifications
-```
-
-### Route Generation Flow (ENHANCEMENT FIRST)
-```
-User Input → AIOrchestrator → AIService → Gemini API
-                ↓
-Route Data → Shared RouteStateService → Platform-specific UI → User Experience
-```
-
-### Territory Claiming Flow (AGGRESSIVE CONSOLIDATION)
-```
-GPS Location → Shared TerritoryService → ContractService → ZetaChain
-                ↓
-NFT Minted → EventBus → Platform-specific UI → User Notification
-```
-
-### Cross-Chain Flow (DRY)
-```
-User Action → CrossChainService → ZetaChain Gateway
-                ↓
-Universal Contract → Territory NFT → Cross-Chain Event → Both Platforms
-```
+- `BaseService`: Service lifecycle and event handling
+- `EventBus`: Pub/sub communication system
+- `AppConfig`: Configuration and API key management
 
 ## Smart Contract Architecture
 
@@ -114,7 +107,7 @@ Universal Contract → Territory NFT → Cross-Chain Event → Both Platforms
 - `isGeohashClaimed(geohash)`: Check territory availability
 - `onCall(context, message)`: Handle cross-chain messages
 
-**Cross-Chain Integration** (PERFORMANT):
+**Cross-Chain Integration**:
 - Gateway API for cross-chain messaging
 - Gas abstraction (pay on origin chain)
 - Universal access from any supported blockchain
@@ -127,9 +120,32 @@ Universal Contract → Territory NFT → Cross-Chain Event → Both Platforms
 - Minted for territory claims and run completions
 - Used for GameFi progression and rewards
 
+## Data Flow
+
+### Cross-Platform Data Flow
+```
+Mobile GPS Data → Shared RunTrackingService → Analytics Service → Web Dashboard
+Mobile Territory Claim → Shared TerritoryService → Blockchain → Web Portfolio
+Web Territory Management → Shared TerritoryService → Mobile Notifications
+```
+
+### Route Generation Flow
+```
+User Input → AIOrchestrator → AIService → Gemini API
+                ↓
+Route Data → Shared RouteStateService → Platform-specific UI → User Experience
+```
+
+### Territory Claiming Flow
+```
+GPS Location → Shared TerritoryService → ContractService → ZetaChain
+                ↓
+NFT Minted → EventBus → Platform-specific UI → User Notification
+```
+
 ## Event System
 
-### Universal Events (DRY: Single source of truth)
+### Universal Events
 ```typescript
 // AI Events
 'ai:routeRequested' → 'ai:routeReady' | 'ai:routeFailed'
@@ -148,111 +164,78 @@ Universal Contract → Territory NFT → Cross-Chain Event → Both Platforms
 'user:profileSynced' → Consistent user state across platforms
 ```
 
-### Event Flow Patterns
-1. **Request/Response**: AI route generation, contract calls (CLEAN: Explicit communication)
-2. **Broadcast**: Location updates, territory proximity (MODULAR: Independent event handling)
-3. **State Sync**: Wallet connection, user preferences (DRY: Consistent across platforms)
-
 ## Performance Optimizations
 
-### Caching Strategy (PERFORMANT)
-- **AI Responses**: 5-minute TTL for route suggestions (ENHANCEMENT FIRST: Improved caching)
-- **Territory Data**: Persistent localStorage cache (AGGRESSIVE CONSOLIDATION: Optimized storage)
-- **User Preferences**: Session and local storage (PREVENT BLOAT: Minimal data storage)
-- **Map Tiles**: Browser cache + service worker (PERFORMANT: Optimized loading)
+### Caching Strategy
+- **AI Responses**: 5-minute TTL for route suggestions
+- **Territory Data**: Persistent localStorage cache
+- **User Preferences**: Session and local storage
+- **Map Tiles**: Browser cache + service worker
 
-### Bundle Optimization (PREVENT BLOAT)
+### Bundle Optimization
 - **Code Splitting**: Platform-specific builds with shared core
 - **Tree Shaking**: Remove unused dependencies in each platform
 - **Compression**: Gzip + Brotli for production
-- **Shared Core**: Deduplicated logic across platforms (DRY: Single implementation)
+- **Shared Core**: Deduplicated logic across platforms
 
-### Mobile Performance (PERFORMANT)
+### Mobile Performance
 - **Touch Optimization**: Gesture recognition and haptic feedback
-- **Battery Efficiency**: Throttled GPS updates during runs (ENHANCEMENT FIRST: Improved battery usage)
-- **Offline Support**: Service worker for core functionality (MODULAR: Independent offline system)
+- **Battery Efficiency**: Throttled GPS updates during runs
+- **Offline Support**: Service worker for core functionality
 
 ## Security Architecture
 
-### API Key Management (CLEAN: Clear separation)
+### API Key Management
 - **Development**: Local secrets file (gitignored)
 - **Production**: Environment variables only
 - **Runtime**: Secure token endpoint (Express.js server)
 
-### Web3 Security (AGGRESSIVE CONSOLIDATION: Centralized security)
+### Web3 Security
 - **Input Validation**: All user inputs sanitized
 - **Gas Limits**: Reasonable defaults with user override
 - **Network Validation**: Ensure correct chain before transactions
 - **Error Handling**: Graceful degradation on failures
 
-### Data Privacy (DRY: Consistent privacy across platforms)
-- **Location Data**: Processed locally, minimal server storage
-- **User Analytics**: Anonymized, stored locally
-- **Cross-Chain Data**: Public blockchain data only
-
-## Scalability Considerations
-
-### Horizontal Scaling (MODULAR: Independent scaling)
-- **Stateless Services**: All services can be replicated
-- **Event Bus**: Can be replaced with Redis pub/sub
-- **API Endpoints**: Load balancer compatible
-
-### Database Strategy (ORGANIZED: Predictable growth)
-- **Current**: Browser localStorage + blockchain
-- **Future**: PostgreSQL for user data, Redis for caching
-- **Geospatial**: PostGIS for advanced territory queries
-
-### Monitoring (PERFORMANT: Optimized tracking)
-- **Performance**: Web Vitals tracking
-- **Cross-Platform**: Consistent metrics across web and mobile
-- **Errors**: Centralized error logging
-- **Usage**: Analytics service integration
-- **Blockchain**: Transaction success rates
-
-## Development Guidelines
-
-### Code Organization (ORGANIZED: Predictable structure)
-```
-Shared Core Responsibilities:
-- Single responsibility principle (CLEAN)
-- Clear public interfaces (MODULAR)
-- Event-driven communication (CLEAN)
-- Proper error handling (AGGRESSIVE CONSOLIDATION)
-
-Platform-Specific Structure:
-- Platform-optimized presentation logic (PERFORMANT)
-- Service dependency injection (MODULAR)
-- Touch/keyboard interaction patterns (ENHANCEMENT FIRST)
-- Accessibility compliance (CLEAN)
-```
-
-### Testing Strategy (MODULAR: Independent testing)
-- **Unit Tests**: Service logic and utilities
-- **Integration Tests**: Cross-platform service interactions
-- **E2E Tests**: Platform-specific critical user flows
-- **Performance Tests**: Platform-specific metrics
-- **Consistency Tests**: Cross-platform behavior validation (DRY)
-
-### Deployment Pipeline (MODULAR: Independent deployment)
-1. **Development**: Hot reload with platform-specific dev servers
-2. **Staging**: Platform-specific builds with test data
-3. **Production**: Optimized platform-specific builds with monitoring
-4. **Cross-Platform Sync**: Consistent shared logic deployment
-5. **Rollback**: Platform-specific version backup strategy
-
 ## Implementation Strategy
 
-### Phase 1: Monorepo Migration (ENHANCEMENT FIRST)
+### Phase 1: Monorepo Migration
 - Consolidate existing codebase into monorepo structure
 - Create shared-core package with existing domain logic
 - Implement platform-specific packages while preserving functionality
 
-### Phase 2: Optimization and Enhancement (AGGRESSIVE CONSOLIDATION)
+### Phase 2: Optimization and Enhancement
 - Identify duplicated logic and consolidate to shared packages
 - Optimize platform-specific features based on user journey mapping
 - Implement performance improvements following Core Principles
 
-### Phase 3: Platform Differentiation (PERFORMANT)
+### Phase 3: Platform Differentiation
 - Enhance web platform for "Analysis & Manage" features
 - Optimize mobile platform for "Performance & Play" features
 - Ensure consistent user experience through shared core logic
+
+## User Journey Mapping
+
+### New User Onboarding
+```
+Web Platform: Research & Learn
+↓
+Mobile Platform: Try First Run
+↓
+Web Platform: Analyze Performance
+↓
+Mobile Platform: Claim First Territory
+↓
+Web Platform: Manage NFT Portfolio
+```
+
+### Advanced User Workflow
+```
+Web Platform: Plan Weekly Training
+↓
+Mobile Platform: Execute Runs & Claim Territories
+↓
+Web Platform: Analyze Performance & Adjust Plan
+↓
+Mobile Platform: Compete in Challenges
+↓
+Web Platform: Trade Territories & Review Strategy
