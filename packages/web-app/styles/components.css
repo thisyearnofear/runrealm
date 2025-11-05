@@ -1347,3 +1347,259 @@
   50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
   100% { transform: scale(1) rotate(360deg); opacity: 0; }
 }
+
+/* ===== USER DASHBOARD ===== */
+
+.user-dashboard {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 350px;
+  max-height: 85vh;
+  overflow-y: auto;
+  z-index: var(--z-modal);
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: all;
+}
+
+.user-dashboard.hidden {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(20px);
+  pointer-events: none;
+}
+
+.user-dashboard .dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 16px 16px 0 0;
+}
+
+.user-dashboard .dashboard-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.user-dashboard .dashboard-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.user-dashboard .dashboard-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.user-dashboard .dashboard-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.user-dashboard .dashboard-content {
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.user-dashboard .dashboard-content.minimized {
+  padding: 10px 20px;
+}
+
+.user-dashboard .dashboard-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.user-dashboard .dashboard-section:last-child {
+  margin-bottom: 0;
+}
+
+.user-dashboard .dashboard-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #00ff88;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-dashboard .dashboard-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.user-dashboard .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.user-dashboard .stat-item {
+  text-align: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.user-dashboard .stat-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #00ff88;
+  margin-bottom: 4px;
+}
+
+.user-dashboard .stat-label {
+  font-size: 0.8rem;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-dashboard .territory-list {
+  margin-top: 12px;
+}
+
+.user-dashboard .territory-item {
+  padding: 10px;
+  margin-bottom: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-dashboard .territory-item:last-child {
+  margin-bottom: 0;
+}
+
+.user-dashboard .territory-name {
+  font-weight: 500;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.user-dashboard .territory-value {
+  color: #ffd700;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.user-dashboard .territory-item.legendary {
+  border-left: 3px solid #ff8c00;
+}
+
+.user-dashboard .territory-item.epic {
+  border-left: 3px solid #9370db;
+}
+
+.user-dashboard .territory-item.rare {
+  border-left: 3px solid #1e90ff;
+}
+
+.user-dashboard .territory-item.common {
+  border-left: 3px solid #00ff88;
+}
+
+.user-dashboard .wallet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.user-dashboard .wallet-address {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #00ff88;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  border-radius: 6px;
+  word-break: break-all;
+}
+
+.user-dashboard .wallet-balance {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffd700;
+}
+
+.user-dashboard .wallet-network {
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.user-dashboard .notification {
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.user-dashboard .notification:last-child {
+  margin-bottom: 0;
+}
+
+.user-dashboard .territory-eligible {
+  background: rgba(0, 255, 136, 0.15);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: #00ff88;
+}
+
+.user-dashboard .territory-claimed {
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  color: #ffd700;
+}
+
+.user-dashboard .achievement-unlocked {
+  background: rgba(147, 112, 219, 0.15);
+  border: 1px solid rgba(147, 112, 219, 0.3);
+  color: #9370db;
+}
+
+.user-dashboard .level-up {
+  background: rgba(30, 144, 255, 0.15);
+  border: 1px solid rgba(30, 144, 255, 0.3);
+  color: #1e90ff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .user-dashboard {
+    width: calc(100vw - 40px);
+    top: 10px;
+    right: 10px;
+    max-height: 80vh;
+  }
+  
+  .user-dashboard .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

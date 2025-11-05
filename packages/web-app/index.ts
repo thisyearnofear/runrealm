@@ -4,6 +4,7 @@ import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
 import { MainUI } from './src/components/main-ui';
 import { WalletWidget } from './src/components/wallet-widget';
 import TerritoryDashboard from './src/components/territory-dashboard';
+import UserDashboard from './src/components/user-dashboard';
 // CONSOLIDATED CSS - Following AGGRESSIVE CONSOLIDATION principle
 import './styles/core-system.css';     // Variables, z-index, animations, utilities
 import './styles/components.css';      // Widgets, GameFi UI, controls, rewards
@@ -144,6 +145,13 @@ async function initializeApp(): Promise<void> {
     app.initializePlatformUI(mainUI, walletWidget, new TerritoryDashboard());
 
     await app.initialize();
+
+    // Initialize User Dashboard
+    const userDashboard = new UserDashboard();
+    const dashboardContainer = document.createElement('div');
+    dashboardContainer.id = 'user-dashboard-root';
+    document.body.appendChild(dashboardContainer);
+    userDashboard.initialize(dashboardContainer);
 
     // Remove loading indicator from template
     const loadingDiv = document.getElementById('loading');

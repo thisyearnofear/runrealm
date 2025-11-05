@@ -26,6 +26,7 @@ import { RouteStateService } from "@runrealm/shared-core/services/route-state-se
 
 // Import modular components
 import { WidgetCreator } from "./main-ui/widget-managers/widget-creator";
+import { UserDashboardService } from "@runrealm/shared-core/services/user-dashboard-service";
 import { EventHandler } from "./main-ui/event-handlers/ui-event-handler";
 import { StatusManager } from "./main-ui/status-managers/location-status-manager";
 import { UIEffectsManager } from "./main-ui/ui-effects/ui-effects-manager";
@@ -42,6 +43,7 @@ export class MainUI extends BaseService {
   private widgetStateService: WidgetStateService;
   private touchGestureService: TouchGestureService;
   private mobileWidgetService: MobileWidgetService;
+  private userDashboardService!: UserDashboardService;
   private walletWidget!: WalletWidget;
   private transactionStatus!: TransactionStatus;
   private rewardSystemUI!: RewardSystemUI;
@@ -125,15 +127,17 @@ export class MainUI extends BaseService {
       this.web3Service
     );
 
+    this.userDashboardService = new UserDashboardService(this.eventBus, this.configService);
+
     this.widgetCreator = new WidgetCreator(
+      this.widgetSystem,
       this.domService,
       this.locationService,
-      this.walletWidget,
       this.uiService,
-      this.widgetSystem,
-      this.visibilityService,
-      this.configService
+      this.walletWidget,
+      this.userDashboardService
     );
+
 
     // Now set the widgetCreator reference in the eventHandler
     this.eventHandler.setWidgetCreator(this.widgetCreator);
@@ -218,6 +222,10 @@ export class MainUI extends BaseService {
     // Create Settings widget (top-right)
     this.widgetCreator.createSettingsWidget();
     console.log("MainUI: Settings widget created");
+
+    // Create User Dashboard widget (top-right)
+    this.widgetCreator.createUserDashboardWidget();
+    console.log("MainUI: User Dashboard widget created");
 
     // Setup settings widget event handlers
     this.eventHandler.setupSettingsEventHandlers();

@@ -2,6 +2,7 @@ import { DOMService } from "@runrealm/shared-core/services/dom-service";
 import { LocationService } from "@runrealm/shared-core/services/location-service";
 import { UIService } from "@runrealm/shared-core/services/ui-service";
 import { WalletWidget } from "../../wallet-widget";
+import { UserDashboardService } from "@runrealm/shared-core/services/user-dashboard-service";
 import { WidgetSystem } from "@runrealm/shared-core/components/widget-system";
 import { AnimationService } from "@runrealm/shared-core/services/animation-service";
 import { WidgetStateService } from "@runrealm/shared-core/components/widget-state-service";
@@ -27,8 +28,9 @@ export class WidgetCreator {
   constructor(
     domService: DOMService,
     locationService: LocationService,
-    walletWidget: WalletWidget,
-    uiService: UIService,
+    private uiService: UIService,
+    private walletWidget: WalletWidget,
+    private userDashboardService: UserDashboardService,
     widgetSystem: WidgetSystem,
     visibilityService: VisibilityService,
     configService: ConfigService
@@ -84,6 +86,25 @@ export class WidgetCreator {
       priority: 10,
       content: this.getSettingsContent(),
     });
+  }
+
+  createDashboardToggleWidget(): void {
+    const dashboardToggleWidget = this.widgetSystem.registerWidget({
+      id: "dashboard-toggle",
+      title: "Dashboard",
+      position: "top-right",
+      initialState: "minimized",
+      component: () => {
+        const button = document.createElement("button");
+        button.className = "dashboard-toggle-button";
+        button.innerHTML = `<img src="/assets/full-pin-icon.png" alt="Dashboard" />`;
+        button.onclick = () => {
+          this.userDashboardService.toggleDashboard();
+        };
+        return button;
+      },
+    });
+    this.widgetSystem.renderWidget(dashboardToggleWidget);
   }
 
   /**
