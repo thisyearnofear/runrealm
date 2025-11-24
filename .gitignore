@@ -68,6 +68,11 @@ src/**/*.js
 !src/**/*.ts
 !src/**/*.tsx
 
+packages/*/.expo/
+packages/*/.expo-shared/
+packages/*/ios/
+packages/*/android/
+
 # Testing
 /spec/.working/
 .nyc_output/

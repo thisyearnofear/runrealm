@@ -14,15 +14,33 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@services/*": ["./src/services/*"],
-      "@types/*": ["./src/types/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@runrealm/shared-core/*": ["../shared-core/*"],
-      "@runrealm/shared-types/*": ["../shared-types/*"],
-      "@runrealm/shared-utils/*": ["../shared-utils/*"],
-      "@runrealm/shared-blockchain/*": ["../shared-blockchain/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@components/*": [
+        "./src/components/*"
+      ],
+      "@services/*": [
+        "./src/services/*"
+      ],
+      "@types/*": [
+        "./src/types/*"
+      ],
+      "@utils/*": [
+        "./src/utils/*"
+      ],
+      "@runrealm/shared-core/*": [
+        "../shared-core/*"
+      ],
+      "@runrealm/shared-types/*": [
+        "../shared-types/*"
+      ],
+      "@runrealm/shared-utils/*": [
+        "../shared-utils/*"
+      ],
+      "@runrealm/shared-blockchain/*": [
+        "../shared-blockchain/*"
+      ]
     }
   },
   "include": [
@@ -31,5 +49,6 @@
   "exclude": [
     "node_modules",
     "dist"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }
