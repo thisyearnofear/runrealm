@@ -1,5 +1,5 @@
 // Centralized application configuration
-import { EventBus } from './event-bus';
+import { EventBus } from "./event-bus";
 
 export interface StravaConfig {
   clientId: string;
@@ -94,40 +94,53 @@ export class ConfigService {
 
   async initializeRuntimeTokens(): Promise<void> {
     try {
-      console.debug('Fetching runtime tokens...');
+      console.debug("Fetching runtime tokens...");
       const runtimeTokens = await this.fetchRuntimeTokens();
-      console.debug('Runtime tokens received:', Object.keys(runtimeTokens));
+      console.debug("Runtime tokens received:", Object.keys(runtimeTokens));
 
       // Store tokens in localStorage for immediate use
       if (runtimeTokens.mapbox) {
-        localStorage.setItem('runrealm_mapbox_access_token', runtimeTokens.mapbox);
+        localStorage.setItem(
+          "runrealm_mapbox_access_token",
+          runtimeTokens.mapbox
+        );
         // Update the config
         this.config.mapbox.accessToken = runtimeTokens.mapbox;
-        console.debug('Mapbox token updated in config');
+        console.debug("Mapbox token updated in config");
       } else {
-        console.debug('No Mapbox token received from runtime endpoint');
+        console.debug("No Mapbox token received from runtime endpoint");
       }
 
       if (runtimeTokens.gemini && this.config.web3?.ai) {
-        localStorage.setItem('runrealm_google_gemini_api_key', runtimeTokens.gemini);
+        localStorage.setItem(
+          "runrealm_google_gemini_api_key",
+          runtimeTokens.gemini
+        );
         // Update the config
         this.config.web3.ai.geminiApiKey = runtimeTokens.gemini;
-        console.debug('Gemini API key updated in config');
+        console.debug("Gemini API key updated in config");
       } else {
-        console.debug('No Gemini API key received from runtime endpoint');
+        console.debug("No Gemini API key received from runtime endpoint");
       }
 
       // Handle Strava configuration
       if (runtimeTokens.strava && runtimeTokens.strava.clientId) {
-        localStorage.setItem('runrealm_strava_client_id', runtimeTokens.strava.clientId);
-        localStorage.setItem('runrealm_strava_redirect_uri', runtimeTokens.strava.redirectUri);
+        localStorage.setItem(
+          "runrealm_strava_client_id",
+          runtimeTokens.strava.clientId
+        );
+        localStorage.setItem(
+          "runrealm_strava_redirect_uri",
+          runtimeTokens.strava.redirectUri
+        );
         if (this.config.fitness?.strava) {
           this.config.fitness.strava.clientId = runtimeTokens.strava.clientId;
-          this.config.fitness.strava.redirectUri = runtimeTokens.strava.redirectUri;
+          this.config.fitness.strava.redirectUri =
+            runtimeTokens.strava.redirectUri;
         }
-        console.debug('Strava configuration updated in config');
+        console.debug("Strava configuration updated in config");
       } else {
-        console.debug('No Strava configuration received from runtime endpoint');
+        console.debug("No Strava configuration received from runtime endpoint");
       }
 
       this.runtimeTokensLoaded = true;
@@ -135,13 +148,15 @@ export class ConfigService {
       this.refreshConfig();
 
       // Emit event to notify services of config update
-      this.eventBus.emit('config:updated', {});
+      this.eventBus.emit("config:updated", {});
 
       // Log success without exposing token values
       const tokenCount = Object.keys(runtimeTokens).length;
-      console.debug(`Runtime tokens initialized successfully (${tokenCount} tokens loaded)`);
+      console.debug(
+        `Runtime tokens initialized successfully (${tokenCount} tokens loaded)`
+      );
     } catch (error) {
-      console.error('Runtime token initialization failed:', error);
+      console.error("Runtime token initialization failed:", error);
       this.runtimeTokensLoaded = true; // Mark as attempted
     }
   }
@@ -184,7 +199,7 @@ export class ConfigService {
   private getEnvVar(name: keyof typeof __ENV__): string | undefined {
     // Use webpack DefinePlugin injected environment variables (public only)
     try {
-      const value = typeof __ENV__ !== 'undefined' ? __ENV__[name] : undefined;
+      const value = typeof __ENV__ !== "undefined" ? __ENV__[name] : undefined;
       return value || localStorage.getItem(`runrealm_${name.toLowerCase()}`);
     } catch (error) {
       console.warn(`Failed to access environment variable ${name}:`, error);
@@ -192,53 +207,69 @@ export class ConfigService {
     }
   }
 
-  private getSecureEnvVar(name: string): string | undefined {
+  private getSecureEnvVar(name: string): string | null {
     // For sensitive variables, only check localStorage and secrets file
     // These are NOT exposed via webpack DefinePlugin for security
     return localStorage.getItem(`runrealm_${name.toLowerCase()}`);
   }
 
-  private async fetchRuntimeTokens(): Promise<{ mapbox?: string, gemini?: string, strava?: StravaConfig }> {
+  private async fetchRuntimeTokens(): Promise<{
+    mapbox?: string;
+    gemini?: string;
+    strava?: StravaConfig;
+  }> {
     try {
       // In production, use relative URL to leverage Netlify proxy
       // In development, use full API base URL
-      const isProduction = process.env.NODE_ENV === 'production';
+      const isProduction = process.env.NODE_ENV === "production";
       const apiUrl = isProduction
-        ? '/api/tokens'  // Netlify will proxy this to Hetzner backend
-        : `${(typeof __ENV__ !== 'undefined' && __ENV__.API_BASE_URL) || 'http://localhost:3000'}/api/tokens`;
+        ? "/api/tokens" // Netlify will proxy this to Hetzner backend
+        : `${
+            (typeof __ENV__ !== "undefined" && __ENV__.API_BASE_URL) ||
+            "http://localhost:3000"
+          }/api/tokens`;
 
-      console.debug(`Fetching tokens from: ${apiUrl} (production: ${isProduction})`);
+      console.debug(
+        `Fetching tokens from: ${apiUrl} (production: ${isProduction})`
+      );
       const response = await fetch(apiUrl);
       console.debug(`Response status: ${response.status}, ok: ${response.ok}`);
 
       if (response.ok) {
         const tokens = await response.json();
-        console.debug('Successfully fetched runtime tokens, keys:', Object.keys(tokens));
+        console.debug(
+          "Successfully fetched runtime tokens, keys:",
+          Object.keys(tokens)
+        );
         return tokens;
       } else {
         const errorText = await response.text();
-        console.error(`Token fetch failed with status: ${response.status}, body: ${errorText}`);
+        console.error(
+          `Token fetch failed with status: ${response.status}, body: ${errorText}`
+        );
       }
     } catch (error) {
-      console.error('Runtime token fetch failed:', error);
+      console.error("Runtime token fetch failed:", error);
     }
     return {};
   }
 
   private getMapboxToken(): string {
     // 🔒 PRODUCTION SECURITY: Never expose real tokens in client-side code
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('🔒 Production mode: Using secure token endpoint for Mapbox');
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        "🔒 Production mode: Using secure token endpoint for Mapbox"
+      );
       // In production, tokens should come from secure server endpoints only
-      return this.getTokenFromSecureEndpoint('mapbox') || '';
+      return this.getTokenFromSecureEndpoint("mapbox") || "";
     }
 
     // 🔒 DEVELOPMENT ONLY: Try localStorage for development tokens
-    const devToken = localStorage.getItem('runrealm_dev_mapbox_token');
-    if (devToken && devToken !== 'your-mapbox-token-here') {
-      console.debug('🔒 Development mode: Using token from localStorage');
-      return devToken;
-    }
+    // const devToken = localStorage.getItem('runrealm_dev_mapbox_token');
+    // if (devToken && devToken !== 'your-mapbox-token-here') {
+    //   console.debug('🔒 Development mode: Using token from localStorage');
+    //   return devToken;
+    // }
 
     // 🔒 SECURE: Check localStorage (user can set manually)
     const token = this.getSecureEnvVar("MAPBOX_ACCESS_TOKEN");
@@ -248,10 +279,10 @@ export class ConfigService {
       if (this.runtimeTokensLoaded) {
         console.warn(
           "🔒 Mapbox access token not found. For security, provide it via:\n" +
-          "1. Environment variables (.env file)\n" +
-          "2. localStorage.setItem('runrealm_mapbox_access_token', 'your_token')\n" +
-          "3. Runtime token endpoint (production)\n" +
-          "4. Environment variables are NO LONGER exposed to client for security"
+            "1. Environment variables (.env file)\n" +
+            "2. localStorage.setItem('runrealm_mapbox_access_token', 'your_token')\n" +
+            "3. Runtime token endpoint (production)\n" +
+            "4. Environment variables are NO LONGER exposed to client for security"
         );
       }
       return "";
@@ -268,16 +299,18 @@ export class ConfigService {
     }
 
     // 🔒 PRODUCTION SECURITY: Never expose real API keys in client-side code
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('🔒 Production mode: Using secure token endpoint for Gemini API');
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        "🔒 Production mode: Using secure token endpoint for Gemini API"
+      );
       // In production, API keys should come from secure server endpoints only
-      return this.getTokenFromSecureEndpoint('gemini') || '';
+      return this.getTokenFromSecureEndpoint("gemini") || "";
     }
 
     // 🔒 DEVELOPMENT ONLY: Try localStorage for development API key
-    const devKey = localStorage.getItem('runrealm_dev_gemini_key');
-    if (devKey && devKey !== 'your-gemini-api-key-here') {
-      console.debug('🔒 Development mode: Using API key from localStorage');
+    const devKey = localStorage.getItem("runrealm_dev_gemini_key");
+    if (devKey && devKey !== "your-gemini-api-key-here") {
+      console.debug("🔒 Development mode: Using API key from localStorage");
       return devKey;
     }
 
@@ -289,10 +322,10 @@ export class ConfigService {
       if (this.runtimeTokensLoaded) {
         console.warn(
           "🔒 Google Gemini API key not found. For security, provide it via:\n" +
-          "1. Environment variables (.env file)\n" +
-          "2. Runtime token endpoint (production)\n" +
-          "3. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
-          "4. Runtime token endpoint (production)"
+            "1. Environment variables (.env file)\n" +
+            "2. Runtime token endpoint (production)\n" +
+            "3. localStorage.setItem('runrealm_google_gemini_api_key', 'your_key')\n" +
+            "4. Runtime token endpoint (production)"
         );
       }
       return "";
@@ -318,13 +351,19 @@ export class ConfigService {
    * This method should be implemented to call your secure token service
    * Default implementation uses Express.js server endpoint
    */
-  private getTokenFromSecureEndpoint(tokenType: 'mapbox' | 'gemini'): string | null {
+  private getTokenFromSecureEndpoint(
+    tokenType: "mapbox" | "gemini"
+  ): string | null {
     // 🔒 IMPLEMENT THIS: Replace with your secure token endpoint
     // Example: return fetch(`/api/secure-tokens/${tokenType}`).then(r => r.text())
 
-    console.warn(`🔒 SECURITY: Implement secure token endpoint for ${tokenType}`);
-    console.warn('🔒 For production, tokens should NEVER be in client-side code');
-    console.warn('🔒 Use server-side proxy or secure token service instead');
+    console.warn(
+      `🔒 SECURITY: Implement secure token endpoint for ${tokenType}`
+    );
+    console.warn(
+      "🔒 For production, tokens should NEVER be in client-side code"
+    );
+    console.warn("🔒 Use server-side proxy or secure token service instead");
 
     // For now, return null to force proper implementation
     return null;
@@ -380,8 +419,6 @@ export class ConfigService {
     };
   }
 
-
-
   private loadFitnessConfig(): ExternalFitnessConfig | undefined {
     const fitnessEnabled = this.config?.features?.enableFitness !== false;
 
@@ -392,38 +429,42 @@ export class ConfigService {
     return {
       strava: this.loadStravaConfig(),
       garmin: {
-        enabled: false // Coming soon
+        enabled: false, // Coming soon
       },
       appleHealth: {
-        enabled: false // Coming soon
+        enabled: false, // Coming soon
       },
       googleFit: {
-        enabled: false // Coming soon
-      }
+        enabled: false, // Coming soon
+      },
     };
   }
 
   private loadStravaConfig(): StravaConfig | undefined {
     const clientId =
       this.getSecureEnvVar("STRAVA_CLIENT_ID") ||
-      localStorage.getItem('runrealm_strava_client_id');
+      localStorage.getItem("runrealm_strava_client_id");
 
     const redirectUri =
       this.getSecureEnvVar("STRAVA_REDIRECT_URI") ||
-      localStorage.getItem('runrealm_strava_redirect_uri') ||
-      'http://localhost:3000/auth/strava/callback';
+      localStorage.getItem("runrealm_strava_redirect_uri") ||
+      "http://localhost:3000/auth/strava/callback";
 
     if (!clientId) {
-      console.debug('Strava client ID not found. Strava integration disabled.');
+      console.debug("Strava client ID not found. Strava integration disabled.");
       return undefined;
     }
 
     return {
       clientId,
       redirectUri,
-      accessToken: localStorage.getItem('runrealm_strava_access_token') || undefined,
-      refreshToken: localStorage.getItem('runrealm_strava_refresh_token') || undefined,
-      expiresAt: parseInt(localStorage.getItem('runrealm_strava_expires_at') || '0') || undefined
+      accessToken:
+        localStorage.getItem("runrealm_strava_access_token") || undefined,
+      refreshToken:
+        localStorage.getItem("runrealm_strava_refresh_token") || undefined,
+      expiresAt:
+        parseInt(localStorage.getItem("runrealm_strava_expires_at") || "0") ||
+        undefined,
     };
   }
 
@@ -439,11 +480,15 @@ export class ConfigService {
     return this.config.fitness?.strava;
   }
 
-  updateStravaTokens(accessToken: string, refreshToken: string, expiresAt: number): void {
+  updateStravaTokens(
+    accessToken: string,
+    refreshToken: string,
+    expiresAt: number
+  ): void {
     // Store in localStorage
-    localStorage.setItem('runrealm_strava_access_token', accessToken);
-    localStorage.setItem('runrealm_strava_refresh_token', refreshToken);
-    localStorage.setItem('runrealm_strava_expires_at', expiresAt.toString());
+    localStorage.setItem("runrealm_strava_access_token", accessToken);
+    localStorage.setItem("runrealm_strava_refresh_token", refreshToken);
+    localStorage.setItem("runrealm_strava_expires_at", expiresAt.toString());
 
     // Update config
     if (this.config.fitness?.strava) {
@@ -453,13 +498,13 @@ export class ConfigService {
     }
 
     // Emit event
-    this.eventBus.emit('fitness:tokens:updated', { source: 'strava' });
+    this.eventBus.emit("fitness:tokens:updated", { source: "strava" });
   }
 
   clearStravaTokens(): void {
-    localStorage.removeItem('runrealm_strava_access_token');
-    localStorage.removeItem('runrealm_strava_refresh_token');
-    localStorage.removeItem('runrealm_strava_expires_at');
+    localStorage.removeItem("runrealm_strava_access_token");
+    localStorage.removeItem("runrealm_strava_refresh_token");
+    localStorage.removeItem("runrealm_strava_expires_at");
 
     if (this.config.fitness?.strava) {
       delete this.config.fitness.strava.accessToken;
@@ -467,7 +512,7 @@ export class ConfigService {
       delete this.config.fitness.strava.expiresAt;
     }
 
-    this.eventBus.emit('fitness:tokens:cleared', { source: 'strava' });
+    this.eventBus.emit("fitness:tokens:cleared", { source: "strava" });
   }
 
   isWeb3Enabled(): boolean {

@@ -13,5 +13,11 @@
     "outDir": "./dist",
     "rootDir": ".",
     "baseUrl": "."
-  }
+  },
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "**/*.spec.js",
+    "**/*.test.js"
+  ]
 }

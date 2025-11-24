@@ -1,24 +1,43 @@
-import * as TaskManager from 'expo-task-manager';
+// Lazy load TaskManager to avoid initialization errors
+let TaskManager: any = null;
+try {
+  TaskManager = require('expo-task-manager');
+} catch (error) {
+  console.warn('TaskManager not available:', error);
+}
+
 import * as Location from 'expo-location';
 import { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
 
-// Define background task
-TaskManager.defineTask('BACKGROUND_LOCATION_TASK', async ({ data, error }) => {
-  if (error) {
-    console.error('Background location task error:', error);
+// Define background task (only if TaskManager is available)
+// This will be called when needed, not at module load time
+const defineBackgroundTask = () => {
+  if (!TaskManager) {
+    console.warn('TaskManager not available, background tracking disabled');
     return;
   }
   
-  if (data) {
-    const { locations } = data as any;
-    // Process location updates
-    console.log('Background location update:', locations[0]);
-    
-    // Update the shared run tracking service
-    // This would require some mechanism to access the service instance
-    // Could use a global event bus or store reference
+  try {
+    TaskManager.defineTask('BACKGROUND_LOCATION_TASK', async ({ data, error }: any) => {
+      if (error) {
+        console.error('Background location task error:', error);
+        return;
+      }
+      
+      if (data) {
+        const { locations } = data as any;
+        // Process location updates
+        console.log('Background location update:', locations[0]);
+        
+        // Update the shared run tracking service
+        // This would require some mechanism to access the service instance
+        // Could use a global event bus or store reference
+      }
+    });
+  } catch (error) {
+    console.warn('Failed to define background task:', error);
   }
-});
+};
 
 export class BackgroundTrackingService {
   private static instance: BackgroundTrackingService;
@@ -34,6 +53,14 @@ export class BackgroundTrackingService {
   }
 
   async startBackgroundTracking(): Promise<void> {
+    // Define the task first (if not already defined)
+    defineBackgroundTask();
+    
+    if (!TaskManager) {
+      console.warn('TaskManager not available, background tracking disabled');
+      return;
+    }
+
     // Request background permission
     const { status } = await Location.requestBackgroundPermissionsAsync();
     if (status !== 'granted') {

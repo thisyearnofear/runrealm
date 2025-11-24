@@ -16,22 +16,60 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import * as Location from 'expo-location';
-import * as TaskManager from 'expo-task-manager';
 
-// Define background location task
-TaskManager.defineTask('LOCATION_TASK_NAME', async ({ data, error }) => {
-  if (error) {
-    console.error('Location task error:', error);
+// Lazy load TaskManager to avoid initialization errors
+// Don't import at module level - load it when needed
+let TaskManager: any = null;
+let taskDefined = false;
+
+// Define background location task (only if TaskManager is available)
+// DISABLED: TaskManager causes initialization errors with LegacyEventEmitter
+// TODO: Fix TaskManager integration when background tracking is needed
+const defineLocationTask = () => {
+  // Temporarily disabled to avoid TaskManager initialization errors
+  // The require() call was causing Metro to try to load TaskManager at bundle time
+  console.warn('Background location tracking disabled - TaskManager integration pending');
+  return;
+  
+  /* DISABLED CODE - Re-enable when TaskManager is fixed
+  // Only define once
+  if (taskDefined) return;
+  
+  // Lazy load TaskManager only when needed
+  // Use dynamic require to prevent Metro from analyzing it
+  if (!TaskManager) {
+    try {
+      const taskManagerModule = 'expo-task-manager';
+      TaskManager = require(taskManagerModule);
+    } catch (error) {
+      console.warn('TaskManager not available:', error);
+      return;
+    }
+  }
+  
+  if (!TaskManager) {
+    console.warn('TaskManager not available, background location tracking disabled');
     return;
   }
-  if (data) {
-    const { locations } = data as { locations: Location.LocationObject[] };
-    const location = locations[0];
-    console.log('Location update:', location);
-    // Here you would update your state or call a callback
-    // For now, we'll just log it
+  
+  try {
+    TaskManager.defineTask('LOCATION_TASK_NAME', async ({ data, error }: any) => {
+      if (error) {
+        console.error('Location task error:', error);
+        return;
+      }
+      if (data) {
+        const { locations } = data as { locations: Location.LocationObject[] };
+        const location = locations[0];
+        console.log('Location update:', location);
+      }
+    });
+    taskDefined = true;
+  } catch (error) {
+    console.warn('Failed to define location task:', error);
   }
-});
+  */
+};
 
 // Import mobile service
 import MobileRunTrackingService from '../services/MobileRunTrackingService';
@@ -65,6 +103,10 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
   useEffect(() => {
     // Initialize geolocation tracking when component mounts
     requestLocationPermission();
+    // Define the location task when component mounts (not at module load)
+    // Only define if we're actually going to use background tracking
+    // For now, skip TaskManager to avoid initialization errors
+    // defineLocationTask();
   }, []);
 
   // Visual feedback functions
@@ -216,16 +258,32 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
         return;
       }
 
-      // Start location updates
-      await Location.startLocationUpdatesAsync('LOCATION_TASK_NAME', {
-        accuracy: Location.Accuracy.High,
-        distanceInterval: 5, // Update every 5 meters
-        timeInterval: 2000, // Update every 2 seconds
-        foregroundService: {
-          notificationTitle: 'RunRealm GPS Tracking',
-          notificationBody: 'Tracking your run in the background',
-        },
-      });
+      // Start location updates (only if TaskManager is available)
+      if (TaskManager) {
+        await Location.startLocationUpdatesAsync('LOCATION_TASK_NAME', {
+          accuracy: Location.Accuracy.High,
+          distanceInterval: 5, // Update every 5 meters
+          timeInterval: 2000, // Update every 2 seconds
+          foregroundService: {
+            notificationTitle: 'RunRealm GPS Tracking',
+            notificationBody: 'Tracking your run in the background',
+          },
+        });
+      } else {
+        // Fallback: Use foreground location updates only
+        console.warn('TaskManager not available, using foreground location updates only');
+        await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            distanceInterval: 5,
+            timeInterval: 2000,
+          },
+          (location) => {
+            console.log('Location update:', location);
+            // Update state here if needed
+          }
+        );
+      }
     } catch (error) {
       console.error('Location watch error:', error);
     }

@@ -1,342 +1,176 @@
 /**
- * Mobile App Entry Point with Navigation
- * ENHANCEMENT FIRST: Uses shared core services with mobile-optimized UI
- * DRY: All business logic in shared-core, mobile only handles presentation
- * CLEAN: Clear separation between services and UI components
- * MODULAR: Composable components with clear responsibilities
+ * MobileApp - Minimal version with navigation
+ * Services will be added incrementally
  */
-import React, { useEffect, useState } from 'react';
-import {
-  SafeAreaView,
-  StatusBar,
-  Alert,
-  View,
-  Text,
-  StyleSheet,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
-// Import React Navigation types
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+// Service 1: AchievementService (simplest, no browser dependencies)
+let AchievementService: any = null;
+let Achievement: any = null;
 
-// Import shared services (ENHANCEMENT FIRST: Reuse existing services)
-import { TerritoryService, Territory } from '@runrealm/shared-core/services/territory-service';
-import { GameService } from '@runrealm/shared-core/services/game-service';
-import { AchievementService, Achievement } from '@runrealm/shared-core/services/achievement-service';
-import { MapService } from '@runrealm/shared-core/services/map-service';
-import { Web3Service } from '@runrealm/shared-core/services/web3-service';
-import { ExternalFitnessService } from '@runrealm/shared-core/services/external-fitness-service';
-
-// Import screens
-import { DashboardScreen } from './screens/DashboardScreen';
-import { HistoryScreen } from './screens/HistoryScreen';
-import { ProfileScreen } from './screens/ProfileScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
-import MapScreen from './screens/MapScreen';
-
-// Import mobile-specific components and adapters (CLEAN: Platform-specific UI only)
-import GPSTrackingComponent from './components/GPSTrackingComponent';
-import MobileOnboarding from './components/MobileOnboarding';
-import TerritoryMapView from './components/TerritoryMapView';
-import { WalletButton } from './components/WalletButton';
-import { TerritoryClaimModal } from './components/TerritoryClaimModal';
-import { MobileMapAdapter } from './services/MobileMapAdapter';
-import { MobileWeb3Adapter } from './services/MobileWeb3Adapter';
-import { PushNotificationService } from './services/PushNotificationService';
-
-// Import icons
-// import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+try {
+  const achievementModule = require("@runrealm/shared-core/services/achievement-service");
+  if (achievementModule?.AchievementService) {
+    AchievementService = achievementModule.AchievementService;
+    Achievement = achievementModule.Achievement;
+  }
+} catch (error) {
+  console.warn("AchievementService not available:", error);
+}
 
 const Tab = createBottomTabNavigator();
 
-const MobileApp = () => {
-  const [appStatus, setAppStatus] = useState('Initializing...');
-  const [currentRunData, setCurrentRunData] = useState<any>(null);
-  const [territories, setTerritories] = useState<Territory[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showClaimModal, setShowClaimModal] = useState(false);
-  const [walletConnected, setWalletConnected] = useState(false);
-
-  // ENHANCEMENT FIRST: Reuse existing services from shared-core (DRY principle)
-  const [territoryService] = useState(() => new TerritoryService());
-  const [gameService] = useState(() => new GameService());
-  const [achievementService] = useState(() => new AchievementService());
-  const [mapService] = useState(() => new MapService());
-  const [web3Service] = useState(() => Web3Service.getInstance());
-  const [externalFitnessService] = useState(() => new ExternalFitnessService());
-
-  // CLEAN: Mobile-specific adapters for platform differences
-  const [mapAdapter] = useState(() => new MobileMapAdapter(mapService));
-  const [web3Adapter] = useState(() => new MobileWeb3Adapter(web3Service));
-  const [pushNotificationService] = useState(() => PushNotificationService.getInstance());
+// Minimal screen components - will be enhanced later
+function DashboardScreen() {
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [achievementService, setAchievementService] = useState<any>(null);
 
   useEffect(() => {
-    initializeApp();
+    if (AchievementService) {
+      const service = new AchievementService();
+      service
+        .initialize()
+        .then(() => {
+          setAchievementService(service);
+          setAchievements(service.getAchievements());
+        })
+        .catch((err: any) => {
+          console.warn("Failed to initialize AchievementService:", err);
+        });
+    }
   }, []);
 
-  const initializeApp = async () => {
-    try {
-      setAppStatus('Initializing services...');
-
-      // Initialize shared services
-      await territoryService.initialize();
-      await gameService.initialize();
-      await achievementService.initialize();
-      await mapService.initialize();
-      await web3Service.initialize();
-      await externalFitnessService.initialize();
-
-      // Initialize mobile adapters
-      await mapAdapter.initialize();
-      await web3Adapter.initialize();
-      // await pushNotificationService.initialize(); // Comment out for now
-
-      // Load claimed territories
-      const claimedTerritories = territoryService.getClaimedTerritories();
-      setTerritories(claimedTerritories);
-
-      // Load achievements
-      const userAchievements = achievementService.getAchievements();
-      setAchievements(userAchievements);
-
-      // Check wallet connection status
-      setWalletConnected(web3Adapter.isConnected());
-
-      // Check if onboarding is needed
-      const hasCompletedOnboarding = await AsyncStorage.getItem('runrealm_onboarding_complete');
-      if (!hasCompletedOnboarding) {
-        setShowOnboarding(true);
-      }
-
-      setAppStatus('RunRealm Mobile Ready!');
-      console.log('Mobile app initialized with shared core services');
-    } catch (error) {
-      console.error('Error initializing mobile app:', error);
-      setAppStatus('Error initializing app');
-    }
-  };
-
-  const checkForNewAchievements = () => {
-    const currentAchievements = achievementService.getAchievements();
-    const previousUnlocked = achievements.filter(a => a.unlockedAt).map(a => a.id);
-    const newlyUnlocked = currentAchievements.filter(a =>
-      a.unlockedAt && !previousUnlocked.includes(a.id)
-    );
-
-    if (newlyUnlocked.length > 0) {
-      setAchievements(currentAchievements);
-
-      // Show notifications for newly unlocked achievements
-      newlyUnlocked.forEach(achievement => {
-        showAchievementNotification(achievement);
-      });
-    }
-  };
-
-  const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
-    setAppStatus('Ready to explore! Tap "Start Run" to begin.');
-  };
-
-  const handleOnboardingSkip = () => {
-    setShowOnboarding(false);
-    setAppStatus('Welcome! Ready to start running?');
-  };
-
-  const showAchievementNotification = (achievement: Achievement) => {
-    Alert.alert(
-      '🏆 Achievement Unlocked!',
-      `${achievement.title}\n${achievement.description}`,
-      [
-        {
-            text: 'Awesome!',
-            style: 'default'
-        }
-      ]
-    );
-  };
-
-  const handleRunStart = () => {
-    setAppStatus('Run in progress...');
-    setCurrentRunData(null);
-    console.log('Run started');
-  };
-
-  const handleRunStop = (runData: any) => {
-    setCurrentRunData(runData);
-
-    // ENHANCEMENT FIRST: Use MapService to visualize completed run
-    if (runData?.path && runData.path.length > 0) {
-      mapAdapter.drawRunTrail(runData.path);
-
-      if (runData.territoryEligible) {
-        mapAdapter.drawTerritory(runData.path);
-      }
-    }
-
-    if (runData?.territoryEligible) {
-      setAppStatus('Run completed! Territory eligible for claiming.');
-
-      // CLEAN: Show modal instead of alert for better UX
-      setShowClaimModal(true);
-    } else {
-      setAppStatus('Run completed. Keep running to create claimable territories!');
-    }
-
-    console.log('Run completed:', runData);
-
-    // Check for new achievements after run completion
-    setTimeout(() => checkForNewAchievements(), 1000);
-  };
-
-  const handleClaimSuccess = (territory: any) => {
-    // Update territories list
-    const updatedTerritories = territoryService.getClaimedTerritories();
-    setTerritories(updatedTerritories);
-
-    setAppStatus('Territory claimed successfully!');
-    console.log('Territory claimed:', territory);
-
-    // Check for new achievements after territory claim
-    setTimeout(() => checkForNewAchievements(), 1000);
-  };
-
-  const handleClaimError = (error: string) => {
-    setAppStatus('Territory claim failed.');
-    console.error('Claim error:', error);
-  };
-
-  const handleWalletConnect = (address: string) => {
-    setWalletConnected(true);
-    setAppStatus(`Wallet connected: ${address.slice(0, 6)}...${address.slice(-4)}`);
-    console.log('Wallet connected:', address);
-  };
-
-  const handleWalletDisconnect = () => {
-    setWalletConnected(false);
-    setAppStatus('Wallet disconnected');
-    console.log('Wallet disconnected');
-  };
-
-  const handleWalletError = (error: string) => {
-    Alert.alert('Wallet Error', error);
-  };
-
   return (
-    <NavigationContainer<{}>>
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+    <View style={styles.screen}>
+      <Text style={styles.title}>Dashboard</Text>
+      {achievementService ? (
+        <>
+          <Text style={styles.subtitle}>
+            {achievements.length} achievements available
+          </Text>
+          <Text style={styles.info}>
+            {achievements.filter((a) => a.unlockedAt).length} unlocked
+          </Text>
+        </>
+      ) : (
+        <Text style={styles.subtitle}>AchievementService not available</Text>
+      )}
+    </View>
+  );
+}
 
-        {/* Onboarding Overlay */}
-        {showOnboarding && (
-          <MobileOnboarding
-            onComplete={handleOnboardingComplete}
-            onSkip={handleOnboardingSkip}
-          />
-        )}
+function MapScreen() {
+  return (
+    <View style={styles.screen}>
+      <Text style={styles.title}>Map</Text>
+      <Text style={styles.subtitle}>Map view will go here</Text>
+    </View>
+  );
+}
 
-        {/* Territory Claim Modal */}
-        <TerritoryClaimModal
-          visible={showClaimModal}
-          runData={currentRunData}
-          territoryService={territoryService}
-          web3Adapter={web3Adapter}
-          onClose={() => setShowClaimModal(false)}
-          onSuccess={handleClaimSuccess}
-          onError={handleClaimError}
+function HistoryScreen() {
+  return (
+    <View style={styles.screen}>
+      <Text style={styles.title}>History</Text>
+      <Text style={styles.subtitle}>Run history will go here</Text>
+    </View>
+  );
+}
+
+function ProfileScreen() {
+  return (
+    <View style={styles.screen}>
+      <Text style={styles.title}>Profile</Text>
+      <Text style={styles.subtitle}>
+        User profile and settings will go here
+      </Text>
+    </View>
+  );
+}
+
+function SettingsScreen() {
+  return (
+    <View style={styles.screen}>
+      <Text style={styles.title}>Settings</Text>
+      <Text style={styles.subtitle}>App settings will go here</Text>
+    </View>
+  );
+}
+
+export default function MobileApp() {
+  return (
+    <NavigationContainer>
+      <Tab.Navigator
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: "#1a1a1a",
+          },
+          headerTintColor: "#fff",
+          tabBarStyle: {
+            backgroundColor: "#1a1a1a",
+          },
+          tabBarActiveTintColor: "#00ff88",
+          tabBarInactiveTintColor: "#666",
+        }}
+      >
+        <Tab.Screen
+          name="Dashboard"
+          component={DashboardScreen}
+          options={{ title: "Dashboard" }}
         />
-
-        <Tab.Navigator>
-          <Tab.Screen name="Dashboard" component={DashboardScreen} />
-          <Tab.Screen name="History" component={HistoryScreen} />
-          <Tab.Screen name="Map" component={MapScreen} />
-          <Tab.Screen name="Profile" component={ProfileScreen} />
-          <Tab.Screen name="Settings" component={SettingsScreen} />
-        </Tab.Navigator>
-      </SafeAreaView>
+        <Tab.Screen
+          name="Map"
+          component={MapScreen}
+          options={{ title: "Map" }}
+          // Using simple MapScreen from this file, not src/screens/MapScreen.tsx
+        />
+        <Tab.Screen
+          name="History"
+          component={HistoryScreen}
+          options={{ title: "History" }}
+        />
+        <Tab.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{ title: "Profile" }}
+        />
+        <Tab.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{ title: "Settings" }}
+        />
+      </Tab.Navigator>
     </NavigationContainer>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#1a1a1a",
+    padding: 20,
   },
-  scrollView: {
-    backgroundColor: '#1a1a1a',
-  },
-  body: {
-    backgroundColor: '#1a1a1a',
-  },
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
+  title: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 10,
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-    color: '#999',
-  },
-  walletContainer: {
-    marginTop: 24,
-    paddingHorizontal: 24,
-  },
-  walletHint: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-  mapContainer: {
-    height: 300,
-    margin: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#333',
-  },
-  trackingContainer: {
-    position: 'absolute',
-    bottom: 80,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  territoryItem: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    padding: 16,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  territoryName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#00ff88',
-  },
-  territoryDetails: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 4,
-  },
-  territoryReward: {
+  subtitle: {
     fontSize: 16,
-    color: '#ffd700',
-    fontWeight: '600',
-    marginTop: 8,
+    color: "#999",
+    textAlign: "center",
+    marginTop: 10,
+  },
+  info: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginTop: 5,
   },
 });
-
-export default MobileApp;

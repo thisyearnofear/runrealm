@@ -13,3 +13,4 @@ export interface TerritoryManager {
     challengeTerritory(tokenId: string): Promise<void>;
     resolveChallenge(challengeId: string): Promise<void>;
 }
+//# sourceMappingURL=contracts.d.ts.map
