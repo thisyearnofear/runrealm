@@ -61,11 +61,8 @@ export class RewardSystemUI extends BaseService {
     this.setupEventListeners();
     this.addRewardStyles();
 
-    // Respect user preference: hide rewards widget until wallet is connected (default: true)
-    if (this.shouldShowRewardsWidget()) {
-      this.createRewardWidget();
-      this.loadRewardData();
-    }
+    // Load reward data (no longer creating standalone widget - integrated into wallet widget)
+    this.loadRewardData();
 
     this.safeEmit('service:initialized', { service: 'RewardSystemUI', success: true });
   }
@@ -96,6 +93,57 @@ export class RewardSystemUI extends BaseService {
     }
   }
 
+  /**
+   * Get rewards data for external components (e.g., wallet widget)
+   */
+  public getRewardData(): RewardData {
+    return { ...this.rewardData };
+  }
+
+  /**
+   * Get compact rewards HTML for embedding in wallet widget
+   */
+  public getRewardsContent(): string {
+    const { availableToClaim, totalEarned, stakedAmount } = this.rewardData;
+    const isConnected = this.web3Service.isWalletConnected();
+
+    if (!isConnected) {
+      return '';
+    }
+
+    return `
+      <div class="wallet-rewards-section">
+        <div class="rewards-header">
+          <span class="rewards-icon">💰</span>
+          <span class="rewards-title">REALM Rewards</span>
+        </div>
+        <div class="rewards-summary">
+          <div class="reward-item">
+            <span class="reward-label">Available:</span>
+            <span class="reward-value highlight">${this.formatTokenAmount(availableToClaim)} REALM</span>
+          </div>
+          ${totalEarned > 0 ? `
+            <div class="reward-item">
+              <span class="reward-label">Total Earned:</span>
+              <span class="reward-value">${this.formatTokenAmount(totalEarned)} REALM</span>
+            </div>
+          ` : ''}
+          ${stakedAmount > 0 ? `
+            <div class="reward-item">
+              <span class="reward-label">Staked:</span>
+              <span class="reward-value">${this.formatTokenAmount(stakedAmount)} REALM</span>
+            </div>
+          ` : ''}
+        </div>
+        ${availableToClaim > 0 ? `
+          <button id="claim-rewards-btn" class="wallet-reward-btn" data-action="claim-rewards">
+            💎 Claim ${this.formatTokenAmount(availableToClaim)} REALM
+          </button>
+        ` : ''}
+      </div>
+    `;
+  }
+
   private setupEventListeners(): void {
     // Listen for reward-related events
     this.subscribe('territory:claimed', (data: { territory: any; transactionHash: string; isCrossChain?: boolean; sourceChainId?: number; source?: string }) => {
@@ -114,21 +162,16 @@ export class RewardSystemUI extends BaseService {
     });
 
     this.subscribe('web3:walletConnected', () => {
-      if (!this.rewardWidget) {
-        // Create widget on connect if preference requires it
-        if (this.shouldShowRewardsWidget()) {
-          this.createRewardWidget();
-        }
-      }
       this.loadRewardData();
       this.updateRewardDisplay();
+      // Emit event for wallet widget to update
+      this.safeEmit('rewards:dataUpdated' as any, this.rewardData);
     });
 
     this.subscribe('web3:walletDisconnected', () => {
       this.resetRewardData();
-      if (this.shouldHideUntilConnected()) {
-        this.removeRewardWidget();
-      }
+      // Emit event for wallet widget to update
+      this.safeEmit('rewards:dataUpdated' as any, this.rewardData);
     });
 
     // React to settings changes for rewards visibility
@@ -321,7 +364,7 @@ export class RewardSystemUI extends BaseService {
     }
   }
 
-  private async claimRewards(): Promise<void> {
+  public async claimRewards(): Promise<void> {
     if (this.rewardData.availableToClaim <= 0) {
       this.uiService.showToast('No rewards available to claim', { type: 'warning' });
       return;
@@ -590,8 +633,11 @@ export class RewardSystemUI extends BaseService {
   }
 
   private updateRewardDisplay(): void {
-    if (!this.rewardWidget) return;
-    this.rewardWidget.innerHTML = this.renderRewardWidget();
+    if (this.rewardWidget) {
+      this.rewardWidget.innerHTML = this.renderRewardWidget();
+    }
+    // Emit event for wallet widget to update
+    this.safeEmit('rewards:dataUpdated' as any, this.rewardData);
   }
 
   private loadRewardData(): void {

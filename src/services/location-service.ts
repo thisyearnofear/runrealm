@@ -90,7 +90,7 @@ export class LocationService extends BaseService {
 
           // Try to get address for this location
           try {
-            const address = await this.geocodingService.reverseGeocode([
+            const address = await this.geocodingService?.reverseGeocode([
               locationInfo.lng,
               locationInfo.lat,
             ]);
@@ -129,7 +129,7 @@ export class LocationService extends BaseService {
    */
   public async searchLocations(query: string): Promise<LocationSearchResult[]> {
     try {
-      const results = await this.geocodingService.searchPlaces(query, 10);
+      const results = await this.geocodingService?.searchPlaces(query, 10);
       return results.map((result) => ({
         name: result.name,
         lat: result.center[1],
@@ -260,11 +260,17 @@ export class LocationService extends BaseService {
     // Update location marker on map if AnimationService is available
     try {
       const animationService = (window as any).RunRealm?.services?.animation;
-      if (animationService && typeof animationService.updateUserLocationMarker === 'function') {
-        animationService.updateUserLocationMarker(locationInfo.lng, locationInfo.lat);
+      if (
+        animationService &&
+        typeof animationService.updateUserLocationMarker === "function"
+      ) {
+        animationService.updateUserLocationMarker(
+          locationInfo.lng,
+          locationInfo.lat
+        );
       }
     } catch (error) {
-      console.warn('LocationService: Failed to update location marker:', error);
+      console.warn("LocationService: Failed to update location marker:", error);
     }
 
     // Emit location change event

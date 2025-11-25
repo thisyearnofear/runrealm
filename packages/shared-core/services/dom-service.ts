@@ -4,7 +4,7 @@ export class DOMService {
   private elementCache: Map<string, HTMLElement> = new Map();
   private observers: Map<string, MutationObserver> = new Map();
 
-  private constructor() {
+  constructor() {
     this.setupPerformanceOptimizations();
   }
 
@@ -32,7 +32,7 @@ export class DOMService {
         pending = true;
         requestAnimationFrame(() => {
           const toExecute = callbacks.splice(0);
-          toExecute.forEach(cb => cb());
+          toExecute.forEach((cb) => cb());
           pending = false;
         });
       }
@@ -58,13 +58,16 @@ export class DOMService {
   }
 
   // Safe element manipulation with error handling
-  updateElement(id: string, updates: Partial<{
-    textContent: string;
-    innerHTML: string;
-    className: string;
-    style: Partial<CSSStyleDeclaration>;
-    attributes: Record<string, string>;
-  }>): boolean {
+  updateElement(
+    id: string,
+    updates: Partial<{
+      textContent: string;
+      innerHTML: string;
+      className: string;
+      style: Partial<CSSStyleDeclaration>;
+      attributes: Record<string, string>;
+    }>
+  ): boolean {
     try {
       const element = this.getElement(id);
       if (!element) return false;
@@ -103,9 +106,8 @@ export class DOMService {
     event: string,
     handler: (e: Event, target: HTMLElement) => void
   ): () => void {
-    const containerElement = typeof container === 'string' 
-      ? this.getElement(container) 
-      : container;
+    const containerElement =
+      typeof container === "string" ? this.getElement(container) : container;
 
     if (!containerElement) {
       console.warn(`Container not found: ${container}`);
@@ -138,7 +140,7 @@ export class DOMService {
 
     const observer = new MutationObserver(callback);
     observer.observe(element, options);
-    
+
     const observerId = `${elementId}_${Date.now()}`;
     this.observers.set(observerId, observer);
 
@@ -167,7 +169,7 @@ export class DOMService {
     if (options.className) element.className = options.className;
     if (options.textContent) element.textContent = options.textContent;
     if (options.innerHTML) element.innerHTML = options.innerHTML;
-    
+
     if (options.attributes) {
       Object.entries(options.attributes).forEach(([key, value]) => {
         element.setAttribute(key, value);
@@ -179,9 +181,10 @@ export class DOMService {
     }
 
     if (options.parent) {
-      const parent = typeof options.parent === 'string' 
-        ? this.getElement(options.parent) 
-        : options.parent;
+      const parent =
+        typeof options.parent === "string"
+          ? this.getElement(options.parent)
+          : options.parent;
       parent?.appendChild(element);
     }
 
@@ -191,7 +194,7 @@ export class DOMService {
   // Cleanup method
   cleanup(): void {
     this.elementCache.clear();
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => observer.disconnect());
     this.observers.clear();
   }
 
@@ -224,10 +227,10 @@ export class DOMService {
   }
 
   show(elementId: string): boolean {
-    return this.removeClass(elementId, 'hidden');
+    return this.removeClass(elementId, "hidden");
   }
 
   hide(elementId: string): boolean {
-    return this.addClass(elementId, 'hidden');
+    return this.addClass(elementId, "hidden");
   }
 }

@@ -161,8 +161,14 @@ export class RunTrackingService extends BaseService {
     try {
       console.log("RunTrackingService: Getting current location...");
       const currentLocation = await this.locationService.getCurrentLocation(
-        true
+        true,
+        false
       );
+      
+      if (!currentLocation) {
+        throw new Error("Unable to get current location. Please enable location access.");
+      }
+      
       console.log("RunTrackingService: Got location:", currentLocation);
 
       const runId = this.generateRunId();
@@ -240,8 +246,14 @@ export class RunTrackingService extends BaseService {
     try {
       console.log("RunTrackingService: Getting current location for route run...");
       const currentLocation = await this.locationService.getCurrentLocation(
-        true
+        true,
+        false
       );
+      
+      if (!currentLocation) {
+        throw new Error("Unable to get current location. Please enable location access.");
+      }
+      
       console.log("RunTrackingService: Got location:", currentLocation);
 
       const runId = this.generateRunId();

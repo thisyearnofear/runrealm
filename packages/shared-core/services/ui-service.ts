@@ -26,29 +26,29 @@ export class UIService {
       "🤖 AI is crafting your perfect route...",
       "🧠 Analyzing terrain and your preferences...",
       "🗺️ Finding the most scenic path for you...",
-      "⚡ Optimizing route for maximum enjoyment..."
+      "⚡ Optimizing route for maximum enjoyment...",
     ],
     walletConnect: [
       "🦊 Connecting to your wallet...",
       "🔐 Establishing secure connection...",
       "🌐 Syncing with blockchain...",
-      "✨ Almost ready to go..."
+      "✨ Almost ready to go...",
     ],
     territoryLoad: [
       "🗺️ Loading nearby territories...",
       "🏆 Scanning for claimable areas...",
       "📍 Mapping your running realm...",
-      "🌟 Discovering opportunities..."
+      "🌟 Discovering opportunities...",
     ],
     crossChain: [
       "🌐 Processing cross-chain magic...",
       "⚡ Bridging between networks...",
       "🔗 Synchronizing across chains...",
-      "🚀 Universal contract working..."
-    ]
+      "🚀 Universal contract working...",
+    ],
   };
 
-  private constructor() {
+  constructor() {
     this.domService = DOMService.getInstance();
     this.animationService = AnimationService.getInstance();
     this.createToastContainer();
@@ -77,13 +77,16 @@ export class UIService {
     document.body.appendChild(this.toastContainer);
   }
 
-  public showToast(
-    message: string,
-    options: ToastOptions = {}
-  ): void {
+  public showToast(message: string, options: ToastOptions = {}): void {
     // Enhanced contextual messages
-    if (options.contextual && this.contextualMessages[message as keyof typeof this.contextualMessages]) {
-      const messages = this.contextualMessages[message as keyof typeof this.contextualMessages];
+    if (
+      options.contextual &&
+      this.contextualMessages[message as keyof typeof this.contextualMessages]
+    ) {
+      const messages =
+        this.contextualMessages[
+          message as keyof typeof this.contextualMessages
+        ];
       message = messages[Math.floor(Math.random() * messages.length)];
     }
     if (!this.toastContainer) return;
@@ -95,16 +98,16 @@ export class UIService {
       celebration = false,
       haptic = false,
       sound = false,
-      action
+      action,
     } = options;
 
     // Enhanced feedback effects
-    if (haptic && 'vibrate' in navigator) {
+    if (haptic && "vibrate" in navigator) {
       const patterns = {
         info: [50],
         success: [100, 50, 100],
         warning: [200],
-        error: [300, 100, 300]
+        error: [300, 100, 300],
       };
       navigator.vibrate(patterns[type as keyof typeof patterns] || [50]);
     }
@@ -114,7 +117,7 @@ export class UIService {
     }
 
     const toast = this.domService.createElement("div", {
-      className: `toast toast-${type} ${celebration ? 'celebrating' : ''}`,
+      className: `toast toast-${type} ${celebration ? "celebrating" : ""}`,
       style: {
         maxWidth: "350px",
         padding: "16px 20px",
@@ -138,7 +141,7 @@ export class UIService {
     });
 
     // Add progress bar if requested
-    if (showProgress && type === 'loading') {
+    if (showProgress && type === "loading") {
       const progressBar = this.domService.createElement("div", {
         className: "toast-progress",
         style: {
@@ -230,7 +233,7 @@ export class UIService {
     setTimeout(() => {
       toast.style.opacity = "1";
       toast.style.transform = "translateX(0)";
-      
+
       // Add celebration effects if requested
       if (celebration) {
         this.createCelebrationEffect(toast);
@@ -339,10 +342,10 @@ export class UIService {
   public showContextualLoading(context: string): void {
     const message = this.getContextualMessage(context);
     this.showToast(message, {
-      type: 'loading',
+      type: "loading",
       duration: 0, // Don't auto-hide loading messages
       showProgress: true,
-      contextual: true
+      contextual: true,
     });
   }
 
@@ -352,11 +355,11 @@ export class UIService {
   public showContextualSuccess(context: string, data?: any): void {
     const message = this.getSuccessMessage(context, data);
     this.showToast(message, {
-      type: 'success',
+      type: "success",
       duration: 5000,
       celebration: true,
       haptic: true,
-      sound: true
+      sound: true,
     });
   }
 
@@ -366,105 +369,138 @@ export class UIService {
   public showContextualError(context: string, originalError?: string): void {
     const errorInfo = this.getErrorMessage(context, originalError);
     this.showToast(errorInfo.message, {
-      type: 'error',
+      type: "error",
       duration: 8000,
       haptic: true,
       sound: true,
-      action: errorInfo.actionText ? {
-        text: errorInfo.actionText,
-        callback: () => console.log('Error action:', errorInfo.action)
-      } : undefined
+      action: errorInfo.actionText
+        ? {
+            text: errorInfo.actionText,
+            callback: () => console.log("Error action:", errorInfo.action),
+          }
+        : undefined,
     });
   }
 
   private getContextualMessage(context: string): string {
-    const messages = this.contextualMessages[context as keyof typeof this.contextualMessages] || [
+    const messages = this.contextualMessages[
+      context as keyof typeof this.contextualMessages
+    ] || [
       "⏳ Working on it...",
       "🔄 Processing your request...",
-      "✨ Making magic happen..."
+      "✨ Making magic happen...",
     ];
     return messages[Math.floor(Math.random() * messages.length)];
   }
 
   private getSuccessMessage(context: string, data?: any): string {
     const successMessages = {
-      territoryClaimedFirst: "🎉 First Territory Claimed! You're now a true RunRealm explorer!",
-      territoryClaimed: `🏆 Territory Claimed! ${data?.territoryName || 'New territory'} is now part of your running realm.`,
-      runCompleted: `💪 Run Completed! Great job covering ${data?.distance || 'some distance'} in ${data?.time || 'your time'}!`,
-      aiRouteGenerated: `🤖 Perfect Route Found! AI crafted a ${data?.distance || 'custom'} route optimized for your goals.`,
-      walletConnected: `🦊 Wallet Connected! Successfully connected ${data?.walletType || 'your wallet'}.`,
-      crossChainSuccess: "🌐 Cross-Chain Success! Your transaction completed successfully across networks!"
+      territoryClaimedFirst:
+        "🎉 First Territory Claimed! You're now a true RunRealm explorer!",
+      territoryClaimed: `🏆 Territory Claimed! ${
+        data?.territoryName || "New territory"
+      } is now part of your running realm.`,
+      runCompleted: `💪 Run Completed! Great job covering ${
+        data?.distance || "some distance"
+      } in ${data?.time || "your time"}!`,
+      aiRouteGenerated: `🤖 Perfect Route Found! AI crafted a ${
+        data?.distance || "custom"
+      } route optimized for your goals.`,
+      walletConnected: `🦊 Wallet Connected! Successfully connected ${
+        data?.walletType || "your wallet"
+      }.`,
+      crossChainSuccess:
+        "🌐 Cross-Chain Success! Your transaction completed successfully across networks!",
     };
-    return successMessages[context as keyof typeof successMessages] || "✅ Success! Operation completed successfully!";
+    return (
+      successMessages[context as keyof typeof successMessages] ||
+      "✅ Success! Operation completed successfully!"
+    );
   }
 
-  private getErrorMessage(context: string, originalError?: string): { message: string; action?: string; actionText?: string } {
+  private getErrorMessage(
+    context: string,
+    originalError?: string
+  ): { message: string; action?: string; actionText?: string } {
     const errorMessages = {
       aiServiceDown: {
-        message: "🤖 AI Coach Taking a Break. Try manual route planning or check back in a few minutes.",
+        message:
+          "🤖 AI Coach Taking a Break. Try manual route planning or check back in a few minutes.",
         action: "Try manual route planning",
-        actionText: "Plan Manually"
+        actionText: "Plan Manually",
       },
       walletNotFound: {
-        message: "🦊 Wallet Not Detected. Install MetaMask or connect your preferred wallet to access GameFi features.",
+        message:
+          "🦊 Wallet Not Detected. Install MetaMask or connect your preferred wallet to access GameFi features.",
         action: "Install MetaMask",
-        actionText: "Get MetaMask"
+        actionText: "Get MetaMask",
       },
       locationDenied: {
-        message: "📍 Location Access Needed. Enable location in your browser settings for territory features.",
+        message:
+          "📍 Location Access Needed. Enable location in your browser settings for territory features.",
         action: "Enable location access",
-        actionText: "How to Enable"
+        actionText: "How to Enable",
       },
       networkError: {
-        message: "🌐 Connection Issue. Check your internet connection and try again.",
+        message:
+          "🌐 Connection Issue. Check your internet connection and try again.",
         action: "Check connection and retry",
-        actionText: "Retry"
+        actionText: "Retry",
+      },
+    };
+    return (
+      errorMessages[context as keyof typeof errorMessages] || {
+        message: originalError || "⚠️ Something went wrong. Please try again.",
+        action: "Try again",
+        actionText: "Retry",
       }
-    };
-    return errorMessages[context as keyof typeof errorMessages] || {
-      message: originalError || "⚠️ Something went wrong. Please try again.",
-      action: "Try again",
-      actionText: "Retry"
-    };
+    );
   }
 
   private playContextualSound(type: string): void {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
       const sounds = {
         success: { frequency: 800, duration: 200 },
         error: { frequency: 300, duration: 400 },
         warning: { frequency: 600, duration: 300 },
         info: { frequency: 600, duration: 150 },
-        loading: { frequency: 500, duration: 100 }
+        loading: { frequency: 500, duration: 100 },
       };
 
       const sound = sounds[type as keyof typeof sounds] || sounds.info;
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-      
+
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(sound.frequency, audioContext.currentTime);
-      oscillator.type = 'sine';
-      
+
+      oscillator.frequency.setValueAtTime(
+        sound.frequency,
+        audioContext.currentTime
+      );
+      oscillator.type = "sine";
+
       gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sound.duration / 1000);
-      
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioContext.currentTime + sound.duration / 1000
+      );
+
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + sound.duration / 1000);
     } catch (error) {
-      console.debug('Audio context not supported:', error);
+      console.debug("Audio context not supported:", error);
     }
   }
 
   private createCelebrationEffect(element: HTMLElement): void {
-    const colors = ['#00ff00', '#00cc00', '#00ff88', '#ffffff', '#ffff00'];
+    const colors = ["#00ff00", "#00cc00", "#00ff88", "#ffffff", "#ffff00"];
     const particleCount = 15;
 
     for (let i = 0; i < particleCount; i++) {
-      const particle = document.createElement('div');
+      const particle = document.createElement("div");
       particle.style.cssText = `
         position: absolute;
         width: 6px;
@@ -499,9 +535,9 @@ export class UIService {
     if (this.toastContainer && this.toastContainer.parentElement) {
       this.toastContainer.parentElement.removeChild(this.toastContainer);
     }
-    
+
     // Clean up celebration effects
-    this.celebrationEffects.forEach(effect => {
+    this.celebrationEffects.forEach((effect) => {
       if (effect.parentNode) {
         effect.parentNode.removeChild(effect);
       }

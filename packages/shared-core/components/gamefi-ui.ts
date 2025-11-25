@@ -3,9 +3,9 @@
  * Provides immersive gaming interface elements for territory claiming and competition
  */
 
-import { DOMService } from '../services/dom-service';
-import { EventBus } from '../core/event-bus';
-import { BaseService } from '../core/base-service';
+import { DOMService } from "../services/dom-service";
+import { EventBus } from "../core/event-bus";
+import { BaseService } from "../core/base-service";
 
 export interface PlayerStats {
   level: number;
@@ -38,7 +38,7 @@ export class GameFiUI extends BaseService {
   private currentStats: PlayerStats | null = null;
   private animationFrameId: number | null = null;
 
-  private constructor() {
+  constructor() {
     super();
     this.dom = DOMService.getInstance();
   }
@@ -59,7 +59,7 @@ export class GameFiUI extends BaseService {
     this.setupEventHandlers();
     this.startAnimationLoop();
 
-    console.log('GameFiUI initialized (service-only)');
+    console.log("GameFiUI initialized (service-only)");
   }
 
   // Service-only: MainUI owns all UI; no HUD/styling methods here
@@ -69,21 +69,27 @@ export class GameFiUI extends BaseService {
    */
   private setupEventHandlers(): void {
     // Territory preview interactions
-    this.subscribe('run:pointAdded', (data) => {
+    this.subscribe("run:pointAdded", (data) => {
       // Emit event for MainUI to update territory widget content
-      this.safeEmit('ui:territoryPreview', { point: data.point, totalDistance: data.totalDistance });
+      this.safeEmit("ui:territoryPreview", {
+        point: data.point,
+        totalDistance: data.totalDistance,
+      });
       this.updateRewardEstimate(data.totalDistance);
     });
 
-    this.subscribe('web3:walletConnected', (data) => {
+    this.subscribe("web3:walletConnected", (data) => {
       // Let MainUI handle GameFi widgets visibility
       this.updatePlayerStats({ realmBalance: 0 } as any);
-      this.safeEmit('ui:gamefiEnabled', { enabled: true });
+      this.safeEmit("ui:gamefiEnabled", { enabled: true });
     });
 
-    this.subscribe('territory:claimed', (data) => {
+    this.subscribe("territory:claimed", (data) => {
       // Access reward from territory metadata if available
-      const reward = data.territory?.metadata?.estimatedReward || data.territory?.estimatedReward || 25;
+      const reward =
+        data.territory?.metadata?.estimatedReward ||
+        data.territory?.estimatedReward ||
+        25;
       this.showRewardNotification(`🎉 Territory Claimed! +${reward} $REALM`);
       this.updatePlayerStats({ territoriesOwned: 1 } as any);
     });
@@ -96,16 +102,22 @@ export class GameFiUI extends BaseService {
    * Enable GameFi mode UI
    */
   // DEPRECATED: MainUI controls GameFi mode and widget rendering
-  public enableGameFiMode(): void { /* no-op */ }
+  public enableGameFiMode(): void {
+    /* no-op */
+  }
 
   /**
    * Disable GameFi mode UI
    */
   // DEPRECATED: MainUI controls GameFi mode and widget rendering
-  public disableGameFiMode(): void { /* no-op */ }
+  public disableGameFiMode(): void {
+    /* no-op */
+  }
 
   // DEPRECATED: HUD visibility controlled by widgets and body class in MainUI
-  private hideGameFiHUD(): void { /* no-op */ }
+  private hideGameFiHUD(): void {
+    /* no-op */
+  }
 
   /**
    * Update player statistics display
@@ -117,7 +129,7 @@ export class GameFiUI extends BaseService {
         totalDistance: 0,
         territoriesOwned: 0,
         realmBalance: 0,
-        rank: 0
+        rank: 0,
       };
     }
 
@@ -125,12 +137,23 @@ export class GameFiUI extends BaseService {
     Object.assign(this.currentStats, stats);
 
     // Update UI elements with animation
-    this.updateStatElement('total-distance', `${Math.floor(this.currentStats.totalDistance)}m`);
-    this.updateStatElement('territories-count', this.currentStats.territoriesOwned.toString());
-    this.updateStatElement('realm-balance', this.currentStats.realmBalance.toFixed(0));
+    this.updateStatElement(
+      "total-distance",
+      `${Math.floor(this.currentStats.totalDistance)}m`
+    );
+    this.updateStatElement(
+      "territories-count",
+      this.currentStats.territoriesOwned.toString()
+    );
+    this.updateStatElement(
+      "realm-balance",
+      this.currentStats.realmBalance.toFixed(0)
+    );
 
     // Update level badge
-    const levelBadge = this.hudElements.get('hud')?.querySelector('.level-badge') as HTMLElement;
+    const levelBadge = this.hudElements
+      .get("hud")
+      ?.querySelector(".level-badge") as HTMLElement;
     if (levelBadge) {
       levelBadge.textContent = this.currentStats.level.toString();
     }
@@ -139,11 +162,14 @@ export class GameFiUI extends BaseService {
   /**
    * Show reward notification
    */
-  public showRewardNotification(message: string, type: 'success' | 'warning' | 'info' = 'success'): void {
-    const container = this.dom.getElement('reward-notifications');
+  public showRewardNotification(
+    message: string,
+    type: "success" | "warning" | "info" = "success"
+  ): void {
+    const container = this.dom.getElement("reward-notifications");
     if (!container) return;
 
-    const notification = this.dom.createElement('div', {
+    const notification = this.dom.createElement("div", {
       className: `reward-notification ${type}`,
       innerHTML: `
         <div class="notification-content">
@@ -152,24 +178,27 @@ export class GameFiUI extends BaseService {
         </div>
       `,
       style: {
-        position: 'relative',
-        background: type === 'success' ? 'linear-gradient(45deg, #00bd00, #00ff88)' :
-                   type === 'warning' ? 'linear-gradient(45deg, #ff6b00, #ff8533)' :
-                   'linear-gradient(45deg, #0064ff, #0080ff)',
-        color: 'white',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        marginBottom: '8px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-        animation: 'slideInRight 0.3s ease-out',
-        overflow: 'hidden'
+        position: "relative",
+        background:
+          type === "success"
+            ? "linear-gradient(45deg, #00bd00, #00ff88)"
+            : type === "warning"
+            ? "linear-gradient(45deg, #ff6b00, #ff8533)"
+            : "linear-gradient(45deg, #0064ff, #0080ff)",
+        color: "white",
+        padding: "12px 16px",
+        borderRadius: "8px",
+        marginBottom: "8px",
+        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+        animation: "slideInRight 0.3s ease-out",
+        overflow: "hidden",
       },
-      parent: container
+      parent: container,
     });
 
     // Auto-remove after 4 seconds
     setTimeout(() => {
-      notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+      notification.style.animation = "slideInRight 0.3s ease-out reverse";
       setTimeout(() => notification.remove(), 300);
     }, 4000);
   }
@@ -178,23 +207,23 @@ export class GameFiUI extends BaseService {
    * Update AI coach message
    */
   public updateCoachMessage(message: string): void {
-    const coachMessage = this.dom.getElement('coach-message');
+    const coachMessage = this.dom.getElement("coach-message");
     if (coachMessage) {
       coachMessage.textContent = message;
-      coachMessage.style.animation = 'pulse 0.5s ease-in-out';
+      coachMessage.style.animation = "pulse 0.5s ease-in-out";
     }
   }
 
   public showTerritoryPreview(preview: TerritoryPreview): void {
     // Implementation for showing territory preview
-    console.log('Territory preview:', preview);
+    console.log("Territory preview:", preview);
   }
 
   // Private helper methods
   private updateStatElement(elementId: string, value: string): void {
     const element = this.dom.getElement(elementId);
     if (element && element.textContent !== value) {
-      element.style.animation = 'pulse 0.3s ease-in-out';
+      element.style.animation = "pulse 0.3s ease-in-out";
       element.textContent = value;
     }
   }
@@ -211,8 +240,10 @@ export class GameFiUI extends BaseService {
     // Calculate estimated $REALM reward based on distance and difficulty
     const baseReward = distance * 0.01; // 0.01 REALM per meter
     const estimatedReward = Math.floor(baseReward + Math.random() * 20);
-    
-    const rewardAmount = this.hudElements.get('territoryPreview')?.querySelector('.reward-amount');
+
+    const rewardAmount = this.hudElements
+      .get("territoryPreview")
+      ?.querySelector(".reward-amount");
     if (rewardAmount) {
       rewardAmount.textContent = `+${estimatedReward} $REALM`;
     }
@@ -227,10 +258,10 @@ export class GameFiUI extends BaseService {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
     }
-    
+
     this.hudElements.clear();
-    document.body.classList.remove('gamefi-mode');
-    
+    document.body.classList.remove("gamefi-mode");
+
     super.cleanup();
   }
 }

@@ -192,6 +192,10 @@ export class MainUI extends BaseService {
     await this.rewardSystemUI.initialize();
     console.log("MainUI: Reward system UI initialized");
 
+    // Connect rewards to wallet widget
+    this.walletWidget.setRewardSystemUI(this.rewardSystemUI);
+    console.log("MainUI: Rewards integrated into wallet widget");
+
     // Initialize contract service
     this.contractService = new ContractService(this.web3Service);
     await this.contractService.initialize();

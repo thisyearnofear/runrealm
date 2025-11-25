@@ -33,6 +33,7 @@ export class WalletWidget extends BaseService {
   private uiService: UIService;
   private animationService: AnimationService;
   private web3Service: Web3Service;
+  private rewardSystemUI: any = null; // RewardSystemUI reference (optional)
 
   private walletState: WalletState = { status: 'disconnected' };
   private retryCount: number = 0;
@@ -88,6 +89,19 @@ export class WalletWidget extends BaseService {
     this.addWalletStyles();
     await this.checkExistingConnection();
     this.safeEmit('service:initialized', { service: 'WalletWidget', success: true });
+  }
+
+  /**
+   * Set RewardSystemUI reference for rewards integration
+   */
+  public setRewardSystemUI(rewardSystemUI: any): void {
+    this.rewardSystemUI = rewardSystemUI;
+    // Listen for rewards updates
+    if (this.rewardSystemUI) {
+      this.subscribe('rewards:dataUpdated' as any, () => {
+        this.updateWidgetContent();
+      });
+    }
   }
 
   /**
@@ -161,6 +175,13 @@ export class WalletWidget extends BaseService {
 
     this.domService.delegate(document.body, '[data-action="switch-network"]', 'click', () => {
       this.switchToSupportedNetwork();
+    });
+
+    // Handle rewards claim button (from wallet widget)
+    this.domService.delegate(document.body, '[data-action="claim-rewards"]', 'click', () => {
+      if (this.rewardSystemUI && typeof this.rewardSystemUI.claimRewards === 'function') {
+        this.rewardSystemUI.claimRewards();
+      }
     });
 
     this.domService.delegate(document.body, '[data-action="retry-connection"]', 'click', () => {
@@ -355,6 +376,7 @@ export class WalletWidget extends BaseService {
 
   private renderConnectedState(wallet: WalletInfo): string {
     const shortAddress = `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`;
+    const rewardsContent = this.rewardSystemUI?.getRewardsContent() || '';
 
     return `
       <div class="wallet-status connected">
@@ -370,6 +392,7 @@ export class WalletWidget extends BaseService {
           </button>
         </div>
       </div>
+      ${rewardsContent}
     `;
   }
 
@@ -857,6 +880,83 @@ export class WalletWidget extends BaseService {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+
+        /* Rewards Section in Wallet Widget */
+        .wallet-rewards-section {
+          margin-top: 12px;
+          padding: 12px;
+          background: rgba(255, 215, 0, 0.1);
+          border: 1px solid rgba(255, 215, 0, 0.2);
+          border-radius: 8px;
+        }
+
+        .rewards-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .rewards-icon {
+          font-size: 16px;
+        }
+
+        .rewards-title {
+          font-size: 13px;
+          font-weight: 600;
+          color: white;
+        }
+
+        .rewards-summary {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-bottom: 10px;
+        }
+
+        .reward-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 12px;
+        }
+
+        .reward-label {
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .reward-value {
+          color: white;
+          font-weight: 600;
+        }
+
+        .reward-value.highlight {
+          color: #ffd700;
+          font-weight: 700;
+        }
+
+        .wallet-reward-btn {
+          width: 100%;
+          padding: 10px;
+          border: none;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          background: linear-gradient(135deg, #ffd700, #ffed4e);
+          color: #1a1a1a;
+        }
+
+        .wallet-reward-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+        }
+
+        .wallet-reward-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         /* Mobile responsiveness */
