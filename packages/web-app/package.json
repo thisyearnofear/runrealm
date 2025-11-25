@@ -4,7 +4,7 @@
   "description": "Web application for RunRealm platform",
   "main": "index.js",
   "scripts": {
-    "start": "webpack serve --mode development --config ../../webpack.config.js",
+    "start": "webpack serve --mode development --config ../../config/build/webpack.config.js",
     "build": "echo 'Web app should be built from root with: npm run build:web'",
     "test": "jest"
   },

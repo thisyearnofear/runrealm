@@ -318,7 +318,15 @@ async function initializeApp(): Promise<void> {
 
     console.log('RunRealm initialized successfully');
   } catch (error) {
+    // Enhanced error logging
     console.error('Failed to initialize RunRealm:', error);
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    } else {
+      console.error('Error object:', JSON.stringify(error, null, 2));
+    }
 
     // Remove loading indicator
     const loadingDiv = document.getElementById('loading');
@@ -326,7 +334,14 @@ async function initializeApp(): Promise<void> {
       loadingDiv.remove();
     }
 
-    // Show user-friendly error message
+    // Show user-friendly error message with more details
+    const errorMessage = error instanceof Error 
+      ? `${error.name}: ${error.message}` 
+      : String(error);
+    const errorStack = error instanceof Error && error.stack 
+      ? `<pre style="font-size: 11px; text-align: left; max-height: 200px; overflow: auto; background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 8px 0;">${error.stack}</pre>`
+      : '';
+
     const errorDiv = document.createElement('div');
     errorDiv.innerHTML = `
       <div style="
@@ -340,12 +355,19 @@ async function initializeApp(): Promise<void> {
         box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         text-align: center;
         z-index: 10000;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow: auto;
       ">
         <h2 style="color: #ff4444; margin: 0 0 16px 0;">
           Failed to Initialize RunRealm
         </h2>
-        <p style="margin: 0 0 16px 0; color: #666;">
-          ${error instanceof Error ? error.message : 'An unexpected error occurred'}
+        <p style="margin: 0 0 16px 0; color: #666; word-break: break-word;">
+          ${errorMessage}
+        </p>
+        ${errorStack}
+        <p style="margin: 16px 0 0 0; font-size: 12px; color: #999;">
+          Check the browser console for more details
         </p>
         <button onclick="window.location.reload()" style="
           background: #00bd00;
@@ -354,6 +376,7 @@ async function initializeApp(): Promise<void> {
           padding: 12px 24px;
           border-radius: 8px;
           cursor: pointer;
+          margin-top: 16px;
         ">
           Retry
         </button>

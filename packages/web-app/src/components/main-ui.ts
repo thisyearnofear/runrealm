@@ -9,7 +9,10 @@ import { DOMService } from "@runrealm/shared-core/services/dom-service";
 import { LocationService } from "@runrealm/shared-core/services/location-service";
 import { UIService } from "@runrealm/shared-core/services/ui-service";
 import { GameFiUI } from "@runrealm/shared-core/components/gamefi-ui";
-import { WidgetSystem, Widget } from "@runrealm/shared-core/components/widget-system";
+import {
+  WidgetSystem,
+  Widget,
+} from "@runrealm/shared-core/components/widget-system";
 import { DragService } from "@runrealm/shared-core/components/drag-service";
 import { VisibilityService } from "@runrealm/shared-core/components/visibility-service";
 import { AnimationService } from "@runrealm/shared-core/services/animation-service";
@@ -127,17 +130,16 @@ export class MainUI extends BaseService {
       this.web3Service
     );
 
-    this.userDashboardService = new UserDashboardService(this.eventBus, this.configService);
+    this.userDashboardService = new UserDashboardService();
 
     this.widgetCreator = new WidgetCreator(
-      this.widgetSystem,
-      this.domService,
       this.locationService,
-      this.uiService,
       this.walletWidget,
-      this.userDashboardService
+      this.userDashboardService,
+      this.widgetSystem,
+      this.visibilityService,
+      this.configService
     );
-
 
     // Now set the widgetCreator reference in the eventHandler
     this.eventHandler.setWidgetCreator(this.widgetCreator);
@@ -222,10 +224,6 @@ export class MainUI extends BaseService {
     // Create Settings widget (top-right)
     this.widgetCreator.createSettingsWidget();
     console.log("MainUI: Settings widget created");
-
-    // Create User Dashboard widget (top-right)
-    this.widgetCreator.createUserDashboardWidget();
-    console.log("MainUI: User Dashboard widget created");
 
     // Setup settings widget event handlers
     this.eventHandler.setupSettingsEventHandlers();

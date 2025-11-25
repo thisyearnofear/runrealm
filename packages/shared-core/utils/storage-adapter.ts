@@ -3,22 +3,34 @@
  * Provides a unified API for persistent storage across platforms
  */
 
-// Detect if we're in React Native
-// Check multiple ways to be more reliable
-const isReactNative = 
-  (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') ||
-  (typeof window === 'undefined' && typeof global !== 'undefined') ||
-  (typeof require !== 'undefined' && require('react-native'));
+// Detect if we're in React Native (runtime check only)
+const isReactNative =
+  typeof navigator !== "undefined" && navigator.product === "ReactNative";
 
 // Lazy load AsyncStorage only in React Native
+// Use a function to prevent webpack from statically analyzing the require
 let AsyncStorage: any = null;
-if (isReactNative) {
-  try {
-    AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  } catch (e) {
-    console.warn('AsyncStorage not available, falling back to in-memory storage');
+const loadAsyncStorage = (): any => {
+  // Early return for web environments
+  if (!isReactNative) return null;
+
+  // Check if require is available (it might not be in all web environments)
+  if (typeof require === "undefined") {
+    return null;
   }
-}
+
+  try {
+    // Use a dynamic require that webpack can't analyze at build time
+    // This prevents webpack from trying to bundle React Native code for web builds
+    const moduleName = "@react-native-async-storage/async-storage";
+    // @ts-ignore - Dynamic require to prevent webpack bundling
+    const module = require(moduleName);
+    return module?.default || module;
+  } catch (e) {
+    // Expected in web environments - silently fail
+    return null;
+  }
+};
 
 // In-memory fallback for when neither localStorage nor AsyncStorage is available
 const memoryStorage: Record<string, string> = {};
@@ -28,14 +40,21 @@ export const StorageAdapter = {
    * Get an item from storage
    */
   async getItem(key: string): Promise<string | null> {
-    if (isReactNative && AsyncStorage) {
-      try {
-        return await AsyncStorage.getItem(key);
-      } catch (e) {
-        console.warn(`StorageAdapter: Failed to get ${key}:`, e);
-        return null;
+    if (isReactNative) {
+      // Lazy load AsyncStorage on first use
+      if (!AsyncStorage) {
+        AsyncStorage = loadAsyncStorage();
       }
-    } else if (typeof localStorage !== 'undefined') {
+      if (AsyncStorage) {
+        try {
+          return await AsyncStorage.getItem(key);
+        } catch (e) {
+          console.warn(`StorageAdapter: Failed to get ${key}:`, e);
+          return null;
+        }
+      }
+    }
+    if (typeof localStorage !== "undefined") {
       try {
         return localStorage.getItem(key);
       } catch (e) {
@@ -52,13 +71,20 @@ export const StorageAdapter = {
    * Set an item in storage
    */
   async setItem(key: string, value: string): Promise<void> {
-    if (isReactNative && AsyncStorage) {
-      try {
-        await AsyncStorage.setItem(key, value);
-      } catch (e) {
-        console.warn(`StorageAdapter: Failed to set ${key}:`, e);
+    if (isReactNative) {
+      // Lazy load AsyncStorage on first use
+      if (!AsyncStorage) {
+        AsyncStorage = loadAsyncStorage();
       }
-    } else if (typeof localStorage !== 'undefined') {
+      if (AsyncStorage) {
+        try {
+          await AsyncStorage.setItem(key, value);
+        } catch (e) {
+          console.warn(`StorageAdapter: Failed to set ${key}:`, e);
+        }
+      }
+    }
+    if (typeof localStorage !== "undefined") {
       try {
         localStorage.setItem(key, value);
       } catch (e) {
@@ -74,13 +100,20 @@ export const StorageAdapter = {
    * Remove an item from storage
    */
   async removeItem(key: string): Promise<void> {
-    if (isReactNative && AsyncStorage) {
-      try {
-        await AsyncStorage.removeItem(key);
-      } catch (e) {
-        console.warn(`StorageAdapter: Failed to remove ${key}:`, e);
+    if (isReactNative) {
+      // Lazy load AsyncStorage on first use
+      if (!AsyncStorage) {
+        AsyncStorage = loadAsyncStorage();
       }
-    } else if (typeof localStorage !== 'undefined') {
+      if (AsyncStorage) {
+        try {
+          await AsyncStorage.removeItem(key);
+        } catch (e) {
+          console.warn(`StorageAdapter: Failed to remove ${key}:`, e);
+        }
+      }
+    }
+    if (typeof localStorage !== "undefined") {
       try {
         localStorage.removeItem(key);
       } catch (e) {
@@ -101,8 +134,8 @@ export const StorageAdapter = {
     if (isReactNative) {
       return memoryStorage[key] || null;
     }
-    
-    if (typeof localStorage !== 'undefined') {
+
+    if (typeof localStorage !== "undefined") {
       try {
         return localStorage.getItem(key);
       } catch (e) {
@@ -124,15 +157,17 @@ export const StorageAdapter = {
     if (isReactNative) {
       memoryStorage[key] = value;
       // Also try to persist asynchronously (fire and forget)
-      if (AsyncStorage) {
-        AsyncStorage.setItem(key, value).catch(() => {
-          // Ignore async errors
-        });
+      // Lazy load AsyncStorage on first use
+      if (!AsyncStorage) {
+        AsyncStorage = loadAsyncStorage();
       }
+      AsyncStorage?.setItem(key, value)?.catch(() => {
+        // Ignore async errors
+      });
       return;
     }
-    
-    if (typeof localStorage !== 'undefined') {
+
+    if (typeof localStorage !== "undefined") {
       try {
         localStorage.setItem(key, value);
       } catch (e) {
@@ -152,15 +187,17 @@ export const StorageAdapter = {
     if (isReactNative) {
       delete memoryStorage[key];
       // Also try to remove from AsyncStorage asynchronously (fire and forget)
-      if (AsyncStorage) {
-        AsyncStorage.removeItem(key).catch(() => {
-          // Ignore async errors
-        });
+      // Lazy load AsyncStorage on first use
+      if (!AsyncStorage) {
+        AsyncStorage = loadAsyncStorage();
       }
+      AsyncStorage?.removeItem(key)?.catch(() => {
+        // Ignore async errors
+      });
       return;
     }
-    
-    if (typeof localStorage !== 'undefined') {
+
+    if (typeof localStorage !== "undefined") {
       try {
         localStorage.removeItem(key);
       } catch (e) {
@@ -172,4 +209,3 @@ export const StorageAdapter = {
     }
   },
 };
-

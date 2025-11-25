@@ -17,28 +17,22 @@ import { ConfigService } from "@runrealm/shared-core/core/app-config";
  * WidgetCreator - Handles creation and management of all UI widgets
  */
 export class WidgetCreator {
-  private domService: DOMService;
   private locationService: LocationService;
-  private uiService: UIService;
   private walletWidget: WalletWidget;
   private widgetSystem: WidgetSystem;
   private visibilityService: VisibilityService;
   private configService: ConfigService;
 
   constructor(
-    domService: DOMService,
     locationService: LocationService,
-    private uiService: UIService,
-    private walletWidget: WalletWidget,
+    walletWidget: WalletWidget,
     private userDashboardService: UserDashboardService,
     widgetSystem: WidgetSystem,
     visibilityService: VisibilityService,
     configService: ConfigService
   ) {
-    this.domService = domService;
     this.locationService = locationService;
     this.walletWidget = walletWidget;
-    this.uiService = uiService;
     this.widgetSystem = widgetSystem;
     this.visibilityService = visibilityService;
     this.configService = configService;
@@ -172,11 +166,16 @@ export class WidgetCreator {
   /**
    * Get content for location widget with GPS and network status
    */
-  getLocationContent(gpsStatus?: any, networkStatus?: any, currentLocation?: any): string {
+  getLocationContent(
+    gpsStatus?: any,
+    networkStatus?: any,
+    currentLocation?: any
+  ): string {
     // Provide default values if not passed
     gpsStatus = gpsStatus || { available: false };
     networkStatus = networkStatus || { online: navigator.onLine };
-    currentLocation = currentLocation || this.locationService.getCurrentLocationInfo();
+    currentLocation =
+      currentLocation || this.locationService.getCurrentLocationInfo();
     const displayText =
       currentLocation?.address ||
       (currentLocation
@@ -205,12 +204,16 @@ export class WidgetCreator {
 
       <div class="location-status">
         <div class="status-row">
-          <div class="status-item gps-status ${gpsStatus.available ? "active" : "inactive"}">
+          <div class="status-item gps-status ${
+            gpsStatus.available ? "active" : "inactive"
+          }">
             <span class="status-icon">${gpsIcon}</span>
             <span class="status-label">GPS</span>
             <span class="status-detail">${gpsText}</span>
           </div>
-          <div class="status-item network-status ${networkStatus.online ? "active" : "inactive"}">
+          <div class="status-item network-status ${
+            networkStatus.online ? "active" : "inactive"
+          }">
             <span class="status-icon">${networkIcon}</span>
             <span class="status-label">Network</span>
             <span class="status-detail">${networkText}</span>
@@ -271,7 +274,12 @@ export class WidgetCreator {
   /**
    * Get settings widget content
    */
-  getSettingsContent(gameFiActive?: boolean, locationVisible?: boolean, walletVisible?: boolean, runControlsVisible?: boolean): string {
+  getSettingsContent(
+    gameFiActive?: boolean,
+    locationVisible?: boolean,
+    walletVisible?: boolean,
+    runControlsVisible?: boolean
+  ): string {
     // Provide default values if not passed
     gameFiActive = gameFiActive ?? false;
     locationVisible = locationVisible ?? true;
@@ -281,9 +289,13 @@ export class WidgetCreator {
       <div class="widget-section">
         <div class="widget-section-title">🎮 Game Features</div>
         <div class="widget-buttons">
-          <button class="widget-button ${gameFiActive ? "active" : ""}" id="gamefi-toggle-widget">
+          <button class="widget-button ${
+            gameFiActive ? "active" : ""
+          }" id="gamefi-toggle-widget">
             <span class="btn-icon">🎮</span>
-            <span class="btn-text">${gameFiActive ? "GameFi ON" : "GameFi OFF"}</span>
+            <span class="btn-text">${
+              gameFiActive ? "GameFi ON" : "GameFi OFF"
+            }</span>
           </button>
         </div>
       </div>
@@ -292,12 +304,16 @@ export class WidgetCreator {
         <div class="widget-section-title">👁️ Widget Visibility</div>
         <div class="widget-toggles">
           <label class="widget-toggle">
-            <input type="checkbox" id="toggle-location" ${locationVisible ? "checked" : ""}>
+            <input type="checkbox" id="toggle-location" ${
+              locationVisible ? "checked" : ""
+            }>
             <span class="toggle-slider"></span>
             <span class="toggle-label">📍 Location</span>
           </label>
           <label class="widget-toggle">
-            <input type="checkbox" id="toggle-wallet" ${walletVisible ? "checked" : ""}>
+            <input type="checkbox" id="toggle-wallet" ${
+              walletVisible ? "checked" : ""
+            }>
             <span class="toggle-slider"></span>
             <span class="toggle-label">🦊 Wallet</span>
           </label>
@@ -309,7 +325,12 @@ export class WidgetCreator {
         <div class="widget-section-title">💰 Rewards</div>
         <div class="widget-toggles">
           <label class="widget-toggle">
-            <input type="checkbox" id="toggle-rewards-hide-until-connected" ${localStorage.getItem("runrealm_rewards_hide_until_connected") === "false" ? "" : "checked"}>
+            <input type="checkbox" id="toggle-rewards-hide-until-connected" ${
+              localStorage.getItem("runrealm_rewards_hide_until_connected") ===
+              "false"
+                ? ""
+                : "checked"
+            }>
             <span class="toggle-slider"></span>
             <span class="toggle-label">Show Rewards only when wallet connected</span>
           </label>
@@ -466,17 +487,22 @@ export class WidgetCreator {
     const difficultyLabel =
       difficulty < 33 ? "Easy" : difficulty < 67 ? "Medium" : "Hard";
     const rarityClass = String(rarity).toLowerCase();
-    const valueScore = this.calculateTerritoryValue(estimatedReward, difficulty, rarity);
-    const valueColor = valueScore > 70 ? '#00ff88' : valueScore > 40 ? '#ffaa00' : '#ff6b6b';
+    const valueScore = this.calculateTerritoryValue(
+      estimatedReward,
+      difficulty,
+      rarity
+    );
+    const valueColor =
+      valueScore > 70 ? "#00ff88" : valueScore > 40 ? "#ffaa00" : "#ff6b6b";
 
     const landmarksHtml =
       Array.isArray(landmarks) && landmarks.length
         ? `<ul class="widget-list">${landmarks
-          .map(
-            (l: string) =>
-              `<li class="widget-list-item"><span class="widget-list-icon">📍</span><span class="widget-list-content">${l}</span></li>`
-          )
-          .join("")}</ul>`
+            .map(
+              (l: string) =>
+                `<li class="widget-list-item"><span class="widget-list-icon">📍</span><span class="widget-list-content">${l}</span></li>`
+            )
+            .join("")}</ul>`
         : '<div class="widget-tip">No notable landmarks</div>';
 
     const content = `
@@ -506,9 +532,18 @@ export class WidgetCreator {
   /**
    * Calculate territory value score
    */
-  private calculateTerritoryValue(reward: number, difficulty: number, rarity: string): number {
-    const rarityMultiplier = { common: 1, rare: 1.5, epic: 2, legendary: 3 }[rarity.toLowerCase()] || 1;
-    return Math.min(Math.round((reward * 0.8 + difficulty * 0.4) * rarityMultiplier), 100);
+  private calculateTerritoryValue(
+    reward: number,
+    difficulty: number,
+    rarity: string
+  ): number {
+    const rarityMultiplier =
+      { common: 1, rare: 1.5, epic: 2, legendary: 3 }[rarity.toLowerCase()] ||
+      1;
+    return Math.min(
+      Math.round((reward * 0.8 + difficulty * 0.4) * rarityMultiplier),
+      100
+    );
   }
 
   /**

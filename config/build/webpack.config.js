@@ -103,6 +103,12 @@ module.exports = (env, argv) => {
       },
     },
 
+    // Exclude React Native packages from web builds
+    externals: {
+      'react-native': 'commonjs react-native',
+      '@react-native-async-storage/async-storage': 'commonjs @react-native-async-storage/async-storage',
+    },
+
     optimization: {
       minimize: isProduction,
       minimizer: isProduction

@@ -55,6 +55,9 @@ packages/*/*.tsbuildinfo
 tsconfig.tsbuildinfo
 # Additional build artifacts
 packages/*/*.js
+packages/*/*.d.ts
+packages/*/*.d.ts.map
+packages/*/*.js.map
 !packages/*/*.ts
 !packages/*/*.tsx
 
