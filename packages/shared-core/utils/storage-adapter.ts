@@ -23,9 +23,16 @@ const loadAsyncStorage = (): any => {
     // Use a dynamic require that webpack can't analyze at build time
     // This prevents webpack from trying to bundle React Native code for web builds
     const moduleName = "@react-native-async-storage/async-storage";
-    // @ts-ignore - Dynamic require to prevent webpack bundling
-    const module = require(moduleName);
-    return module?.default || module;
+
+    // In web builds with IgnorePlugin, this might throw or return empty
+    try {
+      // @ts-ignore - Dynamic require
+      const module = require(moduleName);
+      return module?.default || module;
+    } catch (e) {
+      // Expected in web environments or if ignored by webpack
+      return null;
+    }
   } catch (e) {
     // Expected in web environments - silently fail
     return null;

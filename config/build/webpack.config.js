@@ -228,8 +228,12 @@ module.exports = (env, argv) => {
         "process.env.NODE_ENV": JSON.stringify(argv.mode || "development"),
       }),
       new webpack.ProvidePlugin({
-        process: "process/browser",
+        process: require.resolve("process/browser"),
         Buffer: ["buffer", "Buffer"],
+      }),
+      // Ignore React Native Async Storage in web builds
+      new webpack.IgnorePlugin({
+        resourceRegExp: /@react-native-async-storage\/async-storage/,
       }),
     ],
 
