@@ -28,14 +28,14 @@ export function calculateDistance(point1: {lat: number, lng: number}, point2: {l
 export function getFormattedDistance(lengthInMeters: number, useMetric: boolean): DistanceResult {
   let rounded = '';
   let units = '';
-  let distance = useMetric ? lengthInMeters : lengthInMeters * .000621371;
+  const distance = useMetric ? lengthInMeters : lengthInMeters * .000621371;
 
   if (useMetric) {
     if (distance < 1000) {
       rounded = '' + Math.round(distance);
       units = 'm';
     } else {
-      let km = distance / 1000;
+      const km = distance / 1000;
       rounded = km.toFixed(2);
       units = 'km';
     }

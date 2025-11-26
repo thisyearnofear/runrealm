@@ -26,7 +26,7 @@ const loadAsyncStorage = (): any => {
 
     // In web builds with IgnorePlugin, this might throw or return empty
     try {
-      // @ts-ignore - Dynamic require
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const module = require(moduleName);
       return module?.default || module;
     } catch (e) {

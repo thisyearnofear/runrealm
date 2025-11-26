@@ -36,7 +36,7 @@ export class NextSegmentService {
   private directionsService: DirectionsService;
 
   constructor(mbk: string) {
-    let cfg = {} as SdkConfig;
+    const cfg = {} as SdkConfig;
     ((cfg as any)[atob('YWNjZXNzVG9rZW4=')] = mbk);
     this.directionsService = DirectionsFactory(cfg);
   }

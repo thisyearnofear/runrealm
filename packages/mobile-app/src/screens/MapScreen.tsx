@@ -14,31 +14,36 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
 
   // Lazy load components in useEffect to avoid import-time errors
   useEffect(() => {
-    try {
-      const TerritoryMapViewComp =
-        require("../components/TerritoryMapView").default;
-      setTerritoryMapView(() => TerritoryMapViewComp);
-    } catch (error) {
-      console.warn("TerritoryMapView not available:", error);
-    }
+    const loadComponents = async () => {
+      try {
+        const TerritoryMapViewModule = await import(
+          "../components/TerritoryMapView"
+        );
+        setTerritoryMapView(() => TerritoryMapViewModule.default);
+      } catch (error) {
+        console.warn("TerritoryMapView not available:", error);
+      }
 
-    try {
-      const GPSTrackingComp =
-        require("../components/GPSTrackingComponent").default;
-      setGPSTrackingComponent(() => GPSTrackingComp);
-    } catch (error) {
-      console.warn("GPSTrackingComponent not available:", error);
-    }
+      try {
+        const GPSTrackingModule = await import(
+          "../components/GPSTrackingComponent"
+        );
+        setGPSTrackingComponent(() => GPSTrackingModule.default);
+      } catch (error) {
+        console.warn("GPSTrackingComponent not available:", error);
+      }
 
-    try {
-      const WalletButtonComp =
-        require("../components/WalletButton").WalletButton;
-      setWalletButton(() => WalletButtonComp);
-    } catch (error) {
-      console.warn("WalletButton not available:", error);
-    }
+      try {
+        const WalletButtonModule = await import("../components/WalletButton");
+        setWalletButton(() => WalletButtonModule.WalletButton);
+      } catch (error) {
+        console.warn("WalletButton not available:", error);
+      }
 
-    setComponentsLoaded(true);
+      setComponentsLoaded(true);
+    };
+
+    loadComponents();
   }, []);
 
   // These props would need to be passed through navigation or context

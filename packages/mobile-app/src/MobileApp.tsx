@@ -11,15 +11,20 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 let AchievementService: any = null;
 let Achievement: any = null;
 
-try {
-  const achievementModule = require("@runrealm/shared-core/services/achievement-service");
-  if (achievementModule?.AchievementService) {
-    AchievementService = achievementModule.AchievementService;
-    Achievement = achievementModule.Achievement;
+// Dynamic import for optional dependency
+(async () => {
+  try {
+    const achievementModule = await import(
+      "@runrealm/shared-core/services/achievement-service"
+    );
+    if (achievementModule?.AchievementService) {
+      AchievementService = achievementModule.AchievementService;
+      Achievement = achievementModule.Achievement;
+    }
+  } catch (error) {
+    console.warn("AchievementService not available:", error);
   }
-} catch (error) {
-  console.warn("AchievementService not available:", error);
-}
+})();
 
 const Tab = createBottomTabNavigator();
 

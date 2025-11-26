@@ -19,8 +19,8 @@ import * as Location from 'expo-location';
 
 // Lazy load TaskManager to avoid initialization errors
 // Don't import at module level - load it when needed
-let TaskManager: any = null;
-let taskDefined = false;
+const TaskManager: any = null;
+const taskDefined = false;
 
 // Define background location task (only if TaskManager is available)
 // DISABLED: TaskManager causes initialization errors with LegacyEventEmitter

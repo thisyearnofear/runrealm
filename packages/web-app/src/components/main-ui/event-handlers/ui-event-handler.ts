@@ -57,7 +57,7 @@ export class EventHandler {
   protected safeEmit(event: string, data?: any): void {
     const callbacks = this.eventCallbacks.get(event);
     if (callbacks) {
-      callbacks.forEach(callback => {
+      callbacks.forEach((callback) => {
         try {
           callback(data);
         } catch (error) {
@@ -97,10 +97,15 @@ export class EventHandler {
       this.handleFabAction(action!);
     });
 
-    this.domService.delegate(document.body, ".import-activities-btn", "click", () => {
-      this.showExternalFitnessIntegration();
-      this.trackUserAction("import_activities_clicked");
-    });
+    this.domService.delegate(
+      document.body,
+      ".import-activities-btn",
+      "click",
+      () => {
+        this.showExternalFitnessIntegration();
+        this.trackUserAction("import_activities_clicked");
+      }
+    );
 
     this.domService.delegate(
       document.body,
@@ -175,7 +180,9 @@ export class EventHandler {
         );
 
         try {
-          const { ActionRouter } = await import("@runrealm/shared-core/ui/action-router");
+          const { ActionRouter } = await import(
+            "@runrealm/shared-core/ui/action-router"
+          );
           ActionRouter.dispatch(action as any, payload);
         } catch (err) {
           console.error("Failed to dispatch UI action", action, err);
@@ -270,17 +277,18 @@ export class EventHandler {
             ? data.difficulty < 33
               ? "Easy"
               : data.difficulty < 67
-                ? "Medium"
-                : "Hard"
+              ? "Medium"
+              : "Hard"
             : "—";
         const statsHtml = `
           <div class="widget-stat"><span class="widget-stat-label">Planned Distance</span><span class="widget-stat-value">${km.toFixed(
-          2
-        )} km</span></div>
+            2
+          )} km</span></div>
           <div class="widget-stat"><span class="widget-stat-label">Difficulty</span><span class="widget-stat-value">${diffLabel}</span></div>
-          ${etaMin !== undefined
-            ? `<div class="widget-stat"><span class="widget-stat-label">ETA</span><span class="widget-stat-value">~${etaMin} min</span></div>`
-            : ""
+          ${
+            etaMin !== undefined
+              ? `<div class="widget-stat"><span class="widget-stat-label">ETA</span><span class="widget-stat-value">~${etaMin} min</span></div>`
+              : ""
           }
           <div class="widget-buttons">
             <button class="widget-button" id="start-run-btn">▶️ Start Run</button>
@@ -298,10 +306,11 @@ export class EventHandler {
     this.subscribe("ai:routeFailed", (data: { message: string }) => {
       const errorMessage = data?.message || "Unknown error occurred";
       this.uiService.showToast("🤖 AI route failed", { type: "error" });
-      const tip = `<div class="widget-tip">🤖 Could not generate a route. ${errorMessage.includes("API key")
-        ? "Please check your AI configuration."
-        : "Try again in a moment or adjust your goals."
-        }</div>`;
+      const tip = `<div class="widget-tip">🤖 Could not generate a route. ${
+        errorMessage.includes("API key")
+          ? "Please check your AI configuration."
+          : "Try again in a moment or adjust your goals."
+      }</div>`;
       this.widgetSystem.updateWidget("territory-info", tip);
     });
 
@@ -352,8 +361,9 @@ export class EventHandler {
           const successHtml = `
           <div class="widget-tip success animate-in">
             👻 ${data.runner.name}${fallbackText} is ready to race!
-            <br><small>Difficulty: ${data.difficulty}% • ${data.runner.specialAbility
-            }</small>
+            <br><small>Difficulty: ${data.difficulty}% • ${
+            data.runner.specialAbility
+          }</small>
             <br><small class="ghost-backstory">${data.runner.backstory}</small>
           </div>
           <div class="widget-buttons">
@@ -434,7 +444,8 @@ export class EventHandler {
             📍 Perfect route found! ${waypointSummary}, ${Math.round(
             data.distance
           )}m
-            <br><small>Difficulty: ${data.difficulty || 50
+            <br><small>Difficulty: ${
+              data.difficulty || 50
             }% • Territory opportunities along route</small>
           </div>
           <div class="widget-buttons">
@@ -443,7 +454,8 @@ export class EventHandler {
             )}}'>
               🗺️ Show on Map
             </button>
-            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${data.difficulty || 50
+            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${
+              data.difficulty || 50
             }}'>
               👻 Add Ghost
             </button>
@@ -528,50 +540,61 @@ export class EventHandler {
    */
   setupRouteStateListeners(): void {
     // Listen for route state changes to update widgets
-    this.subscribe("route:stateChanged", (data: { routeId: string; routeData: any; isActive: boolean }) => {
-      if (data.isActive) {
-        // Update territory-info widget with route details
-        const km = (data.routeData.totalDistance || data.routeData.distance || 0) / 1000;
-        const etaMin = data.routeData.estimatedTime
-          ? Math.round(data.routeData.estimatedTime / 60)
-          : undefined;
-        const diffLabel =
-          typeof data.routeData.difficulty === "number"
-            ? data.routeData.difficulty < 33
-              ? "Easy"
-              : data.routeData.difficulty < 67
+    this.subscribe(
+      "route:stateChanged",
+      (data: { routeId: string; routeData: any; isActive: boolean }) => {
+        if (data.isActive) {
+          // Update territory-info widget with route details
+          const km =
+            (data.routeData.totalDistance || data.routeData.distance || 0) /
+            1000;
+          const etaMin = data.routeData.estimatedTime
+            ? Math.round(data.routeData.estimatedTime / 60)
+            : undefined;
+          const diffLabel =
+            typeof data.routeData.difficulty === "number"
+              ? data.routeData.difficulty < 33
+                ? "Easy"
+                : data.routeData.difficulty < 67
                 ? "Medium"
                 : "Hard"
-            : "—";
+              : "—";
 
-        const statsHtml = `
+          const statsHtml = `
           <div class="widget-stat"><span class="widget-stat-label">Planned Distance</span><span class="widget-stat-value">${km.toFixed(
-          2
-        )} km</span></div>
+            2
+          )} km</span></div>
           <div class="widget-stat"><span class="widget-stat-label">Difficulty</span><span class="widget-stat-value">${diffLabel}</span></div>
-          ${etaMin !== undefined
-            ? `<div class="widget-stat"><span class="widget-stat-label">ETA</span><span class="widget-stat-value">~${etaMin} min</span></div>`
-            : ""
+          ${
+            etaMin !== undefined
+              ? `<div class="widget-stat"><span class="widget-stat-label">ETA</span><span class="widget-stat-value">~${etaMin} min</span></div>`
+              : ""
           }
           <div class="widget-tip success">
             🎉 Route ready! Click "Start Run" to begin.
           </div>
           <div class="widget-buttons">
             <button class="widget-button primary" data-action="ai.startRun" data-payload='{"coordinates":${JSON.stringify(
-            data.routeData.coordinates
-          )}, "distance": ${data.routeData.totalDistance || data.routeData.distance}}'>
+              data.routeData.coordinates
+            )}, "distance": ${
+            data.routeData.totalDistance || data.routeData.distance
+          }}'>
               ▶️ Start Run
             </button>
-            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{\"difficulty\":${data.routeData.difficulty || 50}}'>
+            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${
+              data.routeData.difficulty || 50
+            }}'>
               👻 Start Ghost Runner
             </button>
           </div>`;
 
-        this.widgetSystem.updateWidget("territory-info", statsHtml);
-        const w = this.widgetSystem.getWidget("territory-info");
-        if (w && w.minimized) this.widgetSystem.toggleWidget("territory-info");
+          this.widgetSystem.updateWidget("territory-info", statsHtml);
+          const w = this.widgetSystem.getWidget("territory-info");
+          if (w && w.minimized)
+            this.widgetSystem.toggleWidget("territory-info");
+        }
       }
-    });
+    );
 
     // Listen for route cleared events
     this.subscribe("route:cleared", () => {
@@ -741,7 +764,9 @@ export class EventHandler {
     // This will be handled by the UI effects module
   }
 
-  private triggerHapticFeedback(type: "light" | "medium" | "heavy" = "light"): void {
+  private triggerHapticFeedback(
+    type: "light" | "medium" | "heavy" = "light"
+  ): void {
     // This will be handled by the UI effects module
   }
 

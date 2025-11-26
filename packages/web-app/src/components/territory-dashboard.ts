@@ -532,7 +532,7 @@ export class TerritoryDashboard {
   }
 
   private calculateTerritoryValue(territory: Territory): number {
-    let score = territory.estimatedReward;
+    const score = territory.estimatedReward;
 
     // Rarity multiplier
     const rarityMultiplier =
