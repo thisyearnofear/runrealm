@@ -63,9 +63,9 @@ export interface AppEvents extends Web3Events {
   "run:plannedRouteChanged": { geojson: any };
   "run:plannedRouteActivated": { coordinates: any[]; distance: number; runId: string };
   "run:completed": { distance: number; duration: number; points: any[] };
-  "run:paused": Record<string, never>;
-  "run:resumed": Record<string, never>;
-  "run:cancelled": Record<string, never>;
+  "run:paused": { runId: string; timestamp: number; stats: any };
+  "run:resumed": { runId: string; timestamp: number; stats: any };
+  "run:cancelled": { runId: string; timestamp: number };
   "run:statusChanged": { status: string };
   "run:statsUpdated": { distance: number; duration: number; speed: number };
   "ui:settingsOpened": Record<string, never>;
@@ -110,7 +110,7 @@ export interface AppEvents extends Web3Events {
   "onboarding:stepChanged": { stepIndex: number; stepId: string; totalSteps: number };
   "progression:achievementsLoaded": { count: number };
   "progression:levelsLoaded": { maxLevel: number };
-  "run:startRequested": Record<string, never>;
+  "run:startRequested": { runId?: string };
   "location:changed": { lat: number; lng: number; accuracy?: number; address?: string; source: string; timestamp: number };
   "location:updated": { accuracy: number };
   "location:error": Record<string, never>;

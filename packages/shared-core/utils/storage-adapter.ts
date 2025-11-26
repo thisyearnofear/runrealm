@@ -26,7 +26,6 @@ const loadAsyncStorage = (): any => {
 
     // In web builds with IgnorePlugin, this might throw or return empty
     try {
-      // @ts-expect-error - Dynamic require for React Native module
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const module = require(moduleName);
       return module?.default || module;
