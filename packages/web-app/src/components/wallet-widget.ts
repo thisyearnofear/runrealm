@@ -4,11 +4,14 @@
  * Integrates cleanly with the widget system
  */
 
-import { BaseService } from '@runrealm/shared-core/core/base-service';
-import { DOMService } from '@runrealm/shared-core/services/dom-service';
-import { UIService } from '@runrealm/shared-core/services/ui-service';
-import { AnimationService } from '@runrealm/shared-core/services/animation-service';
-import { Web3Service, WalletInfo } from '@runrealm/shared-core/services/web3-service';
+import { BaseService } from "@runrealm/shared-core/core/base-service";
+import { DOMService } from "@runrealm/shared-core/services/dom-service";
+import { UIService } from "@runrealm/shared-core/services/ui-service";
+import { AnimationService } from "@runrealm/shared-core/services/animation-service";
+import {
+  Web3Service,
+  WalletInfo,
+} from "@runrealm/shared-core/services/web3-service";
 
 export interface WalletProvider {
   id: string;
@@ -22,7 +25,7 @@ export interface WalletProvider {
 }
 
 export interface WalletState {
-  status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'switching';
+  status: "disconnected" | "connecting" | "connected" | "error" | "switching";
   wallet?: WalletInfo;
   error?: string;
   lastProvider?: string;
@@ -35,47 +38,51 @@ export class WalletWidget extends BaseService {
   private web3Service: Web3Service;
   private rewardSystemUI: any = null; // RewardSystemUI reference (optional)
 
-  private walletState: WalletState = { status: 'disconnected' };
+  private walletState: WalletState = { status: "disconnected" };
   private retryCount: number = 0;
   private maxRetries: number = 3;
 
   // Centralized wallet provider definitions
   private readonly walletProviders: WalletProvider[] = [
     {
-      id: 'metamask',
-      name: 'MetaMask',
-      icon: '🦊',
-      description: 'Most popular Ethereum wallet',
-      downloadUrl: 'https://metamask.io/download/',
+      id: "metamask",
+      name: "MetaMask",
+      icon: "🦊",
+      description: "Most popular Ethereum wallet",
+      downloadUrl: "https://metamask.io/download/",
       popular: true,
-      isInstalled: () => typeof window !== 'undefined' && Boolean((window as any).ethereum?.isMetaMask),
-      connect: () => this.connectMetaMask()
+      isInstalled: () =>
+        typeof window !== "undefined" &&
+        Boolean((window as any).ethereum?.isMetaMask),
+      connect: () => this.connectMetaMask(),
     },
     {
-      id: 'walletconnect',
-      name: 'WalletConnect',
-      icon: '📱',
-      description: 'Connect with mobile wallets',
+      id: "walletconnect",
+      name: "WalletConnect",
+      icon: "📱",
+      description: "Connect with mobile wallets",
       popular: true,
       isInstalled: () => true,
-      connect: () => this.connectWalletConnect()
+      connect: () => this.connectWalletConnect(),
     },
     {
-      id: 'coinbase',
-      name: 'Coinbase Wallet',
-      icon: '🔵',
-      description: 'Coinbase\'s self-custody wallet',
-      downloadUrl: 'https://www.coinbase.com/wallet',
-      isInstalled: () => typeof window !== 'undefined' && Boolean((window as any).ethereum?.isCoinbaseWallet),
-      connect: () => this.connectCoinbase()
-    }
+      id: "coinbase",
+      name: "Coinbase Wallet",
+      icon: "🔵",
+      description: "Coinbase's self-custody wallet",
+      downloadUrl: "https://www.coinbase.com/wallet",
+      isInstalled: () =>
+        typeof window !== "undefined" &&
+        Boolean((window as any).ethereum?.isCoinbaseWallet),
+      connect: () => this.connectCoinbase(),
+    },
   ];
 
   constructor(
     domService: DOMService,
     uiService: UIService,
     animationService: AnimationService,
-    web3Service: Web3Service
+    web3Service: Web3Service,
   ) {
     super();
     this.domService = domService;
@@ -88,7 +95,10 @@ export class WalletWidget extends BaseService {
     this.setupEventListeners();
     this.addWalletStyles();
     await this.checkExistingConnection();
-    this.safeEmit('service:initialized', { service: 'WalletWidget', success: true });
+    this.safeEmit("service:initialized", {
+      service: "WalletWidget",
+      success: true,
+    });
   }
 
   /**
@@ -98,7 +108,7 @@ export class WalletWidget extends BaseService {
     this.rewardSystemUI = rewardSystemUI;
     // Listen for rewards updates
     if (this.rewardSystemUI) {
-      this.subscribe('rewards:dataUpdated' as any, () => {
+      this.subscribe("rewards:dataUpdated" as any, () => {
         this.updateWidgetContent();
       });
     }
@@ -125,15 +135,15 @@ export class WalletWidget extends BaseService {
     const { status, wallet, error } = this.walletState;
 
     switch (status) {
-      case 'disconnected':
+      case "disconnected":
         return this.renderDisconnectedState();
-      case 'connecting':
+      case "connecting":
         return this.renderConnectingState();
-      case 'connected':
+      case "connected":
         return this.renderConnectedState(wallet!);
-      case 'error':
-        return this.renderErrorState(error || 'Connection failed');
-      case 'switching':
+      case "error":
+        return this.renderErrorState(error || "Connection failed");
+      case "switching":
         return this.renderSwitchingState();
       default:
         return this.renderDisconnectedState();
@@ -142,72 +152,106 @@ export class WalletWidget extends BaseService {
 
   private setupEventListeners(): void {
     // Listen for Web3 events
-    this.subscribe('web3:walletConnected', (data) => {
+    this.subscribe("web3:walletConnected", (data) => {
       this.updateWalletState({
-        status: 'connected',
-        wallet: data as WalletInfo
+        status: "connected",
+        wallet: data as WalletInfo,
       });
-      this.uiService.showToast('🎉 Wallet connected successfully!', { type: 'success' });
+      this.uiService.showToast("🎉 Wallet connected successfully!", {
+        type: "success",
+      });
     });
 
-    this.subscribe('web3:walletDisconnected', () => {
-      this.updateWalletState({ status: 'disconnected', wallet: undefined });
-      this.uiService.showToast('👋 Wallet disconnected', { type: 'info' });
+    this.subscribe("web3:walletDisconnected", () => {
+      this.updateWalletState({ status: "disconnected", wallet: undefined });
+      this.uiService.showToast("👋 Wallet disconnected", { type: "info" });
     });
 
-    this.subscribe('web3:networkChanged', (data) => {
+    this.subscribe("web3:networkChanged", (data) => {
       if (this.walletState.wallet) {
         this.updateWalletState({
-          status: 'connected',
-          wallet: { ...this.walletState.wallet, chainId: data.chainId }
+          status: "connected",
+          wallet: { ...this.walletState.wallet, chainId: data.chainId },
         });
       }
     });
 
     // Widget interactions
-    this.domService.delegate(document.body, '[data-action="connect-wallet"]', 'click', () => {
-      this.showWalletModal();
-    });
-
-    this.domService.delegate(document.body, '[data-action="disconnect-wallet"]', 'click', () => {
-      this.disconnectWallet();
-    });
-
-    this.domService.delegate(document.body, '[data-action="switch-network"]', 'click', () => {
+    // Subscribe to other wallet actions
+    this.subscribe("wallet:switchNetwork", () => {
       this.switchToSupportedNetwork();
     });
 
-    // Handle rewards claim button (from wallet widget)
-    this.domService.delegate(document.body, '[data-action="claim-rewards"]', 'click', () => {
-      if (this.rewardSystemUI && typeof this.rewardSystemUI.claimRewards === 'function') {
+    this.subscribe("rewards:claim", () => {
+      if (
+        this.rewardSystemUI &&
+        typeof this.rewardSystemUI.claimRewards === "function"
+      ) {
         this.rewardSystemUI.claimRewards();
       }
     });
 
-    this.domService.delegate(document.body, '[data-action="retry-connection"]', 'click', () => {
+    this.subscribe("wallet:retryConnection", () => {
       this.retryConnection();
     });
 
     // Provider selection in modal
-    this.domService.delegate(document.body, '.wallet-provider-option', 'click', (event) => {
-      const providerId = (event.target as HTMLElement).closest('.wallet-provider-option')?.getAttribute('data-provider');
-      if (providerId) {
-        this.connectWallet(providerId);
+    this.domService.delegate(
+      document.body,
+      ".wallet-provider-option",
+      "click",
+      (event) => {
+        const providerId = (event.target as HTMLElement)
+          .closest(".wallet-provider-option")
+          ?.getAttribute("data-provider");
+        if (providerId) {
+          this.connectWallet(providerId);
+        }
+      },
+    );
+
+    // Listen for ActionRouter events
+    this.subscribe("wallet:connect", (payload: any) => {
+      if (payload && payload.provider) {
+        this.connectWallet(payload.provider);
+      } else {
+        this.showWalletModal();
       }
+    });
+
+    this.subscribe("wallet:disconnect", () => {
+      this.disconnectWallet();
     });
   }
 
   private async checkExistingConnection(): Promise<void> {
     try {
-      const isConnected = localStorage.getItem('runrealm_wallet_connected') === 'true';
+      // Wait a brief moment to ensure Web3Service is fully initialized
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const isConnected =
+        localStorage.getItem("runrealm_wallet_connected") === "true";
       if (isConnected && this.web3Service.isWalletAvailable()) {
-        this.updateWalletState({ status: 'connecting', lastProvider: 'metamask' });
+        console.log("WalletWidget: Found existing connection, reconnecting...");
+        this.updateWalletState({
+          status: "connecting",
+          lastProvider: "metamask",
+        });
+
+        // Attempt to connect silently first
         const wallet = await this.web3Service.connectWallet();
-        this.updateWalletState({ status: 'connected', wallet });
+        this.updateWalletState({ status: "connected", wallet });
+      } else {
+        this.updateWalletState({ status: "disconnected" });
       }
     } catch (error) {
-      console.log('No existing wallet connection found');
-      this.updateWalletState({ status: 'disconnected' });
+      console.log(
+        "No existing wallet connection found or connection failed:",
+        error,
+      );
+      this.updateWalletState({ status: "disconnected" });
+      // Clear stale state
+      localStorage.removeItem("runrealm_wallet_connected");
     }
   }
 
@@ -215,7 +259,7 @@ export class WalletWidget extends BaseService {
     this.walletState = { ...this.walletState, ...newState };
 
     // Emit state change for other components
-    this.safeEmit('wallet:stateChanged' as any, this.walletState);
+    this.safeEmit("wallet:stateChanged" as any, this.walletState);
 
     // Update widget content through the widget system
     this.updateWidgetContent();
@@ -226,18 +270,20 @@ export class WalletWidget extends BaseService {
    */
   private updateWidgetContent(): void {
     // Emit widget update event that the widget system listens for
-    this.safeEmit('widget:updateContent' as any, {
-      widgetId: 'wallet-info',
+    this.safeEmit("widget:updateContent" as any, {
+      widgetId: "wallet-info",
       content: this.getWidgetContent(),
-      loading: this.walletState.status === 'connecting' || this.walletState.status === 'switching',
-      success: this.walletState.status === 'connected'
+      loading:
+        this.walletState.status === "connecting" ||
+        this.walletState.status === "switching",
+      success: this.walletState.status === "connected",
     });
   }
 
   public async connectWallet(providerId: string): Promise<void> {
-    const provider = this.walletProviders.find(p => p.id === providerId);
+    const provider = this.walletProviders.find((p) => p.id === providerId);
     if (!provider) {
-      this.uiService.showToast('Wallet provider not found', { type: 'error' });
+      this.uiService.showToast("Wallet provider not found", { type: "error" });
       return;
     }
 
@@ -247,12 +293,14 @@ export class WalletWidget extends BaseService {
     }
 
     try {
-      this.updateWalletState({ status: 'connecting', lastProvider: providerId });
+      this.updateWalletState({
+        status: "connecting",
+        lastProvider: providerId,
+      });
       this.retryCount = 0;
 
       await provider.connect();
       this.hideWalletModal();
-
     } catch (error) {
       console.error(`Failed to connect to ${provider.name}:`, error);
       this.handleConnectionError(error, provider);
@@ -262,17 +310,19 @@ export class WalletWidget extends BaseService {
   public async disconnectWallet(): Promise<void> {
     try {
       await this.web3Service.disconnectWallet();
-      this.updateWalletState({ status: 'disconnected', wallet: undefined });
+      this.updateWalletState({ status: "disconnected", wallet: undefined });
     } catch (error) {
-      console.error('Failed to disconnect wallet:', error);
-      this.uiService.showToast('Failed to disconnect wallet', { type: 'error' });
+      console.error("Failed to disconnect wallet:", error);
+      this.uiService.showToast("Failed to disconnect wallet", {
+        type: "error",
+      });
     }
   }
 
   public showWalletModal(): void {
-    const modal = this.domService.createElement('div', {
-      id: 'wallet-modal-overlay',
-      className: 'wallet-modal-overlay',
+    const modal = this.domService.createElement("div", {
+      id: "wallet-modal-overlay",
+      className: "wallet-modal-overlay",
       innerHTML: `
         <div class="wallet-modal">
           <div class="modal-header">
@@ -282,26 +332,31 @@ export class WalletWidget extends BaseService {
           </div>
           
           <div class="wallet-providers">
-            ${this.walletProviders.map(provider => `
-              <div class="wallet-provider-option ${provider.popular ? 'popular' : ''}" 
+            ${this.walletProviders
+              .map(
+                (provider) => `
+              <div class="wallet-provider-option ${provider.popular ? "popular" : ""}" 
                    data-provider="${provider.id}"
                    tabindex="0">
                 <div class="provider-icon">${provider.icon}</div>
                 <div class="provider-info">
                   <div class="provider-name">
                     ${provider.name}
-                    ${provider.popular ? '<span class="popular-badge">Popular</span>' : ''}
+                    ${provider.popular ? '<span class="popular-badge">Popular</span>' : ""}
                   </div>
                   <div class="provider-description">${provider.description}</div>
                 </div>
                 <div class="provider-status">
-                  ${provider.isInstalled() ?
-          '<span class="status-installed">✅ Installed</span>' :
-          '<span class="status-not-installed">📥 Install</span>'
-        }
+                  ${
+                    provider.isInstalled()
+                      ? '<span class="status-installed">✅ Installed</span>'
+                      : '<span class="status-not-installed">📥 Install</span>'
+                  }
                 </div>
               </div>
-            `).join('')}
+            `,
+              )
+              .join("")}
           </div>
           
           <div class="wallet-benefits">
@@ -331,18 +386,20 @@ export class WalletWidget extends BaseService {
           </div>
         </div>
       `,
-      parent: document.body
+      parent: document.body,
     });
 
     this.animationService.fadeIn(modal, { duration: 200 });
   }
 
   private hideWalletModal(): void {
-    const modal = document.querySelector('#wallet-modal-overlay');
+    const modal = document.querySelector("#wallet-modal-overlay");
     if (modal) {
-      this.animationService.fadeOut(modal as HTMLElement, { duration: 200 }).then(() => {
-        modal.remove();
-      });
+      this.animationService
+        .fadeOut(modal as HTMLElement, { duration: 200 })
+        .then(() => {
+          modal.remove();
+        });
     }
   }
 
@@ -376,7 +433,7 @@ export class WalletWidget extends BaseService {
 
   private renderConnectedState(wallet: WalletInfo): string {
     const shortAddress = `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`;
-    const rewardsContent = this.rewardSystemUI?.getRewardsContent() || '';
+    const rewardsContent = this.rewardSystemUI?.getRewardsContent() || "";
 
     return `
       <div class="wallet-status connected">
@@ -405,15 +462,19 @@ export class WalletWidget extends BaseService {
           <div class="wallet-subtitle">${error}</div>
         </div>
         <div class="wallet-actions">
-          ${this.retryCount < this.maxRetries ? `
+          ${
+            this.retryCount < this.maxRetries
+              ? `
             <button class="wallet-action-btn" data-action="retry-connection">
               Retry
             </button>
-          ` : `
+          `
+              : `
             <button class="wallet-action-btn" data-action="connect-wallet">
               Try Again
             </button>
-          `}
+          `
+          }
         </div>
       </div>
     `;
@@ -433,58 +494,64 @@ export class WalletWidget extends BaseService {
 
   private async retryConnection(): Promise<void> {
     if (this.retryCount >= this.maxRetries) {
-      this.uiService.showToast('Maximum retry attempts reached', { type: 'error' });
+      this.uiService.showToast("Maximum retry attempts reached", {
+        type: "error",
+      });
       return;
     }
 
     this.retryCount++;
-    const lastProvider = this.walletState.lastProvider || 'metamask';
+    const lastProvider = this.walletState.lastProvider || "metamask";
 
-    this.uiService.showToast(`Retrying connection... (${this.retryCount}/${this.maxRetries})`, { type: 'info' });
+    this.uiService.showToast(
+      `Retrying connection... (${this.retryCount}/${this.maxRetries})`,
+      { type: "info" },
+    );
     await this.connectWallet(lastProvider);
   }
 
   private async switchToSupportedNetwork(): Promise<void> {
     try {
-      this.updateWalletState({ status: 'switching' });
+      this.updateWalletState({ status: "switching" });
 
       // Switch to ZetaChain testnet (primary network)
       await this.web3Service.switchNetwork(7001);
 
-      this.uiService.showToast('Network switched successfully!', { type: 'success' });
-
+      this.uiService.showToast("Network switched successfully!", {
+        type: "success",
+      });
     } catch (error) {
-      console.error('Failed to switch network:', error);
-      this.uiService.showToast('Failed to switch network', { type: 'error' });
-      this.updateWalletState({ status: 'connected' }); // Revert status
+      console.error("Failed to switch network:", error);
+      this.uiService.showToast("Failed to switch network", { type: "error" });
+      this.updateWalletState({ status: "connected" }); // Revert status
     }
   }
 
   private handleConnectionError(error: any, provider: WalletProvider): void {
-    let errorMessage = 'Failed to connect wallet';
+    let errorMessage = "Failed to connect wallet";
 
     if (error.code === 4001) {
-      errorMessage = 'Connection rejected by user';
+      errorMessage = "Connection rejected by user";
     } else if (error.code === -32002) {
-      errorMessage = 'Connection request already pending';
-    } else if (error.message?.includes('network')) {
-      errorMessage = 'Network connection issue';
-    } else if (error.message?.includes('unauthorized')) {
-      errorMessage = 'Wallet authorization failed';
+      errorMessage = "Connection request already pending";
+    } else if (error.message?.includes("network")) {
+      errorMessage = "Network connection issue";
+    } else if (error.message?.includes("unauthorized")) {
+      errorMessage = "Wallet authorization failed";
     }
 
     this.updateWalletState({
-      status: 'error',
+      status: "error",
       error: errorMessage,
-      lastProvider: provider.id
+      lastProvider: provider.id,
     });
 
-    this.uiService.showToast(errorMessage, { type: 'error' });
+    this.uiService.showToast(errorMessage, { type: "error" });
   }
 
   private showInstallPrompt(provider: WalletProvider): void {
-    const installModal = this.domService.createElement('div', {
-      className: 'install-wallet-modal',
+    const installModal = this.domService.createElement("div", {
+      className: "install-wallet-modal",
       innerHTML: `
         <div class="install-content">
           <div class="install-header">
@@ -502,7 +569,7 @@ export class WalletWidget extends BaseService {
           </div>
         </div>
       `,
-      parent: document.body
+      parent: document.body,
     });
 
     // Auto-remove after 10 seconds
@@ -517,18 +584,36 @@ export class WalletWidget extends BaseService {
   }
 
   private async connectWalletConnect(): Promise<void> {
-    throw new Error('WalletConnect integration coming soon!');
+    // throw new Error('WalletConnect integration coming soon!');
+    this.uiService.showToast(
+      "WalletConnect integration is currently in beta. Please use MetaMask for the best experience.",
+      { type: "info" },
+    );
+
+    // Fallback to showing the modal again if it was closed
+    setTimeout(() => {
+      this.showWalletModal();
+    }, 1000);
   }
 
   private async connectCoinbase(): Promise<void> {
-    throw new Error('Coinbase Wallet integration coming soon!');
+    // throw new Error('Coinbase Wallet integration coming soon!');
+    this.uiService.showToast(
+      "Coinbase Wallet integration is currently in beta. Please use MetaMask for the best experience.",
+      { type: "info" },
+    );
+
+    // Fallback to showing the modal again if it was closed
+    setTimeout(() => {
+      this.showWalletModal();
+    }, 1000);
   }
 
   private addWalletStyles(): void {
-    if (document.querySelector('#wallet-widget-styles')) return;
+    if (document.querySelector("#wallet-widget-styles")) return;
 
-    this.domService.createElement('style', {
-      id: 'wallet-widget-styles',
+    this.domService.createElement("style", {
+      id: "wallet-widget-styles",
       textContent: `
         /* Wallet Widget Styles */
         .wallet-status {
@@ -980,14 +1065,16 @@ export class WalletWidget extends BaseService {
           }
         }
       `,
-      parent: document.head
+      parent: document.head,
     });
   }
 
   protected async onDestroy(): Promise<void> {
     // Clean up any modals
-    document.querySelectorAll('#wallet-modal-overlay, .install-wallet-modal').forEach(modal => {
-      modal.remove();
-    });
+    document
+      .querySelectorAll("#wallet-modal-overlay, .install-wallet-modal")
+      .forEach((modal) => {
+        modal.remove();
+      });
   }
 }

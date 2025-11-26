@@ -1,4 +1,4 @@
-import { GhostRunner } from '../services/ai-service';
+import { GhostRunner } from "../services/ai-service";
 
 // Centralized event system for loose coupling
 export type EventCallback<T = any> = (data: T) => void;
@@ -12,7 +12,11 @@ export interface Web3Events {
   "web3:transactionConfirmed": { hash: string; blockNumber: number };
   "web3:transactionFailed": { hash?: string; error: string };
   "web3:territoryClaimed": { tokenId: string; geohash: string; metadata: any };
-  "web3:crossChainTerritoryClaimed": { hash: string; geohash: string; originChainId: number };
+  "web3:crossChainTerritoryClaimed": {
+    hash: string;
+    geohash: string;
+    originChainId: number;
+  };
   "web3:crossChainTerritoryClaimFailed": { error: string; geohash: string };
   "territory:challenged": {
     tokenId: string;
@@ -61,7 +65,11 @@ export interface AppEvents extends Web3Events {
   "route:stateChanged": { routeId: string; routeData: any; isActive: boolean };
   "route:cleared": Record<string, never>;
   "run:plannedRouteChanged": { geojson: any };
-  "run:plannedRouteActivated": { coordinates: any[]; distance: number; runId: string };
+  "run:plannedRouteActivated": {
+    coordinates: any[];
+    distance: number;
+    runId: string;
+  };
   "run:completed": { distance: number; duration: number; points: any[] };
   "run:paused": { runId: string; timestamp: number; stats: any };
   "run:resumed": { runId: string; timestamp: number; stats: any };
@@ -81,41 +89,94 @@ export interface AppEvents extends Web3Events {
   "territory:eligible": { territory: any; run: any; message: string };
   "territory:preview": { territory: any; bounds: any; metadata: any };
   "territory:nearbyUpdated": { count: number; territories: any[] };
-  "territory:claimed": { territory: any; transactionHash: string; isCrossChain?: boolean; sourceChainId?: number; source?: string };
-  "territory:claimFailed": { error: string; territory: any; runId?: string; isCrossChain?: boolean };
+  "territory:claimed": {
+    territory: any;
+    transactionHash: string;
+    isCrossChain?: boolean;
+    sourceChainId?: number;
+    source?: string;
+  };
+  "territory:claimFailed": {
+    error: string;
+    territory: any;
+    runId?: string;
+    isCrossChain?: boolean;
+  };
   "ai:routeRequested": {
     distance?: number;
     difficulty?: number;
     goals?: string[];
   };
   "ai:ghostRunnerRequested": { difficulty?: number };
-  'ai:routeReady': { route: any; distance: number; duration: number; waypoints?: any[]; totalDistance?: number; difficulty?: number; estimatedTime?: number };
+  "ai:routeReady": {
+    route: any;
+    distance: number;
+    duration: number;
+    waypoints?: any[];
+    totalDistance?: number;
+    difficulty?: number;
+    estimatedTime?: number;
+  };
   "ai:routeFailed": { message: string };
-  "ai:routeVisualize": { coordinates: number[][]; type: string; style: any; metadata: any };
+  "ai:routeVisualize": {
+    coordinates: number[][];
+    type: string;
+    style: any;
+    metadata: any;
+  };
   "ai:waypointsVisualize": { waypoints: any[]; routeMetadata: any };
   "ai:routeClear": Record<string, never>;
-  "ai:ghostRunnerGenerated": { runner: any; difficulty: number; success?: boolean; fallback?: boolean };
+  "ai:ghostRunnerGenerated": {
+    runner: any;
+    difficulty: number;
+    success?: boolean;
+    fallback?: boolean;
+  };
   "ai:ghostRunnerFailed": { message: string };
   "ghost:ready": { runner: GhostRunner };
-  "ghost:progress": { ghostId: string; progress: number; location: { lat: number, lng: number } };
+  "ghost:progress": {
+    ghostId: string;
+    progress: number;
+    location: { lat: number; lng: number };
+  };
   "map:focusTerritory": { geohash: string };
   "game:levelUp": { newLevel: number; player: string };
-  "game:achievementUnlocked": { achievementId: string; achievement: any; player: string };
+  "game:achievementUnlocked": {
+    achievementId: string;
+    achievement: any;
+    player: string;
+  };
   "game:statsUpdated": { stats: any };
   "game:rewardEarned": { amount: number };
   "navigation:routesRegistered": { routes: any[] };
-  "navigation:routeChanged": { routeId: string; route: any; params?: any; previousRoute?: string };
+  "navigation:routeChanged": {
+    routeId: string;
+    route: any;
+    params?: any;
+    previousRoute?: string;
+  };
   "onboarding:completed": Record<string, never>;
   "onboarding:skipped": Record<string, never>;
-  "onboarding:stepChanged": { stepIndex: number; stepId: string; totalSteps: number };
+  "onboarding:stepChanged": {
+    stepIndex: number;
+    stepId: string;
+    totalSteps: number;
+  };
   "progression:achievementsLoaded": { count: number };
   "progression:levelsLoaded": { maxLevel: number };
   "run:startRequested": { runId?: string };
-  "location:changed": { lat: number; lng: number; accuracy?: number; address?: string; source: string; timestamp: number };
+  "location:changed": {
+    lat: number;
+    lng: number;
+    accuracy?: number;
+    address?: string;
+    source: string;
+    timestamp: number;
+  };
   "location:updated": { accuracy: number };
   "location:error": Record<string, never>;
   "config:updated": Record<string, never>;
-  'visibility:changed': { elementId: string; visible: boolean };
+  "visibility:changed": { elementId: string; visible: boolean };
   "widget:stateChanged": { widgetId: string; state: any };
   "widget:stateReset": { widgetId: string };
   "widget:allStatesReset": Record<string, never>;
@@ -129,24 +190,53 @@ export interface AppEvents extends Web3Events {
   "run:clearRequested": Record<string, never>;
   "ui:territoryPreview": { point: any; totalDistance: number };
   "ui:gamefiEnabled": { enabled: boolean };
-  "token:transferStarted": { transactionHash: string; amount: number; token: string };
+  "token:transferStarted": {
+    transactionHash: string;
+    amount: number;
+    token: string;
+  };
   "staking:stakeStarted": { transactionHash: string; amount: number };
   "staking:rewardEarned": { amount: number };
   "rewards:settingsChanged": Record<string, never>;
+  "rewards:claim": Record<string, never>;
+  "wallet:connect": { provider?: string };
+  "wallet:disconnect": Record<string, never>;
+  "wallet:switchNetwork": { chainId?: number };
+  "wallet:retryConnection": Record<string, never>;
   // Dashboard events
   "dashboard:dataUpdated": { data: any; state: any };
   "dashboard:visibilityChanged": { visible: boolean; minimized: boolean };
   "dashboard:realTimeDataUpdated": { currentRun: any; lastUpdated: number };
   // Cross-chain events
-  "crosschain:territoryClaimRequested": { territoryData: any; targetChainId: number };
-  "crosschain:territoryClaimInitiated": { messageId: string; territoryData: any; targetChainId: number };
+  "crosschain:territoryClaimRequested": {
+    territoryData: any;
+    targetChainId: number;
+  };
+  "crosschain:territoryClaimInitiated": {
+    messageId: string;
+    territoryData: any;
+    targetChainId: number;
+  };
   "crosschain:territoryClaimFailed": { error: string; data: any };
   "crosschain:statsUpdateRequested": { statsData: any; targetChainId: number };
-  "crosschain:statsUpdateInitiated": { messageId: string; statsData: any; targetChainId: number };
+  "crosschain:statsUpdateInitiated": {
+    messageId: string;
+    statsData: any;
+    targetChainId: number;
+  };
   "crosschain:statsUpdateFailed": { error: string; data: any };
-  "crosschain:messageSent": { messageId: string; targetChainId: number; targetAddress: string; data: string };
+  "crosschain:messageSent": {
+    messageId: string;
+    targetChainId: number;
+    targetAddress: string;
+    data: string;
+  };
   "crosschain:messageReceived": { message: any; decodedData: any };
-  "crosschain:territoryUpdated": { territoryId: string; action: string; sourceChainId: number };
+  "crosschain:territoryUpdated": {
+    territoryId: string;
+    action: string;
+    sourceChainId: number;
+  };
   // Fitness integration events
   "fitness:connected": { source: string };
   "fitness:disconnected": { source: string };
@@ -155,10 +245,27 @@ export interface AppEvents extends Web3Events {
   "fitness:tokens:updated": { source: string };
   "fitness:tokens:cleared": { source: string };
   // Strava events
-  "strava:activity:created": { activityId: number; ownerId: number; eventTime: number };
-  "strava:activity:privacy_changed": { activityId: number; ownerId: number; isPrivate: boolean };
-  "strava:activity:updated": { activityId: number; ownerId: number; updates?: Record<string, any>; eventTime: number };
-  "strava:activity:deleted": { activityId: number; ownerId: number; eventTime: number };
+  "strava:activity:created": {
+    activityId: number;
+    ownerId: number;
+    eventTime: number;
+  };
+  "strava:activity:privacy_changed": {
+    activityId: number;
+    ownerId: number;
+    isPrivate: boolean;
+  };
+  "strava:activity:updated": {
+    activityId: number;
+    ownerId: number;
+    updates?: Record<string, any>;
+    eventTime: number;
+  };
+  "strava:activity:deleted": {
+    activityId: number;
+    ownerId: number;
+    eventTime: number;
+  };
   "strava:athlete:deauthorized": { athleteId: number; eventTime: number };
 }
 
@@ -177,7 +284,7 @@ export class EventBus {
 
   on<K extends keyof AppEvents>(
     event: K,
-    callback: EventCallback<AppEvents[K]>
+    callback: EventCallback<AppEvents[K]>,
   ): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
@@ -187,7 +294,7 @@ export class EventBus {
 
   off<K extends keyof AppEvents>(
     event: K,
-    callback: EventCallback<AppEvents[K]>
+    callback: EventCallback<AppEvents[K]>,
   ): void {
     const eventListeners = this.listeners.get(event);
     if (eventListeners) {
@@ -210,7 +317,7 @@ export class EventBus {
 
   once<K extends keyof AppEvents>(
     event: K,
-    callback: EventCallback<AppEvents[K]>
+    callback: EventCallback<AppEvents[K]>,
   ): void {
     const onceCallback = (data: AppEvents[K]) => {
       callback(data);
