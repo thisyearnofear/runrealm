@@ -640,8 +640,10 @@ export class EventHandler {
           }, 1000);
         }
 
-        // Use enhanced onboarding restart method
-        // This will be handled by the UI effects module
+        // Restart onboarding
+        localStorage.removeItem("runrealm_onboarding_complete");
+        localStorage.removeItem("runrealm_welcomed");
+        window.location.reload();
       },
     );
 
@@ -661,7 +663,10 @@ export class EventHandler {
 
         // Update button visual state
         target.classList.toggle("active", newState);
-        target.textContent = newState ? "Disable GameFi" : "Enable GameFi";
+        const btnText = target.querySelector(".btn-text");
+        if (btnText) {
+          btnText.textContent = newState ? "GameFi ON" : "GameFi OFF";
+        }
 
         this.uiService.showToast(
           newState ? "GameFi features enabled" : "GameFi features disabled",
@@ -677,19 +682,19 @@ export class EventHandler {
       "change",
       (e) => {
         const target = e.target as HTMLInputElement;
-        EventBus.getInstance().emit("visibility:changed", {
-          elementId: "widget-location-info",
-          visible: target.checked,
-        });
+        const widget = document.getElementById("widget-location-info");
+        if (widget) {
+          widget.style.display = target.checked ? "block" : "none";
+        }
       },
     );
 
     this.domService.delegate(document.body, "#toggle-wallet", "change", (e) => {
       const target = e.target as HTMLInputElement;
-      EventBus.getInstance().emit("visibility:changed", {
-        elementId: "widget-wallet-info",
-        visible: target.checked,
-      });
+      const widget = document.getElementById("widget-wallet-info");
+      if (widget) {
+        widget.style.display = target.checked ? "block" : "none";
+      }
     });
 
     // Rewards visibility preference toggle
@@ -787,6 +792,22 @@ export class EventHandler {
   }
 
   private showExternalFitnessIntegration(): void {
-    // This will be handled by the UI effects module
+    this.uiService.showModal({
+      title: "🌟 Connect Strava",
+      content: `
+        <div style="padding: 20px; text-align: center;">
+          <p style="margin-bottom: 20px;">Import your legendary runs from Strava and claim them as NFT territories!</p>
+          <p style="margin-bottom: 20px; color: #888;">Strava integration is currently in development.</p>
+          <p style="font-size: 14px; color: #666;">Coming soon: Automatic run sync, territory claiming, and achievement tracking.</p>
+        </div>
+      `,
+      actions: [
+        {
+          label: "Got it",
+          primary: true,
+          action: () => {},
+        },
+      ],
+    });
   }
 }

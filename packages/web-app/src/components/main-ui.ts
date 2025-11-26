@@ -26,6 +26,7 @@ import { Web3Service } from "@runrealm/shared-core/services/web3-service";
 import { ConfigService } from "@runrealm/shared-core/core/app-config";
 import { ContractService } from "@runrealm/shared-blockchain/services/contract-service";
 import { RouteStateService } from "@runrealm/shared-core/services/route-state-service";
+import { EventBus } from "@runrealm/shared-core/core/event-bus";
 
 // Import modular components
 import { WidgetCreator } from "./main-ui/widget-managers/widget-creator";
@@ -232,6 +233,29 @@ export class MainUI extends BaseService {
     // Setup settings widget event handlers
     this.eventHandler.setupSettingsEventHandlers();
     console.log("MainUI: Settings event handlers set up");
+
+    // Listen for GameFi toggle events
+    EventBus.getInstance().on("gamefi:toggled", (data: { enabled: boolean }) => {
+      console.log("MainUI: GameFi toggled to:", data.enabled);
+      this.isGameFiMode = data.enabled;
+      
+      if (data.enabled) {
+        document.body.classList.add("gamefi-mode");
+        this.widgetCreator.createGameFiWidgets();
+      } else {
+        document.body.classList.remove("gamefi-mode");
+        this.widgetCreator.removeGameFiWidgets();
+      }
+      
+      // Update settings widget to reflect new state
+      this.widgetSystem.updateWidget("settings", this.widgetCreator.getSettingsContent(
+        data.enabled,
+        true,
+        true,
+        true
+      ));
+    });
+    console.log("MainUI: GameFi event listener registered");
 
     // URL param onboarding=reset support for QA/support
     const params = new URLSearchParams(window.location.search);
