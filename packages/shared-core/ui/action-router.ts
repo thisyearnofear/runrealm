@@ -7,7 +7,12 @@ export type UIAction =
   | "ai.showRoute"
   | "ai.quickPrompt"
   | "ai.startRun"
-  | "territory.toggle";
+  | "territory.toggle"
+  | "connect-wallet"
+  | "disconnect-wallet"
+  | "switch-network"
+  | "claim-rewards"
+  | "retry-connection";
 
 const bus = EventBus.getInstance();
 const aiOrchestrator = AIOrchestrator.getInstance();
@@ -128,7 +133,7 @@ export const ActionRouter = {
       "ActionRouter: Dispatching action:",
       action,
       "with payload:",
-      payload
+      payload,
     );
 
     switch (action) {
@@ -138,14 +143,14 @@ export const ActionRouter = {
         break;
       case "ai.requestGhostRunner":
         console.log(
-          "ActionRouter: Requesting ghost runner through orchestrator"
+          "ActionRouter: Requesting ghost runner through orchestrator",
         );
         aiOrchestrator.requestGhostRunner(normalizeGhostPayload(payload));
         break;
       case "ai.showRoute": {
         console.log(
           "ActionRouter: Emitting ai:routeVisualize event with coordinates:",
-          payload?.coordinates?.length || 0
+          payload?.coordinates?.length || 0,
         );
         console.log("ActionRouter: Route coordinates:", payload?.coordinates);
         // Trigger route visualization on map
@@ -164,7 +169,7 @@ export const ActionRouter = {
         };
         console.log(
           "ActionRouter: Emitting visualization data:",
-          visualizeData
+          visualizeData,
         );
         bus.emit("ai:routeVisualize", visualizeData);
         break;
@@ -187,6 +192,26 @@ export const ActionRouter = {
       case "territory.toggle":
         console.log("ActionRouter: Toggling territory visibility");
         bus.emit("territory:toggleVisibility", {});
+        break;
+      case "connect-wallet":
+        console.log("ActionRouter: Initiating wallet connection");
+        bus.emit("wallet:connect", payload);
+        break;
+      case "disconnect-wallet":
+        console.log("ActionRouter: Disconnecting wallet");
+        bus.emit("wallet:disconnect", {});
+        break;
+      case "switch-network":
+        console.log("ActionRouter: Switching network");
+        bus.emit("wallet:switchNetwork", payload);
+        break;
+      case "claim-rewards":
+        console.log("ActionRouter: Claiming rewards");
+        bus.emit("rewards:claim", {});
+        break;
+      case "retry-connection":
+        console.log("ActionRouter: Retrying connection");
+        bus.emit("wallet:retryConnection", {});
         break;
       default:
         console.warn("Unknown UI action:", action, payload);
