@@ -16,14 +16,18 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
   useEffect(() => {
     const loadComponents = async () => {
       try {
-        const TerritoryMapViewModule = await import("../components/TerritoryMapView");
+        const TerritoryMapViewModule = await import(
+          "../components/TerritoryMapView"
+        );
         setTerritoryMapView(() => TerritoryMapViewModule.default);
       } catch (error) {
         console.warn("TerritoryMapView not available:", error);
       }
 
       try {
-        const GPSTrackingModule = await import("../components/GPSTrackingComponent");
+        const GPSTrackingModule = await import(
+          "../components/GPSTrackingComponent"
+        );
         setGPSTrackingComponent(() => GPSTrackingModule.default);
       } catch (error) {
         console.warn("GPSTrackingComponent not available:", error);

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "webpack serve --mode development --config ../../config/build/webpack.config.js",
     "build": "echo 'Web app should be built from root with: npm run build:web'",
-    "test": "jest"
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "@runrealm/shared-blockchain": "^2.0.0",

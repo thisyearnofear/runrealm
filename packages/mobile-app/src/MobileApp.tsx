@@ -14,7 +14,9 @@ let Achievement: any = null;
 // Dynamic import for optional dependency
 (async () => {
   try {
-    const achievementModule = await import("@runrealm/shared-core/services/achievement-service");
+    const achievementModule = await import(
+      "@runrealm/shared-core/services/achievement-service"
+    );
     if (achievementModule?.AchievementService) {
       AchievementService = achievementModule.AchievementService;
       Achievement = achievementModule.Achievement;

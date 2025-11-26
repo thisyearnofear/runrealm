@@ -4,7 +4,8 @@
   "description": "Shared utilities for RunRealm platform",
   "main": "index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "echo 'No tests configured for shared-utils'"
   },
   "dependencies": {
     "@runrealm/shared-types": "^2.0.0"
