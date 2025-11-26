@@ -13,7 +13,8 @@
     "dev:backend": "node server.js",
     "test": "npm run test --workspaces",
     "test:unit": "npm run test:unit --workspaces",
-    "lint": "eslint packages/*/src --fix",
+    "lint": "eslint 'packages/**/*.{ts,tsx}' --fix --ignore-pattern '**/node_modules/**' --ignore-pattern '**/dist/**'",
+    "lint:check": "eslint 'packages/**/*.{ts,tsx}' --ignore-pattern '**/node_modules/**' --ignore-pattern '**/dist/**'",
     "setup:env": "cp config/environment/.env.template .env && cp config/environment/.env.production.template .env.production",
     "clean": "rm -rf packages/*/dist packages/*/node_modules build artifacts",
     "install:all": "npm install && npm run install --workspaces"
@@ -33,7 +34,11 @@
     "ts-loader": "^9.5.4",
     "typescript": "^5.0.4",
     "webpack": "^5.102.1",
-    "webpack-cli": "^6.0.1"
+    "webpack-cli": "^6.0.1",
+    "lefthook": "^1.7.0",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0"
   },
   "dependencies": {
     "buffer": "^6.0.3",

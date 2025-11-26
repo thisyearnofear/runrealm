@@ -1,0 +1,30 @@
+# Lefthook configuration for RunRealm monorepo
+# https://github.com/evilmartians/lefthook
+
+# Pre-commit hooks - run on staged files
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      run: npm run lint -- --quiet
+      stage_fixed: true
+      glob: "**/*.{ts,tsx,js,jsx}"
+
+# Pre-push hooks - run before pushing to remote
+pre-push:
+  parallel: false
+  commands:
+    # Run tests for all packages
+    test:
+      run: npm run test
+      fail_text: "Tests failed. Please fix the failing tests before pushing."
+
+    # Run lint check (without auto-fix)
+    lint-check:
+      run: npm run lint:check
+      fail_text: "Linting failed. Please run 'npm run lint' to fix issues."
+
+    # Type check with TypeScript compiler
+    typecheck:
+      run: npm run build:shared
+      fail_text: "Type checking failed. Please fix TypeScript errors before pushing."

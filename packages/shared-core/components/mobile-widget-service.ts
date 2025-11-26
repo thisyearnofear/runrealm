@@ -252,7 +252,7 @@ export class MobileWidgetService extends BaseService {
     );
     
     let node;
-    while (node = walker.nextNode()) {
+    while ((node = walker.nextNode()) !== null) {
       if (node.textContent && node.textContent.trim()) {
         textNodes.push(node as Text);
       }

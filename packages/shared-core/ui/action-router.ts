@@ -110,7 +110,7 @@ export const ActionRouter = {
         console.log('ActionRouter: Requesting ghost runner through orchestrator');
         aiOrchestrator.requestGhostRunner(normalizeGhostPayload(payload));
         break;
-      case 'ai.showRoute':
+      case 'ai.showRoute': {
         console.log('ActionRouter: Emitting ai:routeVisualize event with coordinates:', payload?.coordinates?.length || 0);
         console.log('ActionRouter: Route coordinates:', payload?.coordinates);
         // Trigger route visualization on map
@@ -130,6 +130,7 @@ export const ActionRouter = {
         console.log('ActionRouter: Emitting visualization data:', visualizeData);
         bus.emit('ai:routeVisualize', visualizeData);
         break;
+      }
       case 'ai.startRun':
         console.log('ActionRouter: Starting run with AI-generated route');
         // Note: This event is not in the AppEvents interface
@@ -138,12 +139,13 @@ export const ActionRouter = {
         //   distance: payload?.distance || 0
         // });
         break;
-      case 'ai.quickPrompt':
+      case 'ai.quickPrompt': {
         console.log('ActionRouter: Processing quick prompt:', payload?.type);
         // Convert quick prompt to route request with enhanced context
         const quickPromptData = normalizeQuickPrompt(payload);
         aiOrchestrator.requestRoute(quickPromptData);
         break;
+      }
       case 'territory.toggle':
         console.log('ActionRouter: Toggling territory visibility');
         bus.emit('territory:toggleVisibility', {});

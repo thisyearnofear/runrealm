@@ -113,7 +113,7 @@ export class AIService extends BaseService {
     }
 
     // Get API key with improved fallback logic
-    let apiKey = this.getApiKey(web3Config);
+    const apiKey = this.getApiKey(web3Config);
 
     if (!apiKey) {
       const errorMsg = 'No valid Gemini API key found. Check your .env file or /api/tokens endpoint';

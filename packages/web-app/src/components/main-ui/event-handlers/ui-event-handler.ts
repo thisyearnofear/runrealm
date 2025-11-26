@@ -562,7 +562,7 @@ export class EventHandler {
           )}, "distance": ${data.routeData.totalDistance || data.routeData.distance}}'>
               ▶️ Start Run
             </button>
-            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{\"difficulty\":${data.routeData.difficulty || 50}}'>
+            <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${data.routeData.difficulty || 50}}'>
               👻 Start Ghost Runner
             </button>
           </div>`;
