@@ -76,11 +76,13 @@ export class UserDashboard {
     // Use event delegation since buttons are rendered dynamically
     this.container.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
+      const action = target.getAttribute('data-action');
       
       // Close button
       if (target.id === 'dashboard-close' || target.closest('#dashboard-close')) {
         console.log('Close button clicked');
         this.dashboardService.hide();
+        return;
       }
       
       // Minimize/Expand button
@@ -91,8 +93,85 @@ export class UserDashboard {
         } else {
           this.dashboardService.minimize();
         }
+        return;
+      }
+
+      // Territory section actions
+      if (action) {
+        this.handleAction(action, target);
+        return;
+      }
+
+      // Filter buttons
+      const filter = target.getAttribute('data-filter');
+      if (filter) {
+        this.handleFilter(filter, target);
+        return;
       }
     });
+  }
+
+  private handleFilter(filter: string, target: HTMLElement): void {
+    console.log('Filter territories by:', filter);
+
+    // Update active state
+    const filterButtons = this.container?.querySelectorAll('.filter-btn');
+    filterButtons?.forEach(btn => btn.classList.remove('active'));
+    target.classList.add('active');
+
+    // Filter territory items
+    const territoryItems = this.container?.querySelectorAll('.territory-item-compact');
+    territoryItems?.forEach(item => {
+      const itemElement = item as HTMLElement;
+      if (filter === 'all') {
+        itemElement.style.display = 'flex';
+      } else {
+        const hasClass = itemElement.classList.contains(filter);
+        itemElement.style.display = hasClass ? 'flex' : 'none';
+      }
+    });
+
+    this.eventBus.emit('dashboard:territoriesFiltered', { filter });
+  }
+
+  private handleAction(action: string, target: HTMLElement): void {
+    console.log('Dashboard action:', action);
+
+    switch (action) {
+      case 'open-territory-widget': {
+        this.eventBus.emit('dashboard:openWidget', { widgetId: 'territory-info' });
+        // Toggle territory widget
+        const territoryWidget = document.getElementById('widget-territory-info');
+        if (territoryWidget) {
+          territoryWidget.classList.toggle('hidden');
+        }
+        break;
+      }
+
+      case 'show-territories-on-map':
+        this.eventBus.emit('dashboard:showTerritoriesOnMap', {});
+        // Minimize dashboard to see map better
+        this.dashboardService.minimize();
+        break;
+
+      case 'show-territory-on-map': {
+        const territoryId = target.getAttribute('data-territory');
+        if (territoryId) {
+          this.eventBus.emit('dashboard:showTerritoryOnMap', { territoryId });
+          console.log('Show territory on map:', territoryId);
+        }
+        break;
+      }
+
+      case 'view-all-territories':
+        this.eventBus.emit('dashboard:viewAllTerritories', {});
+        // Could open a modal or expand the list
+        console.log('View all territories');
+        break;
+
+      default:
+        console.log('Unhandled action:', action);
+    }
   }
 
   private render(): void {
@@ -185,33 +264,71 @@ export class UserDashboard {
   }
 
   private renderTerritories(territories: any[]): string {
-    if (!territories || territories.length === 0) return '<div class="dashboard-section"><h3>Territories</h3><p>No territories claimed yet</p></div>';
+    if (!territories || territories.length === 0) {
+      return `
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h3>🗺️ Your Territories</h3>
+          </div>
+          <p class="empty-state">No territories claimed yet. Complete runs to claim your first territory!</p>
+        </div>
+      `;
+    }
     
     const territoryCount = territories.length;
     const totalValue = territories.reduce((sum, t) => sum + (t.estimatedReward || 0), 0);
     
     return `
       <div class="dashboard-section">
-        <h3>Territories (${territoryCount})</h3>
-        <div class="territory-summary">
-          <div class="stat-item">
-            <div class="stat-value">${territoryCount}</div>
-            <div class="stat-label">Owned</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">${totalValue.toFixed(2)}</div>
-            <div class="stat-label">$REALM</div>
+        <div class="section-header">
+          <h3>🗺️ Your Territories (${territoryCount})</h3>
+          <div class="section-actions">
+            <button class="action-btn" data-action="open-territory-widget">Widget</button>
+            <button class="action-btn" data-action="show-territories-on-map">Map →</button>
           </div>
         </div>
-        <div class="territory-list">
-          ${territories.slice(0, 3).map(t => `
-            <div class="territory-item ${t.rarity}">
-              <div class="territory-name">${t.metadata?.name || t.geohash}</div>
-              <div class="territory-value">${t.estimatedReward} $REALM</div>
+        
+        <div class="stats-row">
+          <div class="stat-compact">
+            <span class="stat-label">Owned</span>
+            <span class="stat-value">${territoryCount}</span>
+          </div>
+          <div class="stat-compact">
+            <span class="stat-label">Total Value</span>
+            <span class="stat-value">${totalValue.toFixed(0)} $REALM</span>
+          </div>
+        </div>
+        
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="legendary">Legendary</button>
+          <button class="filter-btn" data-filter="epic">Epic</button>
+          <button class="filter-btn" data-filter="rare">Rare</button>
+          <button class="filter-btn" data-filter="common">Common</button>
+        </div>
+        
+        <div class="territory-list-compact">
+          ${territories.slice(0, 5).map(t => `
+            <div class="territory-item-compact ${(t.rarity || 'common').toLowerCase()}" data-territory-id="${t.geohash}">
+              <div class="territory-info">
+                <div class="territory-name">${t.metadata?.name || t.geohash}</div>
+                <div class="territory-meta">
+                  <span class="rarity-badge ${(t.rarity || 'common').toLowerCase()}">${t.rarity || 'Common'}</span>
+                  <span class="territory-reward">+${t.estimatedReward || 0} $REALM</span>
+                </div>
+              </div>
+              <button class="territory-action" data-action="show-territory-on-map" data-territory="${t.geohash}">
+                📍
+              </button>
             </div>
           `).join('')}
-          ${territories.length > 3 ? `<div class="more-territories">+${territories.length - 3} more</div>` : ''}
         </div>
+        
+        ${territories.length > 5 ? `
+          <button class="view-all-btn" data-action="view-all-territories">
+            View All ${territories.length} Territories
+          </button>
+        ` : ''}
       </div>
     `;
   }
@@ -364,28 +481,25 @@ export class UserDashboard {
       this.container.style.visibility = 'visible';
       this.container.style.opacity = '1';
       this.container.style.pointerEvents = 'auto';
-      this.container.style.zIndex = '1500'; // Above map, below modals
+      this.container.style.zIndex = '2000'; // Above map and widgets
       
-      // 60/40 split layout - dashboard on left
+      // Centered compact layout
       this.container.style.position = 'fixed';
-      this.container.style.top = '0';
-      this.container.style.left = '0';
-      this.container.style.bottom = '0';
-      this.container.style.width = minimized ? '60px' : '60%';
-      this.container.style.height = '100vh';
-      this.container.style.transform = 'none';
-      this.container.style.maxWidth = 'none';
-      this.container.style.maxHeight = 'none';
+      this.container.style.top = '50%';
+      this.container.style.left = '50%';
+      this.container.style.transform = 'translate(-50%, -50%)';
+      this.container.style.width = minimized ? '400px' : '700px';
+      this.container.style.maxHeight = '85vh';
+      this.container.style.height = 'auto';
+      this.container.style.maxWidth = '90vw';
       this.container.style.overflow = 'auto';
-      this.container.style.transition = 'width 0.3s ease';
+      this.container.style.transition = 'width 0.3s ease, height 0.3s ease';
+      this.container.style.bottom = 'auto';
       
-      // Add body classes for map adjustment
-      document.body.classList.add('dashboard-visible');
+      // No body classes needed for centered layout
       if (minimized) {
-        document.body.classList.add('dashboard-minimized');
         this.container.classList.add('minimized-layout');
       } else {
-        document.body.classList.remove('dashboard-minimized');
         this.container.classList.remove('minimized-layout');
       }
       
@@ -411,8 +525,7 @@ export class UserDashboard {
       this.container.style.opacity = '';
       this.container.style.pointerEvents = '';
       
-      // Remove body classes
-      document.body.classList.remove('dashboard-visible', 'dashboard-minimized');
+      // Remove classes
       this.container.classList.remove('minimized-layout');
       
       console.log('UserDashboard: Added hidden class and removed inline styles');

@@ -307,3 +307,45 @@ body.dashboard-minimized #map {
 - AI service change is purely optimization - no functionality lost
 - Free tier quota: 250 requests/day - now preserved for actual usage
 - Consider upgrading to paid Gemini API for production
+
+
+---
+
+## Phase 2: Territories Section - COMPLETED ✅
+
+### Features Implemented
+- Compact section design with header and action buttons
+- Stats row (owned count, total value)
+- Filter buttons (All, Legendary, Epic, Rare, Common)
+- Territory list with rarity badges and colors
+- Individual [📍] buttons to show territory on map
+- [Widget] button to open territory widget
+- [Map →] button to show all territories on map
+- "View All" button for pagination
+
+### Interactive Actions
+```typescript
+// Button actions:
+[Widget] → Opens territory widget
+[Map →] → Shows territories on map + minimizes dashboard
+[📍] → Shows specific territory on map
+Filter → Filters list by rarity with visual feedback
+```
+
+### Events Emitted
+```typescript
+'dashboard:openWidget' - { widgetId: 'territory-info' }
+'dashboard:showTerritoriesOnMap' - {}
+'dashboard:showTerritoryOnMap' - { territoryId }
+'dashboard:territoriesFiltered' - { filter }
+```
+
+### Files Modified
+1. `packages/web-app/src/components/user-dashboard.ts` - Territory section + actions
+2. `packages/web-app/styles/components.css` - Compact section styling
+
+### Next Steps
+1. Ghost Runners section (active/available, creation)
+2. Location & GPS section (current location, search)
+3. Recent Activity feed (runs, claims, achievements)
+4. Wire up map interactions (map click → dashboard update)

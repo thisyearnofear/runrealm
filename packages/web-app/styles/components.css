@@ -209,48 +209,258 @@
 .widget-content::-webkit-scrollbar-track {
   /* ===== USER DASHBOARD - ENHANCED ===== */
 
-  /* Dashboard 60/40 split layout */
+  /* Dashboard centered compact layout */
   .user-dashboard {
     position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    bottom: 0 !important;
-    width: 60% !important;
-    height: 100vh !important;
-    transform: none !important;
-    max-width: none !important;
-    max-height: none !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 700px !important;
+    max-width: 90vw !important;
+    max-height: 85vh !important;
     background: var(--widget-bg) !important;
-    border-right: 2px solid var(--widget-border-color) !important;
-    border-radius: 0 !important;
+    border: 2px solid var(--widget-border-color) !important;
+    border-radius: var(--radius-lg) !important;
     backdrop-filter: blur(12px) saturate(1.2) !important;
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: var(--widget-shadow) !important;
     pointer-events: auto !important;
-    transition: width 0.3s ease !important;
+    transition: width 0.3s ease, height 0.3s ease !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    z-index: 1500 !important;
+    z-index: 2000 !important;
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif !important;
   }
 
-  /* Minimized state - thin sidebar */
+  /* Minimized state - narrower */
   .user-dashboard.minimized-layout {
-    width: 60px !important;
+    width: 400px !important;
   }
 
-  /* Map adjustment when dashboard is visible */
-  body.dashboard-visible #map {
-    margin-left: 60% !important;
-    width: 40% !important;
-    transition: margin-left 0.3s ease, width 0.3s ease !important;
+  /* Compact section styling */
+  .dashboard-section {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
   }
 
-  body.dashboard-minimized #map {
-    margin-left: 60px !important;
-    width: calc(100% - 60px) !important;
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .section-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .section-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .action-btn {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    background: rgba(0, 189, 0, 0.15);
+    border: 1px solid rgba(0, 189, 0, 0.3);
+    border-radius: 4px;
+    color: #00ff88;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .action-btn:hover {
+    background: rgba(0, 189, 0, 0.25);
+    transform: translateY(-1px);
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .stat-compact {
+    flex: 1;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .stat-compact .stat-label {
+    display: block;
+    font-size: 0.7rem;
+    color: #aaa;
+    margin-bottom: 2px;
+  }
+
+  .stat-compact .stat-value {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #00ff88;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #ccc;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .filter-btn.active {
+    background: rgba(0, 189, 0, 0.2);
+    border-color: rgba(0, 189, 0, 0.4);
+    color: #00ff88;
+  }
+
+  .territory-list-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .territory-item-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-left: 3px solid #00ff88;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .territory-item-compact:hover {
+    background: rgba(0, 0, 0, 0.3);
+    transform: translateX(2px);
+  }
+
+  .territory-item-compact.legendary {
+    border-left-color: #ff8c00;
+  }
+
+  .territory-item-compact.epic {
+    border-left-color: #9370db;
+  }
+
+  .territory-item-compact.rare {
+    border-left-color: #1e90ff;
+  }
+
+  .territory-item-compact.common {
+    border-left-color: #00ff88;
+  }
+
+  .territory-info {
+    flex: 1;
+  }
+
+  .territory-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .territory-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.75rem;
+  }
+
+  .rarity-badge {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .rarity-badge.legendary {
+    background: rgba(255, 140, 0, 0.2);
+    color: #ff8c00;
+  }
+
+  .rarity-badge.epic {
+    background: rgba(147, 112, 219, 0.2);
+    color: #9370db;
+  }
+
+  .rarity-badge.rare {
+    background: rgba(30, 144, 255, 0.2);
+    color: #1e90ff;
+  }
+
+  .rarity-badge.common {
+    background: rgba(0, 255, 136, 0.2);
+    color: #00ff88;
+  }
+
+  .territory-reward {
+    color: #ffd700;
+  }
+
+  .territory-action {
+    padding: 6px 10px;
+    background: rgba(0, 189, 0, 0.15);
+    border: 1px solid rgba(0, 189, 0, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+
+  .territory-action:hover {
+    background: rgba(0, 189, 0, 0.25);
+    transform: scale(1.1);
+  }
+
+  .view-all-btn {
+    width: 100%;
+    padding: 8px;
+    margin-top: 8px;
+    background: rgba(0, 189, 0, 0.1);
+    border: 1px solid rgba(0, 189, 0, 0.3);
+    border-radius: 6px;
+    color: #00ff88;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .view-all-btn:hover {
+    background: rgba(0, 189, 0, 0.2);
+  }
+
+  .empty-state {
+    padding: 20px;
+    text-align: center;
+    color: #888;
+    font-size: 0.9rem;
   }
 
   .user-dashboard.hidden {

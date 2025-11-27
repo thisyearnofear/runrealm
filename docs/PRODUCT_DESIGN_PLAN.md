@@ -826,14 +826,31 @@ interface DashboardState {
 
 **Next Steps:** Phase 2 - Widget-Dashboard Integration
 
-### Phase 2: Widget-Dashboard Integration (Week 2)
+### Phase 2: Widget-Dashboard Integration (Week 2) - IN PROGRESS ✨
 **Goal: Sync all widgets with dashboard sections**
 
-- [ ] Add [Widget] buttons to each dashboard section
+**Completed:**
+- [x] Revert to centered compact layout (700px, centered overlay)
+- [x] Create Territories section component with compact styling
+- [x] Add [Widget] and [Map →] buttons to Territories section
+- [x] Add filter buttons (All, Legendary, Epic, Rare, Common)
+- [x] Add individual territory [📍] buttons
+- [x] Wire up territory section actions (open widget, show on map, filters)
+- [x] Implement filter functionality with visual feedback
+
+**In Progress:**
+- [ ] Add [Widget] buttons to other dashboard sections
 - [ ] Implement widget ↔ dashboard state sync
-- [ ] Add [Map →] buttons for map interactions
-- [ ] Create dashboard section components
-- [ ] Wire up event handlers for cross-component communication
+- [ ] Create remaining dashboard section components:
+  - [ ] Location & GPS section
+  - [ ] Ghost Runners section
+  - [ ] Recent Activity feed
+  - [ ] Challenges section
+  - [ ] Strava integration panel
+  - [ ] Wallet & Settings sections
+- [ ] Wire up map interactions (territory click → dashboard update)
+
+**Current Status:** Territories section complete with filters and actions. Dashboard remains centered and compact. Ready to add more sections.
 
 ### Phase 3: Dashboard Sections (Week 3)
 **Goal: Build out all dashboard sections with full functionality**
