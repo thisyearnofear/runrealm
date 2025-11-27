@@ -99,15 +99,16 @@ export class WidgetCreator {
       `,
     });
 
-    // Setup event handler after widget is rendered
-    setTimeout(() => {
-      const toggleBtn = document.getElementById("toggle-dashboard-btn");
-      if (toggleBtn) {
-        toggleBtn.addEventListener("click", () => {
-          this.userDashboardService.toggle();
-        });
+    // Use event delegation on document body to ensure handler works
+    document.body.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      if (target.id === "toggle-dashboard-btn" || target.closest("#toggle-dashboard-btn")) {
+        console.log("Dashboard toggle clicked");
+        const dashboardService = this.userDashboardService;
+        console.log("Dashboard service:", dashboardService);
+        dashboardService.toggle();
       }
-    }, 100);
+    });
   }
 
   /**
