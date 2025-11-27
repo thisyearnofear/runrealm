@@ -83,22 +83,31 @@ export class WidgetCreator {
   }
 
   createDashboardToggleWidget(): void {
-    const dashboardToggleWidget = this.widgetSystem.registerWidget({
+    this.widgetSystem.registerWidget({
       id: "dashboard-toggle",
       title: "Dashboard",
+      icon: "📊",
       position: "top-right",
-      initialState: "minimized",
-      component: () => {
-        const button = document.createElement("button");
-        button.className = "dashboard-toggle-button";
-        button.innerHTML = `<img src="/assets/full-pin-icon.png" alt="Dashboard" />`;
-        button.onclick = () => {
-          this.userDashboardService.toggleDashboard();
-        };
-        return button;
-      },
+      minimized: true,
+      priority: 8,
+      content: `
+        <div class="widget-buttons">
+          <button class="widget-button" id="toggle-dashboard-btn">
+            📊 Toggle Dashboard
+          </button>
+        </div>
+      `,
     });
-    this.widgetSystem.renderWidget(dashboardToggleWidget);
+
+    // Setup event handler after widget is rendered
+    setTimeout(() => {
+      const toggleBtn = document.getElementById("toggle-dashboard-btn");
+      if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+          this.userDashboardService.toggle();
+        });
+      }
+    }, 100);
   }
 
   /**

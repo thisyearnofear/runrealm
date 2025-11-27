@@ -66,6 +66,7 @@ export class AIService extends BaseService {
   private genAI: any = null;
   private model: any = null;
   private isEnabled = false;
+  private connectionTested = false; // Track if we've tested the connection
 
   private constructor() {
     super();
@@ -167,12 +168,13 @@ export class AIService extends BaseService {
         ],
       });
 
-      // Test the connection with a simple request
-      await this.testConnection();
+      // Don't test connection on init - test lazily on first use
+      // This prevents quota exhaustion from page loads
+      // await this.testConnection();
 
       this.isEnabled = true;
       this.isInitialized = true;
-      console.log('AIService: Google Generative AI initialized successfully');
+      console.log('AIService: Google Generative AI initialized successfully (connection will be tested on first use)');
 
       // Set up event listeners after successful initialization
       this.setupEventListeners();
@@ -503,12 +505,26 @@ export class AIService extends BaseService {
     }
   }
 
-  protected ensureInitialized(): void {
+  protected async ensureInitialized(): Promise<void> {
     if (!this.isEnabled || !this.model) {
       const status = this.getStatus();
       const errorMsg = `AIService not properly initialized. Call init() first. Status: ${JSON.stringify(status)}`;
       console.warn(errorMsg);
       throw new Error(errorMsg);
+    }
+
+    // Test connection lazily on first actual use
+    if (!this.connectionTested) {
+      console.log('AIService: Testing connection on first use...');
+      try {
+        await this.testConnection();
+        this.connectionTested = true;
+      } catch (error) {
+        console.error('AIService: Connection test failed on first use:', error);
+        // Connection test failure is already handled in testConnection()
+        // Just mark as tested to avoid repeated attempts
+        this.connectionTested = true;
+      }
     }
   }
 
@@ -686,7 +702,7 @@ export class AIService extends BaseService {
       marketActivity: number;
     }
   ): Promise<TerritoryAnalysis> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     if (!this.isEnabled) {
       return this.createFallbackAnalysis(territoryData);
@@ -726,7 +742,7 @@ export class AIService extends BaseService {
     warnings: string[];
     paceRecommendation: number;
   }> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     if (!this.isEnabled) {
       return this.createFallbackCoaching(currentRun, userGoals);
