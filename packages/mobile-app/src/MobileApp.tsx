@@ -8,73 +8,9 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import MapScreen from "./screens/MapScreen";
 import { HistoryScreen } from "./screens/HistoryScreen";
+import { DashboardScreen } from "./screens/DashboardScreen";
 
 const Tab = createBottomTabNavigator();
-
-// Minimal screen components - will be enhanced later
-function DashboardScreen() {
-  const [achievements, setAchievements] = useState<any[]>([]);
-  const [achievementService, setAchievementService] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadAchievementService = async () => {
-      try {
-        // Dynamic import for optional dependency
-        const achievementModule = await import(
-          "@runrealm/shared-core/services/achievement-service"
-        );
-
-        if (!isMounted) return;
-
-        if (achievementModule?.AchievementService) {
-          const Service = achievementModule.AchievementService;
-          const service = new Service();
-          await service.initialize();
-
-          if (isMounted) {
-            setAchievementService(service);
-            setAchievements(service.getAchievements());
-          }
-        }
-      } catch (error) {
-        console.warn("AchievementService not available:", error);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadAchievementService();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Dashboard</Text>
-      {isLoading ? (
-        <Text style={styles.subtitle}>Loading...</Text>
-      ) : achievementService ? (
-        <>
-          <Text style={styles.subtitle}>
-            {achievements.length} achievements available
-          </Text>
-          <Text style={styles.info}>
-            {achievements.filter((a) => a.unlockedAt).length} unlocked
-          </Text>
-        </>
-      ) : (
-        <Text style={styles.subtitle}>AchievementService not available</Text>
-      )}
-    </View>
-  );
-}
 
 function ProfileScreen() {
   return (
