@@ -39,7 +39,7 @@ export class GhostRunnerService extends BaseService {
   private constructor() {
     super();
     this.aiService = AIService.getInstance();
-    this.runTrackingService = RunTrackingService.getInstance();
+    this.runTrackingService = new RunTrackingService();
   }
 
   static getInstance(): GhostRunnerService {
@@ -202,14 +202,14 @@ export class GhostRunnerService extends BaseService {
   }
 
   private getUserStats() {
-    const runs = this.runTrackingService.getRunHistory();
-    if (runs.length === 0) return undefined;
+     const runs = this.runTrackingService.getRunHistory();
+     if (runs.length === 0) return undefined;
 
-    const totalDistance = runs.reduce((sum, r) => sum + r.distance, 0);
-    const avgPace = runs.reduce((sum, r) => sum + (r.duration / r.distance), 0) / runs.length;
+     const totalDistance = runs.reduce((sum: number, r) => sum + r.distance, 0);
+     const avgPace = runs.reduce((sum: number, r) => sum + (r.duration / r.distance), 0) / runs.length;
 
-    return { averagePace: avgPace, totalDistance };
-  }
+     return { averagePace: avgPace, totalDistance };
+   }
 
   private getTypeBaseDifficulty(type: string): number {
     switch (type) {

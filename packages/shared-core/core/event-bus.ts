@@ -267,7 +267,18 @@ export interface AppEvents extends Web3Events {
     eventTime: number;
   };
   "strava:athlete:deauthorized": { athleteId: number; eventTime: number };
-}
+  // Ghost runner events
+  "ghost:unlocked": { ghost: any; reason: string };
+  "ghost:deployed": { ghost: any; territoryId: string };
+  "ghost:completed": { ghostRun: any };
+  "ghost:upgraded": { ghost: any };
+  "ghost:unlockAvailable": { message: string; types: string[] };
+  // Realm token events
+  "realm:earned": { amount: number; reason: string };
+  // Territory activity events
+  "territory:activityUpdated": { territory: any };
+  "territory:vulnerable": { territory: any };
+  }
 
 export class EventBus {
   private static instance: EventBus;

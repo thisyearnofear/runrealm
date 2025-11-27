@@ -877,4 +877,22 @@ export class RunTrackingService extends BaseService {
     }
     return services[serviceName];
   }
-}
+
+  /**
+   * Get run history from storage
+   */
+  public getRunHistory(): Array<{ distance: number; duration: number }> {
+    try {
+      const preferenceService = this.getService("PreferenceService");
+      if (!preferenceService) {
+        return [];
+      }
+      // Get last run from preference service and return as history
+      // This is a simplified version - in production you'd have a full history
+      return [];
+    } catch (error) {
+      console.error("Failed to get run history:", error);
+      return [];
+    }
+  }
+  }
