@@ -15,6 +15,8 @@ import { RunProgressFeedback } from "../components/run-progress-feedback";
 import { EnhancedRunControls } from "../components/enhanced-run-controls";
 import { GameFiUI } from "../components/gamefi-ui";
 import TerritoryDashboard from "../components/territory-dashboard";
+import { GhostManagement } from "../components/ghost-management";
+import { GhostButton } from "../components/ghost-button";
 
 // Import new services
 import { AnimationService } from "../services/animation-service";
@@ -27,6 +29,7 @@ import { ContractService } from "../services/contract-service";
 import { SoundService } from "../services/sound-service";
 import { AIOrchestrator } from "../services/ai-orchestrator";
 import { CrossChainService } from "../services/cross-chain-service";
+import { GhostRunnerService } from "../../packages/shared-core/services/ghost-runner-service";
 
 // Import existing services
 import { PreferenceService } from "../preference-service";
@@ -94,6 +97,9 @@ export class RunRealmApp {
   private crossChainService: CrossChainService;
   private crossChainDemo: CrossChainDemoComponent;
   private externalFitnessService: ExternalFitnessService;
+  private ghostRunnerService: GhostRunnerService;
+  private ghostManagement: GhostManagement;
+  private ghostButton: GhostButton;
 
   // Lazy-loaded services (PERFORMANT: created only when needed)
   private nextSegmentService: NextSegmentService;
@@ -174,6 +180,9 @@ export class RunRealmApp {
     this.crossChainDemo = new CrossChainDemoComponent();
     this.mapService = new MapService();
     this.externalFitnessService = new ExternalFitnessService();
+    this.ghostRunnerService = GhostRunnerService.getInstance();
+    this.ghostManagement = new GhostManagement();
+    this.ghostButton = new GhostButton(this.ghostManagement);
 
     // Initialize remaining services (CONSOLIDATED)
     this.enhancedRunControls = new EnhancedRunControls();
@@ -567,6 +576,11 @@ export class RunRealmApp {
       // Initialize GameFi UI after core services
       await this.gamefiUI.initialize();
 
+      // Initialize ghost runner service and UI
+      await this.ghostRunnerService.initialize();
+      await this.ghostManagement.initialize(document.body);
+      this.ghostButton.initialize(document.body);
+
       // Create Territory Dashboard container
       this.initializeTerritoryDashboard();
 
@@ -623,6 +637,10 @@ export class RunRealmApp {
       CrossChainService: this.crossChainService, // Legacy compatibility
       externalFitness: this.externalFitnessService,
       ExternalFitnessService: this.externalFitnessService, // Legacy compatibility
+
+      // Ghost Runner services
+      ghostRunnerService: this.ghostRunnerService,
+      ghostManagement: this.ghostManagement,
 
       // UI services
       animation: this.animation,

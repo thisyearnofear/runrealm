@@ -1,4 +1,4 @@
-# 🚀 RunRealm - Getting Started Guide
+# RunRealm - Getting Started Guide
 
 Welcome to RunRealm! This guide will help you set up the project locally and understand how it works.
 
@@ -218,9 +218,9 @@ npm run clean            # Remove build artifacts
    - Look at `server.js` for backend API endpoints
 
 2. **Read the docs**:
-   - `docs/ARCHITECTURE.md` - System architecture
-   - `docs/SETUP_AND_DEPLOYMENT.md` - Deployment guide
-   - `docs/IMPLEMENTATION_GUIDES.md` - Implementation details
+   - `docs/architecture.md` - System architecture
+   - `docs/features.md` - Feature guides
+   - `docs/guides.md` - Implementation details
 
 3. **Try the features**:
    - Plan a route with AI
@@ -230,10 +230,8 @@ npm run clean            # Remove build artifacts
 ## 🆘 Need Help?
 
 - Check the documentation in `docs/` folder
-- Look at the README.md for overview
 - Review error messages in the browser console and terminal
 
 ## 🎉 You're Ready!
 
 Once you see the app running in your browser, you're all set! Start exploring and have fun building with RunRealm.
-

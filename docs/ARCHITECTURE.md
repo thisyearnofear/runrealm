@@ -33,15 +33,16 @@ RunRealm is a cross-chain fitness GameFi platform built with TypeScript, featuri
 
 ### Web Platform Features (Analysis & Manage)
 - **Deep Analytics Dashboard**: Route performance analysis, training load monitoring, historical progress tracking
-- **Territory Management**: NFT portfolio overview, territory trading interface, value assessment tools
+- **Territory Management**: NFT portfolio overview, territory trading interface, value assessment tools, activity point monitoring
+- **Ghost Runner Management**: Ghost NFT collection, upgrade interface, deployment scheduling, performance analytics
 - **Social Hub**: Community forums, leaderboards, route sharing platform
 - **Content Creation**: Blog platform, route planning tools, training methodology sharing
 
 ### Mobile Platform Features (Performance & Play)
 - **Real-Time GPS Tracking**: Precise location tracking, turn-by-turn navigation, real-time performance metrics
-- **Gamification Engine**: Territory claiming mechanics, REALM token rewards, achievement system
+- **Gamification Engine**: Territory claiming mechanics, REALM token rewards, achievement system, ghost runner deployment
 - **Social Interaction**: Real-time friend tracking, location-based encounters, instant messaging
-- **AI Coaching**: Real-time route suggestions, pace adjustment recommendations, milestone celebrations
+- **AI Coaching**: Real-time route suggestions, pace adjustment recommendations, milestone celebrations, ghost runner generation
 
 ## Monorepo Architecture
 
@@ -68,7 +69,7 @@ RunRealm/
 - `RunTrackingService`: GPS tracking and run management
 - `TerritoryService`: Geospatial NFT logic and proximity detection
 - `LocationService`: GPS tracking and geolocation
-- `GameService`: GameFi mechanics and progression
+- `GameService`: GameFi mechanics, progression, and ghost runner management
 
 **Blockchain Integration** (`packages/shared-blockchain/`)
 - `Web3Service`: Wallet connection and network management
@@ -77,7 +78,7 @@ RunRealm/
 
 **AI & Route Management** (`packages/shared-core/`)
 - `AIOrchestrator`: Centralized AI request management with caching
-- `AIService`: Google Gemini API integration
+- `AIService`: Google Gemini API integration for route optimization, ghost runner generation, and territory analysis
 
 #### 2. Platform-Specific Presentation Layers
 
@@ -120,6 +121,90 @@ RunRealm/
 - Minted for territory claims and run completions
 - Used for GameFi progression and rewards
 
+### Territory Defense & Activity System
+
+**Activity Staking Model**:
+Territories use an activity point system to maintain ownership. Points decay over time, requiring ongoing engagement.
+
+**Territory State**:
+```solidity
+struct Territory {
+    uint256 tokenId;
+    address owner;
+    string geohash;
+    uint256 activityPoints;  // 0-1000 scale
+    uint256 lastUpdateTime;
+}
+```
+
+**Activity Point Economics**:
+- Real run on territory: +100 points
+- Ghost run on territory: +50 points
+- Visiting territory: +10 points
+- Decay rate: -10 points per day
+- Maximum: 1000 points (100 days protection)
+
+**Defense Status Thresholds**:
+- 700-1000 points: Strong 🛡️
+- 300-699 points: Moderate ⚠️
+- 100-299 points: Vulnerable 🔶
+- 0-99 points: Claimable 🚨
+
+**Claiming Mechanics**:
+- Territories with <100 activity points can be claimed
+- Claimer must provide valid run proof via oracle
+- New owner starts with 500 points (grace period)
+- No reclaim bonuses (fair competition)
+
+### Ghost Runner NFT System
+
+**Ghost Runner Contract**:
+AI-generated virtual runners that defend territories and maintain activity when users can't physically run.
+
+**Ghost NFT Structure**:
+```solidity
+struct GhostRunner {
+    uint256 tokenId;
+    GhostType type;      // Sprinter, Endurance, Hill, AllRounder
+    uint8 level;         // 1-5
+    uint256 totalRuns;
+    uint256 totalDistance;
+    uint16 winRate;      // Basis points (0-10000)
+    uint256 mintedFrom;  // Original user's run history hash
+}
+```
+
+**Ghost Types & Specialization**:
+- **Sprinter**: 400m-5K distances, 90% of owner's best 5K pace
+- **Endurance**: 10K+ distances, 85% of owner's best long run pace
+- **Hill Climber**: Elevation routes, 95% of owner's best hill run pace
+- **All-Rounder**: Universal, 70% of owner's average pace
+
+**Ghost Performance**:
+- Performance based on current owner's run history (not original minter)
+- Upgradeable: +2-3% pace per level (max level 5)
+- Tradeable as standard NFTs (ERC-721)
+
+**Ghost Deployment**:
+- Deploy cost: 25-100 $REALM per run (type dependent)
+- Upgrade cost: 200 $REALM per level
+- One ghost can defend multiple territories (one per day limit)
+- Ghost runs worth 50% of real run value for activity points
+
+**Earning Ghosts** (Achievement-Based):
+- Complete onboarding → Basic All-Rounder Ghost
+- First 10 runs → Unlock ghost type of choice
+- Claim 5 territories → Bonus ghost
+- Share on social → Random ghost (lottery)
+- Refer friend (5 runs) → Premium ghost
+- Custom ghost mint: 1000 $REALM
+
+**Oracle Integration**:
+- Multi-signature validation (2-of-3) for run proofs
+- Run data stored on IPFS, hash on-chain
+- 24-hour dispute period for territory transfers
+- Off-chain ghost run simulation with on-chain verification
+
 ## Data Flow
 
 ### Cross-Platform Data Flow
@@ -143,6 +228,17 @@ GPS Location → Shared TerritoryService → ContractService → ZetaChain
 NFT Minted → EventBus → Platform-specific UI → User Notification
 ```
 
+### Ghost Runner Flow
+```
+User Achievement → Unlock Ghost NFT → Mint on-chain
+                        ↓
+User Deploys Ghost (costs $REALM) → Off-chain Simulation
+                        ↓
+Ghost Run Completed → Oracle Signs Proof → Update Territory Activity Points
+                        ↓
+Territory Defense Status Updated → UI Reflects Changes
+```
+
 ## Event System
 
 ### Universal Events
@@ -154,6 +250,14 @@ NFT Minted → EventBus → Platform-specific UI → User Notification
 // Territory Events  
 'territory:nearbyUpdated' → UI proximity alerts
 'territory:claimed' → GameFi progression update
+'territory:activityUpdated' → Defense status changed
+'territory:vulnerable' → Territory below 300 activity points
+
+// Ghost Runner Events
+'ghost:deployed' → Ghost run started
+'ghost:completed' → Ghost run finished, activity points updated
+'ghost:unlocked' → New ghost earned via achievement
+'ghost:upgraded' → Ghost leveled up
 
 // Web3 Events
 'web3:connected' → Enable blockchain features
@@ -195,47 +299,3 @@ NFT Minted → EventBus → Platform-specific UI → User Notification
 - **Gas Limits**: Reasonable defaults with user override
 - **Network Validation**: Ensure correct chain before transactions
 - **Error Handling**: Graceful degradation on failures
-
-## Implementation Strategy
-
-### Phase 1: Monorepo Migration
-- Consolidate existing codebase into monorepo structure
-- Create shared-core package with existing domain logic
-- Implement platform-specific packages while preserving functionality
-
-### Phase 2: Optimization and Enhancement
-- Identify duplicated logic and consolidate to shared packages
-- Optimize platform-specific features based on user journey mapping
-- Implement performance improvements following Core Principles
-
-### Phase 3: Platform Differentiation
-- Enhance web platform for "Analysis & Manage" features
-- Optimize mobile platform for "Performance & Play" features
-- Ensure consistent user experience through shared core logic
-
-## User Journey Mapping
-
-### New User Onboarding
-```
-Web Platform: Research & Learn
-↓
-Mobile Platform: Try First Run
-↓
-Web Platform: Analyze Performance
-↓
-Mobile Platform: Claim First Territory
-↓
-Web Platform: Manage NFT Portfolio
-```
-
-### Advanced User Workflow
-```
-Web Platform: Plan Weekly Training
-↓
-Mobile Platform: Execute Runs & Claim Territories
-↓
-Web Platform: Analyze Performance & Adjust Plan
-↓
-Mobile Platform: Compete in Challenges
-↓
-Web Platform: Trade Territories & Review Strategy

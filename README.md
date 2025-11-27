@@ -6,6 +6,8 @@ A cross-chain fitness GameFi platform that transforms your runs into NFT territo
 
 - **Strava Integration**: Import runs and claim them as NFT territories
 - **AI-Powered Coaching**: Smart route suggestions and personalized training with Google Gemini
+- **Ghost Runners**: AI-generated virtual competitors that defend your territories when you can't run
+- **Territory Defense**: Activity point system keeps territories secure through regular engagement
 - **Cross-Chain GameFi**: Territory claiming and REALM token rewards on ZetaChain
 - **Dual Platform**: Web app for analysis & management, mobile app for performance & play
 - **Geospatial NFTs**: Own and trade location-based territories
@@ -34,10 +36,10 @@ npm run test     # Run tests
 
 ## 📚 Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) - System architecture, platform design, and smart contracts
-- [Setup and Deployment](docs/SETUP_AND_DEPLOYMENT.md) - Installation, deployment, and Strava integration
-- [Mobile and Testing](docs/MOBILE_AND_TESTING.md) - Mobile implementation and testing strategies
-- [Implementation Guides](docs/IMPLEMENTATION_GUIDES.md) - Dashboard implementation and UI recommendations
+- [Introduction](docs/introduction.md) - Complete guide to setup, installation, and deployment.
+- [Architecture](docs/architecture.md) - System architecture, platform design, and smart contracts.
+- [Features](docs/features.md) - Detailed look at key features like Ghost Runners and the User Dashboard.
+- [Guides](docs/guides.md) - Implementation guides, mobile development, and testing strategies.
 
 ## 🏗️ Architecture
 
@@ -56,4 +58,4 @@ packages/
 
 ## 🤝 Contributing
 
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed contribution guidelines.
+See [architecture.md](docs/architecture.md) for detailed contribution guidelines.

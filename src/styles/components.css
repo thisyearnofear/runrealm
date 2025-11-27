@@ -1347,3 +1347,116 @@
   50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
   100% { transform: scale(1) rotate(360deg); opacity: 0; }
 }
+/* Ghost Runners Dashboard Section */
+.ghost-runners-section .ghost-summary {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.ghost-summary .summary-row {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+}
+
+.ghost-summary .summary-item {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.ghost-summary .summary-label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.ghost-summary .summary-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.ghost-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.ghost-item-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.ghost-item-compact:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ghost-avatar-small {
+  font-size: 28px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.ghost-info-compact {
+  flex: 1;
+}
+
+.ghost-name-small {
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.ghost-stats-small {
+  font-size: 12px;
+  color: #888;
+}
+
+.ghost-manage-btn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.ghost-manage-btn:hover {
+  transform: translateY(-2px);
+}
+
+.ghost-empty {
+  text-align: center;
+  padding: 30px 20px;
+  color: #aaa;
+}
+
+.ghost-empty p {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.ghost-empty small {
+  font-size: 13px;
+  color: #666;
+}
+

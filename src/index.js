@@ -7,6 +7,7 @@ import './styles/components.css'; // Widgets, GameFi UI, controls, rewards
 import './styles/interfaces.css'; // Modals, location, wallet, cross-chain
 import './styles/responsive.css'; // Mobile-first responsive design
 import './styles/external-fitness.css'; // External fitness integration
+import './styles/ghost-management.css'; // Ghost runner management
 // Register service worker for offline support
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
     navigator.serviceWorker.register('/sw.js')

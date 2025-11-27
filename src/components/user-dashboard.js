@@ -102,6 +102,13 @@ export class UserDashboard {
           </div>
         </div>
 
+        <div class="dashboard-section ghost-runners-section">
+          <h3>👻 Ghost Runners</h3>
+          <div id="ghost-runners-content" class="section-content">
+            <div class="ghost-placeholder">Loading ghosts...</div>
+          </div>
+        </div>
+
         <div class="dashboard-section wallet-section">
           <h3>💰 Wallet</h3>
           <div id="wallet-content" class="section-content">
@@ -182,6 +189,12 @@ export class UserDashboard {
         const territoriesContent = this.container.querySelector('#territories-content');
         if (territoriesContent && data.territories) {
             territoriesContent.innerHTML = this.renderTerritories(data.territories);
+        }
+
+        // Update ghost runners
+        const ghostContent = this.container.querySelector('#ghost-runners-content');
+        if (ghostContent) {
+            ghostContent.innerHTML = this.renderGhostRunners();
         }
 
         // Update wallet info
@@ -387,6 +400,76 @@ export class UserDashboard {
         }
 
         return content || '<div class="insights-placeholder">No AI insights available</div>';
+    }
+
+    private renderGhostRunners(): string {
+        // Get ghost service from global registry
+        const ghostService = (window as any).RunRealm?.services?.ghostRunnerService;
+        if (!ghostService) {
+            return '<div class="ghost-placeholder">Ghost system loading...</div>';
+        }
+
+        const ghosts = ghostService.getGhosts();
+        const realmBalance = ghostService.getRealmBalance();
+
+        if (ghosts.length === 0) {
+            return `
+        <div class="ghost-empty">
+          <p>🏃 Complete runs to unlock ghost runners!</p>
+          <small>Your first ghost unlocks after completing onboarding</small>
+        </div>
+      `;
+        }
+
+        const readyGhosts = ghosts.filter(g => !g.cooldownUntil || g.cooldownUntil < new Date()).length;
+
+        return `
+      <div class="ghost-summary">
+        <div class="summary-row">
+          <div class="summary-item">
+            <div class="summary-label">Total Ghosts</div>
+            <div class="summary-value">${ghosts.length}</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Ready</div>
+            <div class="summary-value">${readyGhosts}</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">$REALM</div>
+            <div class="summary-value">${Math.floor(realmBalance)}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="ghost-list-compact">
+        ${ghosts.slice(0, 3).map(g => `
+          <div class="ghost-item-compact">
+            <span class="ghost-avatar-small">${g.avatar || '👻'}</span>
+            <div class="ghost-info-compact">
+              <div class="ghost-name-small">${g.name}</div>
+              <div class="ghost-stats-small">
+                ${this.formatGhostType(g.type)} • Lv${g.level}
+                ${g.cooldownUntil && g.cooldownUntil > new Date() ? ' • ⏱️' : ' • ✅'}
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <button class="ghost-manage-btn" onclick="window.RunRealm?.services?.ghostManagement?.show()">
+        Manage Ghosts →
+      </button>
+    `;
+    }
+
+    private formatGhostType(type: string): string {
+        const types = {
+            sprinter: '⚡',
+            endurance: '🏃',
+            hill: '⛰️',
+            allrounder: '🌟'
+        };
+        return types[type] || type;
     }
 
     private updateLastUpdated(): void {

@@ -61,8 +61,11 @@ export interface Territory {
   isCrossChain?: boolean;
   sourceChainId?: number;
   crossChainClaimTxHash?: string;
-  // Link to territory intent if this territory was pre-committed
   intentId?: string;
+  // Activity staking system
+  activityPoints?: number; // 0-1000
+  lastActivityUpdate?: number; // timestamp
+  defenseStatus?: 'strong' | 'moderate' | 'vulnerable' | 'claimable';
 }
 
 export interface TerritoryClaimResult {
@@ -1085,5 +1088,66 @@ export class TerritoryService extends BaseService {
       return null;
     }
     return services[serviceName];
+  }
+
+  /**
+   * Update territory activity points
+   */
+  updateTerritoryActivity(territoryId: string, points: number): void {
+    const territory = this.claimedTerritories.get(territoryId);
+    if (!territory) return;
+
+    const current = territory.activityPoints || 500; // Start with 500 on claim
+    territory.activityPoints = Math.min(1000, Math.max(0, current + points));
+    territory.lastActivityUpdate = Date.now();
+    territory.defenseStatus = this.calculateDefenseStatus(territory.activityPoints);
+
+    this.claimedTerritories.set(territoryId, territory);
+    this.saveTerritoriesToStorage();
+
+    this.safeEmit('territory:activityUpdated', { territory });
+    
+    if (territory.defenseStatus === 'vulnerable') {
+      this.safeEmit('territory:vulnerable', { territory });
+    }
+  }
+
+  /**
+   * Calculate defense status from activity points
+   */
+  private calculateDefenseStatus(points: number): 'strong' | 'moderate' | 'vulnerable' | 'claimable' {
+    if (points >= 700) return 'strong';
+    if (points >= 300) return 'moderate';
+    if (points >= 100) return 'vulnerable';
+    return 'claimable';
+  }
+
+  /**
+   * Apply activity point decay for all territories
+   */
+  applyActivityDecay(): void {
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    this.claimedTerritories.forEach((territory, id) => {
+      if (!territory.lastActivityUpdate) {
+        territory.lastActivityUpdate = territory.claimedAt || now;
+      }
+
+      const daysSinceUpdate = (now - territory.lastActivityUpdate) / dayMs;
+      const decayPoints = Math.floor(daysSinceUpdate * 10); // -10 points per day
+
+      if (decayPoints > 0) {
+        this.updateTerritoryActivity(id, -decayPoints);
+      }
+    });
+  }
+
+  /**
+   * Get territories by defense status
+   */
+  getTerritoriesByStatus(status: 'strong' | 'moderate' | 'vulnerable' | 'claimable'): Territory[] {
+    return Array.from(this.claimedTerritories.values())
+      .filter(t => t.defenseStatus === status);
   }
 }
