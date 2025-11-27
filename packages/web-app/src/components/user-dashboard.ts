@@ -39,8 +39,11 @@ export class UserDashboard {
   }
 
   private setupSubscriptions(): void {
+    console.log('UserDashboard: Setting up subscriptions');
+    
     // Subscribe to data updates
     const dataUpdateCallback = (data: { data: DashboardData; state: DashboardState }) => {
+      console.log('UserDashboard: Data update received', data);
       this.updateDisplay(data.data, data.state);
     };
     
@@ -53,6 +56,7 @@ export class UserDashboard {
 
     // Subscribe to visibility changes
     const visibilityChangeCallback = (state: { visible: boolean; minimized: boolean }) => {
+      console.log('UserDashboard: Visibility change received', state);
       this.updateVisibility(state.visible, state.minimized);
     };
     
@@ -62,38 +66,33 @@ export class UserDashboard {
     this.unsubscribeVisibilityChanges = () => {
       this.dashboardService.unsubscribeFromVisibilityChanges(visibilityChangeCallback);
     };
+    
+    console.log('UserDashboard: Subscriptions complete');
   }
 
   private setupEventListeners(): void {
     if (!this.container) return;
 
-    // Close button
-    const closeBtn = this.container.querySelector('#dashboard-close');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', () => {
+    // Use event delegation since buttons are rendered dynamically
+    this.container.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      
+      // Close button
+      if (target.id === 'dashboard-close' || target.closest('#dashboard-close')) {
+        console.log('Close button clicked');
         this.dashboardService.hide();
-      });
-    }
-
-    // Minimize button
-    const minimizeBtn = this.container.querySelector('#dashboard-minimize');
-    if (minimizeBtn) {
-      minimizeBtn.addEventListener('click', () => {
+      }
+      
+      // Minimize/Expand button
+      if (target.id === 'dashboard-minimize' || target.closest('#dashboard-minimize')) {
+        console.log('Minimize button clicked, current state:', this.dashboardService.getState());
         if (this.dashboardService.getState().isMinimized) {
           this.dashboardService.expand();
         } else {
           this.dashboardService.minimize();
         }
-      });
-    }
-
-    // Toggle button (if it exists in the UI)
-    const toggleBtn = document.getElementById('user-dashboard-toggle');
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', () => {
-        this.dashboardService.toggle();
-      });
-    }
+      }
+    });
   }
 
   private render(): void {
@@ -356,12 +355,47 @@ export class UserDashboard {
   }
 
   private updateVisibility(visible: boolean, minimized: boolean): void {
+    console.log('UserDashboard: updateVisibility called', { visible, minimized, container: this.container });
     if (!this.container) return;
 
     if (visible) {
       this.container.classList.remove('hidden');
+      // Force visibility and opacity to override CSS !important rules
+      this.container.style.visibility = 'visible';
+      this.container.style.opacity = '1';
+      this.container.style.pointerEvents = 'auto';
+      this.container.style.zIndex = '2000'; // Above map and widgets
+      // Force centering
+      this.container.style.position = 'fixed';
+      this.container.style.top = '50%';
+      this.container.style.left = '50%';
+      this.container.style.transform = 'translate(-50%, -50%)';
+      // Make it compact
+      this.container.style.width = '600px';
+      this.container.style.maxHeight = '80vh';
+      this.container.style.overflow = 'auto';
+      console.log('UserDashboard: Removed hidden class and forced visibility');
+      
+      // Check computed styles after forcing
+      const computed = window.getComputedStyle(this.container);
+      console.log('UserDashboard: After forcing - computed styles:', {
+        display: computed.display,
+        visibility: computed.visibility,
+        opacity: computed.opacity,
+        zIndex: computed.zIndex,
+        position: computed.position,
+        top: computed.top,
+        left: computed.left,
+        width: computed.width,
+        height: computed.height,
+      });
     } else {
       this.container.classList.add('hidden');
+      // Remove inline styles to let CSS take over
+      this.container.style.visibility = '';
+      this.container.style.opacity = '';
+      this.container.style.pointerEvents = '';
+      console.log('UserDashboard: Added hidden class and removed inline styles');
     }
 
     const content = this.container.querySelector('.dashboard-content');
