@@ -230,6 +230,10 @@ export class MainUI extends BaseService {
     this.widgetCreator.createSettingsWidget();
     console.log("MainUI: Settings widget created");
 
+    // Create Dashboard toggle widget (top-right)
+    this.widgetCreator.createDashboardToggleWidget();
+    console.log("MainUI: Dashboard toggle widget created");
+
     // Setup settings widget event handlers
     this.eventHandler.setupSettingsEventHandlers();
     console.log("MainUI: Settings event handlers set up");
