@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React from "react";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 
-export const HistoryScreen: React.FC = () => {
+export function HistoryScreen() {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>🏃 Run History</Text>
@@ -10,28 +10,28 @@ export const HistoryScreen: React.FC = () => {
       </View>
     </ScrollView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: "#1a1a1a",
     padding: 16,
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
     marginBottom: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
   placeholder: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   placeholderText: {
     fontSize: 16,
-    color: '#999',
+    color: "#999",
   },
 });

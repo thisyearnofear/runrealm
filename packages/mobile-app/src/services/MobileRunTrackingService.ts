@@ -130,8 +130,11 @@ class MobileRunTrackingService {
   async startRun(): Promise<string> {
     console.log("Starting run via mobile tracking service");
     try {
-      // Set location service if needed
-      // this.runTrackingService.setLocationService(/* mobile location service */);
+      // Ensure location tracking is initialized before starting a run
+      if (!this.locationTrackingEnabled) {
+        console.log("Location tracking not initialized, initializing now...");
+        await this.initializeLocationTracking();
+      }
 
       const runId = await this.runTrackingService.startRun();
       console.log(`Run started with ID: ${runId}`);
@@ -151,6 +154,12 @@ class MobileRunTrackingService {
   ): Promise<string> {
     console.log("Starting run with predefined route");
     try {
+      // Ensure location tracking is initialized before starting a run
+      if (!this.locationTrackingEnabled) {
+        console.log("Location tracking not initialized, initializing now...");
+        await this.initializeLocationTracking();
+      }
+
       const runId = await this.runTrackingService.startRunWithRoute(
         coordinates,
         distance

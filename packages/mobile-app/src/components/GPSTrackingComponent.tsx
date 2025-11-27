@@ -17,61 +17,8 @@ import {
 } from "react-native";
 import * as Location from "expo-location";
 
-// Lazy load TaskManager to avoid initialization errors
-// Don't import at module level - load it when needed
-const TaskManager: any = null;
-const taskDefined = false;
-
-// Define background location task (only if TaskManager is available)
-// DISABLED: TaskManager causes initialization errors with LegacyEventEmitter
-// TODO: Fix TaskManager integration when background tracking is needed
-const defineLocationTask = () => {
-  // Temporarily disabled to avoid TaskManager initialization errors
-  // The require() call was causing Metro to try to load TaskManager at bundle time
-  console.warn(
-    "Background location tracking disabled - TaskManager integration pending"
-  );
-  return;
-
-  /* DISABLED CODE - Re-enable when TaskManager is fixed
-  // Only define once
-  if (taskDefined) return;
-  
-  // Lazy load TaskManager only when needed
-  // Use dynamic require to prevent Metro from analyzing it
-  if (!TaskManager) {
-    try {
-      const taskManagerModule = 'expo-task-manager';
-      TaskManager = require(taskManagerModule);
-    } catch (error) {
-      console.warn('TaskManager not available:', error);
-      return;
-    }
-  }
-  
-  if (!TaskManager) {
-    console.warn('TaskManager not available, background location tracking disabled');
-    return;
-  }
-  
-  try {
-    TaskManager.defineTask('LOCATION_TASK_NAME', async ({ data, error }: any) => {
-      if (error) {
-        console.error('Location task error:', error);
-        return;
-      }
-      if (data) {
-        const { locations } = data as { locations: Location.LocationObject[] };
-        const location = locations[0];
-        console.log('Location update:', location);
-      }
-    });
-    taskDefined = true;
-  } catch (error) {
-    console.warn('Failed to define location task:', error);
-  }
-  */
-};
+// Import the location tracking provider hook
+import { useLocationTracking } from "../providers/LocationTrackingProvider";
 
 // Import mobile service
 import MobileRunTrackingService from "../services/MobileRunTrackingService";
@@ -85,6 +32,10 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
   onRunStart,
   onRunStop,
 }) => {
+  // Get location tracking context from provider
+  const { isTaskManagerReady, isTaskDefined, locationTaskName } =
+    useLocationTracking();
+
   const [isTracking, setIsTracking] = useState(false);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const [distance, setDistance] = useState(0);
@@ -103,15 +54,35 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
   const buttonScaleAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  const mobileTrackingService = new MobileRunTrackingService();
+  // Use useRef to maintain a stable service instance across renders
+  const mobileTrackingServiceRef = useRef<MobileRunTrackingService | null>(
+    null
+  );
+
+  if (!mobileTrackingServiceRef.current) {
+    mobileTrackingServiceRef.current = new MobileRunTrackingService();
+  }
+  const mobileTrackingService = mobileTrackingServiceRef.current;
 
   useEffect(() => {
     // Initialize geolocation tracking when component mounts
     requestLocationPermission();
-    // Define the location task when component mounts (not at module load)
-    // Only define if we're actually going to use background tracking
-    // For now, skip TaskManager to avoid initialization errors
-    // defineLocationTask();
+
+    // Initialize location tracking service in the background
+    const initializeTracking = async () => {
+      try {
+        await mobileTrackingService.initializeLocationTracking();
+        console.log("GPSTrackingComponent: Location tracking initialized");
+      } catch (error) {
+        console.warn(
+          "GPSTrackingComponent: Failed to initialize location tracking:",
+          error
+        );
+        // Don't throw - it will be initialized when startRun is called
+      }
+    };
+
+    initializeTracking();
   }, []);
 
   // Visual feedback functions
@@ -312,33 +283,53 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
         return;
       }
 
-      // Start location updates (only if TaskManager is available)
-      if (TaskManager) {
-        await Location.startLocationUpdatesAsync("LOCATION_TASK_NAME", {
-          accuracy: Location.Accuracy.High,
-          distanceInterval: 5, // Update every 5 meters
-          timeInterval: 2000, // Update every 2 seconds
-          foregroundService: {
-            notificationTitle: "RunRealm GPS Tracking",
-            notificationBody: "Tracking your run in the background",
-          },
-        });
-      } else {
-        // Fallback: Use foreground location updates only
-        console.warn(
-          "TaskManager not available, using foreground location updates only"
-        );
-        await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.High,
-            distanceInterval: 5,
-            timeInterval: 2000,
-          },
-          (location) => {
-            console.log("Location update:", location);
-            // Update state here if needed
+      // Try to use TaskManager for background location tracking if available
+      if (isTaskManagerReady && isTaskDefined) {
+        try {
+          // Request background permissions if using TaskManager
+          const backgroundStatus =
+            await Location.requestBackgroundPermissionsAsync();
+          if (backgroundStatus.status === "granted") {
+            await Location.startLocationUpdatesAsync(locationTaskName, {
+              accuracy: Location.Accuracy.High,
+              distanceInterval: 5, // Update every 5 meters
+              timeInterval: 2000, // Update every 2 seconds
+              foregroundService: {
+                notificationTitle: "RunRealm GPS Tracking",
+                notificationBody: "Tracking your run in the background",
+              },
+            });
+            console.log("Background location tracking started");
+            return;
+          } else {
+            console.warn(
+              "Background location permission not granted, using foreground only"
+            );
           }
-        );
+        } catch (error) {
+          console.warn("Failed to start background location updates:", error);
+        }
+      } else {
+        console.log("TaskManager not ready, using foreground location updates");
+      }
+
+      // Fallback: Use foreground location updates only
+      console.log("Using foreground location updates");
+      const subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          distanceInterval: 5,
+          timeInterval: 2000,
+        },
+        (location) => {
+          console.log("Foreground location update:", location);
+          // Update state here if needed
+        }
+      );
+
+      // Store subscription for cleanup
+      if (subscription) {
+        console.log("Foreground location subscription started");
       }
     } catch (error) {
       console.error("Location watch error:", error);
@@ -356,7 +347,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
 
       // Clear location watch
       try {
-        await Location.stopLocationUpdatesAsync("LOCATION_TASK_NAME");
+        await Location.stopLocationUpdatesAsync(locationTaskName);
       } catch (error) {
         console.error("Error stopping location updates:", error);
       }

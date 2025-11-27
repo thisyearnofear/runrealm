@@ -7,7 +7,7 @@ interface MapScreenProps {
   route: any;
 }
 
-const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
+export function MapScreen() {
   const [componentsLoaded, setComponentsLoaded] = useState(false);
   const [TerritoryMapView, setTerritoryMapView] = useState<any>(null);
   const [GPSTrackingComponent, setGPSTrackingComponent] = useState<any>(null);
@@ -28,6 +28,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
       try {
         // Load MapService and create MobileMapAdapter
         try {
+          console.log("MapScreen: Loading MapService and MobileMapAdapter...");
           const mapServiceModule = await import(
             "@runrealm/shared-core/services/map-service"
           );
@@ -37,21 +38,47 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
             mapServiceModule?.MapService &&
             mapAdapterModule?.MobileMapAdapter
           ) {
+            console.log("MapScreen: Modules loaded, creating instances...");
             const MapService = mapServiceModule.MapService;
             const MobileMapAdapter = mapAdapterModule.MobileMapAdapter;
 
             const mapService = new MapService();
-            await mapService.initialize();
+            console.log("MapScreen: Initializing MapService...");
+            try {
+              await mapService.initialize();
+              console.log("MapScreen: MapService initialized");
+            } catch (error) {
+              // MapService might fail in React Native if it tries to use browser APIs
+              // This is okay - MobileMapAdapter doesn't need the map to be fully initialized
+              console.warn(
+                "MapScreen: MapService initialization had issues (expected in RN):",
+                error
+              );
+            }
 
             const adapter = new MobileMapAdapter(mapService);
+            console.log("MapScreen: Initializing MobileMapAdapter...");
             await adapter.initialize();
+            console.log("MapScreen: MobileMapAdapter initialized");
 
             if (isMounted) {
               setMapAdapter(adapter);
+              console.log("MapScreen: Map adapter set in state");
             }
+          } else {
+            console.warn(
+              "MapScreen: MapService or MobileMapAdapter not found in modules"
+            );
           }
         } catch (error) {
-          console.warn("MapService/MobileMapAdapter not available:", error);
+          console.error(
+            "MapScreen: Error loading MapService/MobileMapAdapter:",
+            error
+          );
+          console.error(
+            "MapScreen: Error details:",
+            error instanceof Error ? error.stack : String(error)
+          );
         }
 
         // Load Web3Service and create MobileWeb3Adapter
@@ -103,12 +130,22 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
   useEffect(() => {
     const loadComponents = async () => {
       try {
+        console.log("MapScreen: Loading TerritoryMapView component...");
         const TerritoryMapViewModule = await import(
           "../components/TerritoryMapView"
         );
-        setTerritoryMapView(() => TerritoryMapViewModule.default);
+        if (TerritoryMapViewModule?.default) {
+          setTerritoryMapView(() => TerritoryMapViewModule.default);
+          console.log("MapScreen: TerritoryMapView loaded successfully");
+        } else {
+          console.warn("MapScreen: TerritoryMapView.default is undefined");
+        }
       } catch (error) {
-        console.warn("TerritoryMapView not available:", error);
+        console.error("MapScreen: Error loading TerritoryMapView:", error);
+        console.error(
+          "MapScreen: Error details:",
+          error instanceof Error ? error.stack : String(error)
+        );
       }
 
       try {
@@ -170,6 +207,10 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
             ? "Loading map components..."
             : "Initializing map services..."}
         </Text>
+        <Text style={{ color: "#666", fontSize: 12, marginTop: 5 }}>
+          Components: {componentsLoaded ? "✓" : "✗"} | Adapters:{" "}
+          {adaptersLoading ? "..." : mapAdapter ? "✓" : "✗"}
+        </Text>
       </View>
     );
   }
@@ -197,7 +238,13 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
         >
           <Text style={{ color: "#fff", fontSize: 18 }}>Map</Text>
           <Text style={{ color: "#999", fontSize: 14, marginTop: 10 }}>
-            Map adapter not available
+            {!TerritoryMapView
+              ? "TerritoryMapView component not loaded"
+              : "Map adapter not available"}
+          </Text>
+          <Text style={{ color: "#666", fontSize: 12, marginTop: 5 }}>
+            TerritoryMapView: {TerritoryMapView ? "✓" : "✗"} | MapAdapter:{" "}
+            {mapAdapter ? "✓" : "✗"}
           </Text>
         </View>
       )}
@@ -221,7 +268,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   trackingContainer: {

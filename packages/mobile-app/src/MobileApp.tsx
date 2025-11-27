@@ -2,13 +2,14 @@
  * MobileApp - Minimal version with navigation
  * Services will be added incrementally
  */
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import MapScreen from "./screens/MapScreen";
+import { MapScreen } from "./screens/MapScreen";
 import { HistoryScreen } from "./screens/HistoryScreen";
 import { DashboardScreen } from "./screens/DashboardScreen";
+import { LocationTrackingProvider } from "./providers/LocationTrackingProvider";
 
 const Tab = createBottomTabNavigator();
 
@@ -34,48 +35,50 @@ function SettingsScreen() {
 
 export default function MobileApp() {
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: "#1a1a1a",
-          },
-          headerTintColor: "#fff",
-          tabBarStyle: {
-            backgroundColor: "#1a1a1a",
-          },
-          tabBarActiveTintColor: "#00ff88",
-          tabBarInactiveTintColor: "#666",
-        }}
-      >
-        <Tab.Screen
-          name="Dashboard"
-          component={DashboardScreen}
-          options={{ title: "Dashboard" }}
-        />
-        <Tab.Screen
-          name="Map"
-          component={MapScreen}
-          options={{ title: "Map" }}
-          // Using simple MapScreen from this file, not src/screens/MapScreen.tsx
-        />
-        <Tab.Screen
-          name="History"
-          component={HistoryScreen}
-          options={{ title: "History" }}
-        />
-        <Tab.Screen
-          name="Profile"
-          component={ProfileScreen}
-          options={{ title: "Profile" }}
-        />
-        <Tab.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{ title: "Settings" }}
-        />
-      </Tab.Navigator>
-    </NavigationContainer>
+    <LocationTrackingProvider>
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: "#1a1a1a",
+            },
+            headerTintColor: "#fff",
+            tabBarStyle: {
+              backgroundColor: "#1a1a1a",
+            },
+            tabBarActiveTintColor: "#00ff88",
+            tabBarInactiveTintColor: "#666",
+          }}
+        >
+          <Tab.Screen
+            name="Dashboard"
+            component={DashboardScreen}
+            options={{ title: "Dashboard" }}
+          />
+          <Tab.Screen
+            name="Map"
+            component={MapScreen}
+            options={{ title: "Map" }}
+            // Using simple MapScreen from this file, not src/screens/MapScreen.tsx
+          />
+          <Tab.Screen
+            name="History"
+            component={HistoryScreen}
+            options={{ title: "History" }}
+          />
+          <Tab.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{ title: "Profile" }}
+          />
+          <Tab.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{ title: "Settings" }}
+          />
+        </Tab.Navigator>
+      </NavigationContainer>
+    </LocationTrackingProvider>
   );
 }
 
