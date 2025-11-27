@@ -94,7 +94,7 @@ export class UserDashboardService extends BaseService {
   }
 
   protected debounce(func: (...args: any[]) => void, wait: number): () => void {
-    let timeout: NodeJS.Timeout | null = null;
+    let timeout: number | null = null;
     return (...args: any[]) => {
       if (timeout) {
         clearTimeout(timeout);
@@ -104,7 +104,7 @@ export class UserDashboardService extends BaseService {
   }
 
   protected throttle(func: (...args: any[]) => void, wait: number): () => void {
-    let timeout: NodeJS.Timeout | null = null;
+    let timeout: number | null = null;
     let lastExecTime = 0;
     return (...args: any[]) => {
       const now = Date.now();

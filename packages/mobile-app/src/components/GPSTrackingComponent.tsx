@@ -2,7 +2,7 @@
  * GPS Tracking Component for Mobile
  * Provides mobile-optimized run tracking UI and functionality
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -14,8 +14,8 @@ import {
   Animated,
   ActivityIndicator,
   TouchableOpacity,
-} from 'react-native';
-import * as Location from 'expo-location';
+} from "react-native";
+import * as Location from "expo-location";
 
 // Lazy load TaskManager to avoid initialization errors
 // Don't import at module level - load it when needed
@@ -28,9 +28,11 @@ const taskDefined = false;
 const defineLocationTask = () => {
   // Temporarily disabled to avoid TaskManager initialization errors
   // The require() call was causing Metro to try to load TaskManager at bundle time
-  console.warn('Background location tracking disabled - TaskManager integration pending');
+  console.warn(
+    "Background location tracking disabled - TaskManager integration pending"
+  );
   return;
-  
+
   /* DISABLED CODE - Re-enable when TaskManager is fixed
   // Only define once
   if (taskDefined) return;
@@ -72,22 +74,25 @@ const defineLocationTask = () => {
 };
 
 // Import mobile service
-import MobileRunTrackingService from '../services/MobileRunTrackingService';
+import MobileRunTrackingService from "../services/MobileRunTrackingService";
 
 interface GPSTrackingProps {
   onRunStart?: () => void;
   onRunStop?: (runData: any) => void;
 }
 
-const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunStop }) => {
-const [isTracking, setIsTracking] = useState(false);
-const [currentRunId, setCurrentRunId] = useState<string | null>(null);
-const [distance, setDistance] = useState(0);
-const [duration, setDuration] = useState(0);
-const [speed, setSpeed] = useState(0);
-const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
+const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
+  onRunStart,
+  onRunStop,
+}) => {
+  const [isTracking, setIsTracking] = useState(false);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [distance, setDistance] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [speed, setSpeed] = useState(0);
+  const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
 
-// Visual feedback states
+  // Visual feedback states
   const [gpsAccuracy, setGpsAccuracy] = useState(0); // 0-100
   const [isLoadingGPS, setIsLoadingGPS] = useState(false);
   const [territoryEligible, setTerritoryEligible] = useState(false);
@@ -111,7 +116,10 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
 
   // Visual feedback functions
   const updateGPSAccuracy = (accuracy: number) => {
-    const normalizedAccuracy = Math.max(0, Math.min(100, (20 - accuracy) / 20 * 100)); // 0-20m range
+    const normalizedAccuracy = Math.max(
+      0,
+      Math.min(100, ((20 - accuracy) / 20) * 100)
+    ); // 0-20m range
     setGpsAccuracy(normalizedAccuracy);
 
     // Animate the accuracy ring
@@ -168,25 +176,26 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
   };
 
   const requestLocationPermission = async () => {
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       setIsLoadingGPS(true);
       try {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
           {
-            title: 'RunRealm Location Permission',
-            message: 'RunRealm needs access to your location to track your runs.',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'OK',
+            title: "RunRealm Location Permission",
+            message:
+              "RunRealm needs access to your location to track your runs.",
+            buttonNeutral: "Ask Me Later",
+            buttonNegative: "Cancel",
+            buttonPositive: "OK",
           }
         );
         if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          console.log('Location permission granted');
+          console.log("Location permission granted");
           // Get initial location to verify permissions work
           try {
             const position = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.High
+              accuracy: Location.Accuracy.High,
             });
             setLocation({
               latitude: position.coords.latitude,
@@ -194,25 +203,67 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
             });
             updateGPSAccuracy(position.coords.accuracy || 20);
             setIsLoadingGPS(false);
-            console.log('Initial location obtained');
+            console.log("Initial location obtained");
           } catch (error) {
-            console.error('Error getting initial location:', error);
+            console.error("Error getting initial location:", error);
             setIsLoadingGPS(false);
-            Alert.alert('Location Error', 'Unable to get your location. Please check permissions.');
+            Alert.alert(
+              "Location Error",
+              "Unable to get your location. Please check permissions."
+            );
           }
         } else {
-          console.log('Location permission denied');
+          console.log("Location permission denied");
           setIsLoadingGPS(false);
-          Alert.alert('Permission Denied', 'Location permission is required for GPS tracking.');
+          Alert.alert(
+            "Permission Denied",
+            "Location permission is required for GPS tracking."
+          );
         }
       } catch (err) {
-        console.warn('Permission request error:', err);
+        console.warn("Permission request error:", err);
         setIsLoadingGPS(false);
       }
     } else {
-      // iOS permissions are handled automatically
-      console.log('iOS - requesting location permission');
-      setIsLoadingGPS(false);
+      // iOS - request permissions using expo-location
+      setIsLoadingGPS(true);
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+
+        if (status === "granted") {
+          console.log("iOS location permission granted");
+          // Get initial location to verify permissions work
+          try {
+            const position = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.High,
+            });
+            setLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+            updateGPSAccuracy(position.coords.accuracy || 20);
+            setIsLoadingGPS(false);
+            console.log("Initial location obtained on iOS");
+          } catch (error) {
+            console.error("Error getting initial location on iOS:", error);
+            setIsLoadingGPS(false);
+            Alert.alert(
+              "Location Error",
+              "Unable to get your location. Please check permissions."
+            );
+          }
+        } else {
+          console.log("iOS location permission denied");
+          setIsLoadingGPS(false);
+          Alert.alert(
+            "Permission Denied",
+            "Location permission is required for GPS tracking."
+          );
+        }
+      } catch (err) {
+        console.warn("iOS permission request error:", err);
+        setIsLoadingGPS(false);
+      }
     }
   };
 
@@ -226,25 +277,28 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
   };
 
   const handleStartRun = async () => {
-  animateButtonPress();
-  try {
-  const runId = await mobileTrackingService.startRun();
+    animateButtonPress();
+    try {
+      const runId = await mobileTrackingService.startRun();
 
-  setCurrentRunId(runId);
-  setIsTracking(true);
-  setDistance(0);
-  setDuration(0);
-  setTerritoryEligible(false);
+      setCurrentRunId(runId);
+      setIsTracking(true);
+      setDistance(0);
+      setDuration(0);
+      setTerritoryEligible(false);
 
       // Start real-time location updates for UI
-  startLocationUpdates();
-  startPulseAnimation();
+      startLocationUpdates();
+      startPulseAnimation();
 
-  console.log('Run started with ID:', runId);
-  onRunStart && onRunStart();
-  } catch (error) {
-      console.error('Failed to start run:', error);
-      Alert.alert('Error', 'Failed to start run. Please check location permissions.');
+      console.log("Run started with ID:", runId);
+      onRunStart && onRunStart();
+    } catch (error) {
+      console.error("Failed to start run:", error);
+      Alert.alert(
+        "Error",
+        "Failed to start run. Please check location permissions."
+      );
     }
   };
 
@@ -253,25 +307,27 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
     try {
       // Request foreground permissions first
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.error('Permission to access location was denied');
+      if (status !== "granted") {
+        console.error("Permission to access location was denied");
         return;
       }
 
       // Start location updates (only if TaskManager is available)
       if (TaskManager) {
-        await Location.startLocationUpdatesAsync('LOCATION_TASK_NAME', {
+        await Location.startLocationUpdatesAsync("LOCATION_TASK_NAME", {
           accuracy: Location.Accuracy.High,
           distanceInterval: 5, // Update every 5 meters
           timeInterval: 2000, // Update every 2 seconds
           foregroundService: {
-            notificationTitle: 'RunRealm GPS Tracking',
-            notificationBody: 'Tracking your run in the background',
+            notificationTitle: "RunRealm GPS Tracking",
+            notificationBody: "Tracking your run in the background",
           },
         });
       } else {
         // Fallback: Use foreground location updates only
-        console.warn('TaskManager not available, using foreground location updates only');
+        console.warn(
+          "TaskManager not available, using foreground location updates only"
+        );
         await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
@@ -279,56 +335,56 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
             timeInterval: 2000,
           },
           (location) => {
-            console.log('Location update:', location);
+            console.log("Location update:", location);
             // Update state here if needed
           }
         );
       }
     } catch (error) {
-      console.error('Location watch error:', error);
+      console.error("Location watch error:", error);
     }
   };
 
   const handleStopRun = async () => {
-  animateButtonPress();
-  try {
-  const runData = mobileTrackingService.stopRun();
+    animateButtonPress();
+    try {
+      const runData = mobileTrackingService.stopRun();
 
-  setIsTracking(false);
-  setCurrentRunId(null);
-  stopPulseAnimation();
+      setIsTracking(false);
+      setCurrentRunId(null);
+      stopPulseAnimation();
 
-  // Clear location watch
-  try {
-    await Location.stopLocationUpdatesAsync('LOCATION_TASK_NAME');
-  } catch (error) {
-    console.error('Error stopping location updates:', error);
-  }
+      // Clear location watch
+      try {
+        await Location.stopLocationUpdatesAsync("LOCATION_TASK_NAME");
+      } catch (error) {
+        console.error("Error stopping location updates:", error);
+      }
 
-    console.log('Run stopped:', runData);
-  onRunStop && onRunStop(runData);
-  } catch (error) {
-    console.error('Failed to stop run:', error);
-      Alert.alert('Error', 'Failed to stop run.');
+      console.log("Run stopped:", runData);
+      onRunStop && onRunStop(runData);
+    } catch (error) {
+      console.error("Failed to stop run:", error);
+      Alert.alert("Error", "Failed to stop run.");
     }
   };
 
   const handlePauseRun = async () => {
     animateButtonPress();
-  mobileTrackingService.pauseRun();
-  setIsTracking(false);
-  stopPulseAnimation();
+    mobileTrackingService.pauseRun();
+    setIsTracking(false);
+    stopPulseAnimation();
 
-  // Clear location watch when paused
-  try {
-    await Location.stopLocationUpdatesAsync('LOCATION_TASK_NAME');
-  } catch (error) {
-    console.error('Error stopping location updates:', error);
-  }
+    // Clear location watch when paused
+    try {
+      await Location.stopLocationUpdatesAsync("LOCATION_TASK_NAME");
+    } catch (error) {
+      console.error("Error stopping location updates:", error);
+    }
   };
 
   const handleResumeRun = async () => {
-  animateButtonPress();
+    animateButtonPress();
     mobileTrackingService.resumeRun();
     setIsTracking(true);
     startPulseAnimation();
@@ -344,9 +400,11 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
     const seconds = totalSeconds % 60;
 
     if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
+        .toString()
+        .padStart(2, "0")}`;
     }
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -358,17 +416,19 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
             style={[
               styles.gpsAccuracyRing,
               {
-                transform: [{
-                  scale: gpsAccuracyAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1],
-                  })
-                }],
+                transform: [
+                  {
+                    scale: gpsAccuracyAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    }),
+                  },
+                ],
                 opacity: gpsAccuracyAnim.interpolate({
                   inputRange: [0, 0.3, 1],
                   outputRange: [0.3, 0.7, 1],
                 }),
-              }
+              },
             ]}
           >
             <View style={styles.gpsAccuracyInner}>
@@ -376,13 +436,15 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
                 <ActivityIndicator size="small" color="#4CAF50" />
               ) : (
                 <Text style={styles.gpsAccuracyText}>
-                  {gpsAccuracy > 70 ? '🛰️' : gpsAccuracy > 40 ? '📡' : '📶'}
+                  {gpsAccuracy > 70 ? "🛰️" : gpsAccuracy > 40 ? "📡" : "📶"}
                 </Text>
               )}
             </View>
           </Animated.View>
           <Text style={styles.gpsStatusText}>
-            {isLoadingGPS ? 'Getting GPS...' : `GPS: ${gpsAccuracy.toFixed(0)}%`}
+            {isLoadingGPS
+              ? "Getting GPS..."
+              : `GPS: ${gpsAccuracy.toFixed(0)}%`}
           </Text>
         </View>
 
@@ -397,7 +459,7 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
                   inputRange: [1, 1.1],
                   outputRange: [0.8, 1],
                 }),
-              }
+              },
             ]}
           >
             <Text style={styles.eligibilityText}>🏰 Territory Eligible!</Text>
@@ -409,7 +471,9 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
         <Text style={styles.statsTitle}>Current Run</Text>
         <View style={styles.statsRow}>
           <Text style={styles.statLabel}>Distance:</Text>
-          <Text style={styles.statValue}>{(distance / 1000).toFixed(2)} km</Text>
+          <Text style={styles.statValue}>
+            {(distance / 1000).toFixed(2)} km
+          </Text>
         </View>
         <View style={styles.statsRow}>
           <Text style={styles.statLabel}>Duration:</Text>
@@ -428,7 +492,10 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
         {!isTracking ? (
           <Animated.View style={{ transform: [{ scale: buttonScaleAnim }] }}>
             <TouchableOpacity
-              style={[styles.primaryButton, isButtonPressed && styles.buttonPressed]}
+              style={[
+                styles.primaryButton,
+                isButtonPressed && styles.buttonPressed,
+              ]}
               onPress={handleStartRun}
               activeOpacity={0.8}
             >
@@ -439,7 +506,10 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
           <View style={styles.runningControls}>
             <Animated.View style={{ transform: [{ scale: buttonScaleAnim }] }}>
               <TouchableOpacity
-                style={[styles.secondaryButton, isButtonPressed && styles.buttonPressed]}
+                style={[
+                  styles.secondaryButton,
+                  isButtonPressed && styles.buttonPressed,
+                ]}
                 onPress={handlePauseRun}
                 activeOpacity={0.8}
               >
@@ -449,7 +519,10 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
 
             <Animated.View style={{ transform: [{ scale: buttonScaleAnim }] }}>
               <TouchableOpacity
-                style={[styles.stopButton, isButtonPressed && styles.buttonPressed]}
+                style={[
+                  styles.stopButton,
+                  isButtonPressed && styles.buttonPressed,
+                ]}
                 onPress={handleStopRun}
                 activeOpacity={0.8}
               >
@@ -462,7 +535,10 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
         {isTracking === false && currentRunId && (
           <Animated.View style={{ transform: [{ scale: buttonScaleAnim }] }}>
             <TouchableOpacity
-              style={[styles.resumeButton, isButtonPressed && styles.buttonPressed]}
+              style={[
+                styles.resumeButton,
+                isButtonPressed && styles.buttonPressed,
+              ]}
               onPress={handleResumeRun}
               activeOpacity={0.8}
             >
@@ -479,62 +555,62 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   statsContainer: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
   },
   statsTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   statLabel: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   statValue: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   locationText: {
     fontSize: 14,
-    color: '#888',
+    color: "#888",
     marginTop: 8,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   controlsContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   runningControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
     marginBottom: 10,
   },
 
   // GPS Status Styles
   gpsStatusContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   gpsAccuracyContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 8,
   },
   gpsAccuracyRing: {
@@ -542,31 +618,31 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     borderWidth: 3,
-    borderColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#4CAF50",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
   gpsAccuracyInner: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(76, 175, 80, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   gpsAccuracyText: {
     fontSize: 18,
   },
   gpsStatusText: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
+    color: "#666",
+    fontWeight: "500",
   },
 
   // Territory Eligibility Styles
   eligibilityIndicator: {
-    backgroundColor: '#FFD700',
+    backgroundColor: "#FFD700",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -574,51 +650,51 @@ const styles = StyleSheet.create({
   },
   eligibilityText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
   },
 
   // Enhanced Button Styles
   primaryButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderRadius: 12,
     minWidth: 200,
-    alignItems: 'center',
+    alignItems: "center",
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
   },
   secondaryButton: {
-    backgroundColor: '#FF9800',
+    backgroundColor: "#FF9800",
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 10,
     minWidth: 120,
-    alignItems: 'center',
+    alignItems: "center",
     marginRight: 8,
   },
   stopButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: "#F44336",
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 10,
     minWidth: 120,
-    alignItems: 'center',
+    alignItems: "center",
     marginLeft: 8,
   },
   resumeButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: "#2196F3",
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderRadius: 12,
     minWidth: 150,
-    alignItems: 'center',
+    alignItems: "center",
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -627,24 +703,24 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   primaryButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   secondaryButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   stopButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   resumeButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

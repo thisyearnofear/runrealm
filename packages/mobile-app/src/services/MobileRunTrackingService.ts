@@ -3,8 +3,12 @@
  * Provides mobile-specific run tracking functionality
  * using shared core RunTrackingService
  */
-import { RunTrackingService, RunSession } from '@runrealm/shared-core/services/run-tracking-service';
-import { BackgroundTrackingService } from './BackgroundTrackingService';
+import {
+  RunTrackingService,
+  RunSession,
+} from "@runrealm/shared-core/services/run-tracking-service";
+import { BackgroundTrackingService } from "./BackgroundTrackingService";
+import * as Location from "expo-location";
 
 class MobileRunTrackingService {
   private runTrackingService: RunTrackingService;
@@ -18,54 +22,122 @@ class MobileRunTrackingService {
   }
 
   /**
-  * Initialize location tracking with mobile-specific permissions and settings
-  */
+   * Initialize location tracking with mobile-specific permissions and settings
+   */
   async initializeLocationTracking(): Promise<void> {
-    // Mobile-specific location initialization
-    console.log('Initializing mobile location tracking with shared service');
+    console.log("Initializing mobile location tracking with expo-location");
 
     try {
-      // Create a mobile-specific location service that integrates with React Native Geolocation
-      const mobileLocationService = {
-        async getCurrentLocation(highAccuracy: boolean = false) {
-          return new Promise((resolve, reject) => {
-            // This would be replaced with actual React Native Geolocation call
-            // For now, return mock data
-            resolve({
-              lat: 40.7128,
-              lng: -74.0060,
-              accuracy: 10,
-              timestamp: Date.now()
-            });
-          });
+      // Request location permissions
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        throw new Error("Location permission not granted");
+      }
+
+      // Request background location permissions if available
+      try {
+        const backgroundStatus =
+          await Location.requestBackgroundPermissionsAsync();
+        if (backgroundStatus.status === "granted") {
+          console.log("Background location permission granted");
         }
+      } catch (error) {
+        // Background permissions may not be available on all platforms
+        console.warn("Background location permission not available:", error);
+      }
+
+      // Create a mobile-specific location service that integrates with expo-location
+      const mobileLocationService = {
+        async getCurrentLocation(
+          highAccuracy: boolean = false,
+          _useCache: boolean = false
+        ) {
+          try {
+            const options: Location.LocationOptions = {
+              accuracy: highAccuracy
+                ? Location.Accuracy.BestForNavigation
+                : Location.Accuracy.Balanced,
+            };
+
+            const location = await Location.getCurrentPositionAsync(options);
+
+            return {
+              lat: location.coords.latitude,
+              lng: location.coords.longitude,
+              accuracy: location.coords.accuracy || 0,
+              timestamp: location.timestamp,
+            };
+          } catch (error) {
+            console.error("Error getting current location:", error);
+            throw error;
+          }
+        },
+
+        // Optional: Add watchPosition method if needed by RunTrackingService
+        watchPosition(
+          onUpdate: (location: {
+            lat: number;
+            lng: number;
+            accuracy: number;
+            timestamp: number;
+          }) => void,
+          onError?: (error: Error) => void,
+          options?: { enableHighAccuracy?: boolean }
+        ) {
+          const watchOptions: Location.LocationOptions = {
+            accuracy: options?.enableHighAccuracy
+              ? Location.Accuracy.BestForNavigation
+              : Location.Accuracy.Balanced,
+            timeInterval: 1000, // Update every second
+            distanceInterval: 1, // Update every meter
+          };
+
+          const subscription = Location.watchPositionAsync(
+            watchOptions,
+            (location) => {
+              onUpdate({
+                lat: location.coords.latitude,
+                lng: location.coords.longitude,
+                accuracy: location.coords.accuracy || 0,
+                timestamp: location.timestamp,
+              });
+            }
+          );
+
+          // Return a cleanup function
+          return () => {
+            subscription.then((sub) => sub.remove());
+          };
+        },
       };
 
       // Set the location service on the shared RunTrackingService
       this.runTrackingService.setLocationService(mobileLocationService);
 
       this.locationTrackingEnabled = true;
-      console.log('Mobile location tracking enabled');
+      console.log("Mobile location tracking enabled successfully");
     } catch (error) {
-      console.error('Failed to initialize location tracking:', error);
+      console.error("Failed to initialize location tracking:", error);
+      this.locationTrackingEnabled = false;
       throw error;
     }
-   }
+  }
 
   /**
    * Start a run with mobile-specific tracking
    */
   async startRun(): Promise<string> {
-    console.log('Starting run via mobile tracking service');
+    console.log("Starting run via mobile tracking service");
     try {
       // Set location service if needed
       // this.runTrackingService.setLocationService(/* mobile location service */);
-      
+
       const runId = await this.runTrackingService.startRun();
       console.log(`Run started with ID: ${runId}`);
       return runId;
     } catch (error) {
-      console.error('Failed to start run:', error);
+      console.error("Failed to start run:", error);
       throw error;
     }
   }
@@ -73,14 +145,20 @@ class MobileRunTrackingService {
   /**
    * Start a run with predefined route
    */
-  async startRunWithRoute(coordinates: number[][], distance: number): Promise<string> {
-    console.log('Starting run with predefined route');
+  async startRunWithRoute(
+    coordinates: number[][],
+    distance: number
+  ): Promise<string> {
+    console.log("Starting run with predefined route");
     try {
-      const runId = await this.runTrackingService.startRunWithRoute(coordinates, distance);
+      const runId = await this.runTrackingService.startRunWithRoute(
+        coordinates,
+        distance
+      );
       console.log(`Run with route started with ID: ${runId}`);
       return runId;
     } catch (error) {
-      console.error('Failed to start run with route:', error);
+      console.error("Failed to start run with route:", error);
       throw error;
     }
   }
@@ -133,9 +211,9 @@ class MobileRunTrackingService {
   async enableBackgroundTracking(): Promise<void> {
     try {
       await this.backgroundTrackingService.startBackgroundTracking();
-      console.log('Background tracking enabled');
+      console.log("Background tracking enabled");
     } catch (error) {
-      console.error('Failed to enable background tracking:', error);
+      console.error("Failed to enable background tracking:", error);
       throw error;
     }
   }
@@ -146,9 +224,9 @@ class MobileRunTrackingService {
   async disableBackgroundTracking(): Promise<void> {
     try {
       await this.backgroundTrackingService.stopBackgroundTracking();
-      console.log('Background tracking disabled');
+      console.log("Background tracking disabled");
     } catch (error) {
-      console.error('Failed to disable background tracking:', error);
+      console.error("Failed to disable background tracking:", error);
       throw error;
     }
   }

@@ -1,3 +1,4 @@
+import MobileRunTrackingService from "@/services/MobileRunTrackingService";
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Text } from "react-native";
 
@@ -11,6 +12,92 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
   const [TerritoryMapView, setTerritoryMapView] = useState<any>(null);
   const [GPSTrackingComponent, setGPSTrackingComponent] = useState<any>(null);
   const [WalletButton, setWalletButton] = useState<any>(null);
+  const [mapAdapter, setMapAdapter] = useState<any>(null);
+  const [web3Adapter, setWeb3Adapter] = useState<any>(null);
+  const [adaptersLoading, setAdaptersLoading] = useState(true);
+  const currentRunData: any = null;
+
+  useEffect(() => {
+    MobileRunTrackingService;
+  });
+  // Initialize adapters
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAdapters = async () => {
+      try {
+        // Load MapService and create MobileMapAdapter
+        try {
+          const mapServiceModule = await import(
+            "@runrealm/shared-core/services/map-service"
+          );
+          const mapAdapterModule = await import("../services/MobileMapAdapter");
+
+          if (
+            mapServiceModule?.MapService &&
+            mapAdapterModule?.MobileMapAdapter
+          ) {
+            const MapService = mapServiceModule.MapService;
+            const MobileMapAdapter = mapAdapterModule.MobileMapAdapter;
+
+            const mapService = new MapService();
+            await mapService.initialize();
+
+            const adapter = new MobileMapAdapter(mapService);
+            await adapter.initialize();
+
+            if (isMounted) {
+              setMapAdapter(adapter);
+            }
+          }
+        } catch (error) {
+          console.warn("MapService/MobileMapAdapter not available:", error);
+        }
+
+        // Load Web3Service and create MobileWeb3Adapter
+        try {
+          const web3ServiceModule = await import(
+            "@runrealm/shared-core/services/web3-service"
+          );
+          const web3AdapterModule = await import(
+            "../services/MobileWeb3Adapter"
+          );
+
+          if (
+            web3ServiceModule?.Web3Service &&
+            web3AdapterModule?.MobileWeb3Adapter
+          ) {
+            const Web3Service = web3ServiceModule.Web3Service;
+            const MobileWeb3Adapter = web3AdapterModule.MobileWeb3Adapter;
+
+            const web3Service = new Web3Service();
+            await web3Service.initialize();
+
+            const adapter = new MobileWeb3Adapter(web3Service);
+            await adapter.initialize();
+
+            if (isMounted) {
+              setWeb3Adapter(adapter);
+            }
+          }
+        } catch (error) {
+          console.warn("Web3Service/MobileWeb3Adapter not available:", error);
+        }
+      } catch (error) {
+        console.error("Error loading adapters:", error);
+      } finally {
+        if (isMounted) {
+          setAdaptersLoading(false);
+        }
+      }
+    };
+
+    loadAdapters();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Lazy load components in useEffect to avoid import-time errors
   useEffect(() => {
@@ -46,12 +133,6 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
     loadComponents();
   }, []);
 
-  // These props would need to be passed through navigation or context
-  // For now, we'll use placeholder values
-  const mapAdapter: any = null;
-  const web3Adapter: any = null;
-  const currentRunData: any = null;
-
   const handleRunStart = () => {
     console.log("Run started");
   };
@@ -72,8 +153,8 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
     console.error("Wallet error:", error);
   };
 
-  // If components aren't loaded yet, show a simple placeholder
-  if (!componentsLoaded || !TerritoryMapView || !GPSTrackingComponent) {
+  // If components or adapters aren't loaded yet, show a simple placeholder
+  if (!componentsLoaded || adaptersLoading) {
     return (
       <View
         style={{
@@ -85,9 +166,9 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
       >
         <Text style={{ color: "#fff", fontSize: 18 }}>Map</Text>
         <Text style={{ color: "#999", fontSize: 14, marginTop: 10 }}>
-          {componentsLoaded
-            ? "Map components not available"
-            : "Loading map components..."}
+          {!componentsLoaded
+            ? "Loading map components..."
+            : "Initializing map services..."}
         </Text>
       </View>
     );
@@ -95,7 +176,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
 
   return (
     <View style={{ flex: 1 }}>
-      {TerritoryMapView && (
+      {TerritoryMapView && mapAdapter ? (
         <TerritoryMapView
           mapAdapter={mapAdapter}
           showUserLocation={true}
@@ -105,6 +186,20 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
             // Could show territory details modal
           }}
         />
+      ) : (
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "#1a1a1a",
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 18 }}>Map</Text>
+          <Text style={{ color: "#999", fontSize: 14, marginTop: 10 }}>
+            Map adapter not available
+          </Text>
+        </View>
       )}
       <View style={styles.trackingContainer}>
         {GPSTrackingComponent && (
@@ -115,14 +210,14 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation, route }) => {
         )}
       </View>
       <View style={styles.walletContainer}>
-        {WalletButton && (
+        {WalletButton && web3Adapter ? (
           <WalletButton
             web3Adapter={web3Adapter}
             onConnect={handleWalletConnect}
             onDisconnect={handleWalletDisconnect}
             onError={handleWalletError}
           />
-        )}
+        ) : null}
       </View>
     </View>
   );

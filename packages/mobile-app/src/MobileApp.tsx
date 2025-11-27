@@ -6,25 +6,8 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-
-// Service 1: AchievementService (simplest, no browser dependencies)
-let AchievementService: any = null;
-let Achievement: any = null;
-
-// Dynamic import for optional dependency
-(async () => {
-  try {
-    const achievementModule = await import(
-      "@runrealm/shared-core/services/achievement-service"
-    );
-    if (achievementModule?.AchievementService) {
-      AchievementService = achievementModule.AchievementService;
-      Achievement = achievementModule.Achievement;
-    }
-  } catch (error) {
-    console.warn("AchievementService not available:", error);
-  }
-})();
+import MapScreen from "./screens/MapScreen";
+import { HistoryScreen } from "./screens/HistoryScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -32,26 +15,52 @@ const Tab = createBottomTabNavigator();
 function DashboardScreen() {
   const [achievements, setAchievements] = useState<any[]>([]);
   const [achievementService, setAchievementService] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (AchievementService) {
-      const service = new AchievementService();
-      service
-        .initialize()
-        .then(() => {
-          setAchievementService(service);
-          setAchievements(service.getAchievements());
-        })
-        .catch((err: any) => {
-          console.warn("Failed to initialize AchievementService:", err);
-        });
-    }
+    let isMounted = true;
+
+    const loadAchievementService = async () => {
+      try {
+        // Dynamic import for optional dependency
+        const achievementModule = await import(
+          "@runrealm/shared-core/services/achievement-service"
+        );
+
+        if (!isMounted) return;
+
+        if (achievementModule?.AchievementService) {
+          const Service = achievementModule.AchievementService;
+          const service = new Service();
+          await service.initialize();
+
+          if (isMounted) {
+            setAchievementService(service);
+            setAchievements(service.getAchievements());
+          }
+        }
+      } catch (error) {
+        console.warn("AchievementService not available:", error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadAchievementService();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>Dashboard</Text>
-      {achievementService ? (
+      {isLoading ? (
+        <Text style={styles.subtitle}>Loading...</Text>
+      ) : achievementService ? (
         <>
           <Text style={styles.subtitle}>
             {achievements.length} achievements available
@@ -63,24 +72,6 @@ function DashboardScreen() {
       ) : (
         <Text style={styles.subtitle}>AchievementService not available</Text>
       )}
-    </View>
-  );
-}
-
-function MapScreen() {
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Map</Text>
-      <Text style={styles.subtitle}>Map view will go here</Text>
-    </View>
-  );
-}
-
-function HistoryScreen() {
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>History</Text>
-      <Text style={styles.subtitle}>Run history will go here</Text>
     </View>
   );
 }
