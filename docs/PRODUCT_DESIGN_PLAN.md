@@ -803,15 +803,28 @@ interface DashboardState {
 
 ## Implementation Priority
 
-### Phase 1: Collapsible Dashboard Foundation (Week 1)
+### Phase 1: Collapsible Dashboard Foundation (Week 1) - COMPLETED ✅
 **Goal: Make dashboard primary with minimize capability**
 
-- [ ] Create collapsible dashboard layout component
-- [ ] Implement expand/minimize toggle in header
-- [ ] Add 60/40 split view (dashboard/map)
+**Completed:**
+- [x] Fix dashboard toggle widget (corrected API usage)
+- [x] Fix dashboard visibility (inline styles override CSS)
+- [x] Fix dashboard z-index (set to 1500)
+- [x] Fix dashboard centering and compact size (600px, centered)
+- [x] Fix close and minimize buttons (event delegation)
+- [x] Shorten button labels (min/exp for space)
+- [x] Create collapsible dashboard layout component (60/40 split)
+- [x] Implement expand/minimize toggle in header (60px collapsed, 60% expanded)
+- [x] Add 60/40 split view (dashboard/map with body classes)
+- [x] Smooth transition animations (0.3s ease)
+
+**Remaining:**
 - [ ] Persist dashboard state in localStorage
-- [ ] Smooth transition animations
 - [ ] Responsive breakpoints (mobile stacks vertically)
+
+**Current Status:** Dashboard-first layout complete! Dashboard on left (60%), map on right (40%). Minimize collapses to 60px sidebar. Ready for Phase 2.
+
+**Next Steps:** Phase 2 - Widget-Dashboard Integration
 
 ### Phase 2: Widget-Dashboard Integration (Week 2)
 **Goal: Sync all widgets with dashboard sections**

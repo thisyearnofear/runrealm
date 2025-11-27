@@ -105,8 +105,8 @@ export class UserDashboard {
       <div class="dashboard-header">
         <h2>User Dashboard</h2>
         <div class="dashboard-controls">
-          <button id="dashboard-minimize" class="dashboard-btn">${state.isMinimized ? ' expand' : ' minimize'}</button>
-          <button id="dashboard-close" class="dashboard-btn"> close</button>
+          <button id="dashboard-minimize" class="dashboard-btn">${state.isMinimized ? '▲ exp' : '▼ min'}</button>
+          <button id="dashboard-close" class="dashboard-btn">✕ close</button>
         </div>
       </div>
       <div class="dashboard-content ${state.isMinimized ? 'minimized' : ''}">
@@ -350,7 +350,7 @@ export class UserDashboard {
     // Update minimize button text
     const minimizeBtn = this.container.querySelector('#dashboard-minimize');
     if (minimizeBtn) {
-      minimizeBtn.textContent = state.isMinimized ? ' expand' : ' minimize';
+      minimizeBtn.textContent = state.isMinimized ? '▲ exp' : '▼ min';
     }
   }
 
@@ -360,20 +360,35 @@ export class UserDashboard {
 
     if (visible) {
       this.container.classList.remove('hidden');
-      // Force visibility and opacity to override CSS !important rules
+      // Force visibility
       this.container.style.visibility = 'visible';
       this.container.style.opacity = '1';
       this.container.style.pointerEvents = 'auto';
-      this.container.style.zIndex = '2000'; // Above map and widgets
-      // Force centering
+      this.container.style.zIndex = '1500'; // Above map, below modals
+      
+      // 60/40 split layout - dashboard on left
       this.container.style.position = 'fixed';
-      this.container.style.top = '50%';
-      this.container.style.left = '50%';
-      this.container.style.transform = 'translate(-50%, -50%)';
-      // Make it compact
-      this.container.style.width = '600px';
-      this.container.style.maxHeight = '80vh';
+      this.container.style.top = '0';
+      this.container.style.left = '0';
+      this.container.style.bottom = '0';
+      this.container.style.width = minimized ? '60px' : '60%';
+      this.container.style.height = '100vh';
+      this.container.style.transform = 'none';
+      this.container.style.maxWidth = 'none';
+      this.container.style.maxHeight = 'none';
       this.container.style.overflow = 'auto';
+      this.container.style.transition = 'width 0.3s ease';
+      
+      // Add body classes for map adjustment
+      document.body.classList.add('dashboard-visible');
+      if (minimized) {
+        document.body.classList.add('dashboard-minimized');
+        this.container.classList.add('minimized-layout');
+      } else {
+        document.body.classList.remove('dashboard-minimized');
+        this.container.classList.remove('minimized-layout');
+      }
+      
       console.log('UserDashboard: Removed hidden class and forced visibility');
       
       // Check computed styles after forcing
@@ -395,6 +410,11 @@ export class UserDashboard {
       this.container.style.visibility = '';
       this.container.style.opacity = '';
       this.container.style.pointerEvents = '';
+      
+      // Remove body classes
+      document.body.classList.remove('dashboard-visible', 'dashboard-minimized');
+      this.container.classList.remove('minimized-layout');
+      
       console.log('UserDashboard: Added hidden class and removed inline styles');
     }
 

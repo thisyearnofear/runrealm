@@ -1,6 +1,8 @@
-# Fixes Applied - 2025-11-27
+# Fixes and Implementation - 2025-11-27
 
-## Issue 1: Dashboard Toggle Widget Shows "undefined"
+## Phase 1: Dashboard Foundation - COMPLETED ✅
+
+### Issue 1: Dashboard Toggle Widget Shows "undefined"
 
 **Problem:**
 - Dashboard toggle widget was using incorrect API
@@ -196,15 +198,105 @@ public async analyzeTerritory(...): Promise<TerritoryAnalysis> {
 
 ---
 
+## Phase 1 Implementation: Dashboard-First Layout
+
+### Goal
+Transform dashboard from centered overlay to primary interface with 60/40 split.
+
+### Changes Made
+
+**1. Layout Transformation**
+- Dashboard positioned on left: `position: fixed; left: 0; width: 60%`
+- Map adjusted to right: `margin-left: 60%; width: 40%`
+- Full height: `height: 100vh; top: 0; bottom: 0`
+
+**2. Collapsible Functionality**
+- Expanded: 60% width (default)
+- Minimized: 60px width (thin sidebar)
+- Smooth transitions: `transition: width 0.3s ease`
+
+**3. Body Classes for Map Adjustment**
+```typescript
+// When dashboard visible
+document.body.classList.add('dashboard-visible');
+
+// When minimized
+document.body.classList.add('dashboard-minimized');
+```
+
+**4. CSS Updates**
+`packages/web-app/styles/components.css`:
+```css
+.user-dashboard {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 60% !important;
+  height: 100vh !important;
+  border-right: 2px solid var(--widget-border-color) !important;
+  transition: width 0.3s ease !important;
+}
+
+.user-dashboard.minimized-layout {
+  width: 60px !important;
+}
+
+body.dashboard-visible #map {
+  margin-left: 60% !important;
+  width: 40% !important;
+  transition: margin-left 0.3s ease, width 0.3s ease !important;
+}
+
+body.dashboard-minimized #map {
+  margin-left: 60px !important;
+  width: calc(100% - 60px) !important;
+}
+```
+
+**5. Component Updates**
+`packages/web-app/src/components/user-dashboard.ts`:
+- Updated `updateVisibility()` to apply split layout styles
+- Added body class management for map adjustment
+- Shortened button labels: "▼ min" / "▲ exp"
+- Fixed event delegation for dynamic buttons
+
+### Result
+✅ Dashboard-first interface complete
+✅ 60/40 split layout working
+✅ Smooth minimize/expand transitions
+✅ Map automatically adjusts
+✅ Close button hides dashboard, map goes full width
+
+### Files Modified
+1. `packages/web-app/src/components/user-dashboard.ts` - Layout logic
+2. `packages/web-app/styles/components.css` - Split layout styles
+3. `docs/PRODUCT_DESIGN_PLAN.md` - Progress tracking
+
+---
+
 ## Next Steps
 
-Before implementing the full dashboard redesign plan:
+### Phase 2: Widget-Dashboard Integration (Week 2)
+**Goal: Sync all widgets with dashboard sections**
 
-1. ✅ Verify dashboard toggle works
-2. ✅ Verify AI service doesn't auto-trigger
-3. Test AI features still work when actually invoked
-4. Consider adding user preference for "test connection on startup" (advanced users)
-5. Proceed with dashboard-first redesign from PRODUCT_DESIGN_PLAN.md
+- [ ] Add [Widget] buttons to each dashboard section
+- [ ] Implement widget ↔ dashboard state sync
+- [ ] Add [Map →] buttons for map interactions
+- [ ] Create dashboard section components:
+  - Location & GPS section
+  - Territories section with list/filter
+  - Ghost Runners section
+  - Recent Activity feed
+  - Challenges section
+  - Strava integration panel
+  - Wallet & Settings sections
+- [ ] Wire up event handlers for cross-component communication
+
+**Priority Tasks:**
+1. Create section components (Location, Territories, Ghost Runners)
+2. Add [Widget] and [Map →] buttons to each section
+3. Implement WidgetDashboardBridge service for state sync
+4. Test widget ↔ dashboard ↔ map interactions
 
 ---
 
