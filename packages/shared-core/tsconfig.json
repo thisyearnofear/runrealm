@@ -15,10 +15,7 @@
     "baseUrl": ".",
     "typeRoots": ["../../node_modules/@types", "../../types"]
   },
-  "include": [
-    "**/*",
-    "types/**/*"
-  ],
+  "include": ["**/*", "types/**/*"],
   "exclude": [
     "**/__tests__/**/*",
     "**/*.test.ts",
