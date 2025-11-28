@@ -18,5 +18,14 @@
   "include": [
     "**/*",
     "types/**/*"
+  ],
+  "exclude": [
+    "**/__tests__/**/*",
+    "**/*.test.ts",
+    "**/*.test.js",
+    "**/*.spec.ts",
+    "**/*.spec.js",
+    "node_modules",
+    "dist"
   ]
 }
