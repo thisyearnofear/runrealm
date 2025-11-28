@@ -172,9 +172,9 @@ async function initializeApp(): Promise<void> {
     );
 
     // Import platform-specific ghost UI components (from root src)
-    const { GhostManagement } = await import("../../src/components/ghost-management");
-    const { GhostButton } = await import("../../src/components/ghost-button");
-    
+    const { GhostManagement } = await import("../../src/components/ghost-management.js");
+    const { GhostButton } = await import("../../src/components/ghost-button.js");
+
     const ghostManagement = new GhostManagement();
     const ghostButton = new GhostButton(ghostManagement);
 
@@ -183,17 +183,7 @@ async function initializeApp(): Promise<void> {
 
     await app.initialize();
 
-    // Mount React TerritoryDashboard (web-specific)
-    const { mountTerritoryDashboard } = await import(
-      "./src/components/TerritoryDashboardMount"
-    );
-    const territoryDashboardContainer = document.getElementById("territory-dashboard-root");
-    if (territoryDashboardContainer) {
-      mountTerritoryDashboard(territoryDashboardContainer);
-      console.log("React TerritoryDashboard mounted");
-    }
-
-    // Initialize User Dashboard
+    // Initialize User Dashboard (consolidated command center)
     const userDashboard = new UserDashboard();
     const dashboardContainer = document.createElement("div");
     dashboardContainer.id = "user-dashboard-root";
