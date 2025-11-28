@@ -228,7 +228,7 @@ module.exports = (env, argv) => {
         "process.env.NODE_ENV": JSON.stringify(argv.mode || "development"),
       }),
       new webpack.ProvidePlugin({
-        process: require.resolve("process/browser"),
+        process: "process/browser",
         Buffer: ["buffer", "Buffer"],
       }),
       // Ignore React Native Async Storage in web builds
