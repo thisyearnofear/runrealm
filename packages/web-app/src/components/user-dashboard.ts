@@ -20,6 +20,7 @@ export class UserDashboard {
   private unsubscribeDataUpdates: (() => void) | null = null;
   private unsubscribeVisibilityChanges: (() => void) | null = null;
   private expandedTerritoryId: string | null = null;
+  private activeTab: 'overview' | 'territories' | 'ghosts' | 'challenges' = 'overview';
 
   constructor() {
     this.dashboardService = UserDashboardService.getInstance();
@@ -86,13 +87,12 @@ export class UserDashboard {
         return;
       }
 
-      // Minimize/Expand button
-      if (target.id === 'dashboard-minimize' || target.closest('#dashboard-minimize')) {
-        console.log('Minimize button clicked, current state:', this.dashboardService.getState());
-        if (this.dashboardService.getState().isMinimized) {
-          this.dashboardService.expand();
-        } else {
-          this.dashboardService.minimize();
+      // Tab switching
+      if (target.classList.contains('dashboard-tab')) {
+        const tabName = target.getAttribute('data-tab') as 'overview' | 'territories' | 'ghosts' | 'challenges';
+        if (tabName) {
+          this.activeTab = tabName;
+          this.render();
         }
         return;
       }
@@ -251,39 +251,47 @@ export class UserDashboard {
   private render(): void {
     if (!this.container) return;
 
-    const state = this.dashboardService.getState();
     const data = this.dashboardService.getData();
 
     this.container.innerHTML = `
       <div class="dashboard-header">
         <h2>User Dashboard</h2>
-        <div class="dashboard-controls">
-          <button id="dashboard-minimize" class="dashboard-btn">${state.isMinimized ? '▲ exp' : '▼ min'}</button>
-          <button id="dashboard-close" class="dashboard-btn">✕ close</button>
-        </div>
+        <button id="dashboard-close" class="dashboard-close-btn">✕</button>
       </div>
-      <div class="dashboard-content ${state.isMinimized ? 'minimized' : ''}">
-        ${this.renderDashboardContent(data)}
+      <div class="dashboard-tabs">
+        <button class="dashboard-tab ${this.activeTab === 'overview' ? 'active' : ''}" data-tab="overview">Overview</button>
+        <button class="dashboard-tab ${this.activeTab === 'territories' ? 'active' : ''}" data-tab="territories">Territories</button>
+        <button class="dashboard-tab ${this.activeTab === 'ghosts' ? 'active' : ''}" data-tab="ghosts">Ghosts</button>
+        <button class="dashboard-tab ${this.activeTab === 'challenges' ? 'active' : ''}" data-tab="challenges">Challenges</button>
+      </div>
+      <div class="dashboard-content">
+        ${this.renderTabContent(data)}
       </div>
     `;
 
     this.setupEventListeners();
   }
 
-  private renderDashboardContent(data: DashboardData): string {
-    return `
-      <div class="dashboard-sections">
-        ${this.renderPlayerStats(data.userStats)}
-        ${this.renderCurrentRun(data.currentRun)}
-        ${this.renderGhostRunners(data.ghosts)}
-        ${this.renderTerritories(data.territories)}
-        ${this.renderChallenges(data.userStats)}
-        ${this.renderWalletInfo(data.walletInfo)}
-        ${this.renderRecentActivity(data.recentActivity)}
-        ${this.renderAIInsights(data.aiInsights)}
-        ${this.renderNotifications(data.notifications)}
-      </div>
-    `;
+  private renderTabContent(data: DashboardData): string {
+    switch (this.activeTab) {
+      case 'overview':
+        return `
+          ${this.renderPlayerStats(data.userStats)}
+          ${this.renderCurrentRun(data.currentRun)}
+          ${this.renderWalletInfo(data.walletInfo)}
+        `;
+      case 'territories':
+        return this.renderTerritories(data.territories);
+      case 'ghosts':
+        return this.renderGhostRunners(data.ghosts);
+      case 'challenges':
+        return `
+          ${this.renderChallenges(data.userStats)}
+          ${this.renderNotifications(data.notifications)}
+        `;
+      default:
+        return '';
+    }
   }
 
   private renderPlayerStats(userStats: any): string {
