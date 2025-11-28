@@ -23,7 +23,10 @@
     "ios": {
       "supportsTablet": true,
       "newArchEnabled": true,
-      "bundleIdentifier": "com.runrealm.app"
+      "bundleIdentifier": "com.runrealm.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.runrealm.app",
@@ -39,6 +42,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c43efc36-a463-460e-bd5d-67fa6a69051d"
+      }
     }
   }
 }

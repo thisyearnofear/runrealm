@@ -9,9 +9,9 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "build": "tsc",
-    "build:ios": "eas build --profile production --platform ios",
+    "build:ios": "./scripts/build-ios.sh",
     "build:android": "eas build --profile production --platform android",
-    "submit:ios": "eas submit --platform ios",
+    "submit:ios:env": "./scripts/submit-ios.sh",
     "test": "jest --passWithNoTests"
   },
   "dependencies": {

@@ -45,17 +45,20 @@
     "README.md"
   ],
   "dependencies": {
-    "mapbox-gl": "2.4.1",
+    "@google/generative-ai": "^0.17.0",
+    "@mapbox/mapbox-sdk": "0.13.2",
     "@turf/turf": "^6.5.0",
-    "ethers": "^6.13.0",
     "@zetachain/protocol-contracts": "^13.0.0",
     "@zetachain/toolkit": "^16.1.1",
-    "@google/generative-ai": "^0.17.0",
-    "@mapbox/mapbox-sdk": "0.13.2"
+    "ethers": "^6.13.0",
+    "mapbox-gl": "2.4.1"
   },
   "devDependencies": {
-    "@types/mapbox-gl": "2.4.2",
     "@types/geojson": "^7946.0.16",
+    "@types/jest": "^29.5.14",
+    "@types/mapbox-gl": "2.4.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.5",
     "typescript": "^5.0.4"
   }
 }
