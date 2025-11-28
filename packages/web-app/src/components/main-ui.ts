@@ -22,6 +22,8 @@ import { MobileWidgetService } from "@runrealm/shared-core/components/mobile-wid
 import { WalletWidget } from "./wallet-widget";
 import { TransactionStatus } from "@runrealm/shared-core/components/transaction-status";
 import { RewardSystemUI } from "@runrealm/shared-core/components/reward-system-ui";
+import { ExternalFitnessIntegration } from "@runrealm/shared-core/components/external-fitness-integration";
+import { AccessibilityEnhancer } from "@runrealm/shared-core/components/accessibility-enhancer";
 import { Web3Service } from "@runrealm/shared-core/services/web3-service";
 import { ConfigService } from "@runrealm/shared-core/core/app-config";
 import { ContractService } from "@runrealm/shared-blockchain/services/contract-service";
@@ -235,26 +237,27 @@ export class MainUI extends BaseService {
     console.log("MainUI: Settings event handlers set up");
 
     // Listen for GameFi toggle events
-    EventBus.getInstance().on("gamefi:toggled", (data: { enabled: boolean }) => {
-      console.log("MainUI: GameFi toggled to:", data.enabled);
-      this.isGameFiMode = data.enabled;
-      
-      if (data.enabled) {
-        document.body.classList.add("gamefi-mode");
-        this.widgetCreator.createGameFiWidgets();
-      } else {
-        document.body.classList.remove("gamefi-mode");
-        this.widgetCreator.removeGameFiWidgets();
+    EventBus.getInstance().on(
+      "gamefi:toggled",
+      (data: { enabled: boolean }) => {
+        console.log("MainUI: GameFi toggled to:", data.enabled);
+        this.isGameFiMode = data.enabled;
+
+        if (data.enabled) {
+          document.body.classList.add("gamefi-mode");
+          this.widgetCreator.createGameFiWidgets();
+        } else {
+          document.body.classList.remove("gamefi-mode");
+          this.widgetCreator.removeGameFiWidgets();
+        }
+
+        // Update settings widget to reflect new state
+        this.widgetSystem.updateWidget(
+          "settings",
+          this.widgetCreator.getSettingsContent(data.enabled, true, true, true)
+        );
       }
-      
-      // Update settings widget to reflect new state
-      this.widgetSystem.updateWidget("settings", this.widgetCreator.getSettingsContent(
-        data.enabled,
-        true,
-        true,
-        true
-      ));
-    });
+    );
     console.log("MainUI: GameFi event listener registered");
 
     // URL param onboarding=reset support for QA/support

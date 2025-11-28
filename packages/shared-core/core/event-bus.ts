@@ -82,6 +82,7 @@ export interface AppEvents extends Web3Events {
   "ui:toast": { message: string; type: string; duration?: number };
   "ui:showRunControls": Record<string, never>;
   "ui:hideRunControls": Record<string, never>;
+  "gamefi:toggled": { enabled: boolean };
   "map:styleChanged": { style: string };
   "mobile:gestureDetected": { type: string; data: any };
   "territory:claimRequested": { runId: string };
@@ -284,7 +285,7 @@ export class EventBus {
 
   on<K extends keyof AppEvents>(
     event: K,
-    callback: EventCallback<AppEvents[K]>,
+    callback: EventCallback<AppEvents[K]>
   ): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
@@ -294,7 +295,7 @@ export class EventBus {
 
   off<K extends keyof AppEvents>(
     event: K,
-    callback: EventCallback<AppEvents[K]>,
+    callback: EventCallback<AppEvents[K]>
   ): void {
     const eventListeners = this.listeners.get(event);
     if (eventListeners) {
@@ -317,7 +318,7 @@ export class EventBus {
 
   once<K extends keyof AppEvents>(
     event: K,
-    callback: EventCallback<AppEvents[K]>,
+    callback: EventCallback<AppEvents[K]>
   ): void {
     const onceCallback = (data: AppEvents[K]) => {
       callback(data);

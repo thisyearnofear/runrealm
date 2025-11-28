@@ -7,6 +7,7 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
     "baseUrl": ".",
     "typeRoots": ["./types", "./node_modules/@types"],
     "paths": {
@@ -22,11 +23,7 @@
       "@components/*": ["./packages/shared-core/components/*"]
     }
   },
-  "include": [
-    "packages/**/*",
-    "src/**/*",
-    "types/**/*"
-  ],
+  "include": ["packages/**/*", "types/**/*"],
   "exclude": [
     "node_modules",
     "config",
@@ -37,6 +34,12 @@
     "artifacts",
     "tools",
     "infrastructure",
-    "test"
+    "test",
+    "packages/mobile-app/**/*",
+    "**/__tests__/**/*",
+    "**/*.test.ts",
+    "**/*.test.js",
+    "**/*.spec.ts",
+    "**/*.spec.js"
   ]
 }

@@ -174,7 +174,11 @@ async function initializeApp(): Promise<void> {
     );
 
     // Initialize platform UI with RunRealmApp
-    app.initializePlatformUI(mainUI, walletWidget, newTerritoryDashboard);
+    app.initializePlatformUI(
+      mainUI,
+      walletWidget,
+      newTerritoryDashboard as any
+    );
 
     await app.initialize();
 

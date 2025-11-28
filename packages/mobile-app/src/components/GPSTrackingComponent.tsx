@@ -7,21 +7,15 @@ import {
   View,
   Text,
   StyleSheet,
-  Button,
-  PermissionsAndroid,
-  Platform,
   Alert,
   Animated,
   ActivityIndicator,
   TouchableOpacity,
 } from "react-native";
-import * as Location from "expo-location";
-
-// Import the location tracking provider hook
+import * as ExpoLocation from "expo-location";
 import { useLocationTracking } from "../providers/LocationTrackingProvider";
-
-// Import mobile service
 import MobileRunTrackingService from "../services/MobileRunTrackingService";
+import { MobileLocationService } from "../services/MobileLocationService";
 
 interface GPSTrackingProps {
   onRunStart?: () => void;
@@ -65,24 +59,66 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
   const mobileTrackingService = mobileTrackingServiceRef.current;
 
   useEffect(() => {
-    // Initialize geolocation tracking when component mounts
-    requestLocationPermission();
+    let isMounted = true;
+    const locationService = MobileLocationService.getInstance();
 
-    // Initialize location tracking service in the background
-    const initializeTracking = async () => {
+    // Initialize geolocation tracking when component mounts
+    const initLocation = async () => {
       try {
-        await mobileTrackingService.initializeLocationTracking();
-        console.log("GPSTrackingComponent: Location tracking initialized");
+        // Check if permission is already granted (TerritoryMapView handles requesting)
+        const permissionStatus = await locationService.checkPermissionStatus();
+
+        if (permissionStatus.granted) {
+          // Get initial location
+          try {
+            const location = await locationService.getCurrentLocation();
+            if (isMounted) {
+              setLocation({
+                latitude: location.latitude,
+                longitude: location.longitude,
+              });
+              updateGPSAccuracy(location.accuracy || 20);
+              setIsLoadingGPS(false);
+            }
+          } catch (error) {
+            console.error("Error getting location:", error);
+            if (isMounted) {
+              setIsLoadingGPS(false);
+            }
+          }
+        } else {
+          // Permission not granted - TerritoryMapView will handle requesting
+          // Just set loading to false so we don't show "Getting GPS" forever
+          if (isMounted) {
+            setIsLoadingGPS(false);
+          }
+        }
+
+        if (isMounted) {
+          // Initialize location tracking service in the background
+          try {
+            await mobileTrackingService.initializeLocationTracking();
+            console.log("GPSTrackingComponent: Location tracking initialized");
+          } catch (error) {
+            console.warn(
+              "GPSTrackingComponent: Failed to initialize location tracking:",
+              error
+            );
+          }
+        }
       } catch (error) {
-        console.warn(
-          "GPSTrackingComponent: Failed to initialize location tracking:",
-          error
-        );
-        // Don't throw - it will be initialized when startRun is called
+        console.error("Error initializing location:", error);
+        if (isMounted) {
+          setIsLoadingGPS(false);
+        }
       }
     };
 
-    initializeTracking();
+    initLocation();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Visual feedback functions
@@ -146,98 +182,6 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
     return eligible;
   };
 
-  const requestLocationPermission = async () => {
-    if (Platform.OS === "android") {
-      setIsLoadingGPS(true);
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          {
-            title: "RunRealm Location Permission",
-            message:
-              "RunRealm needs access to your location to track your runs.",
-            buttonNeutral: "Ask Me Later",
-            buttonNegative: "Cancel",
-            buttonPositive: "OK",
-          }
-        );
-        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          console.log("Location permission granted");
-          // Get initial location to verify permissions work
-          try {
-            const position = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.High,
-            });
-            setLocation({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            });
-            updateGPSAccuracy(position.coords.accuracy || 20);
-            setIsLoadingGPS(false);
-            console.log("Initial location obtained");
-          } catch (error) {
-            console.error("Error getting initial location:", error);
-            setIsLoadingGPS(false);
-            Alert.alert(
-              "Location Error",
-              "Unable to get your location. Please check permissions."
-            );
-          }
-        } else {
-          console.log("Location permission denied");
-          setIsLoadingGPS(false);
-          Alert.alert(
-            "Permission Denied",
-            "Location permission is required for GPS tracking."
-          );
-        }
-      } catch (err) {
-        console.warn("Permission request error:", err);
-        setIsLoadingGPS(false);
-      }
-    } else {
-      // iOS - request permissions using expo-location
-      setIsLoadingGPS(true);
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-
-        if (status === "granted") {
-          console.log("iOS location permission granted");
-          // Get initial location to verify permissions work
-          try {
-            const position = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.High,
-            });
-            setLocation({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            });
-            updateGPSAccuracy(position.coords.accuracy || 20);
-            setIsLoadingGPS(false);
-            console.log("Initial location obtained on iOS");
-          } catch (error) {
-            console.error("Error getting initial location on iOS:", error);
-            setIsLoadingGPS(false);
-            Alert.alert(
-              "Location Error",
-              "Unable to get your location. Please check permissions."
-            );
-          }
-        } else {
-          console.log("iOS location permission denied");
-          setIsLoadingGPS(false);
-          Alert.alert(
-            "Permission Denied",
-            "Location permission is required for GPS tracking."
-          );
-        }
-      } catch (err) {
-        console.warn("iOS permission request error:", err);
-        setIsLoadingGPS(false);
-      }
-    }
-  };
-
   const updateRunStats = (stats: any) => {
     if (stats) {
       setDistance(stats.distance || 0);
@@ -276,9 +220,11 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
   const startLocationUpdates = async () => {
     // Start watching position for real-time UI updates
     try {
-      // Request foreground permissions first
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
+      // Use MobileLocationService for foreground permissions
+      const locationService = MobileLocationService.getInstance();
+      const permissionStatus = await locationService.checkPermissionStatus();
+
+      if (!permissionStatus.granted) {
         console.error("Permission to access location was denied");
         return;
       }
@@ -288,10 +234,10 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
         try {
           // Request background permissions if using TaskManager
           const backgroundStatus =
-            await Location.requestBackgroundPermissionsAsync();
+            await ExpoLocation.requestBackgroundPermissionsAsync();
           if (backgroundStatus.status === "granted") {
-            await Location.startLocationUpdatesAsync(locationTaskName, {
-              accuracy: Location.Accuracy.High,
+            await ExpoLocation.startLocationUpdatesAsync(locationTaskName, {
+              accuracy: ExpoLocation.LocationAccuracy.High,
               distanceInterval: 5, // Update every 5 meters
               timeInterval: 2000, // Update every 2 seconds
               foregroundService: {
@@ -313,24 +259,20 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
         console.log("TaskManager not ready, using foreground location updates");
       }
 
-      // Fallback: Use foreground location updates only
+      // Fallback: Use foreground location updates via service
       console.log("Using foreground location updates");
-      const subscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          distanceInterval: 5,
-          timeInterval: 2000,
-        },
+      await locationService.watchLocation(
         (location) => {
           console.log("Foreground location update:", location);
           // Update state here if needed
+        },
+        {
+          accuracy: ExpoLocation.LocationAccuracy.High,
+          distanceInterval: 5,
+          timeInterval: 2000,
         }
       );
-
-      // Store subscription for cleanup
-      if (subscription) {
-        console.log("Foreground location subscription started");
-      }
+      console.log("Foreground location subscription started");
     } catch (error) {
       console.error("Location watch error:", error);
     }
@@ -346,8 +288,11 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
       stopPulseAnimation();
 
       // Clear location watch
+      const locationService = MobileLocationService.getInstance();
+      locationService.stopWatchingLocation();
+
       try {
-        await Location.stopLocationUpdatesAsync(locationTaskName);
+        await ExpoLocation.stopLocationUpdatesAsync(locationTaskName);
       } catch (error) {
         console.error("Error stopping location updates:", error);
       }
@@ -367,8 +312,11 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({
     stopPulseAnimation();
 
     // Clear location watch when paused
+    const locationService = MobileLocationService.getInstance();
+    locationService.stopWatchingLocation();
+
     try {
-      await Location.stopLocationUpdatesAsync("LOCATION_TASK_NAME");
+      await ExpoLocation.stopLocationUpdatesAsync("LOCATION_TASK_NAME");
     } catch (error) {
       console.error("Error stopping location updates:", error);
     }

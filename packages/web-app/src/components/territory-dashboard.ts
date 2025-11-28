@@ -58,7 +58,12 @@ export class TerritoryDashboard {
     return TerritoryDashboard.instance;
   }
 
-  public initialize(parentElement: HTMLElement): void {
+  public async initialize(container?: HTMLElement): Promise<void> {
+    const parentElement = container;
+    if (!parentElement) {
+      console.warn("TerritoryDashboard: No container provided");
+      return;
+    }
     this.container = this.domService.createElement("div", {
       id: "territory-dashboard",
       className: "territory-dashboard hidden",
@@ -184,12 +189,12 @@ export class TerritoryDashboard {
     return this.territories
       .map(
         (territory) => `
-      <div class="territory-card ${territory.rarity}">
+      <div class="territory-card ${territory.rarity || "common"}">
         <div class="territory-header">
           <h4>${territory.metadata.name}</h4>
-          <span class="rarity-badge ${
-            territory.rarity
-          }">${territory.rarity.toUpperCase()}</span>
+          <span class="rarity-badge ${territory.rarity || "common"}">${(
+          territory.rarity || "common"
+        ).toUpperCase()}</span>
         </div>
         <div class="territory-info">
           <p>${territory.metadata.description}</p>
@@ -200,25 +205,25 @@ export class TerritoryDashboard {
               )}</span>
               <span class="score-label">Territory Value</span>
             </div>
-            <span>Difficulty: ${territory.difficulty}/100</span>
-            <span>Reward: ${territory.estimatedReward} $REALM</span>
+            <span>Difficulty: ${territory.difficulty || 0}/100</span>
+            <span>Reward: ${territory.estimatedReward || 0} $REALM</span>
           </div>
           <div class="cross-chain-info">
             <span class="origin-chain">🌐 Origin: ${
-              territory.originChain
+              territory.originChain || "N/A"
             }</span>
             ${
-              territory.crossChainHistory.length > 0
+              (territory.crossChainHistory?.length || 0) > 0
                 ? `<span class="cross-chain-badge">⚡ ${
-                    territory.crossChainHistory.length
+                    territory.crossChainHistory!.length
                   } Cross-Chain Transfer${
-                    territory.crossChainHistory.length > 1 ? "s" : ""
+                    territory.crossChainHistory!.length > 1 ? "s" : ""
                   }</span>`
                 : '<span class="native-badge">🏠 Native Territory</span>'
             }
           </div>
           <div class="territory-landmarks">
-            ${territory.landmarks
+            ${(territory.landmarks || [])
               .map(
                 (landmark) => `<span class="landmark-tag">${landmark}</span>`
               )
@@ -314,9 +319,9 @@ export class TerritoryDashboard {
       if (!territory) return;
 
       const analysis = await this.aiService.analyzeTerritory(geohash, {
-        distance: territory.estimatedReward * 10, // Mock calculation
-        difficulty: territory.difficulty,
-        landmarks: territory.landmarks,
+        distance: (territory.estimatedReward || 0) * 10, // Mock calculation
+        difficulty: territory.difficulty || 0,
+        landmarks: territory.landmarks || [],
         elevation: 50, // Mock elevation
       });
 
@@ -542,17 +547,17 @@ export class TerritoryDashboard {
         rare: 2,
         epic: 3,
         legendary: 5,
-      }[territory.rarity] || 1;
+      }[territory.rarity || "common"] || 1;
 
     // Cross-chain bonus
-    const crossChainBonus = territory.crossChainHistory.length * 0.2;
+    const crossChainBonus = (territory.crossChainHistory?.length || 0) * 0.2;
 
     // Landmark bonus
-    const landmarkBonus = territory.landmarks.length * 0.1;
+    const landmarkBonus = (territory.landmarks?.length || 0) * 0.1;
 
-    return Math.round(
-      score * rarityMultiplier * (1 + crossChainBonus + landmarkBonus)
-    );
+    const finalScore =
+      (score || 0) * rarityMultiplier * (1 + crossChainBonus + landmarkBonus);
+    return Math.round(finalScore);
   }
 
   public getTerritories(): Territory[] {

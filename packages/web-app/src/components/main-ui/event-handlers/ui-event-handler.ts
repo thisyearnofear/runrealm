@@ -31,7 +31,7 @@ export class EventHandler {
     uiService: UIService,
     widgetSystem: WidgetSystem,
     widgetCreator: WidgetCreator | null, // Allow null initially
-    web3Service: Web3Service,
+    web3Service: Web3Service
   ) {
     this.domService = domService;
     this.locationService = locationService;
@@ -105,7 +105,7 @@ export class EventHandler {
       () => {
         this.showExternalFitnessIntegration();
         this.trackUserAction("import_activities_clicked");
-      },
+      }
     );
 
     this.domService.delegate(
@@ -114,7 +114,7 @@ export class EventHandler {
       "click",
       () => {
         this.locationService.getCurrentLocation();
-      },
+      }
     );
 
     this.domService.delegate(
@@ -123,7 +123,7 @@ export class EventHandler {
       "click",
       () => {
         this.locationService.showLocationModal();
-      },
+      }
     );
 
     this.domService.delegate(
@@ -132,7 +132,7 @@ export class EventHandler {
       "click",
       () => {
         this.walletWidget.showWalletModal();
-      },
+      }
     );
 
     // Centralized UI action routing with enhanced UX
@@ -143,11 +143,11 @@ export class EventHandler {
       async (event) => {
         console.log(
           "MainUI: Click detected on element with data-action:",
-          event.target,
+          event.target
         );
 
         const target = (event.target as HTMLElement).closest(
-          "[data-action]",
+          "[data-action]"
         ) as HTMLElement | null;
         if (!target) {
           console.log("MainUI: No data-action target found");
@@ -177,7 +177,7 @@ export class EventHandler {
           "MainUI: Dispatching action:",
           action,
           "with payload:",
-          payload,
+          payload
         );
 
         try {
@@ -189,7 +189,7 @@ export class EventHandler {
           console.error("Failed to dispatch UI action", action, err);
           this.hideAILoadingState();
         }
-      },
+      }
     );
 
     // Listen for service events
@@ -218,7 +218,7 @@ export class EventHandler {
       "click",
       () => {
         // This will be handled by the status manager
-      },
+      }
     );
 
     // Manual GPS status refresh
@@ -228,7 +228,7 @@ export class EventHandler {
       "click",
       () => {
         // This will be handled by the status manager
-      },
+      }
     );
 
     // Monitor network status changes
@@ -261,7 +261,11 @@ export class EventHandler {
     // AI route events -> render planned route and update widget
     this.subscribe("ai:routeReady", (data) => {
       try {
-        const coordinates = data.waypoints?.map((p) => [p.lng, p.lat]) || [];
+        const coordinates =
+          data.waypoints?.map((p: { lng: number; lat: number }) => [
+            p.lng,
+            p.lat,
+          ]) || [];
         const geojson = {
           type: "Feature",
           properties: {},
@@ -278,12 +282,12 @@ export class EventHandler {
             ? data.difficulty < 33
               ? "Easy"
               : data.difficulty < 67
-                ? "Medium"
-                : "Hard"
+              ? "Medium"
+              : "Hard"
             : "—";
         const statsHtml = `
           <div class="widget-stat"><span class="widget-stat-label">Planned Distance</span><span class="widget-stat-value">${km.toFixed(
-            2,
+            2
           )} km</span></div>
           <div class="widget-stat"><span class="widget-stat-label">Difficulty</span><span class="widget-stat-value">${diffLabel}</span></div>
           ${
@@ -343,7 +347,7 @@ export class EventHandler {
             this.widgetSystem.updateWidget("ai-coach", errorHtml);
           }
         }
-      },
+      }
     );
 
     // Handle AI service events
@@ -363,8 +367,8 @@ export class EventHandler {
           <div class="widget-tip success animate-in">
             👻 ${data.runner.name}${fallbackText} is ready to race!
             <br><small>Difficulty: ${data.difficulty}% • ${
-              data.runner.specialAbility
-            }</small>
+            data.runner.specialAbility
+          }</small>
             <br><small class="ghost-backstory">${data.runner.backstory}</small>
           </div>
           <div class="widget-buttons">
@@ -373,7 +377,7 @@ export class EventHandler {
             </button>
             <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${Math.min(
               data.difficulty + 10,
-              100,
+              100
             )}}'>
               👻 Harder Ghost
             </button>
@@ -390,7 +394,7 @@ export class EventHandler {
           this.addCelebrationEffect();
           this.triggerHapticFeedback("medium");
         }
-      },
+      }
     );
 
     this.subscribe(
@@ -416,7 +420,7 @@ export class EventHandler {
         `;
           this.widgetSystem.updateWidget("ai-coach", errorHtml);
         }
-      },
+      }
     );
 
     // Handle route generation success
@@ -443,15 +447,15 @@ export class EventHandler {
           const successHtml = `
           <div class="widget-tip success animate-in">
             📍 Perfect route found! ${waypointSummary}, ${Math.round(
-              data.distance,
-            )}m
+            data.distance
+          )}m
             <br><small>Difficulty: ${
               data.difficulty || 50
             }% • Territory opportunities along route</small>
           </div>
           <div class="widget-buttons">
             <button class="widget-button primary" data-action="ai.showRoute" data-payload='{"coordinates":${JSON.stringify(
-              data.route,
+              data.route
             )}}'>
               🗺️ Show on Map
             </button>
@@ -473,7 +477,7 @@ export class EventHandler {
           this.addCelebrationEffect();
           this.triggerHapticFeedback("medium");
         }
-      },
+      }
     );
 
     // Handle route generation failure
@@ -532,7 +536,7 @@ export class EventHandler {
             this.widgetSystem.updateWidget("ai-coach", errorHtml);
           }
         }
-      },
+      }
     );
   }
 
@@ -557,13 +561,13 @@ export class EventHandler {
               ? data.routeData.difficulty < 33
                 ? "Easy"
                 : data.routeData.difficulty < 67
-                  ? "Medium"
-                  : "Hard"
+                ? "Medium"
+                : "Hard"
               : "—";
 
           const statsHtml = `
           <div class="widget-stat"><span class="widget-stat-label">Planned Distance</span><span class="widget-stat-value">${km.toFixed(
-            2,
+            2
           )} km</span></div>
           <div class="widget-stat"><span class="widget-stat-label">Difficulty</span><span class="widget-stat-value">${diffLabel}</span></div>
           ${
@@ -576,10 +580,10 @@ export class EventHandler {
           </div>
           <div class="widget-buttons">
             <button class="widget-button primary" data-action="ai.startRun" data-payload='{"coordinates":${JSON.stringify(
-              data.routeData.coordinates,
+              data.routeData.coordinates
             )}, "distance": ${
-              data.routeData.totalDistance || data.routeData.distance
-            }}'>
+            data.routeData.totalDistance || data.routeData.distance
+          }}'>
               ▶️ Start Run
             </button>
             <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${
@@ -594,7 +598,7 @@ export class EventHandler {
           if (w && w.minimized)
             this.widgetSystem.toggleWidget("territory-info");
         }
-      },
+      }
     );
 
     // Listen for route cleared events
@@ -644,7 +648,7 @@ export class EventHandler {
         localStorage.removeItem("runrealm_onboarding_complete");
         localStorage.removeItem("runrealm_welcomed");
         window.location.reload();
-      },
+      }
     );
 
     // GameFi toggle from settings
@@ -670,9 +674,9 @@ export class EventHandler {
 
         this.uiService.showToast(
           newState ? "GameFi features enabled" : "GameFi features disabled",
-          { type: "info" },
+          { type: "info" }
         );
-      },
+      }
     );
 
     // Widget visibility toggles
@@ -686,7 +690,7 @@ export class EventHandler {
         if (widget) {
           widget.style.display = target.checked ? "block" : "none";
         }
-      },
+      }
     );
 
     this.domService.delegate(document.body, "#toggle-wallet", "change", (e) => {
@@ -707,13 +711,13 @@ export class EventHandler {
         // Store preference: checked means hide until connected
         localStorage.setItem(
           "runrealm_rewards_hide_until_connected",
-          target.checked ? "true" : "false",
+          target.checked ? "true" : "false"
         );
         // Notify rewards UI to react immediately
         this.safeEmit("rewards:settingsChanged" as any, {});
         // Update settings widget to reflect any state change
         // this.widgetSystem.updateWidget("settings", this.getSettingsContent());
-      },
+      }
     );
   }
 
@@ -751,24 +755,6 @@ export class EventHandler {
     console.log(`User action: ${action}`);
   }
 
-  // Helper methods to maintain compatibility
-  private subscribe(event: string, callback: (data?: any) => void): void {
-    // Subscribe to service events using the base service pattern
-    // This would connect to the actual event system
-    if ((this as any).addEventListener) {
-      (this as any).addEventListener(event, callback);
-    }
-  }
-
-  private safeEmit(event: string, data?: any): void {
-    // Emit service events using the base service pattern
-    // This would connect to the actual event system
-    if ((this as any).dispatchEvent) {
-      const eventObj = new CustomEvent(event, { detail: data });
-      (this as any).dispatchEvent(eventObj);
-    }
-  }
-
   private addButtonFeedback(button: HTMLElement): void {
     // This will be handled by the UI effects module
   }
@@ -786,28 +772,21 @@ export class EventHandler {
   }
 
   private triggerHapticFeedback(
-    type: "light" | "medium" | "heavy" = "light",
+    type: "light" | "medium" | "heavy" = "light"
   ): void {
     // This will be handled by the UI effects module
   }
 
   private showExternalFitnessIntegration(): void {
-    this.uiService.showModal({
-      title: "🌟 Connect Strava",
-      content: `
-        <div style="padding: 20px; text-align: center;">
-          <p style="margin-bottom: 20px;">Import your legendary runs from Strava and claim them as NFT territories!</p>
-          <p style="margin-bottom: 20px; color: #888;">Strava integration is currently in development.</p>
-          <p style="font-size: 14px; color: #666;">Coming soon: Automatic run sync, territory claiming, and achievement tracking.</p>
-        </div>
-      `,
-      actions: [
-        {
-          label: "Got it",
-          primary: true,
-          action: () => {},
-        },
-      ],
-    });
+    // Show toast notification about Strava integration
+    this.uiService.showToast(
+      "🌟 Connect Strava to import your legendary runs and claim them as NFT territories!",
+      {
+        type: "info",
+        duration: 5000,
+      }
+    );
+    // Note: Full modal functionality would be handled by ExternalFitnessIntegration component
+    // For now, showing a toast notification
   }
 }
