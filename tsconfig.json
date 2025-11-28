@@ -7,19 +7,41 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
     "baseUrl": ".",
-    "typeRoots": ["./types", "./node_modules/@types"],
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ],
     "paths": {
-      "@runrealm/shared-core/*": ["./packages/shared-core/*"],
-      "@runrealm/shared-types/*": ["./packages/shared-types/*"],
-      "@runrealm/shared-utils/*": ["./packages/shared-utils/*"],
-      "@runrealm/shared-blockchain/*": ["./packages/shared-blockchain/*"],
-      "@runrealm/web-app/*": ["./packages/web-app/*"],
+      "@runrealm/shared-core/*": [
+        "./packages/shared-core/*"
+      ],
+      "@runrealm/shared-types/*": [
+        "./packages/shared-types/*"
+      ],
+      "@runrealm/shared-utils/*": [
+        "./packages/shared-utils/*"
+      ],
+      "@runrealm/shared-blockchain/*": [
+        "./packages/shared-blockchain/*"
+      ],
+      "@runrealm/web-app/*": [
+        "./packages/web-app/*"
+      ],
       // Maintain backward compatibility
-      "@/*": ["./packages/web-app/*"],
-      "@core/*": ["./packages/shared-core/*"],
-      "@services/*": ["./packages/shared-core/services/*"],
-      "@components/*": ["./packages/shared-core/components/*"]
+      "@/*": [
+        "./packages/web-app/*"
+      ],
+      "@core/*": [
+        "./packages/shared-core/*"
+      ],
+      "@services/*": [
+        "./packages/shared-core/services/*"
+      ],
+      "@components/*": [
+        "./packages/shared-core/components/*"
+      ]
     }
   },
   "include": [

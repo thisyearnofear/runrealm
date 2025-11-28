@@ -3,7 +3,6 @@ import { RunRealmApp } from "@runrealm/shared-core/core/run-realm-app";
 import { DebugUI } from "@runrealm/shared-core/utils/debug-ui";
 import { MainUI } from "./src/components/main-ui";
 import { WalletWidget } from "./src/components/wallet-widget";
-import TerritoryDashboard from "./src/components/territory-dashboard";
 import UserDashboard from "./src/components/user-dashboard";
 // CONSOLIDATED CSS - Following AGGRESSIVE CONSOLIDATION principle
 import "./styles/core-system.css"; // Variables, z-index, animations, utilities
@@ -154,7 +153,6 @@ async function initializeApp(): Promise<void> {
     const web3Service = Web3Service.getInstance();
     const configService = ConfigService.getInstance();
     const animationService = AnimationService.getInstance();
-    const newTerritoryDashboard = new TerritoryDashboard();
 
     // Create MainUI with required dependencies
     const walletWidget = new WalletWidget(
@@ -173,10 +171,27 @@ async function initializeApp(): Promise<void> {
       configService
     );
 
-    // Initialize platform UI with RunRealmApp
-    app.initializePlatformUI(mainUI, walletWidget, newTerritoryDashboard);
+    // Import platform-specific ghost UI components (from root src)
+    const { GhostManagement } = await import("../../src/components/ghost-management");
+    const { GhostButton } = await import("../../src/components/ghost-button");
+    
+    const ghostManagement = new GhostManagement();
+    const ghostButton = new GhostButton(ghostManagement);
+
+    // Initialize platform UI with all components
+    app.initializePlatformUI(mainUI, walletWidget, undefined, ghostManagement, ghostButton);
 
     await app.initialize();
+
+    // Mount React TerritoryDashboard (web-specific)
+    const { mountTerritoryDashboard } = await import(
+      "./src/components/TerritoryDashboardMount"
+    );
+    const territoryDashboardContainer = document.getElementById("territory-dashboard-root");
+    if (territoryDashboardContainer) {
+      mountTerritoryDashboard(territoryDashboardContainer);
+      console.log("React TerritoryDashboard mounted");
+    }
 
     // Initialize User Dashboard
     const userDashboard = new UserDashboard();
@@ -280,13 +295,11 @@ async function initializeApp(): Promise<void> {
           // 2. Check if this is a cross-chain scenario
           const isCrossChain = wallet.chainId !== 7001; // Not on ZetaChain testnet
           console.log(
-            `🌐 Current chain: ${crossChain.getChainName(wallet.chainId)} (${
-              wallet.chainId
+            `🌐 Current chain: ${crossChain.getChainName(wallet.chainId)} (${wallet.chainId
             })`
           );
           console.log(
-            `🔗 Cross-chain scenario: ${
-              isCrossChain ? "Yes" : "No (on ZetaChain)"
+            `🔗 Cross-chain scenario: ${isCrossChain ? "Yes" : "No (on ZetaChain)"
             }`
           );
 

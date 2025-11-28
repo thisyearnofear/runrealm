@@ -1,5 +1,5 @@
 // Clean, modular entry point for RunRealm
-import { RunRealmApp } from './core/run-realm-app';
+import { RunRealmApp } from '@runrealm/shared-core';
 import { DebugUI } from './utils/debug-ui';
 // CONSOLIDATED CSS - Following AGGRESSIVE CONSOLIDATION principle
 import './styles/core-system.css';     // Variables, z-index, animations, utilities

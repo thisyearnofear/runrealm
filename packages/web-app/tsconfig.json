@@ -7,6 +7,7 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -14,12 +15,24 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../shared-core/*"],
-      "@shared-types/*": ["../shared-types/*"],
-      "@shared-utils/*": ["../shared-utils/*"],
-      "@blockchain/*": ["../shared-blockchain/*"],
-      "@web/*": ["./*"],
-      "@mobile/*": ["./*"]
+      "@shared/*": [
+        "../shared-core/*"
+      ],
+      "@shared-types/*": [
+        "../shared-types/*"
+      ],
+      "@shared-utils/*": [
+        "../shared-utils/*"
+      ],
+      "@blockchain/*": [
+        "../shared-blockchain/*"
+      ],
+      "@web/*": [
+        "./*"
+      ],
+      "@mobile/*": [
+        "./*"
+      ]
     }
   }
 }

@@ -62,18 +62,18 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
     realmBalance: 0,
     rank: 0
   });
-  
+
   const [territories, setTerritories] = useState<Territory[]>([]);
   const [activeChallenges, setActiveChallenges] = useState<CompetitionChallenge[]>([]);
   const [ghostRunners, setGhostRunners] = useState<GhostRunner[]>([]);
   const [selectedTerritory, setSelectedTerritory] = useState<Territory | null>(null);
-  
+
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [aiCoachMessage, setAiCoachMessage] = useState('Welcome to RunRealm! Connect your wallet to start claiming territories.');
   const [dashboardVisible, setDashboardVisible] = useState(false);
   const [currentRoute, setCurrentRoute] = useState<AIRouteProps | null>(null);
-  
+
   // Service refs
   const gamefiUI = useRef<GameFiUI | null>(null);
   const aiService = useRef<AIService | null>(null);
@@ -91,7 +91,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
         eventBus.current = EventBus.getInstance();
 
         await gamefiUI.current.init();
-        
+
         if (gameMode) {
           gamefiUI.current.enableGameFiMode();
           setDashboardVisible(true);
@@ -99,21 +99,25 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
 
         // Set up event listeners
         setupEventListeners();
-
-        console.log('TerritoryDashboard initialized');
       } catch (error) {
         console.error('Failed to initialize TerritoryDashboard:', error);
       }
     };
 
     initializeServices();
-
-    return () => {
-      if (gamefiUI.current) {
-        gamefiUI.current.cleanup();
-      }
-    };
   }, [gameMode]);
+
+  // Handle dashboard visibility and body class for split view
+  useEffect(() => {
+    if (dashboardVisible) {
+      document.body.classList.add('dashboard-active');
+    } else {
+      document.body.classList.remove('dashboard-active');
+    }
+    return () => {
+      document.body.classList.remove('dashboard-active');
+    };
+  }, [dashboardVisible]);
 
   // Set up event listeners
   const setupEventListeners = useCallback(() => {
@@ -123,17 +127,17 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
     eventBus.current.on('territory:claimRequested', handleTerritoryClaimRequest);
     eventBus.current.on('territory:claimed', handleTerritoryClaimedSuccess);
     eventBus.current.on('game:challengeStarted', handleTerritoryContest);
-    
+
     // AI events
     eventBus.current.on('ai:routeRequested', handleAIRouteRequest);
     eventBus.current.on('ghost:ready', handleGhostReady);
     eventBus.current.on('ghost:progress', handleGhostProgress);
     eventBus.current.on('ai:routeSuggested', handleCoachMessage);
-    
+
     // Web3 events
     eventBus.current.on('web3:walletConnected', handleWalletConnected);
     eventBus.current.on('web3:transactionConfirmed', handleTransactionCompleted);
-    
+
     // Run tracking events
     eventBus.current.on('run:started', handleRunStarted);
     eventBus.current.on('run:pointAdded', handleRunProgress);
@@ -152,7 +156,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
       //   selectedTerritory.estimatedReward
       // );
       const txHash = '0x123456789'; // Mock transaction hash
-      
+
       if (gamefiUI.current) {
         gamefiUI.current.showRewardNotification(
           `🔄 Territory claim pending... (${txHash.slice(0, 8)}...)`,
@@ -211,7 +215,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
     };
 
     setActiveChallenges(prev => [...prev, challenge]);
-    
+
     if (gamefiUI.current) {
       gamefiUI.current.showRewardNotification(
         `⚔️ Territory "${data.territoryId}" is under attack!`,
@@ -251,7 +255,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
       }
 
       setCurrentRoute(routeProps);
-      
+
       if (onRouteGenerated) {
         onRouteGenerated(routeProps);
       }
@@ -304,7 +308,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
   }, []);
 
   const handleGhostProgress = useCallback((data: any) => {
-    setGhostRunners(prev => 
+    setGhostRunners(prev =>
       prev.map(ghost => {
         if (ghost.id === data.ghostId) {
           return { ...ghost, progress: data.progress };
@@ -324,7 +328,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
 
   const handleWalletConnected = useCallback((data: any) => {
     setPlayerStats(prev => ({ ...prev, realmBalance: data.balance || 0 }));
-    
+
     if (gamefiUI.current) {
       gamefiUI.current.updatePlayerStats({ realmBalance: data.balance || 0 });
       gamefiUI.current.updateCoachMessage(
@@ -355,9 +359,9 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
 
   const handleRunProgress = useCallback((data: any) => {
     const distance = data.totalDistance || 0;
-    
+
     setPlayerStats(prev => ({ ...prev, totalDistance: distance }));
-    
+
     if (gamefiUI.current) {
       gamefiUI.current.updatePlayerStats({ totalDistance: distance });
     }
@@ -427,7 +431,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
       }
 
       gamefiUI.current.updateCoachMessage(
-        `🏁 Run completed! ${Math.floor(distance)}m in ${Math.floor(timeSpent/60)}min. ${leveledUp ? 'Level up!' : 'Keep going!'}`
+        `🏁 Run completed! ${Math.floor(distance)}m in ${Math.floor(timeSpent / 60)}min. ${leveledUp ? 'Level up!' : 'Keep going!'}`
       );
     }
   }, [playerStats.level]);
@@ -442,7 +446,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
     return 'legendary';
   };
 
-  
+
 
   // Component UI (minimal - mostly handled by GameFi UI)
   if (!dashboardVisible) {
@@ -451,13 +455,157 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
 
   return (
     <div className="territory-dashboard-root">
+      {/* Desktop Dashboard - Aggregates all widget functionality */}
+      <div className="desktop-dashboard">
+        {/* Top Stats Bar */}
+        <div className="dashboard-stats-bar">
+          <div className="stat-item">
+            <span className="stat-label">LEVEL</span>
+            <span className="stat-value">{playerStats.level}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">DISTANCE</span>
+            <span className="stat-value">{(playerStats.totalDistance / 1000).toFixed(2)} km</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">TERRITORIES</span>
+            <span className="stat-value">{playerStats.territoriesOwned}</span>
+          </div>
+          <div className="stat-item highlight">
+            <span className="stat-label">BALANCE</span>
+            <span className="stat-value">{playerStats.realmBalance.toFixed(0)} $REALM</span>
+          </div>
+        </div>
+
+        {/* Left Panel - Challenges & Ghosts */}
+        <div className="dashboard-panel left-panel">
+          <div className="panel-section">
+            <h3>⚔️ Active Challenges</h3>
+            {activeChallenges.length === 0 ? (
+              <div className="empty-state">No active challenges</div>
+            ) : (
+              <div className="challenge-list">
+                {activeChallenges.map(challenge => (
+                  <div key={challenge.id} className="challenge-item">
+                    <div className="challenge-header">
+                      <span className="challenger">{challenge.challenger}</span>
+                      <span className="reward">+{challenge.reward} $REALM</span>
+                    </div>
+                    <div className="challenge-timer">
+                      {Math.ceil(challenge.timeRemaining / 60000)}m remaining
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="panel-section">
+            <h3>👻 Ghost Runners</h3>
+            {ghostRunners.length === 0 ? (
+              <div className="empty-state">No ghosts active</div>
+            ) : (
+              <div className="ghost-list">
+                {ghostRunners.map(ghost => (
+                  <div key={ghost.id} className="ghost-item">
+                    <div className="ghost-header">
+                      <span className="ghost-name">{ghost.name}</span>
+                      <span className="ghost-difficulty">Lvl {ghost.difficulty}</span>
+                    </div>
+                    <div className="ghost-progress-bar">
+                      <div
+                        className="progress-fill"
+                        style={{ width: `${ghost.progress * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Panel - Territory & Route Info */}
+        <div className="dashboard-panel right-panel">
+          {selectedTerritory ? (
+            <div className="panel-section territory-details">
+              <h3>🗺️ Selected Territory</h3>
+              <div className="detail-row">
+                <span className="label">Geohash</span>
+                <span className="value">{selectedTerritory.geohash}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Rarity</span>
+                <span className={`value rarity-${selectedTerritory.rarity}`}>
+                  {selectedTerritory.rarity.toUpperCase()}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Reward</span>
+                <span className="value highlight">+{selectedTerritory.estimatedReward} $REALM</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Difficulty</span>
+                <span className="value">
+                  {selectedTerritory.difficulty < 33 ? 'Easy' :
+                    selectedTerritory.difficulty < 67 ? 'Medium' : 'Hard'}
+                </span>
+              </div>
+
+              <button
+                className="action-btn claim-btn"
+                onClick={() => handleTerritoryClaimRequest()}
+                disabled={isLoading || selectedTerritory.isOwned}
+              >
+                {isLoading ? '⏳ Processing...' :
+                  selectedTerritory.isOwned ? '✅ Owned' : '⚡ Claim Territory'}
+              </button>
+            </div>
+          ) : currentRoute ? (
+            <div className="panel-section route-details">
+              <h3>📍 Active Route</h3>
+              <div className="detail-row">
+                <span className="label">Distance</span>
+                <span className="value">{currentRoute.distance}m</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Goal</span>
+                <span className="value capitalize">{currentRoute.goalType}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Est. Reward</span>
+                <span className="value highlight">+{currentRoute.estimatedReward} $REALM</span>
+              </div>
+              <div className="landmarks-list">
+                <h4>Landmarks</h4>
+                {currentRoute.landmarks.map((landmark, i) => (
+                  <span key={i} className="landmark-tag">{landmark}</span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="panel-section empty-selection">
+              <div className="instruction">
+                Select a territory or generate a route to see details
+              </div>
+            </div>
+          )}
+
+          {/* AI Coach Message */}
+          <div className="ai-coach-bubble">
+            <div className="coach-avatar">🤖</div>
+            <div className="coach-text">{aiCoachMessage}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Mobile-specific territory panel overlay */}
-      <div className="mobile-territory-overlay" style={{ display: 'none' }}>
+      <div className="mobile-territory-overlay">
         {selectedTerritory && (
           <div className="mobile-territory-panel">
             <div className="territory-header">
               <h3>🗺️ {selectedTerritory.geohash}</h3>
-              <button 
+              <button
                 className="close-mobile-panel"
                 onClick={() => setSelectedTerritory(null)}
               >
@@ -466,8 +614,8 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
             </div>
             <div className="territory-details">
               <div className="difficulty">
-                Difficulty: {selectedTerritory.difficulty < 33 ? 'Easy' : 
-                           selectedTerritory.difficulty < 67 ? 'Medium' : 'Hard'}
+                Difficulty: {selectedTerritory.difficulty < 33 ? 'Easy' :
+                  selectedTerritory.difficulty < 67 ? 'Medium' : 'Hard'}
               </div>
               <div className="reward">
                 Reward: +{selectedTerritory.estimatedReward} $REALM
@@ -477,7 +625,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
               </div>
             </div>
             <div className="territory-actions">
-              <button 
+              <button
                 className="claim-btn"
                 onClick={() => handleTerritoryClaimRequest()}
                 disabled={isLoading}
@@ -502,32 +650,241 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
           borderRadius: '4px',
           fontSize: '12px',
           zIndex: 2000,
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          display: 'none' // Hidden by default now that we have a real dashboard
         }}>
-          Territories: {territories.length} | Challenges: {activeChallenges.length} | 
+          Territories: {territories.length} | Challenges: {activeChallenges.length} |
           Ghosts: {ghostRunners.filter(g => g.active).length} | Level: {playerStats.level}
         </div>
       )}
 
       <style>{`
         .territory-dashboard-root {
-          position: relative;
-          width: 100%;
-          height: 100%;
-        }
-
-        .mobile-territory-overlay {
-          position: fixed;
+          position: absolute;
           top: 0;
           left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.8);
-          z-index: 1500;
+          width: 100%;
+          height: 100%;
+          pointer-events: none; /* Allow clicks to pass through to map */
+          z-index: 1000;
+        }
+
+        /* Desktop Dashboard Styles */
+        .desktop-dashboard {
           display: flex;
-          align-items: center;
-          justify-content: center;
+          flex-direction: column;
+          height: 100%;
           padding: 20px;
+          pointer-events: none;
+        }
+
+        .dashboard-stats-bar {
+          display: flex;
+          justify-content: center;
+          gap: 40px;
+          background: rgba(0, 20, 40, 0.85);
+          backdrop-filter: blur(10px);
+          padding: 15px 40px;
+          border-radius: 16px;
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          margin-bottom: 20px;
+          pointer-events: auto;
+          align-self: center;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .stat-label {
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          color: rgba(255, 255, 255, 0.6);
+          margin-bottom: 4px;
+        }
+
+        .stat-value {
+          font-size: 18px;
+          font-weight: 700;
+          color: white;
+          font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        .stat-item.highlight .stat-value {
+          color: #00ff88;
+          text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .dashboard-panel {
+          position: absolute;
+          top: 100px;
+          bottom: 40px;
+          width: 300px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          pointer-events: none;
+        }
+
+        .left-panel {
+          left: 20px;
+        }
+
+        .right-panel {
+          right: 20px;
+        }
+
+        .panel-section {
+          background: rgba(0, 20, 40, 0.85);
+          backdrop-filter: blur(10px);
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 16px;
+          pointer-events: auto;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-section h3 {
+          margin: 0 0 12px 0;
+          font-size: 14px;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.8);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          padding-bottom: 8px;
+        }
+
+        .empty-state {
+          color: rgba(255, 255, 255, 0.4);
+          font-size: 13px;
+          text-align: center;
+          padding: 20px 0;
+          font-style: italic;
+        }
+
+        /* Challenges */
+        .challenge-item {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 8px;
+          padding: 10px;
+          margin-bottom: 8px;
+        }
+
+        .challenge-header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 4px;
+          font-size: 13px;
+        }
+
+        .challenger { color: white; font-weight: 600; }
+        .reward { color: #ffaa00; }
+        .challenge-timer { font-size: 11px; color: rgba(255, 255, 255, 0.5); }
+
+        /* Ghosts */
+        .ghost-item {
+          margin-bottom: 12px;
+        }
+
+        .ghost-header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 4px;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .ghost-progress-bar {
+          height: 4px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 2px;
+          overflow: hidden;
+        }
+
+        .progress-fill {
+          height: 100%;
+          background: #00ff88;
+          box-shadow: 0 0 8px #00ff88;
+        }
+
+        /* Territory Details */
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+          font-size: 13px;
+        }
+
+        .detail-row .label { color: rgba(255, 255, 255, 0.6); }
+        .detail-row .value { color: white; font-weight: 500; }
+        .detail-row .value.highlight { color: #00ff88; }
+        .detail-row .value.capitalize { text-transform: capitalize; }
+
+        .rarity-common { color: #b0b0b0; }
+        .rarity-uncommon { color: #00ff88; }
+        .rarity-rare { color: #0088ff; }
+        .rarity-epic { color: #a020f0; }
+        .rarity-legendary { color: #ffaa00; }
+
+        .action-btn {
+          width: 100%;
+          padding: 10px;
+          border-radius: 8px;
+          border: none;
+          font-weight: 600;
+          cursor: pointer;
+          margin-top: 12px;
+          transition: all 0.2s;
+        }
+
+        .claim-btn {
+          background: linear-gradient(45deg, #00bd00, #00ff88);
+          color: white;
+        }
+
+        .claim-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          background: #333;
+        }
+
+        .claim-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 189, 0, 0.3);
+        }
+
+        /* AI Coach */
+        .ai-coach-bubble {
+          background: rgba(0, 100, 255, 0.1);
+          border: 1px solid rgba(0, 100, 255, 0.3);
+          border-radius: 12px;
+          padding: 12px;
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          pointer-events: auto;
+          margin-top: auto; /* Push to bottom */
+        }
+
+        .coach-avatar { font-size: 24px; }
+        .coach-text { font-size: 13px; color: rgba(255, 255, 255, 0.9); line-height: 1.4; }
+
+        .landmark-tag {
+          display: inline-block;
+          background: rgba(255, 255, 255, 0.1);
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          margin: 2px;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Mobile Overlay Styles (unchanged mostly) */
+        .mobile-territory-overlay {
+          display: none; /* Hidden on desktop by default */
         }
 
         .mobile-territory-panel {
@@ -537,6 +894,7 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
           padding: 20px;
           max-width: 400px;
           width: 100%;
+          pointer-events: auto;
         }
 
         .territory-header {
@@ -569,31 +927,25 @@ export const TerritoryDashboard: React.FC<TerritoryDashboardProps> = ({
           font-size: 14px;
         }
 
-        .claim-btn {
-          background: linear-gradient(45deg, #00bd00, #00ff88);
-          color: white;
-          border: none;
-          border-radius: 8px;
-          padding: 12px 20px;
-          font-weight: 600;
-          cursor: pointer;
-          width: 100%;
-          transition: all 0.2s ease;
-        }
-
-        .claim-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .claim-btn:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 20px rgba(0, 189, 0, 0.3);
-        }
-
+        /* Responsive Breakpoints */
         @media (max-width: 768px) {
+          .desktop-dashboard {
+            display: none;
+          }
+
           .mobile-territory-overlay {
-            display: block;
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1500;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            pointer-events: auto;
           }
         }
       `}</style>

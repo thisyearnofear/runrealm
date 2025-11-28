@@ -14,6 +14,7 @@ import { TerritoryToggle } from "../components/territory-toggle";
 import { RunProgressFeedback } from "../components/run-progress-feedback";
 import { EnhancedRunControls } from "../components/enhanced-run-controls";
 import { GameFiUI } from "../components/gamefi-ui";
+import { GhostRunnerService } from "../services/ghost-runner-service";
 
 // Import UI interfaces for dependency injection
 import { MainUI as MainUIInterface, WalletWidget as WalletWidgetInterface, TerritoryDashboard as TerritoryDashboardInterface } from "../types/ui-interfaces";
@@ -66,7 +67,7 @@ export class RunRealmApp {
   private config!: ConfigService;
   private eventBus!: EventBus;
 
-  // Core service instances (CONSOLIDATED - single source of truth)
+  // Core service instances
   private preferenceService!: PreferenceService;
   private ui!: UIService;
   private location!: LocationService;
@@ -95,16 +96,18 @@ export class RunRealmApp {
   private crossChainService!: CrossChainService;
   private crossChainDemo!: CrossChainDemoComponent;
   private externalFitnessService!: ExternalFitnessService;
+  private ghostRunnerService!: GhostRunnerService;
 
   // Platform-specific UI components (injected dependencies)
   private territoryDashboard?: TerritoryDashboardInterface;
+  private ghostManagement?: any;  // Platform-specific ghost UI (web-app/mobile-app)
+  private ghostButton?: any;      // Platform-specific ghost button (web-app/mobile-app)
 
   // Lazy-loaded services (PERFORMANT: created only when needed)
   private nextSegmentService?: NextSegmentService;
 
   // Application state
   private map!: Map;
-  // currentRun removed - now handled by RunTrackingService
   private isWaiting = false;
   private useMetric!: boolean;
   private followRoads!: boolean;
@@ -128,6 +131,7 @@ export class RunRealmApp {
   }
 
   private constructor() {
+    // Initialize core services only - defer platform UI and token-dependent services
     this.initializeServices();
     this.initializeState();
     this.setupEventHandlers();
@@ -144,11 +148,15 @@ export class RunRealmApp {
   public initializePlatformUI(
     mainUI?: MainUIInterface,
     walletWidget?: WalletWidgetInterface,
-    territoryDashboard?: TerritoryDashboardInterface
+    territoryDashboard?: TerritoryDashboardInterface,
+    ghostManagement?: any,
+    ghostButton?: any
   ): void {
     this.mainUI = mainUI;
     this.walletWidget = walletWidget;
     this.territoryDashboard = territoryDashboard;
+    this.ghostManagement = ghostManagement;
+    this.ghostButton = ghostButton;
   }
 
   private initializeServices(): void {
@@ -188,22 +196,70 @@ export class RunRealmApp {
     this.crossChainDemo = new CrossChainDemoComponent();
     this.mapService = new MapService();
     this.externalFitnessService = new ExternalFitnessService();
+    this.ghostRunnerService = GhostRunnerService.getInstance();
 
-    // Initialize remaining services (CONSOLIDATED)
+    // Initialize remaining services
     this.enhancedRunControls = new EnhancedRunControls();
     this.gamefiUI = GameFiUI.getInstance();
 
-    // SINGLE SOURCE OF TRUTH: Global service registry (CONSOLIDATED)
+    // Register global services
     this.registerGlobalServices();
   }
 
+  private registerGlobalServices(): void {
+    if (typeof window === "undefined") return;
+
+    // Create global RunRealm namespace if it doesn't exist
+    if (!(window as any).RunRealm) {
+      (window as any).RunRealm = {};
+    }
+
+    // Single source of truth for all services
+    (window as any).RunRealm.services = {
+      // Core services
+      config: this.config,
+      eventBus: this.eventBus,
+      preferenceService: this.preferenceService,
+      ui: this.ui,
+      dom: this.dom,
+
+      // Location & tracking
+      location: this.location,
+      runTracking: this.runTracking,
+
+      // GameFi services
+      territory: this.territory,
+      enhancedRunControls: this.enhancedRunControls,
+      gamefiUI: this.gamefiUI,
+
+      // Web3 & AI
+      web3: this.web3,
+      ai: this.ai,
+      crossChain: this.crossChainService,
+      externalFitness: this.externalFitnessService,
+
+      // Ghost Runner services
+      ghostRunnerService: this.ghostRunnerService,
+      ghostManagement: this.ghostManagement,
+
+      // UI services
+      animation: this.animation,
+      navigation: this.navigation,
+      onboarding: this.onboarding,
+      progression: this.progression,
+      game: this.game,
+      contractService: this.contractService,
+      mapService: this.mapService,
+    };
+    console.log("Services registered globally");
+  }
+
   private initializeTokenDependentServices(): void {
-    // Initialize services that depend on API tokens (CONSOLIDATED)
+    // Initialize services that require API tokens
     this.geocodingService = new GeocodingService(
       this.config.getConfig().mapbox.accessToken
     );
 
-    // Initialize route info panel
     this.routeInfoPanel = RouteInfoPanel.getInstance();
     this.routeInfoPanel.initialize();
   }
@@ -370,23 +426,25 @@ export class RunRealmApp {
       // Initialize services that depend on API tokens
       this.initializeTokenDependentServices();
 
+      // Initialize map
       await this.initializeMap();
       this.setupMapEventHandlers();
+
+      // Initialize GameFi services
       await this.initializeGameFiServices();
 
-      // Initialize main UI if available (platform-specific initialization)
+      // Initialize main UI if available (platform-specific)
       if (this.mainUI) {
         await this.mainUI.initialize();
       }
 
-      // Expose mainUI globally if available (also in production) for cross-service access
+      // Expose application globally for cross-service access
       (window as any).RunRealm = (window as any).RunRealm || {};
       if (this.mainUI) {
         (window as any).RunRealm.mainUI = this.mainUI;
       }
       (window as any).RunRealm.map = this.map;
       (window as any).RunRealm.animationService = this.animation;
-      (window as any).RunRealm.eventBus = this.eventBus;
 
       // Development-only extras
       if (process.env.NODE_ENV === "development") {
@@ -403,7 +461,7 @@ export class RunRealmApp {
 
           console.log("🧪 Test coordinates:", testCoordinates);
 
-          // Test direct AnimationService call (FIXED: use consolidated property)
+          // Test AnimationService route visualization
           if (this.animation && this.animation.setAIRoute) {
             console.log("🧪 Calling AnimationService.setAIRoute directly...");
             this.animation.setAIRoute(
@@ -446,7 +504,7 @@ export class RunRealmApp {
       this.initializeNavigation();
       this.initializeOnboarding();
 
-      // Ensure AnimationService has map reference (FIXED: use consolidated property)
+      // Set AnimationService map reference
       if (this.animation && this.map) {
         this.animation.map = this.map;
         console.log("RunRealmApp: AnimationService map reference set");
@@ -532,111 +590,51 @@ export class RunRealmApp {
     }
   }
 
-  // AGGRESSIVE CONSOLIDATION: Removed initializeMapServices() - services initialized in constructor
-  // nextSegmentService initialized inline where needed to prevent bloat
+  // nextSegmentService initialized inline when needed (lazy loading)
 
   private async initializeGameFiServices(): Promise<void> {
     try {
-      // CONSOLIDATED: Initialize core services first
+      // Initialize location and tracking services
       await this.location.initialize();
-
-      // Set location service reference on run tracking service
       this.runTracking.setLocationService(this.location);
-
-      // Initialize run tracking and territory services
       await this.runTracking.initialize();
       await this.territory.initialize();
-
-      // Initialize enhanced run controls
       await this.enhancedRunControls.initialize();
 
-      // Initialize Web3 Service (if enabled)
+      // Initialize Web3 and cross-chain services if enabled
       if (this.config.isWeb3Enabled()) {
         await this.web3.initialize();
         if (this.walletWidget) {
           await this.walletWidget.initialize();
         }
-      }
-
-      // Initialize Cross-Chain Service (if Web3 is enabled)
-      if (this.config.isWeb3Enabled()) {
         await this.crossChainService.initialize();
       }
 
-      // Initialize AI service AFTER web3/config is fully loaded
+      // Initialize AI and UI services
       await this.ai.initializeService();
-
-      // Initialize GameFi UI after core services
       await this.gamefiUI.initialize();
 
-      // Create Territory Dashboard container
+      // Initialize ghost runner service
+      await this.ghostRunnerService.initialize();
+
+      // Initialize platform-specific ghost UI if available
+      if (this.ghostManagement && typeof this.ghostManagement.initialize === 'function') {
+        await this.ghostManagement.initialize(document.body);
+      }
+      if (this.ghostButton && typeof this.ghostButton.initialize === 'function') {
+        this.ghostButton.initialize(document.body);
+      }
+
+      // Set up territory dashboard container
       this.initializeTerritoryDashboard();
 
-      console.log("GameFi services initialized");
+      console.log("GameFi services initialized successfully");
     } catch (error) {
       console.error("Failed to initialize GameFi services:", error);
-      // Continue without GameFi features but show error
       this.ui.showToast("Some GameFi features may not be available", {
         type: "warning",
       });
     }
-  }
-
-  /**
-   * SINGLE SOURCE OF TRUTH: Consolidated global service registration
-   * ENHANCEMENT FIRST: Enhanced existing method instead of creating new one
-   */
-  private registerGlobalServices(): void {
-    if (typeof window === "undefined") return;
-
-    // Create global RunRealm namespace if it doesn't exist
-    if (!(window as any).RunRealm) {
-      (window as any).RunRealm = {};
-    }
-
-    // CONSOLIDATED: Single registry with consistent naming
-    (window as any).RunRealm.services = {
-      // Core services
-      config: this.config,
-      preferenceService: this.preferenceService,
-      ui: this.ui,
-      dom: this.dom,
-
-      // Location & tracking
-      location: this.location,
-      LocationService: this.location, // Legacy compatibility
-      runTracking: this.runTracking,
-      RunTrackingService: this.runTracking, // Legacy compatibility
-
-      // GameFi services
-      territory: this.territory,
-      TerritoryService: this.territory, // Legacy compatibility
-      enhancedRunControls: this.enhancedRunControls,
-      EnhancedRunControls: this.enhancedRunControls, // Legacy compatibility
-      gamefiUI: this.gamefiUI,
-      GameFiUI: this.gamefiUI, // Legacy compatibility
-
-      // Web3 & AI
-      web3: this.web3,
-      Web3Service: this.web3, // Legacy compatibility
-      ai: this.ai,
-      AIService: this.ai, // Legacy compatibility
-      crossChain: this.crossChainService,
-      CrossChainService: this.crossChainService, // Legacy compatibility
-      externalFitness: this.externalFitnessService,
-      ExternalFitnessService: this.externalFitnessService, // Legacy compatibility
-
-      // UI services
-      animation: this.animation,
-      navigation: this.navigation,
-      onboarding: this.onboarding,
-      progression: this.progression,
-      game: this.game,
-      contractService: this.contractService,
-      mapService: this.mapService,
-    };
-
-    console.log("Services registered globally (CONSOLIDATED)");
   }
 
   private initializeTerritoryDashboard(): void {
@@ -728,18 +726,8 @@ export class RunRealmApp {
     // Segment addition now handled by RunTrackingService
   }
 
-  // Old run creation methods removed - now handled by RunTrackingService
-
-  // Old run tracking methods removed - now handled by RunTrackingService and TerritoryService
-
-  // Territory claiming is now handled by TerritoryService
-  // This method is deprecated and should be removed
   private async handleTerritoryClaimRequest(data: any): Promise<void> {
-    console.warn('RunRealmApp.handleTerritoryClaimRequest is deprecated. Territory claiming is now handled by TerritoryService.');
-    
-    // Redirect to territory service
     if (this.territory) {
-      // Emit the claim request through the event system
       this.eventBus.emit('territory:claimRequested', data);
     } else {
       this.ui.showToast("Territory service not available", { type: "error" });
@@ -790,8 +778,6 @@ export class RunRealmApp {
     }
   }
 
-  // Old run event handlers removed - now handled by RunTrackingService
-
   private handleUnitsToggled(useMetric: boolean): void {
     this.useMetric = useMetric;
     this.preferenceService.saveUseMetric(useMetric);
@@ -812,10 +798,6 @@ export class RunRealmApp {
     }
   }
 
-  // Old saveRun method removed - now handled by RunTrackingService
-
-  // Old run serialization removed - now handled by RunTrackingService
-
   private saveFocus(): void {
     const center = this.map.getCenter();
     const position = {
@@ -828,10 +810,8 @@ export class RunRealmApp {
     this.preferenceService.saveCurrentFocus(position, this.map.getZoom());
   }
 
-  // Removed old initializeUI - replaced by MainUI component
-
   private initializeNavigation(): void {
-    // Set up navigation routes (FIXED: use consolidated property)
+    // Set up navigation routes
     this.navigation.registerRoutes([
       {
         id: "map",
@@ -863,14 +843,10 @@ export class RunRealmApp {
       },
     ]);
 
-    // Create navigation UI (optional - only if containers exist)
-    // Note: Navigation UI is now handled by the widget system
-    // this.navigationService.createNavigationUI('navigation-container');
-    // this.navigationService.createQuickActions('quick-actions-container');
+    // Navigation UI is handled by the widget system
   }
 
   private initializeOnboarding(): void {
-    // Set up onboarding if needed (FIXED: use consolidated property)
     if (this.onboarding.shouldShowOnboarding()) {
       const onboardingConfig = {
         steps: [
@@ -912,15 +888,12 @@ export class RunRealmApp {
         showProgress: true,
       };
 
-      // Resume or start onboarding (FIXED: use consolidated property)
       this.onboarding.resumeOnboarding(onboardingConfig);
     } else {
       // Mark as complete to avoid the old system
       localStorage.setItem("runrealm_onboarding_complete", "true");
     }
   }
-
-  // Old getCurrentRun method removed - use RunTrackingService.getCurrentRun() instead
 
   getMap(): Map {
     return this.map;
@@ -961,29 +934,25 @@ export class RunRealmApp {
           "coordinates"
         );
 
-        // Safety check: ensure AnimationService has map reference (FIXED)
+        // Set AnimationService map reference if needed
         if (!this.animation.map) {
           this.animation.map = this.map;
         }
 
-        // Clear any existing AI route
         this.animation.clearAIRoute();
 
-        // Visualize the new AI route
         if (data.coordinates && data.coordinates.length > 1) {
           this.animation.setAIRoute(
             data.coordinates as [number, number][],
             data.style,
             data.metadata
           );
-
-          // Optionally fit map to show the entire route
           this.fitMapToRoute(data.coordinates as [number, number][]);
         }
       }
     );
 
-    // Handle route clearing (FIXED)
+    // Handle route clearing
     this.eventBus.on("ai:routeClear", () => {
       console.log("RunRealmApp: Clearing AI route");
       this.animation.clearAIRoute();
@@ -999,7 +968,7 @@ export class RunRealmApp {
           "AI waypoints"
         );
 
-        // Safety check: ensure AnimationService has map reference (FIXED)
+        // Set AnimationService map reference if needed
         if (!this.animation.map) {
           this.animation.map = this.map;
         }
@@ -1035,23 +1004,19 @@ export class RunRealmApp {
             "coordinates"
           );
 
-          // Safety check: ensure AnimationService has map reference
+          // Set AnimationService map reference if needed
           if (!this.animation.map) {
             this.animation.map = this.map;
           }
 
-          // Clear any existing AI route (FIXED)
           this.animation.clearAIRoute();
 
-          // Visualize the new AI route
           if (data.coordinates && data.coordinates.length > 1) {
             this.animation.setAIRoute(
               data.coordinates as [number, number][],
               data.style,
               data.metadata
             );
-
-            // Optionally fit map to show the entire route
             this.fitMapToRoute(data.coordinates as [number, number][]);
           }
         }
@@ -1067,7 +1032,7 @@ export class RunRealmApp {
             "AI waypoints"
           );
 
-          // Safety check: ensure AnimationService has map reference (FIXED)
+          // Set AnimationService map reference if needed
           if (!this.animation.map) {
             this.animation.map = this.map;
           }
@@ -1126,8 +1091,6 @@ export class RunRealmApp {
     this.eventBus.emit("ui:unitsToggled", { useMetric: !this.useMetric });
   }
 
-  // Old run control methods removed - now handled by RunTrackingService via EnhancedRunControls
-
   // Public GameFi API methods
   enableGameMode(): void {
     this.gameMode = true;
@@ -1148,7 +1111,7 @@ export class RunRealmApp {
     return this.web3.connectWallet();
   }
 
-  // Location service methods (FIXED: use consolidated property)
+  // Location service methods
   showLocationModal(): void {
     if (this.location) {
       this.location.showLocationModal();

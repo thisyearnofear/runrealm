@@ -15,9 +15,13 @@
     "@runrealm/shared-utils": "^2.0.0",
     "acorn-import-assertions": "^1.9.0",
     "acorn-import-attributes": "^1.9.5",
-    "mapbox-gl": "2.4.1"
+    "mapbox-gl": "2.4.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "css-loader": "^7.1.2",
     "html-webpack-plugin": "^5.6.4",
     "style-loader": "^4.0.0",
