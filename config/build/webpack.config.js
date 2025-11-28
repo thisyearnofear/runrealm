@@ -60,7 +60,7 @@ module.exports = (env, argv) => {
     module: {
       rules: [
         {
-          test: /\.tsx?$/,
+          test: /\.[tj]sx?$/,
           use: [
             {
               loader: "ts-loader",
