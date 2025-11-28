@@ -213,9 +213,11 @@ export interface AppEvents extends Web3Events {
   "dashboard:showTerritoryOnMap": { territoryId: string };
   "dashboard:viewAllTerritories": Record<string, never>;
   "ui:showGhostManagement": Record<string, never>;
-  "ghost:deployRequested": { ghostId: string };
+  "ghost:deployRequested": { ghostId: string; territoryId?: string };
   "ui:showChallenges": Record<string, never>;
   "territory:manage": { territoryId: string };
+  "territory:boostActivity": { territoryId: string };
+  "game:claimChallenge": { challengeId: string };
   // Cross-chain events
   "crosschain:territoryClaimRequested": {
     territoryData: any;
@@ -287,6 +289,7 @@ export interface AppEvents extends Web3Events {
   // Territory activity events
   "territory:activityUpdated": { territory: any };
   "territory:vulnerable": { territory: any };
+  "territory:boostRequested": { territoryId: string; cost: number; points: number };
 }
 
 export class EventBus {

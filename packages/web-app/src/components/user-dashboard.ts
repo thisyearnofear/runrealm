@@ -19,6 +19,7 @@ export class UserDashboard {
   private eventBus: EventBus;
   private unsubscribeDataUpdates: (() => void) | null = null;
   private unsubscribeVisibilityChanges: (() => void) | null = null;
+  private expandedTerritoryId: string | null = null;
 
   constructor() {
     this.dashboardService = UserDashboardService.getInstance();
@@ -192,7 +193,52 @@ export class UserDashboard {
       case 'manage-territory': {
         const territoryId = target.getAttribute('data-territory');
         if (territoryId) {
-          this.eventBus.emit('territory:manage', { territoryId });
+          // Toggle expansion
+          if (this.expandedTerritoryId === territoryId) {
+            this.expandedTerritoryId = null;
+          } else {
+            this.expandedTerritoryId = territoryId;
+          }
+          // Re-render to show/hide expanded view
+          this.render();
+        }
+        break;
+      }
+
+      case 'deploy-ghost-to-territory': {
+        const territoryId = target.getAttribute('data-territory-id');
+        if (territoryId) {
+          // Get selected ghost from dropdown
+          const select = this.container?.querySelector(`.ghost-select[data-territory-id="${territoryId}"]`) as HTMLSelectElement;
+          const ghostId = select?.value;
+
+          if (ghostId) {
+            this.eventBus.emit('ghost:deployRequested', { ghostId, territoryId });
+            // Collapse territory after deployment
+            this.expandedTerritoryId = null;
+            this.render();
+          } else {
+            this.eventBus.emit('ui:toast', {
+              message: 'Please select a ghost to deploy',
+              type: 'warning'
+            });
+          }
+        }
+        break;
+      }
+
+      case 'boost-territory-activity': {
+        const territoryId = target.getAttribute('data-territory-id');
+        if (territoryId) {
+          this.eventBus.emit('territory:boostActivity', { territoryId });
+        }
+        break;
+      }
+
+      case 'claim-challenge': {
+        const challengeId = target.getAttribute('data-challenge-id');
+        if (challengeId) {
+          this.eventBus.emit('game:claimChallenge', { challengeId });
         }
         break;
       }
@@ -338,31 +384,144 @@ export class UserDashboard {
         </div>
         
         <div class="territory-list-compact">
-          ${territories.slice(0, 5).map(t => `
-            <div class="territory-item-compact ${(t.rarity || 'common').toLowerCase()}" data-territory-id="${t.geohash}">
-              <div class="territory-info">
-                <div class="territory-name">${t.metadata?.name || t.geohash}</div>
-                <div class="territory-meta">
-                  <span class="rarity-badge ${(t.rarity || 'common').toLowerCase()}">${t.rarity || 'Common'}</span>
-                  <span class="territory-reward">+${t.estimatedReward || 0} $REALM</span>
-                  ${t.defenseStatus ? `<span class="defense-badge ${t.defenseStatus}">${t.defenseStatus}</span>` : ''}
-                </div>
-              </div>
-              <div class="territory-actions">
-                <button class="territory-action" data-action="show-territory-on-map" data-territory="${t.geohash}" title="View on Map">📍</button>
-                <button class="territory-action" data-action="manage-territory" data-territory="${t.geohash}" title="Manage">⚙️</button>
-              </div>
-            </div>
-          `).join('')}
+          ${territories.slice(0, 10).map(t => this.renderTerritoryCard(t)).join('')}
         </div>
         
-        ${territories.length > 5 ? `
+        ${territories.length > 10 ? `
           <button class="view-all-btn" data-action="view-all-territories">
             View All ${territories.length} Territories
           </button>
         ` : ''}
       </div>
     `;
+  }
+
+  private renderTerritoryCard(territory: any): string {
+    const isExpanded = this.expandedTerritoryId === territory.geohash;
+    const activityPoints = territory.activityPoints || 500;
+    const defenseStatus = territory.defenseStatus || 'moderate';
+
+    return `
+      <div class="territory-item-compact ${(territory.rarity || 'common').toLowerCase()} ${isExpanded ? 'expanded' : ''}" 
+           data-territory-id="${territory.geohash}">
+        <div class="territory-header">
+          <div class="territory-info">
+            <div class="territory-name">${territory.metadata?.name || territory.geohash}</div>
+            <div class="territory-meta">
+              <span class="rarity-badge ${(territory.rarity || 'common').toLowerCase()}">${territory.rarity || 'Common'}</span>
+              <span class="territory-reward">+${territory.estimatedReward || 0} $REALM</span>
+              <span class="defense-badge ${defenseStatus}">${defenseStatus}</span>
+            </div>
+          </div>
+          <div class="territory-actions">
+            <button class="territory-action" data-action="show-territory-on-map" data-territory="${territory.geohash}" title="View on Map">📍</button>
+            <button class="territory-action ${isExpanded ? 'active' : ''}" data-action="manage-territory" data-territory="${territory.geohash}" title="Manage">
+              ${isExpanded ? '▲' : '⚙️'}
+            </button>
+          </div>
+        </div>
+        
+        ${isExpanded ? this.renderTerritoryDetails(territory, activityPoints, defenseStatus) : ''}
+      </div>
+    `;
+  }
+
+  private renderTerritoryDetails(territory: any, activityPoints: number, defenseStatus: string): string {
+    // Get available ghosts for deployment
+    const data = this.dashboardService.getData();
+    const availableGhosts = (data.ghosts || []).filter((g: any) =>
+      !g.cooldownUntil || new Date(g.cooldownUntil) < new Date()
+    );
+
+    const activityPercentage = (activityPoints / 1000) * 100;
+
+    return `
+      <div class="territory-details">
+        <div class="territory-stats-grid">
+          <div class="territory-stat">
+            <label>Defense Points</label>
+            <div class="defense-bar">
+              <div class="defense-fill ${defenseStatus}" style="width: ${activityPercentage}%"></div>
+            </div>
+            <span class="defense-value">${activityPoints} / 1000</span>
+          </div>
+          
+          <div class="territory-stat">
+            <label>Claimed</label>
+            <value>${territory.claimedAt ? new Date(territory.claimedAt).toLocaleDateString() : 'Unknown'}</value>
+          </div>
+          
+          <div class="territory-stat">
+            <label>Last Activity</label>
+            <value>${territory.lastActivityUpdate ? this.formatTimeAgo(territory.lastActivityUpdate) : 'Never'}</value>
+          </div>
+        </div>
+
+        ${territory.deployedGhost ? `
+          <div class="deployed-ghost">
+            <div class="ghost-info">
+              <span class="ghost-avatar">${territory.deployedGhost.avatar || '👻'}</span>
+              <div>
+                <div class="ghost-name">${territory.deployedGhost.name}</div>
+                <div class="ghost-cooldown">Cooldown: ${this.formatCooldown(territory.deployedGhost.cooldownUntil)}</div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="territory-actions-expanded">
+          ${availableGhosts.length > 0 ? `
+            <div class="action-group">
+              <label>Deploy Ghost</label>
+              <select class="ghost-select" data-territory-id="${territory.geohash}">
+                <option value="">Select ghost...</option>
+                ${availableGhosts.map((g: any) => `
+                  <option value="${g.id}">${g.avatar || '👻'} ${g.name} (Lvl ${g.level})</option>
+                `).join('')}
+              </select>
+              <button class="action-btn" data-action="deploy-ghost-to-territory" 
+                      data-territory-id="${territory.geohash}" 
+                      data-ghost-id="">
+                Deploy Selected
+              </button>
+            </div>
+          ` : `
+            <div class="action-group">
+              <p class="info-text">No ghosts available. All ghosts are on cooldown.</p>
+            </div>
+          `}
+          
+          <div class="action-group">
+            <label>Boost Activity</label>
+            <button class="action-btn secondary" data-action="boost-territory-activity" data-territory-id="${territory.geohash}">
+              +100 Points (50 $REALM)
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private formatTimeAgo(timestamp: number): string {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    return 'Just now';
+  }
+
+  private formatCooldown(cooldownUntil: Date | null): string {
+    if (!cooldownUntil) return 'Ready';
+    const now = new Date();
+    const cooldown = new Date(cooldownUntil);
+    if (cooldown <= now) return 'Ready';
+
+    const diff = cooldown.getTime() - now.getTime();
+    const hours = Math.ceil(diff / (1000 * 60 * 60));
+    return `${hours}h remaining`;
   }
 
   private renderWalletInfo(walletInfo: any): string {
@@ -449,7 +608,22 @@ export class UserDashboard {
   }
 
   private renderChallenges(userStats: any): string {
-    // Placeholder for active challenges since they aren't fully in service yet
+    const challenges = userStats?.activeChallenges || [];
+
+    if (challenges.length === 0) {
+      return `
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h3>⚔️ Active Challenges</h3>
+            <button class="action-btn" data-action="find-challenges">Find More</button>
+          </div>
+          <div class="empty-state">
+            <p>No active challenges. Check back tomorrow!</p>
+          </div>
+        </div>
+      `;
+    }
+
     return `
       <div class="dashboard-section">
         <div class="section-header">
@@ -457,28 +631,27 @@ export class UserDashboard {
           <button class="action-btn" data-action="find-challenges">Find More</button>
         </div>
         <div class="challenges-list">
-          <div class="challenge-item">
-            <div class="challenge-icon">🏃</div>
-            <div class="challenge-info">
-              <div class="challenge-title">Daily Quest: 5k Run</div>
-              <div class="challenge-progress-bar">
-                <div class="progress-fill" style="width: 60%"></div>
+          ${challenges.map((c: any) => {
+      const progress = Math.min((c.goal.current / c.goal.target) * 100, 100);
+      return `
+              <div class="challenge-item">
+                <div class="challenge-icon">${c.icon}</div>
+                <div class="challenge-info">
+                  <div class="challenge-title">${c.title}</div>
+                  <div class="challenge-progress-bar">
+                    <div class="progress-fill" style="width: ${progress}%"></div>
+                  </div>
+                  <div class="challenge-meta">${c.goal.current} / ${c.goal.target} ${c.goal.unit}</div>
+                </div>
+                <button class="challenge-claim-btn" 
+                  ${c.completed && !c.claimed ? '' : 'disabled'} 
+                  data-action="claim-challenge" 
+                  data-challenge-id="${c.id}">
+                  ${c.claimed ? 'Claimed' : c.completed ? 'Claim Reward' : 'In Progress'}
+                </button>
               </div>
-              <div class="challenge-meta">3.0 / 5.0 km</div>
-            </div>
-            <button class="challenge-claim-btn" disabled>In Progress</button>
-          </div>
-          <div class="challenge-item">
-            <div class="challenge-icon">🗺️</div>
-            <div class="challenge-info">
-              <div class="challenge-title">Weekly: Claim 3 Territories</div>
-              <div class="challenge-progress-bar">
-                <div class="progress-fill" style="width: 33%"></div>
-              </div>
-              <div class="challenge-meta">1 / 3 claimed</div>
-            </div>
-            <button class="challenge-claim-btn" disabled>In Progress</button>
-          </div>
+            `;
+    }).join('')}
         </div>
       </div>
     `;

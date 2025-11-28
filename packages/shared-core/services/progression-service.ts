@@ -6,6 +6,27 @@
 import { BaseService } from '../core/base-service';
 import { EventBus } from '../core/event-bus';
 
+export interface Challenge {
+  id: string;
+  type: 'daily' | 'weekly' | 'special';
+  title: string;
+  description: string;
+  icon: string;
+  goal: {
+    type: 'distance' | 'territories' | 'time' | 'speed';
+    target: number;
+    current: number;
+    unit: string;
+  };
+  reward: {
+    type: 'xp' | 'realm' | 'item';
+    amount: number;
+  };
+  expiresAt: number;
+  completed: boolean;
+  claimed: boolean;
+}
+
 export interface PlayerStats {
   level: number;
   experience: number;
@@ -15,6 +36,7 @@ export interface PlayerStats {
   challengesWon: number;
   totalTime: number; // in seconds
   achievements: string[];
+  activeChallenges: Challenge[];
   streak: number; // consecutive days
   lastActiveDate?: string; // YYYY-MM-DD
 }
@@ -57,12 +79,13 @@ export class ProgressionService extends BaseService {
     challengesWon: 0,
     totalTime: 0,
     achievements: [],
+    activeChallenges: [],
     streak: 0
   };
-  
+
   private achievements: Map<string, PlayerAchievement> = new Map();
   private levelConfigs: LevelConfig[] = [];
-  
+
   // Default achievements
   private defaultAchievements: PlayerAchievement[] = [
     {
@@ -147,19 +170,19 @@ export class ProgressionService extends BaseService {
   protected async onInitialize(): Promise<void> {
     // Load player stats from storage
     this.loadStats();
-    
+
     // Initialize achievements
     this.initializeAchievements();
-    
+
     // Initialize level configs
     this.initializeLevelConfigs();
-    
+
     // Set up event listeners
     this.setupEventListeners();
-    
+
     // Update streak
     this.updateStreak();
-    
+
     this.safeEmit('service:initialized', { service: 'ProgressionService', success: true });
   }
 
@@ -195,7 +218,7 @@ export class ProgressionService extends BaseService {
     this.defaultAchievements.forEach(achievement => {
       this.achievements.set(achievement.id, achievement);
     });
-    
+
     // Load any custom achievements from config
     this.safeEmit('progression:achievementsLoaded', {
       count: this.achievements.size
@@ -207,7 +230,7 @@ export class ProgressionService extends BaseService {
    */
   private initializeLevelConfigs(): void {
     this.levelConfigs = [...this.defaultLevelConfigs];
-    
+
     this.safeEmit('progression:levelsLoaded', {
       maxLevel: this.levelConfigs[this.levelConfigs.length - 1].level
     });
@@ -224,17 +247,22 @@ export class ProgressionService extends BaseService {
       // this.addDistance(data.totalDistance || 0);
       // this.addTime(data.timeSpent || 0);
     });
-    
+
     // Listen for territory claims
     this.subscribe('territory:claimed', () => {
       this.addTerritory();
     });
-    
+
     // Listen for challenge wins
     this.subscribe('game:challengeResolved', (data) => {
       if (data.winner === this.getWalletAddress()) {
         this.addChallengeWin();
       }
+    });
+
+    // Listen for challenge claims
+    this.subscribe('game:claimChallenge', (data) => {
+      this.claimChallengeReward(data.challengeId);
     });
   }
 
@@ -251,13 +279,16 @@ export class ProgressionService extends BaseService {
    */
   public addDistance(distance: number): void {
     if (distance <= 0) return;
-    
+
     this.stats.totalDistance += distance;
     this.addExperience(Math.floor(distance / 100)); // 1 XP per 100m
-    
+
     // Check for distance-based achievements
     this.checkDistanceAchievements();
-    
+
+    // Update challenge progress
+    this.updateChallengeProgress('distance', distance);
+
     this.saveStats();
     this.emitStatsUpdate();
   }
@@ -267,10 +298,10 @@ export class ProgressionService extends BaseService {
    */
   public addTime(seconds: number): void {
     if (seconds <= 0) return;
-    
+
     this.stats.totalTime += seconds;
     this.addExperience(Math.floor(seconds / 60)); // 1 XP per minute
-    
+
     this.saveStats();
     this.emitStatsUpdate();
   }
@@ -282,10 +313,13 @@ export class ProgressionService extends BaseService {
     this.stats.territoriesClaimed += 1;
     this.stats.territoriesOwned += 1;
     this.addExperience(50); // Fixed XP for territory claim
-    
+
     // Check for territory-based achievements
     this.checkTerritoryAchievements();
-    
+
+    // Update challenge progress
+    this.updateChallengeProgress('territories', 1);
+
     this.saveStats();
     this.emitStatsUpdate();
   }
@@ -296,7 +330,7 @@ export class ProgressionService extends BaseService {
   public addChallengeWin(): void {
     this.stats.challengesWon += 1;
     this.addExperience(100); // Fixed XP for challenge win
-    
+
     this.saveStats();
     this.emitStatsUpdate();
   }
@@ -306,16 +340,16 @@ export class ProgressionService extends BaseService {
    */
   public addExperience(points: number): void {
     if (points <= 0) return;
-    
+
     // Apply level-based experience boost
     const boost = this.getCurrentLevelConfig()?.rewards.experienceBoost || 0;
     const boostedPoints = Math.floor(points * (1 + boost / 100));
-    
+
     this.stats.experience += boostedPoints;
-    
+
     // Check for level up
     this.checkLevelUp();
-    
+
     this.saveStats();
     this.emitStatsUpdate();
   }
@@ -327,15 +361,15 @@ export class ProgressionService extends BaseService {
     const nextLevelConfig = this.getLevelConfig(this.stats.level + 1);
     if (nextLevelConfig && this.stats.experience >= nextLevelConfig.experienceRequired) {
       this.stats.level += 1;
-      
+
       this.safeEmit('game:levelUp', {
         newLevel: this.stats.level,
         player: this.getWalletAddress()
       });
-      
+
       // Check for level-based achievements
       this.checkLevelAchievements();
-      
+
       // Show level up notification
       this.safeEmit('ui:toast', {
         message: `🎉 Level Up! You're now level ${this.stats.level}`,
@@ -350,13 +384,13 @@ export class ProgressionService extends BaseService {
    */
   private updateStreak(): void {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    
+
     if (this.stats.lastActiveDate) {
       const lastDate = new Date(this.stats.lastActiveDate);
       const todayDate = new Date(today);
       const diffTime = Math.abs(todayDate.getTime() - lastDate.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+
       if (diffDays === 1) {
         // Consecutive day
         this.stats.streak += 1;
@@ -369,10 +403,10 @@ export class ProgressionService extends BaseService {
       // First time
       this.stats.streak = 1;
     }
-    
+
     this.stats.lastActiveDate = today;
     this.saveStats();
-    
+
     // Check for streak achievements
     this.checkStreakAchievements();
   }
@@ -383,7 +417,7 @@ export class ProgressionService extends BaseService {
   private checkDistanceAchievements(): void {
     const distanceAchievements = Array.from(this.achievements.values())
       .filter(a => a.criteria.type === 'distance' && !this.stats.achievements.includes(a.id));
-    
+
     distanceAchievements.forEach(achievement => {
       if (this.stats.totalDistance >= achievement.criteria.value) {
         this.unlockAchievement(achievement.id);
@@ -397,7 +431,7 @@ export class ProgressionService extends BaseService {
   private checkTerritoryAchievements(): void {
     const territoryAchievements = Array.from(this.achievements.values())
       .filter(a => a.criteria.type === 'territories' && !this.stats.achievements.includes(a.id));
-    
+
     territoryAchievements.forEach(achievement => {
       if (this.stats.territoriesClaimed >= achievement.criteria.value) {
         this.unlockAchievement(achievement.id);
@@ -411,7 +445,7 @@ export class ProgressionService extends BaseService {
   private checkLevelAchievements(): void {
     const levelAchievements = Array.from(this.achievements.values())
       .filter(a => a.criteria.type === 'level' && !this.stats.achievements.includes(a.id));
-    
+
     levelAchievements.forEach(achievement => {
       if (this.stats.level >= achievement.criteria.value) {
         this.unlockAchievement(achievement.id);
@@ -425,7 +459,7 @@ export class ProgressionService extends BaseService {
   private checkStreakAchievements(): void {
     const streakAchievements = Array.from(this.achievements.values())
       .filter(a => a.criteria.type === 'streak' && !this.stats.achievements.includes(a.id));
-    
+
     streakAchievements.forEach(achievement => {
       if (this.stats.streak >= achievement.criteria.value) {
         this.unlockAchievement(achievement.id);
@@ -440,33 +474,33 @@ export class ProgressionService extends BaseService {
     if (this.stats.achievements.includes(achievementId)) {
       return; // Already unlocked
     }
-    
+
     const achievement = this.achievements.get(achievementId);
     if (!achievement) {
       console.warn(`Achievement ${achievementId} not found`);
       return;
     }
-    
+
     // Add to unlocked achievements
     this.stats.achievements.push(achievementId);
-    
+
     // Grant rewards
     this.addExperience(achievement.reward.experience);
-    
+
     // Emit achievement unlocked event
     this.safeEmit('game:achievementUnlocked', {
       achievementId,
       achievement,
       player: this.getWalletAddress()
     });
-    
+
     // Show notification
     this.safeEmit('ui:toast', {
       message: `🏆 Achievement Unlocked: ${achievement.name}`,
       type: 'success',
       duration: 5000
     });
-    
+
     this.saveStats();
     this.emitStatsUpdate();
   }
@@ -526,6 +560,135 @@ export class ProgressionService extends BaseService {
   }
 
   /**
+   * Get active challenges
+   */
+  public getActiveChallenges(): Challenge[] {
+    // Generate daily challenges if none exist or expired
+    this.checkAndGenerateChallenges();
+    return this.stats.activeChallenges;
+  }
+
+  /**
+   * Check and generate daily challenges
+   */
+  private checkAndGenerateChallenges(): void {
+    const now = Date.now();
+    const hasActiveDaily = this.stats.activeChallenges.some(
+      c => c.type === 'daily' && c.expiresAt > now
+    );
+
+    if (!hasActiveDaily) {
+      // Remove expired daily challenges
+      this.stats.activeChallenges = this.stats.activeChallenges.filter(
+        c => c.type !== 'daily' || c.claimed
+      );
+
+      // Generate new ones
+      const newChallenges = this.generateDailyChallenges();
+      this.stats.activeChallenges.push(...newChallenges);
+      this.saveStats();
+    }
+  }
+
+  /**
+   * Generate daily challenges
+   */
+  private generateDailyChallenges(): Challenge[] {
+    const challenges: Challenge[] = [
+      {
+        id: `daily-dist-${Date.now()}`,
+        type: 'daily',
+        title: 'Daily Distance',
+        description: 'Run 3km today',
+        icon: '🏃',
+        goal: {
+          type: 'distance',
+          target: 3000,
+          current: 0,
+          unit: 'm'
+        },
+        reward: {
+          type: 'xp',
+          amount: 100
+        },
+        expiresAt: new Date().setHours(24, 0, 0, 0),
+        completed: false,
+        claimed: false
+      },
+      {
+        id: `daily-speed-${Date.now()}`,
+        type: 'daily',
+        title: 'Speed Demon',
+        description: 'Maintain 10km/h for 500m',
+        icon: '⚡',
+        goal: {
+          type: 'speed',
+          target: 10,
+          current: 0,
+          unit: 'km/h'
+        },
+        reward: {
+          type: 'realm',
+          amount: 50
+        },
+        expiresAt: new Date().setHours(24, 0, 0, 0),
+        completed: false,
+        claimed: false
+      }
+    ];
+    return challenges;
+  }
+
+  /**
+   * Update challenge progress
+   */
+  public updateChallengeProgress(type: 'distance' | 'territories' | 'time', amount: number): void {
+    let updated = false;
+
+    this.stats.activeChallenges.forEach(challenge => {
+      if (challenge.completed || challenge.goal.type !== type) return;
+
+      challenge.goal.current += amount;
+
+      if (challenge.goal.current >= challenge.goal.target) {
+        challenge.goal.current = challenge.goal.target;
+        challenge.completed = true;
+
+        this.safeEmit('ui:toast', {
+          message: `🎯 Challenge Complete: ${challenge.title}`,
+          type: 'success'
+        });
+      }
+      updated = true;
+    });
+
+    if (updated) {
+      this.saveStats();
+      this.emitStatsUpdate();
+    }
+  }
+
+  /**
+   * Claim challenge reward
+   */
+  public claimChallengeReward(challengeId: string): void {
+    const challenge = this.stats.activeChallenges.find(c => c.id === challengeId);
+    if (!challenge || !challenge.completed || challenge.claimed) return;
+
+    challenge.claimed = true;
+
+    // Grant reward
+    if (challenge.reward.type === 'xp') {
+      this.addExperience(challenge.reward.amount);
+    } else if (challenge.reward.type === 'realm') {
+      this.safeEmit('game:rewardEarned', { amount: challenge.reward.amount });
+    }
+
+    this.saveStats();
+    this.emitStatsUpdate();
+  }
+
+  /**
    * Reset player progression (for testing)
    */
   public resetProgression(): void {
@@ -538,9 +701,10 @@ export class ProgressionService extends BaseService {
       challengesWon: 0,
       totalTime: 0,
       achievements: [],
+      activeChallenges: [],
       streak: 0
     };
-    
+
     this.saveStats();
     this.emitStatsUpdate();
   }

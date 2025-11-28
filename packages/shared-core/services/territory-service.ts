@@ -145,6 +145,11 @@ export class TerritoryService extends BaseService {
     this.subscribe("web3:crossChainTerritoryClaimFailed", (data: any) => {
       this.handleCrossChainClaimFailure(data);
     });
+
+    // Listen for territory boost requests
+    this.subscribe("territory:boostActivity", (data: { territoryId: string }) => {
+      this.boostTerritoryActivity(data.territoryId);
+    });
   }
 
   // New: Territory Intent Management Methods
@@ -159,7 +164,7 @@ export class TerritoryService extends BaseService {
     estimatedDuration?: number
   ): Promise<TerritoryIntent> {
     const geohash = this.generateGeohash(bounds);
-    
+
     // Create a mock RunSession for metadata generation
     const mockRunSession: RunSession = {
       id: "",
@@ -193,12 +198,12 @@ export class TerritoryService extends BaseService {
 
     this.territoryIntents.set(intent.id, intent);
     this.saveTerritoryIntentsToStorage();
-    
+
     // Use existing event pattern - territory claimed is closest match
-    this.safeEmit("web3:territoryClaimed", { 
-      tokenId: intent.id, 
-      geohash: intent.geohash, 
-      metadata: intent.metadata 
+    this.safeEmit("web3:territoryClaimed", {
+      tokenId: intent.id,
+      geohash: intent.geohash,
+      metadata: intent.metadata
     });
     return intent;
   }
@@ -209,7 +214,7 @@ export class TerritoryService extends BaseService {
   public async getTerritoryPreview(bounds: TerritoryBounds): Promise<TerritoryPreview> {
     const geohash = this.generateGeohash(bounds);
     const isAvailable = await this.checkTerritoryAvailability(geohash);
-    
+
     // Create a mock RunSession for metadata generation
     const mockRunSession: RunSession = {
       id: "",
@@ -236,8 +241,8 @@ export class TerritoryService extends BaseService {
       }
     }
 
-    const estimatedClaimability = isAvailable && conflictingTerritories.length === 0 ? 100 : 
-                                 isAvailable ? Math.max(0, 100 - (conflictingTerritories.length * 25)) : 0;
+    const estimatedClaimability = isAvailable && conflictingTerritories.length === 0 ? 100 :
+      isAvailable ? Math.max(0, 100 - (conflictingTerritories.length * 25)) : 0;
 
     return {
       bounds,
@@ -260,27 +265,27 @@ export class TerritoryService extends BaseService {
     // Find matching territory intent
     for (const [intentId, intent] of this.territoryIntents) {
       if (intent.status !== "active") continue;
-      
+
       // Check if the run overlaps with the intended territory
       if (this.runOverlapsWithIntent(runSession, intent)) {
         // Mark intent as completed
         intent.status = "completed";
         this.territoryIntents.set(intentId, intent);
-        
+
         // Create territory with intent reference
         const territory = await this.createTerritoryFromRun(runSession);
         territory.intentId = intentId;
-        
+
         // Claim the territory
         const result = await this.claimTerritory(territory);
-        
+
         // Use existing event pattern - web3 territory claimed
-        this.safeEmit("web3:territoryClaimed", { 
+        this.safeEmit("web3:territoryClaimed", {
           tokenId: territory.id,
           geohash: territory.geohash,
           metadata: territory.metadata
         });
-        
+
         this.saveTerritoryIntentsToStorage();
         break;
       }
@@ -305,7 +310,7 @@ export class TerritoryService extends BaseService {
   public getActiveTerritoryIntents(): TerritoryIntent[] {
     const now = Date.now();
     const activeIntents: TerritoryIntent[] = [];
-    
+
     for (const [intentId, intent] of this.territoryIntents) {
       if (intent.status === "active" && intent.expiresAt > now) {
         activeIntents.push(intent);
@@ -315,11 +320,11 @@ export class TerritoryService extends BaseService {
         this.territoryIntents.set(intentId, intent);
       }
     }
-    
+
     if (activeIntents.length !== this.territoryIntents.size) {
       this.saveTerritoryIntentsToStorage();
     }
-    
+
     return activeIntents;
   }
 
@@ -333,14 +338,14 @@ export class TerritoryService extends BaseService {
     intent.status = "cancelled";
     this.territoryIntents.set(intentId, intent);
     this.saveTerritoryIntentsToStorage();
-    
+
     // Use existing service error event for cancellation
     this.safeEmit("service:error", {
       service: "TerritoryService",
       context: "Territory intent cancelled",
       error: `Intent ${intentId} was cancelled by user`
     });
-    
+
     return true;
   }
 
@@ -353,7 +358,7 @@ export class TerritoryService extends BaseService {
       if (stored) {
         const intents = JSON.parse(stored);
         this.territoryIntents = new Map(Object.entries(intents));
-        
+
         // Clean up expired intents
         this.getActiveTerritoryIntents();
       }
@@ -789,7 +794,7 @@ export class TerritoryService extends BaseService {
 
     // Generate territory from external activity
     const territory = await this.createTerritoryFromRun(runSession);
-    
+
     // Add external activity metadata
     if (runSession.externalActivity) {
       territory.metadata.description = `Territory claimed from ${runSession.externalActivity.source} activity: ${runSession.externalActivity.name}`;
@@ -828,11 +833,11 @@ export class TerritoryService extends BaseService {
 
       // Check if this is a cross-chain claim
       const isCrossChainClaim = wallet.chainId !== 7001; // Not on ZetaChain testnet
-      
+
       if (isCrossChainClaim && crossChainService) {
         // Handle cross-chain territory claim
         console.log("TerritoryService: Initiating cross-chain territory claim");
-        
+
         // Prepare cross-chain territory data
         const crossChainData = {
           geohash: territory.geohash,
@@ -853,18 +858,18 @@ export class TerritoryService extends BaseService {
         territory.status = "claimable";
         territory.isCrossChain = true;
         territory.sourceChainId = wallet.chainId;
-        
+
         // Initialize cross-chain history if not exists
         if (!territory.crossChainHistory) {
           territory.crossChainHistory = [];
         }
-        
+
         // Add to cross-chain history
         territory.crossChainHistory.push({
           chainId: wallet.chainId,
           timestamp: Date.now()
         });
-        
+
         // Store locally
         this.claimedTerritories.set(territory.id, territory);
         this.saveTerritoriesToStorage();
@@ -877,7 +882,7 @@ export class TerritoryService extends BaseService {
       } else {
         // Handle direct territory claim on ZetaChain
         console.log("TerritoryService: Initiating direct territory claim");
-        
+
         // Prepare territory data for blockchain
         const territoryData = {
           geohash: territory.geohash,
@@ -1106,7 +1111,7 @@ export class TerritoryService extends BaseService {
     this.saveTerritoriesToStorage();
 
     this.safeEmit('territory:activityUpdated', { territory });
-    
+
     if (territory.defenseStatus === 'vulnerable') {
       this.safeEmit('territory:vulnerable', { territory });
     }
@@ -1149,5 +1154,39 @@ export class TerritoryService extends BaseService {
   getTerritoriesByStatus(status: 'strong' | 'moderate' | 'vulnerable' | 'claimable'): Territory[] {
     return Array.from(this.claimedTerritories.values())
       .filter(t => t.defenseStatus === status);
+  }
+
+  /**
+   * Boost territory activity by spending REALM tokens
+   */
+  boostTerritoryActivity(territoryId: string): void {
+    const territory = this.claimedTerritories.get(territoryId);
+    if (!territory) {
+      this.safeEmit('ui:toast', {
+        message: '❌ Territory not found',
+        type: 'error'
+      });
+      return;
+    }
+
+    const boostCost = 50; // 50 REALM for +100 points
+    const boostPoints = 100;
+
+    // Check if user has enough REALM (this would integrate with GhostRunnerService or wallet)
+    // For now, we'll emit an event to request the boost
+    this.safeEmit('territory:boostRequested', {
+      territoryId,
+      cost: boostCost,
+      points: boostPoints
+    });
+
+    // The actual boost will be applied when confirmed
+    // For now, apply it directly
+    this.updateTerritoryActivity(territoryId, boostPoints);
+
+    this.safeEmit('ui:toast', {
+      message: `✨ Territory boosted! +${boostPoints} defense points`,
+      type: 'success'
+    });
   }
 }
