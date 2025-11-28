@@ -14,7 +14,10 @@ module.exports = (env, argv) => {
   const exposedEnvVariables = {
     NODE_ENV: argv.mode || "development",
     // API base URL for token endpoint (dev → local express, prod → hetzner backend)
-    API_BASE_URL: argv.mode === "production" ? "https://runrealm.coupondj.fun" : `http://localhost:${process.env.PORT || 3000}`,
+    API_BASE_URL:
+      argv.mode === "production"
+        ? "https://runrealm.coupondj.fun"
+        : `http://localhost:${process.env.PORT || 3000}`,
     // Public configuration only
     ENABLE_WEB3: process.env.ENABLE_WEB3 || "true",
     ENABLE_AI_FEATURES: process.env.ENABLE_AI_FEATURES || "true",
@@ -85,17 +88,35 @@ module.exports = (env, argv) => {
       modules: [
         path.resolve(__dirname, "../../packages"),
         path.resolve(__dirname, "../../node_modules"),
-        "node_modules"
+        "node_modules",
       ],
       alias: {
         "@": path.resolve(__dirname, "../../packages/web-app"),
         "@core": path.resolve(__dirname, "../../packages/shared-core"),
-        "@services": path.resolve(__dirname, "../../packages/shared-core/services"),
-        "@components": path.resolve(__dirname, "../../packages/shared-core/components"),
-        "@runrealm/shared-core": path.resolve(__dirname, "../../packages/shared-core"),
-        "@runrealm/shared-types": path.resolve(__dirname, "../../packages/shared-types"),
-        "@runrealm/shared-utils": path.resolve(__dirname, "../../packages/shared-utils"),
-        "@runrealm/shared-blockchain": path.resolve(__dirname, "../../packages/shared-blockchain"),
+        "@services": path.resolve(
+          __dirname,
+          "../../packages/shared-core/services"
+        ),
+        "@components": path.resolve(
+          __dirname,
+          "../../packages/shared-core/components"
+        ),
+        "@runrealm/shared-core": path.resolve(
+          __dirname,
+          "../../packages/shared-core"
+        ),
+        "@runrealm/shared-types": path.resolve(
+          __dirname,
+          "../../packages/shared-types"
+        ),
+        "@runrealm/shared-utils": path.resolve(
+          __dirname,
+          "../../packages/shared-utils"
+        ),
+        "@runrealm/shared-blockchain": path.resolve(
+          __dirname,
+          "../../packages/shared-blockchain"
+        ),
         "@runrealm/web-app": path.resolve(__dirname, "../../packages/web-app"),
       },
       fallback: {
@@ -105,8 +126,9 @@ module.exports = (env, argv) => {
 
     // Exclude React Native packages from web builds
     externals: {
-      'react-native': 'commonjs react-native',
-      '@react-native-async-storage/async-storage': 'commonjs @react-native-async-storage/async-storage',
+      "react-native": "commonjs react-native",
+      "@react-native-async-storage/async-storage":
+        "commonjs @react-native-async-storage/async-storage",
     },
 
     optimization: {
@@ -191,7 +213,10 @@ module.exports = (env, argv) => {
 
     plugins: [
       new HtmlWebpackPlugin({
-        template: path.resolve(__dirname, "../../packages/web-app/template.html"),
+        template: path.resolve(
+          __dirname,
+          "../../packages/web-app/template.html"
+        ),
         filename: "index.html",
         inject: "body",
         minify: isProduction
@@ -255,7 +280,7 @@ module.exports = (env, argv) => {
       historyApiFallback: true,
       proxy: [
         {
-          context: ['/api'],
+          context: ["/api"],
           target: `http://localhost:${process.env.PORT || 3000}`,
           changeOrigin: true,
         },
