@@ -191,6 +191,7 @@ export class UserDashboardService extends BaseService {
         challengesWon: playerStats.challengesWon,
         totalTime: playerStats.totalTime,
         achievements: playerStats.achievements,
+        activeChallenges: playerStats.activeChallenges,
         streak: playerStats.streak,
       };
 
