@@ -171,12 +171,18 @@ async function initializeApp(): Promise<void> {
       configService
     );
 
-    // Import platform-specific ghost UI components (from root src)
-    const { GhostManagement } = await import("../../src/components/ghost-management.js");
-    const { GhostButton } = await import("../../src/components/ghost-button.js");
-
-    const ghostManagement = new GhostManagement();
-    const ghostButton = new GhostButton(ghostManagement);
+    // Import platform-specific ghost UI components
+    let ghostManagement;
+    let ghostButton;
+    try {
+      const { GhostManagement } = await import("./src/components/ghost-management.js");
+      const { GhostButton } = await import("./src/components/ghost-button.js");
+      ghostManagement = new GhostManagement();
+      ghostButton = new GhostButton(ghostManagement);
+    } catch (err) {
+      console.warn("Ghost management components not available:", err);
+      // Continue without ghost features
+    }
 
     // Initialize platform UI with all components
     app.initializePlatformUI(mainUI, walletWidget, undefined, ghostManagement, ghostButton);
