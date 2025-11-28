@@ -11,6 +11,7 @@ import { Web3Service, WalletInfo } from "./web3-service";
 import { TerritoryService, Territory } from "./territory-service";
 import { AIService } from "./ai-service";
 import { WidgetStateService } from "../components/widget-state-service";
+import { GhostRunnerService, GhostRunnerNFT } from "./ghost-runner-service";
 
 export interface DashboardState {
   isVisible: boolean;
@@ -26,6 +27,7 @@ export interface DashboardData {
     recentAchievements: string[];
   };
   territories: Territory[];
+  ghosts: GhostRunnerNFT[];
   walletInfo: WalletInfo | null;
   aiInsights: {
     suggestedRoute?: any;
@@ -56,6 +58,7 @@ export class UserDashboardService extends BaseService {
       recentAchievements: [],
     },
     territories: [],
+    ghosts: [],
     walletInfo: null,
     aiInsights: {
       personalizedTips: [],
@@ -75,6 +78,7 @@ export class UserDashboardService extends BaseService {
   private web3Service: Web3Service;
   private territoryService: TerritoryService;
   private aiService: AIService;
+  private ghostRunnerService: GhostRunnerService;
 
   constructor() {
     super();
@@ -84,6 +88,7 @@ export class UserDashboardService extends BaseService {
     this.web3Service = Web3Service.getInstance();
     this.territoryService = new TerritoryService();
     this.aiService = AIService.getInstance();
+    this.ghostRunnerService = GhostRunnerService.getInstance();
   }
 
   static getInstance(): UserDashboardService {
@@ -192,6 +197,9 @@ export class UserDashboardService extends BaseService {
       // Update territories from territory service
       this.dashboardData.territories =
         this.territoryService.getClaimedTerritories();
+
+      // Update ghosts from ghost runner service
+      this.dashboardData.ghosts = this.ghostRunnerService.getGhosts();
 
       // Update timestamp
       this.dashboardState.lastUpdated = Date.now();
@@ -324,6 +332,11 @@ export class UserDashboardService extends BaseService {
       this.dashboardData.aiInsights.territoryAnalysis = data;
       this.debouncedUpdate?.();
     });
+
+    // Listen for ghost events
+    this.subscribe("ghost:unlocked", () => this.debouncedUpdate?.());
+    this.subscribe("ghost:upgraded", () => this.debouncedUpdate?.());
+    this.subscribe("ghost:deployed", () => this.debouncedUpdate?.());
   }
 
   private startRealTimeUpdates(): void {

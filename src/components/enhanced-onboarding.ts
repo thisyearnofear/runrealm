@@ -245,7 +245,7 @@ export class EnhancedOnboarding extends BaseService {
           <div class="tooltip-footer">
             <div class="footer-left">
               ${this.options.allowSkip ?
-          '<button class="tooltip-btn tertiary" id="onboarding-skip-all">Skip Tutorial</button>' : ''}
+          '<button class="tooltip-btn secondary" id="onboarding-skip-all">Skip</button>' : ''}
             </div>
             <div class="footer-right">
               ${this.currentStep > 0 ?
@@ -278,83 +278,17 @@ export class EnhancedOnboarding extends BaseService {
   private positionTooltip(step: OnboardingStep): void {
     if (!this.tooltip) return;
 
-    const position = step.position || 'center';
-    const isMobile = window.innerWidth <= 768;
+    // User requested consistent centered positioning for all steps
+    // This overrides the target-based positioning which was causing issues
+    // and ensures a consistent experience across desktop and mobile
+    this.tooltip.style.position = 'fixed';
+    this.tooltip.style.top = '50%';
+    this.tooltip.style.left = '50%';
+    this.tooltip.style.transform = 'translate(-50%, -50%)';
 
-    // On mobile or for intro/outro steps, always center
-    if (position === 'center' || isMobile || step.id === 'welcome' || step.id === 'ready-to-run') {
-      this.tooltip.style.position = 'fixed';
-      this.tooltip.style.top = '50%';
-      this.tooltip.style.left = '50%';
-      this.tooltip.style.transform = 'translate(-50%, -50%)';
-      return;
-    }
-
-    if (step.target) {
-      const targetElement = document.querySelector(step.target);
-      if (targetElement) {
-        const rect = targetElement.getBoundingClientRect();
-        const tooltipRect = this.tooltip.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        // Smart positioning that avoids viewport edges
-        let finalPosition = position;
-        let top = 0;
-        let left = 0;
-
-        switch (position) {
-          case 'top':
-            top = rect.top - tooltipRect.height - 20;
-            left = rect.left + (rect.width - tooltipRect.width) / 2;
-            // Fallback to bottom if not enough space above
-            if (top < 20) {
-              finalPosition = 'bottom';
-              top = rect.bottom + 20;
-            }
-            break;
-          case 'bottom':
-            top = rect.bottom + 20;
-            left = rect.left + (rect.width - tooltipRect.width) / 2;
-            // Fallback to top if not enough space below
-            if (top + tooltipRect.height > viewportHeight - 20) {
-              finalPosition = 'top';
-              top = rect.top - tooltipRect.height - 20;
-            }
-            break;
-          case 'left':
-            top = rect.top + (rect.height - tooltipRect.height) / 2;
-            left = rect.left - tooltipRect.width - 20;
-            // Fallback to right if not enough space left
-            if (left < 20) {
-              finalPosition = 'right';
-              left = rect.right + 20;
-            }
-            break;
-          case 'right':
-            top = rect.top + (rect.height - tooltipRect.height) / 2;
-            left = rect.right + 20;
-            // Fallback to left if not enough space right
-            if (left + tooltipRect.width > viewportWidth - 20) {
-              finalPosition = 'left';
-              left = rect.left - tooltipRect.width - 20;
-            }
-            break;
-        }
-
-        // Ensure tooltip stays within viewport bounds
-        left = Math.max(20, Math.min(left, viewportWidth - tooltipRect.width - 20));
-        top = Math.max(20, Math.min(top, viewportHeight - tooltipRect.height - 20));
-
-        this.tooltip.style.position = 'fixed';
-        this.tooltip.style.top = `${top}px`;
-        this.tooltip.style.left = `${left}px`;
-        this.tooltip.style.transform = 'none';
-
-        // Add positioning class for styling
-        this.tooltip.classList.add(`positioned-${finalPosition}`);
-      }
-    }
+    // Remove any positioning classes
+    this.tooltip.classList.remove('positioned-top', 'positioned-bottom', 'positioned-left', 'positioned-right');
+    this.tooltip.classList.add('positioned-center');
   }
 
   private setupTooltipEvents(): void {

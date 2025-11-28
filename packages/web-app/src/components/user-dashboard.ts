@@ -40,15 +40,15 @@ export class UserDashboard {
 
   private setupSubscriptions(): void {
     console.log('UserDashboard: Setting up subscriptions');
-    
+
     // Subscribe to data updates
     const dataUpdateCallback = (data: { data: DashboardData; state: DashboardState }) => {
       console.log('UserDashboard: Data update received', data);
       this.updateDisplay(data.data, data.state);
     };
-    
+
     this.dashboardService.subscribeToDataUpdates(dataUpdateCallback);
-    
+
     // Store unsubscribe function
     this.unsubscribeDataUpdates = () => {
       this.dashboardService.unsubscribeFromDataUpdates(dataUpdateCallback);
@@ -59,14 +59,14 @@ export class UserDashboard {
       console.log('UserDashboard: Visibility change received', state);
       this.updateVisibility(state.visible, state.minimized);
     };
-    
+
     this.dashboardService.subscribeToVisibilityChanges(visibilityChangeCallback);
-    
+
     // Store unsubscribe function
     this.unsubscribeVisibilityChanges = () => {
       this.dashboardService.unsubscribeFromVisibilityChanges(visibilityChangeCallback);
     };
-    
+
     console.log('UserDashboard: Subscriptions complete');
   }
 
@@ -77,14 +77,14 @@ export class UserDashboard {
     this.container.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       const action = target.getAttribute('data-action');
-      
+
       // Close button
       if (target.id === 'dashboard-close' || target.closest('#dashboard-close')) {
         console.log('Close button clicked');
         this.dashboardService.hide();
         return;
       }
-      
+
       // Minimize/Expand button
       if (target.id === 'dashboard-minimize' || target.closest('#dashboard-minimize')) {
         console.log('Minimize button clicked, current state:', this.dashboardService.getState());
@@ -165,9 +165,37 @@ export class UserDashboard {
 
       case 'view-all-territories':
         this.eventBus.emit('dashboard:viewAllTerritories', {});
-        // Could open a modal or expand the list
         console.log('View all territories');
         break;
+
+      case 'manage-ghosts':
+        // Emit event to open ghost management (or handle internally if we move it here completely)
+        // For now, let's assume we want to show the full ghost management UI
+        this.eventBus.emit('ui:showGhostManagement', {});
+        this.dashboardService.minimize();
+        break;
+
+      case 'ghost.deploy': {
+        const ghostId = target.getAttribute('data-ghost-id');
+        if (ghostId) {
+          // Open deployment modal or trigger deployment flow
+          this.eventBus.emit('ghost:deployRequested', { ghostId });
+        }
+        break;
+      }
+
+      case 'find-challenges':
+        this.eventBus.emit('ui:showChallenges', {});
+        this.dashboardService.minimize();
+        break;
+
+      case 'manage-territory': {
+        const territoryId = target.getAttribute('data-territory');
+        if (territoryId) {
+          this.eventBus.emit('territory:manage', { territoryId });
+        }
+        break;
+      }
 
       default:
         console.log('Unhandled action:', action);
@@ -201,7 +229,9 @@ export class UserDashboard {
       <div class="dashboard-sections">
         ${this.renderPlayerStats(data.userStats)}
         ${this.renderCurrentRun(data.currentRun)}
+        ${this.renderGhostRunners(data.ghosts)}
         ${this.renderTerritories(data.territories)}
+        ${this.renderChallenges(data.userStats)}
         ${this.renderWalletInfo(data.walletInfo)}
         ${this.renderRecentActivity(data.recentActivity)}
         ${this.renderAIInsights(data.aiInsights)}
@@ -212,7 +242,7 @@ export class UserDashboard {
 
   private renderPlayerStats(userStats: any): string {
     if (!userStats) return '<div class="dashboard-section"><h3>Player Stats</h3><p>No data available</p></div>';
-    
+
     return `
       <div class="dashboard-section">
         <h3>Player Stats</h3>
@@ -240,7 +270,7 @@ export class UserDashboard {
 
   private renderCurrentRun(currentRun: any): string {
     if (!currentRun) return '';
-    
+
     return `
       <div class="dashboard-section">
         <h3>Current Run</h3>
@@ -274,10 +304,10 @@ export class UserDashboard {
         </div>
       `;
     }
-    
+
     const territoryCount = territories.length;
     const totalValue = territories.reduce((sum, t) => sum + (t.estimatedReward || 0), 0);
-    
+
     return `
       <div class="dashboard-section">
         <div class="section-header">
@@ -315,11 +345,13 @@ export class UserDashboard {
                 <div class="territory-meta">
                   <span class="rarity-badge ${(t.rarity || 'common').toLowerCase()}">${t.rarity || 'Common'}</span>
                   <span class="territory-reward">+${t.estimatedReward || 0} $REALM</span>
+                  ${t.defenseStatus ? `<span class="defense-badge ${t.defenseStatus}">${t.defenseStatus}</span>` : ''}
                 </div>
               </div>
-              <button class="territory-action" data-action="show-territory-on-map" data-territory="${t.geohash}">
-                📍
-              </button>
+              <div class="territory-actions">
+                <button class="territory-action" data-action="show-territory-on-map" data-territory="${t.geohash}" title="View on Map">📍</button>
+                <button class="territory-action" data-action="manage-territory" data-territory="${t.geohash}" title="Manage">⚙️</button>
+              </div>
             </div>
           `).join('')}
         </div>
@@ -335,7 +367,7 @@ export class UserDashboard {
 
   private renderWalletInfo(walletInfo: any): string {
     if (!walletInfo) return '<div class="dashboard-section"><h3>Wallet</h3><p>Not connected</p></div>';
-    
+
     return `
       <div class="dashboard-section">
         <h3>Wallet</h3>
@@ -350,10 +382,10 @@ export class UserDashboard {
 
   private renderRecentActivity(recentActivity: any): string {
     if (!recentActivity) return '';
-    
+
     const lastRun = recentActivity.lastRun;
     const achievements = recentActivity.recentAchievements || [];
-    
+
     return `
       <div class="dashboard-section">
         <h3>Recent Activity</h3>
@@ -373,14 +405,93 @@ export class UserDashboard {
     `;
   }
 
+  private renderGhostRunners(ghosts: any[]): string {
+    if (!ghosts || ghosts.length === 0) {
+      return `
+        <div class="dashboard-section">
+          <h3>👻 Ghost Runners</h3>
+          <div class="empty-state">
+            <p>No ghost runners yet. Complete runs to unlock them!</p>
+            <button class="action-btn" data-action="ai.requestGhostRunner">Summon Ghost</button>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="dashboard-section">
+        <div class="section-header">
+          <h3>👻 Ghost Runners (${ghosts.length})</h3>
+          <button class="action-btn" data-action="manage-ghosts">Manage All</button>
+        </div>
+        <div class="ghost-list-horizontal">
+          ${ghosts.map(g => {
+      const isReady = !g.cooldownUntil || new Date(g.cooldownUntil) < new Date();
+      return `
+              <div class="ghost-card-compact">
+                <div class="ghost-avatar">${g.avatar || '👻'}</div>
+                <div class="ghost-info">
+                  <div class="ghost-name">${g.name}</div>
+                  <div class="ghost-meta">Lvl ${g.level} • ${g.type}</div>
+                </div>
+                <div class="ghost-status ${isReady ? 'ready' : 'cooldown'}">
+                  ${isReady ? 'Ready' : 'Cooldown'}
+                </div>
+                ${isReady ? `
+                  <button class="ghost-action-btn" data-action="ghost.deploy" data-ghost-id="${g.id}">Deploy</button>
+                ` : ''}
+              </div>
+            `;
+    }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderChallenges(userStats: any): string {
+    // Placeholder for active challenges since they aren't fully in service yet
+    return `
+      <div class="dashboard-section">
+        <div class="section-header">
+          <h3>⚔️ Active Challenges</h3>
+          <button class="action-btn" data-action="find-challenges">Find More</button>
+        </div>
+        <div class="challenges-list">
+          <div class="challenge-item">
+            <div class="challenge-icon">🏃</div>
+            <div class="challenge-info">
+              <div class="challenge-title">Daily Quest: 5k Run</div>
+              <div class="challenge-progress-bar">
+                <div class="progress-fill" style="width: 60%"></div>
+              </div>
+              <div class="challenge-meta">3.0 / 5.0 km</div>
+            </div>
+            <button class="challenge-claim-btn" disabled>In Progress</button>
+          </div>
+          <div class="challenge-item">
+            <div class="challenge-icon">🗺️</div>
+            <div class="challenge-info">
+              <div class="challenge-title">Weekly: Claim 3 Territories</div>
+              <div class="challenge-progress-bar">
+                <div class="progress-fill" style="width: 33%"></div>
+              </div>
+              <div class="challenge-meta">1 / 3 claimed</div>
+            </div>
+            <button class="challenge-claim-btn" disabled>In Progress</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   private renderAIInsights(aiInsights: any): string {
     if (!aiInsights) return '';
-    
+
     const tips = aiInsights.personalizedTips || [];
     const suggestedRoute = aiInsights.suggestedRoute;
-    
+
     if (tips.length === 0 && !suggestedRoute) return '';
-    
+
     return `
       <div class="dashboard-section">
         <h3>AI Insights</h3>
@@ -407,27 +518,27 @@ export class UserDashboard {
 
   private renderNotifications(notifications: any): string {
     if (!notifications) return '';
-    
+
     const notificationItems = [];
-    
+
     if (notifications.territoryEligible) {
       notificationItems.push('<div class="notification territory-eligible">Territory eligible for claiming!</div>');
     }
-    
+
     if (notifications.territoryClaimed) {
       notificationItems.push('<div class="notification territory-claimed">Territory claimed successfully!</div>');
     }
-    
+
     if (notifications.achievementUnlocked) {
       notificationItems.push(`<div class="notification achievement-unlocked">Achievement unlocked: ${notifications.achievementUnlocked}</div>`);
     }
-    
+
     if (notifications.levelUp) {
       notificationItems.push(`<div class="notification level-up">Level up! You are now level ${notifications.levelUp}</div>`);
     }
-    
+
     if (notificationItems.length === 0) return '';
-    
+
     return `
       <div class="dashboard-section">
         <h3>Notifications</h3>
@@ -482,7 +593,7 @@ export class UserDashboard {
       this.container.style.opacity = '1';
       this.container.style.pointerEvents = 'auto';
       this.container.style.zIndex = '2000'; // Above map and widgets
-      
+
       // Centered compact layout
       this.container.style.position = 'fixed';
       this.container.style.top = '50%';
@@ -495,16 +606,16 @@ export class UserDashboard {
       this.container.style.overflow = 'auto';
       this.container.style.transition = 'width 0.3s ease, height 0.3s ease';
       this.container.style.bottom = 'auto';
-      
+
       // No body classes needed for centered layout
       if (minimized) {
         this.container.classList.add('minimized-layout');
       } else {
         this.container.classList.remove('minimized-layout');
       }
-      
+
       console.log('UserDashboard: Removed hidden class and forced visibility');
-      
+
       // Check computed styles after forcing
       const computed = window.getComputedStyle(this.container);
       console.log('UserDashboard: After forcing - computed styles:', {
@@ -524,10 +635,10 @@ export class UserDashboard {
       this.container.style.visibility = '';
       this.container.style.opacity = '';
       this.container.style.pointerEvents = '';
-      
+
       // Remove classes
       this.container.classList.remove('minimized-layout');
-      
+
       console.log('UserDashboard: Added hidden class and removed inline styles');
     }
 
@@ -564,7 +675,7 @@ export class UserDashboard {
     if (this.unsubscribeDataUpdates) {
       this.unsubscribeDataUpdates();
     }
-    
+
     if (this.unsubscribeVisibilityChanges) {
       this.unsubscribeVisibilityChanges();
     }

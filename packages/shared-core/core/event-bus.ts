@@ -207,6 +207,15 @@ export interface AppEvents extends Web3Events {
   "dashboard:dataUpdated": { data: any; state: any };
   "dashboard:visibilityChanged": { visible: boolean; minimized: boolean };
   "dashboard:realTimeDataUpdated": { currentRun: any; lastUpdated: number };
+  "dashboard:territoriesFiltered": { filter: string };
+  "dashboard:openWidget": { widgetId: string };
+  "dashboard:showTerritoriesOnMap": Record<string, never>;
+  "dashboard:showTerritoryOnMap": { territoryId: string };
+  "dashboard:viewAllTerritories": Record<string, never>;
+  "ui:showGhostManagement": Record<string, never>;
+  "ghost:deployRequested": { ghostId: string };
+  "ui:showChallenges": Record<string, never>;
+  "territory:manage": { territoryId: string };
   // Cross-chain events
   "crosschain:territoryClaimRequested": {
     territoryData: any;
@@ -278,13 +287,13 @@ export interface AppEvents extends Web3Events {
   // Territory activity events
   "territory:activityUpdated": { territory: any };
   "territory:vulnerable": { territory: any };
-  }
+}
 
 export class EventBus {
   private static instance: EventBus;
   private listeners: Map<keyof AppEvents, Set<EventCallback>> = new Map();
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): EventBus {
     if (!EventBus.instance) {
