@@ -13,7 +13,10 @@ export class DistanceResult {
  * @param point2 Second point {lat, lng}
  * @returns Distance in meters
  */
-export function calculateDistance(point1: {lat: number, lng: number}, point2: {lat: number, lng: number}): number {
+export function calculateDistance(
+  point1: { lat: number; lng: number },
+  point2: { lat: number; lng: number }
+): number {
   const from = turf.point([point1.lng, point1.lat]);
   const to = turf.point([point2.lng, point2.lat]);
   return turf.distance(from, to, { units: 'meters' });
@@ -28,7 +31,7 @@ export function calculateDistance(point1: {lat: number, lng: number}, point2: {l
 export function getFormattedDistance(lengthInMeters: number, useMetric: boolean): DistanceResult {
   let rounded = '';
   let units = '';
-  const distance = useMetric ? lengthInMeters : lengthInMeters * .000621371;
+  const distance = useMetric ? lengthInMeters : lengthInMeters * 0.000621371;
 
   if (useMetric) {
     if (distance < 1000) {
@@ -48,7 +51,7 @@ export function getFormattedDistance(lengthInMeters: number, useMetric: boolean)
     distance: distance,
     roundedDistance: rounded,
     units: units,
-    formatted: `${rounded}${units}`
+    formatted: `${rounded}${units}`,
   } as DistanceResult;
 }
 

@@ -16,14 +16,14 @@ interface RunRealmIntegrationProps {
 export const RunRealmIntegration: React.FC<RunRealmIntegrationProps> = ({
   containerId = 'mapbox-container',
   gameMode = true,
-  showWalletButton = true
+  showWalletButton = true,
 }) => {
   const appRef = useRef<RunRealmApp | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number }>({
     lat: 40.7128,
-    lng: -74.0060 // Default to NYC
+    lng: -74.006, // Default to NYC
   });
   const [selectedTerritory, setSelectedTerritory] = useState<any>(null);
 
@@ -57,7 +57,7 @@ export const RunRealmIntegration: React.FC<RunRealmIntegrationProps> = ({
             (position) => {
               setCurrentPosition({
                 lat: position.coords.latitude,
-                lng: position.coords.longitude
+                lng: position.coords.longitude,
               });
             },
             (error) => {
@@ -107,7 +107,7 @@ export const RunRealmIntegration: React.FC<RunRealmIntegrationProps> = ({
   return (
     <div className="runrealm-integration">
       {/* Map container will be created programmatically */}
-      
+
       {/* GameFi UI (Territory Dashboard) */}
       {isInitialized && gameMode && (
         <TerritoryDashboard
@@ -124,10 +124,7 @@ export const RunRealmIntegration: React.FC<RunRealmIntegrationProps> = ({
           <div className="wallet-panel">
             <h3>🚀 Ready to Earn $REALM?</h3>
             <p>Connect your wallet to start claiming territories and earning rewards!</p>
-            <button
-              className="connect-wallet-btn"
-              onClick={handleConnectWallet}
-            >
+            <button type="button" className="connect-wallet-btn" onClick={handleConnectWallet}>
               🦊 Connect Wallet
             </button>
           </div>
@@ -136,11 +133,22 @@ export const RunRealmIntegration: React.FC<RunRealmIntegrationProps> = ({
 
       {/* Territory Details Modal */}
       {selectedTerritory && (
-        <div className="territory-modal-overlay" onClick={() => setSelectedTerritory(null)}>
-          <div className="territory-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="territory-modal-overlay" role="presentation">
+          <div
+            className="territory-modal"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setSelectedTerritory(null);
+              }
+            }}
+            role="dialog"
+            tabIndex={-1}
+          >
             <div className="modal-header">
               <h3>🗺️ Territory Details</h3>
-              <button 
+              <button
+                type="button"
                 className="close-modal"
                 onClick={() => setSelectedTerritory(null)}
               >
@@ -149,13 +157,22 @@ export const RunRealmIntegration: React.FC<RunRealmIntegrationProps> = ({
             </div>
             <div className="modal-content">
               <div className="territory-info">
-                <div><strong>Geohash:</strong> {selectedTerritory.geohash}</div>
-                <div><strong>Difficulty:</strong> {
-                  selectedTerritory.difficulty < 33 ? 'Easy' :
-                  selectedTerritory.difficulty < 67 ? 'Medium' : 'Hard'
-                }</div>
-                <div><strong>Estimated Reward:</strong> +{selectedTerritory.estimatedReward} $REALM</div>
-                <div><strong>Rarity:</strong> 
+                <div>
+                  <strong>Geohash:</strong> {selectedTerritory.geohash}
+                </div>
+                <div>
+                  <strong>Difficulty:</strong>{' '}
+                  {selectedTerritory.difficulty < 33
+                    ? 'Easy'
+                    : selectedTerritory.difficulty < 67
+                      ? 'Medium'
+                      : 'Hard'}
+                </div>
+                <div>
+                  <strong>Estimated Reward:</strong> +{selectedTerritory.estimatedReward} $REALM
+                </div>
+                <div>
+                  <strong>Rarity:</strong>
                   <span className={`rarity-badge ${selectedTerritory.rarity}`}>
                     {selectedTerritory.rarity}
                   </span>

@@ -16,21 +16,21 @@ function createTestServer() {
   process.env.STRAVA_VERIFY_TOKEN = 'test_verify_token';
 
   // Add webhook endpoints (copied from server.js)
-  app.get("/api/strava/webhook", (req, res) => {
+  app.get('/api/strava/webhook', (req, res) => {
     const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
     const verifyToken = process.env.STRAVA_VERIFY_TOKEN || 'runrealm_webhook_verify';
-    
+
     if (mode === 'subscribe' && token === verifyToken) {
       return res.json({ 'hub.challenge': challenge });
     }
-    
+
     return res.status(403).json({ error: 'Validation failed' });
   });
 
-  app.post("/api/strava/webhook", (req, res) => {
+  app.post('/api/strava/webhook', (req, res) => {
     // Acknowledge immediately
     res.status(200).end();
-    
+
     // Store event for testing
     app.lastWebhookEvent = req.body;
   });
@@ -47,43 +47,37 @@ describe('Strava Webhook Endpoints', () => {
 
   describe('GET /api/strava/webhook (Validation)', () => {
     test('should validate webhook subscription with correct parameters', async () => {
-      const response = await request(app)
-        .get('/api/strava/webhook')
-        .query({
-          'hub.mode': 'subscribe',
-          'hub.verify_token': 'test_verify_token',
-          'hub.challenge': 'test_challenge_123'
-        });
+      const response = await request(app).get('/api/strava/webhook').query({
+        'hub.mode': 'subscribe',
+        'hub.verify_token': 'test_verify_token',
+        'hub.challenge': 'test_challenge_123',
+      });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
-        'hub.challenge': 'test_challenge_123'
+        'hub.challenge': 'test_challenge_123',
       });
     });
 
     test('should reject validation with incorrect verify token', async () => {
-      const response = await request(app)
-        .get('/api/strava/webhook')
-        .query({
-          'hub.mode': 'subscribe',
-          'hub.verify_token': 'wrong_token',
-          'hub.challenge': 'test_challenge_123'
-        });
+      const response = await request(app).get('/api/strava/webhook').query({
+        'hub.mode': 'subscribe',
+        'hub.verify_token': 'wrong_token',
+        'hub.challenge': 'test_challenge_123',
+      });
 
       expect(response.status).toBe(403);
       expect(response.body).toEqual({
-        error: 'Validation failed'
+        error: 'Validation failed',
       });
     });
 
     test('should reject validation with incorrect mode', async () => {
-      const response = await request(app)
-        .get('/api/strava/webhook')
-        .query({
-          'hub.mode': 'unsubscribe',
-          'hub.verify_token': 'test_verify_token',
-          'hub.challenge': 'test_challenge_123'
-        });
+      const response = await request(app).get('/api/strava/webhook').query({
+        'hub.mode': 'unsubscribe',
+        'hub.verify_token': 'test_verify_token',
+        'hub.challenge': 'test_challenge_123',
+      });
 
       expect(response.status).toBe(403);
     });
@@ -97,12 +91,10 @@ describe('Strava Webhook Endpoints', () => {
         object_id: 1234567890,
         object_type: 'activity',
         owner_id: 12345,
-        subscription_id: 999999
+        subscription_id: 999999,
       };
 
-      const response = await request(app)
-        .post('/api/strava/webhook')
-        .send(webhookEvent);
+      const response = await request(app).post('/api/strava/webhook').send(webhookEvent);
 
       expect(response.status).toBe(200);
       expect(app.lastWebhookEvent).toEqual(webhookEvent);
@@ -118,13 +110,11 @@ describe('Strava Webhook Endpoints', () => {
         subscription_id: 999999,
         updates: {
           title: 'Updated Run Title',
-          private: 'false'
-        }
+          private: 'false',
+        },
       };
 
-      const response = await request(app)
-        .post('/api/strava/webhook')
-        .send(webhookEvent);
+      const response = await request(app).post('/api/strava/webhook').send(webhookEvent);
 
       expect(response.status).toBe(200);
       expect(app.lastWebhookEvent).toEqual(webhookEvent);
@@ -137,12 +127,10 @@ describe('Strava Webhook Endpoints', () => {
         object_id: 1234567890,
         object_type: 'activity',
         owner_id: 12345,
-        subscription_id: 999999
+        subscription_id: 999999,
       };
 
-      const response = await request(app)
-        .post('/api/strava/webhook')
-        .send(webhookEvent);
+      const response = await request(app).post('/api/strava/webhook').send(webhookEvent);
 
       expect(response.status).toBe(200);
       expect(app.lastWebhookEvent).toEqual(webhookEvent);
@@ -157,22 +145,18 @@ describe('Strava Webhook Endpoints', () => {
         owner_id: 12345,
         subscription_id: 999999,
         updates: {
-          authorized: 'false'
-        }
+          authorized: 'false',
+        },
       };
 
-      const response = await request(app)
-        .post('/api/strava/webhook')
-        .send(webhookEvent);
+      const response = await request(app).post('/api/strava/webhook').send(webhookEvent);
 
       expect(response.status).toBe(200);
       expect(app.lastWebhookEvent).toEqual(webhookEvent);
     });
 
     test('should handle malformed webhook events gracefully', async () => {
-      const response = await request(app)
-        .post('/api/strava/webhook')
-        .send('invalid json');
+      const response = await request(app).post('/api/strava/webhook').send('invalid json');
 
       // Should still return 200 to acknowledge receipt
       expect(response.status).toBe(200);
@@ -188,12 +172,12 @@ describe('StravaWebhookService', () => {
     // Mock the service for unit testing
     const mockService = {
       verifyToken: 'test_token',
-      handleValidation: function(mode, token, challenge) {
+      handleValidation: function (mode, token, challenge) {
         if (mode === 'subscribe' && token === this.verifyToken) {
           return { 'hub.challenge': challenge };
         }
         return null;
-      }
+      },
     };
 
     const result = mockService.handleValidation('subscribe', 'test_token', 'challenge123');

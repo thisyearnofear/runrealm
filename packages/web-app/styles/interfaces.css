@@ -95,7 +95,7 @@
 /* ===== LOCATION SERVICE - ENHANCED ===== */
 
 .location-btn {
-  background: linear-gradient(45deg, #4CAF50, #45a049);
+  background: linear-gradient(45deg, #4caf50, #45a049);
   color: white;
   border: none;
   border-radius: var(--radius-md);
@@ -111,9 +111,11 @@
 }
 
 .location-btn:hover {
-  background: linear-gradient(45deg, #45a049, #4CAF50);
+  background: linear-gradient(45deg, #45a049, #4caf50);
   transform: translateY(-2px);
-  box-shadow: var(--elevation-3), 0 4px 12px rgba(76, 175, 80, 0.3);
+  box-shadow:
+    var(--elevation-3),
+    0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 .location-options {
@@ -123,7 +125,7 @@
 }
 
 .location-option-btn {
-  background: linear-gradient(45deg, #2196F3, #1976D2);
+  background: linear-gradient(45deg, #2196f3, #1976d2);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
@@ -139,9 +141,11 @@
 }
 
 .location-option-btn:hover {
-  background: linear-gradient(45deg, #1976D2, #2196F3);
+  background: linear-gradient(45deg, #1976d2, #2196f3);
   transform: translateY(-2px);
-  box-shadow: var(--elevation-3), 0 6px 20px rgba(33, 150, 243, 0.3);
+  box-shadow:
+    var(--elevation-3),
+    0 6px 20px rgba(33, 150, 243, 0.3);
 }
 
 .location-option-btn:disabled {
@@ -167,8 +171,10 @@
 
 .location-search input:focus {
   outline: none;
-  border-color: #2196F3;
-  box-shadow: var(--elevation-2), 0 0 0 3px rgba(33, 150, 243, 0.1);
+  border-color: #2196f3;
+  box-shadow:
+    var(--elevation-2),
+    0 0 0 3px rgba(33, 150, 243, 0.1);
 }
 
 .search-results {
@@ -215,7 +221,7 @@
 /* ===== WALLET CONNECTION - ENHANCED ===== */
 
 .wallet-connect-btn {
-  background: linear-gradient(45deg, #FF6B35, #F7931E);
+  background: linear-gradient(45deg, #ff6b35, #f7931e);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
@@ -233,9 +239,11 @@
 }
 
 .wallet-connect-btn:hover {
-  background: linear-gradient(45deg, #F7931E, #FF6B35);
+  background: linear-gradient(45deg, #f7931e, #ff6b35);
   transform: translateY(-2px);
-  box-shadow: var(--elevation-3), 0 6px 20px rgba(255, 107, 53, 0.3);
+  box-shadow:
+    var(--elevation-3),
+    0 6px 20px rgba(255, 107, 53, 0.3);
 }
 
 .wallet-connected {
@@ -245,12 +253,12 @@
 }
 
 .wallet-address {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: var(--font-size-sm);
 }
 
 .connected-indicator {
-  color: #4CAF50;
+  color: #4caf50;
   font-size: var(--font-size-sm);
   animation: pulse 2s infinite;
 }
@@ -264,7 +272,7 @@
 /* Enhanced Wallet Provider Buttons */
 .connect-provider-btn,
 .install-provider-btn {
-  background: #2196F3;
+  background: #2196f3;
   color: white;
   border: none;
   border-radius: var(--radius-md);
@@ -277,17 +285,17 @@
 }
 
 .connect-provider-btn:hover {
-  background: #1976D2;
+  background: #1976d2;
   transform: translateY(-1px);
   box-shadow: var(--elevation-2);
 }
 
 .install-provider-btn {
-  background: #FF9800;
+  background: #ff9800;
 }
 
 .install-provider-btn:hover {
-  background: #F57C00;
+  background: #f57c00;
   transform: translateY(-1px);
   box-shadow: var(--elevation-2);
 }
@@ -344,7 +352,7 @@
 }
 
 .address {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: var(--font-size-md);
 }
 
@@ -393,7 +401,7 @@
   border-radius: var(--radius-xl);
   padding: var(--space-lg);
   color: white;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   max-width: 600px;
   margin: var(--space-lg) auto;
   box-shadow: var(--elevation-4);
@@ -508,7 +516,9 @@
 .demo-btn.primary:hover {
   background: linear-gradient(135deg, var(--color-primary), #00e676);
   transform: translateY(-2px);
-  box-shadow: var(--elevation-3), 0 8px 24px var(--glow-primary);
+  box-shadow:
+    var(--elevation-3),
+    0 8px 24px var(--glow-primary);
 }
 
 /* Enhanced Demo Status */
@@ -590,7 +600,7 @@
   color: var(--color-primary);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 
 /* ===== MAIN UI INTERFACE - ENHANCED ===== */
@@ -790,7 +800,9 @@
     box-shadow: var(--elevation-1);
   }
   50% {
-    box-shadow: var(--elevation-3), 0 0 30px var(--glow-success);
+    box-shadow:
+      var(--elevation-3),
+      0 0 30px var(--glow-success);
   }
   100% {
     box-shadow: var(--elevation-1);

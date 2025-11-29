@@ -3,18 +3,18 @@
  * Handles geolocation, address search, and user location preferences
  */
 
-import { BaseService } from "../core/base-service";
-import { GeocodingService } from "../services/geocoding-service";
-import { PreferenceService } from "./preference-service";
-import { DOMService } from "./dom-service";
-import { UIService } from "./ui-service";
+import { BaseService } from '../core/base-service';
+import { GeocodingService } from '../services/geocoding-service';
+import { DOMService } from './dom-service';
+import { PreferenceService } from './preference-service';
+import { UIService } from './ui-service';
 
 export interface LocationInfo {
   lat: number;
   lng: number;
   accuracy?: number;
   address?: string;
-  source: "gps" | "search" | "manual" | "default";
+  source: 'gps' | 'search' | 'manual' | 'default';
   timestamp: number;
 }
 
@@ -48,13 +48,13 @@ export class LocationService extends BaseService {
 
   protected async onInitialize(): Promise<void> {
     // Initialize dependencies
-    this.geocodingService = new (
-      await import("../services/geocoding-service")
-    ).GeocodingService(this.config.getConfig().mapbox.accessToken);
+    this.geocodingService = new (await import('../services/geocoding-service')).GeocodingService(
+      this.config.getConfig().mapbox.accessToken
+    );
     this.preferenceService = new (
-      await import("../services/preference-service")
+      await import('../services/preference-service')
     ).PreferenceService();
-    const { DOMService } = await import("./dom-service");
+    const { DOMService } = await import('./dom-service');
     this.domService = DOMService.getInstance();
 
     this.createLocationUI();
@@ -63,8 +63,8 @@ export class LocationService extends BaseService {
     // Try to get last known location or default
     await this.loadLastKnownLocation();
 
-    this.safeEmit("service:initialized", {
-      service: "LocationService",
+    this.safeEmit('service:initialized', {
+      service: 'LocationService',
       success: true,
     });
   }
@@ -73,22 +73,20 @@ export class LocationService extends BaseService {
    * Check if location permission is granted
    * Returns 'granted', 'denied', 'prompt', or 'unknown'
    */
-  public async checkLocationPermission(): Promise<
-    "granted" | "denied" | "prompt" | "unknown"
-  > {
+  public async checkLocationPermission(): Promise<'granted' | 'denied' | 'prompt' | 'unknown'> {
     if (!navigator.geolocation) {
-      return "unknown";
+      return 'unknown';
     }
 
     // Try to use Permissions API if available (more accurate)
-    if ("permissions" in navigator) {
+    if ('permissions' in navigator) {
       try {
         const result = await (navigator.permissions as any).query({
-          name: "geolocation",
+          name: 'geolocation',
         });
-        return result.state as "granted" | "denied" | "prompt";
+        return result.state as 'granted' | 'denied' | 'prompt';
       } catch (error) {
-        console.warn("Permissions API not fully supported:", error);
+        console.warn('Permissions API not fully supported:', error);
       }
     }
 
@@ -96,20 +94,20 @@ export class LocationService extends BaseService {
     // We'll use a quick check that times out fast
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
-        resolve("prompt"); // If it times out, assume prompt state
+        resolve('prompt'); // If it times out, assume prompt state
       }, 100);
 
       navigator.geolocation.getCurrentPosition(
         () => {
           clearTimeout(timeout);
-          resolve("granted");
+          resolve('granted');
         },
         (error) => {
           clearTimeout(timeout);
           if (error.code === error.PERMISSION_DENIED) {
-            resolve("denied");
+            resolve('denied');
           } else {
-            resolve("prompt");
+            resolve('prompt');
           }
         },
         { timeout: 50, maximumAge: 0 }
@@ -125,8 +123,8 @@ export class LocationService extends BaseService {
   public async requestLocationPermission(): Promise<boolean> {
     if (!navigator.geolocation) {
       const uiService = UIService.getInstance();
-      uiService.showToast("📍 Geolocation is not supported by this browser", {
-        type: "error",
+      uiService.showToast('📍 Geolocation is not supported by this browser', {
+        type: 'error',
         duration: 4000,
       });
       return false;
@@ -136,7 +134,7 @@ export class LocationService extends BaseService {
       const location = await this.getCurrentLocation(true, false);
       return location !== null;
     } catch (error) {
-      console.warn("Failed to request location permission:", error);
+      console.warn('Failed to request location permission:', error);
       return false;
     }
   }
@@ -147,19 +145,19 @@ export class LocationService extends BaseService {
    */
   public showLocationPermissionPrompt(): void {
     if (!this.domService) {
-      console.warn("DOMService not available for location permission prompt");
+      console.warn('DOMService not available for location permission prompt');
       return;
     }
 
     const uiService = UIService.getInstance();
     if (!uiService) {
-      console.warn("UIService not available for location permission prompt");
+      console.warn('UIService not available for location permission prompt');
       return;
     }
 
     // Create a modal/prompt asking for location permission
-    const promptModal = this.domService.createElement("div", {
-      className: "location-permission-prompt-overlay",
+    const promptModal = this.domService.createElement('div', {
+      className: 'location-permission-prompt-overlay',
       innerHTML: `
         <div class="location-permission-prompt">
           <div class="prompt-header">
@@ -190,9 +188,9 @@ export class LocationService extends BaseService {
     });
 
     // Add styles if not already present
-    if (!document.querySelector("#location-permission-prompt-styles")) {
-      this.domService.createElement("style", {
-        id: "location-permission-prompt-styles",
+    if (!document.querySelector('#location-permission-prompt-styles')) {
+      this.domService.createElement('style', {
+        id: 'location-permission-prompt-styles',
         textContent: `
           .location-permission-prompt-overlay {
             position: fixed;
@@ -322,34 +320,29 @@ export class LocationService extends BaseService {
     if (this.domService) {
       this.domService.delegate(
         promptModal,
-        "#request-location-permission-btn",
-        "click",
+        '#request-location-permission-btn',
+        'click',
         async () => {
           promptModal.remove();
           const granted = await this.requestLocationPermission();
           if (granted && uiService) {
-            uiService.showToast("✅ Location access enabled!", {
-              type: "success",
+            uiService.showToast('✅ Location access enabled!', {
+              type: 'success',
               duration: 3000,
             });
           }
         }
       );
 
-      this.domService.delegate(
-        promptModal,
-        "#dismiss-location-prompt-btn",
-        "click",
-        () => {
-          promptModal.remove();
-        }
-      );
+      this.domService.delegate(promptModal, '#dismiss-location-prompt-btn', 'click', () => {
+        promptModal.remove();
+      });
 
       // Close on backdrop click
       this.domService.delegate(
         promptModal,
-        ".location-permission-prompt-overlay",
-        "click",
+        '.location-permission-prompt-overlay',
+        'click',
         (event) => {
           if (event.target === promptModal) {
             promptModal.remove();
@@ -362,35 +355,30 @@ export class LocationService extends BaseService {
   /**
    * Check if location permission is permanently blocked and show helpful instructions
    */
-  private async checkAndHandleBlockedPermission(
-    uiService: UIService
-  ): Promise<void> {
+  private async checkAndHandleBlockedPermission(uiService: UIService): Promise<void> {
     try {
       const permissionStatus = await this.checkLocationPermission();
 
-      if (permissionStatus === "denied") {
+      if (permissionStatus === 'denied') {
         // Permission is permanently blocked - show detailed instructions
         this.showPermissionBlockedInstructions(uiService);
       } else {
         // Permission might be in prompt state - show standard message with action button
-        uiService.showToast(
-          "📍 Location access needed. Click to enable location.",
-          {
-            type: "warning",
-            duration: 6000,
-            action: {
-              text: "Enable",
-              callback: () => this.showLocationPermissionPrompt(),
-            },
-          }
-        );
+        uiService.showToast('📍 Location access needed. Click to enable location.', {
+          type: 'warning',
+          duration: 6000,
+          action: {
+            text: 'Enable',
+            callback: () => this.showLocationPermissionPrompt(),
+          },
+        });
       }
     } catch (error) {
       // Fallback to standard message if check fails
-      uiService.showToast(
-        "📍 Location access needed. Enable location in your browser settings.",
-        { type: "warning", duration: 5000 }
-      );
+      uiService.showToast('📍 Location access needed. Enable location in your browser settings.', {
+        type: 'warning',
+        duration: 5000,
+      });
     }
   }
 
@@ -401,8 +389,8 @@ export class LocationService extends BaseService {
     if (!this.domService) return;
 
     // Create a helpful modal with instructions
-    const instructionsModal = this.domService.createElement("div", {
-      className: "location-permission-blocked-overlay",
+    const instructionsModal = this.domService.createElement('div', {
+      className: 'location-permission-blocked-overlay',
       innerHTML: `
         <div class="location-permission-blocked-modal">
           <div class="blocked-header">
@@ -445,9 +433,9 @@ export class LocationService extends BaseService {
     });
 
     // Add styles if not already present
-    if (!document.querySelector("#location-permission-blocked-styles")) {
-      this.domService.createElement("style", {
-        id: "location-permission-blocked-styles",
+    if (!document.querySelector('#location-permission-blocked-styles')) {
+      this.domService.createElement('style', {
+        id: 'location-permission-blocked-styles',
         textContent: `
           .location-permission-blocked-overlay {
             position: fixed;
@@ -606,42 +594,37 @@ export class LocationService extends BaseService {
     if (this.domService) {
       this.domService.delegate(
         instructionsModal,
-        "#dismiss-blocked-instructions-btn",
-        "click",
+        '#dismiss-blocked-instructions-btn',
+        'click',
         () => {
           instructionsModal.remove();
         }
       );
 
-      this.domService.delegate(
-        instructionsModal,
-        "#try-again-location-btn",
-        "click",
-        async () => {
-          instructionsModal.remove();
-          // Wait a moment for user to enable permission, then try again
-          setTimeout(async () => {
-            const granted = await this.requestLocationPermission();
-            if (granted) {
-              uiService.showToast("✅ Location access enabled!", {
-                type: "success",
-                duration: 3000,
-              });
-            } else {
-              uiService.showToast(
-                "📍 Please enable location in your browser settings and refresh the page.",
-                { type: "info", duration: 5000 }
-              );
-            }
-          }, 1000);
-        }
-      );
+      this.domService.delegate(instructionsModal, '#try-again-location-btn', 'click', async () => {
+        instructionsModal.remove();
+        // Wait a moment for user to enable permission, then try again
+        setTimeout(async () => {
+          const granted = await this.requestLocationPermission();
+          if (granted) {
+            uiService.showToast('✅ Location access enabled!', {
+              type: 'success',
+              duration: 3000,
+            });
+          } else {
+            uiService.showToast(
+              '📍 Please enable location in your browser settings and refresh the page.',
+              { type: 'info', duration: 5000 }
+            );
+          }
+        }, 1000);
+      });
 
       // Close on backdrop click
       this.domService.delegate(
         instructionsModal,
-        ".location-permission-blocked-overlay",
-        "click",
+        '.location-permission-blocked-overlay',
+        'click',
         (event) => {
           if (event.target === instructionsModal) {
             instructionsModal.remove();
@@ -662,7 +645,7 @@ export class LocationService extends BaseService {
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
         if (!silent) {
-          console.warn("Geolocation is not supported by this browser");
+          console.warn('Geolocation is not supported by this browser');
         }
         resolve(null);
         return;
@@ -680,7 +663,7 @@ export class LocationService extends BaseService {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
             accuracy: position.coords.accuracy,
-            source: "gps",
+            source: 'gps',
             timestamp: Date.now(),
           };
 
@@ -696,7 +679,7 @@ export class LocationService extends BaseService {
               }
             }
           } catch (error) {
-            console.warn("Failed to get address for location:", error);
+            console.warn('Failed to get address for location:', error);
           }
 
           this.setCurrentLocation(locationInfo);
@@ -704,21 +687,21 @@ export class LocationService extends BaseService {
         },
         (error) => {
           // Handle errors gracefully without throwing
-          let message = "Failed to get location";
-          let errorType = "unknown";
+          let message = 'Failed to get location';
+          let errorType = 'unknown';
 
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              message = "Location access denied by user";
-              errorType = "permission_denied";
+              message = 'Location access denied by user';
+              errorType = 'permission_denied';
               break;
             case error.POSITION_UNAVAILABLE:
-              message = "Location information unavailable";
-              errorType = "position_unavailable";
+              message = 'Location information unavailable';
+              errorType = 'position_unavailable';
               break;
             case error.TIMEOUT:
-              message = "Location request timed out";
-              errorType = "timeout";
+              message = 'Location request timed out';
+              errorType = 'timeout';
               break;
           }
 
@@ -730,18 +713,18 @@ export class LocationService extends BaseService {
               const uiService = UIService.getInstance();
               if (!uiService) return;
 
-              if (errorType === "permission_denied") {
+              if (errorType === 'permission_denied') {
                 // Check if permission is permanently blocked and show helpful instructions
                 this.checkAndHandleBlockedPermission(uiService);
               } else {
                 uiService.showToast(`📍 ${message}`, {
-                  type: "info",
+                  type: 'info',
                   duration: 4000,
                 });
               }
             } catch (uiError) {
               // UIService not available, just log
-              console.warn("Could not show location error toast:", uiError);
+              console.warn('Could not show location error toast:', uiError);
             }
           }
 
@@ -759,7 +742,7 @@ export class LocationService extends BaseService {
   public async searchLocations(query: string): Promise<LocationSearchResult[]> {
     try {
       if (!this.geocodingService) {
-        console.warn("Geocoding service not initialized");
+        console.warn('Geocoding service not initialized');
         return [];
       }
       const results = await this.geocodingService.searchPlaces(query, 10);
@@ -767,12 +750,11 @@ export class LocationService extends BaseService {
         name: result.name,
         lat: result.center[1],
         lng: result.center[0],
-        country: result.context?.find((c: any) => c.id.includes("country"))
-          ?.text,
-        region: result.context?.find((c: any) => c.id.includes("region"))?.text,
+        country: result.context?.find((c: any) => c.id.includes('country'))?.text,
+        region: result.context?.find((c: any) => c.id.includes('region'))?.text,
       }));
     } catch (error) {
-      console.error("Location search failed:", error);
+      console.error('Location search failed:', error);
       return [];
     }
   }
@@ -785,7 +767,7 @@ export class LocationService extends BaseService {
       lat,
       lng,
       address,
-      source: "manual",
+      source: 'manual',
       timestamp: Date.now(),
     };
 
@@ -800,8 +782,8 @@ export class LocationService extends BaseService {
       this.createLocationModal();
     }
 
-    this.locationModal!.style.display = "flex";
-    document.body.classList.add("modal-open");
+    this.locationModal!.style.display = 'flex';
+    document.body.classList.add('modal-open');
 
     // Focus first focusable element in modal
     setTimeout(() => {
@@ -819,11 +801,11 @@ export class LocationService extends BaseService {
    */
   public hideLocationModal(): void {
     if (this.locationModal) {
-      this.locationModal.style.display = "none";
-      document.body.classList.remove("modal-open");
+      this.locationModal.style.display = 'none';
+      document.body.classList.remove('modal-open');
 
       // Return focus to the button that opened the modal
-      const locationButton = document.getElementById("location-button");
+      const locationButton = document.getElementById('location-button');
       if (locationButton) {
         locationButton.focus();
       }
@@ -849,14 +831,14 @@ export class LocationService extends BaseService {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
           accuracy: position.coords.accuracy,
-          source: "gps",
+          source: 'gps',
           timestamp: Date.now(),
         };
 
         this.setCurrentLocation(locationInfo);
       },
       (error) => {
-        console.warn("Location tracking error:", error);
+        console.warn('Location tracking error:', error);
       },
       {
         enableHighAccuracy: true,
@@ -895,28 +877,20 @@ export class LocationService extends BaseService {
     // Update location marker on map if AnimationService is available
     try {
       const animationService = (window as any).RunRealm?.services?.animation;
-      if (
-        animationService &&
-        typeof animationService.updateUserLocationMarker === "function"
-      ) {
-        animationService.updateUserLocationMarker(
-          locationInfo.lng,
-          locationInfo.lat
-        );
+      if (animationService && typeof animationService.updateUserLocationMarker === 'function') {
+        animationService.updateUserLocationMarker(locationInfo.lng, locationInfo.lat);
       }
     } catch (error) {
-      console.warn("LocationService: Failed to update location marker:", error);
+      console.warn('LocationService: Failed to update location marker:', error);
     }
 
     // Emit location change event
-    this.safeEmit("location:changed", locationInfo);
+    this.safeEmit('location:changed', locationInfo);
   }
 
   private async loadLastKnownLocation(): Promise<void> {
     if (!this.preferenceService) {
-      console.warn(
-        "Preference service not initialized, cannot load last known location"
-      );
+      console.warn('Preference service not initialized, cannot load last known location');
       return;
     }
     const lastFocus = this.preferenceService.getLastOrDefaultFocus();
@@ -924,31 +898,29 @@ export class LocationService extends BaseService {
     this.currentLocation = {
       lat: lastFocus.lat,
       lng: lastFocus.lng,
-      source: "default",
+      source: 'default',
       timestamp: Date.now(),
     };
   }
 
   private createLocationUI(): void {
     if (!this.domService) {
-      console.warn(
-        "LocationService: DOMService not available, skipping UI creation"
-      );
+      console.warn('LocationService: DOMService not available, skipping UI creation');
       return;
     }
 
     // Create location button in the UI
-    const locationButton = this.domService.createElement("button", {
-      id: "location-button",
-      className: "location-btn control-btn",
-      innerHTML: "📍 Set Location",
+    const locationButton = this.domService.createElement('button', {
+      id: 'location-button',
+      className: 'location-btn control-btn',
+      innerHTML: '📍 Set Location',
       attributes: {
-        title: "Set your location",
+        title: 'Set your location',
       },
     });
 
     // Add to controls area
-    const controlsContainer = document.querySelector(".controls");
+    const controlsContainer = document.querySelector('.controls');
     if (controlsContainer) {
       controlsContainer.appendChild(locationButton);
     }
@@ -956,15 +928,13 @@ export class LocationService extends BaseService {
 
   private createLocationModal(): void {
     if (!this.domService) {
-      console.warn(
-        "LocationService: DOMService not available, cannot create modal"
-      );
+      console.warn('LocationService: DOMService not available, cannot create modal');
       return;
     }
 
-    this.locationModal = this.domService.createElement("div", {
-      id: "location-modal",
-      className: "location-modal-overlay modal-overlay",
+    this.locationModal = this.domService.createElement('div', {
+      id: 'location-modal',
+      className: 'location-modal-overlay modal-overlay',
       innerHTML: `
         <div class="location-modal">
           <div class="modal-header">
@@ -994,14 +964,12 @@ export class LocationService extends BaseService {
                 <div class="location-display">
                   <strong>Current:</strong> ${
                     this.currentLocation.address ||
-                    `${this.currentLocation.lat.toFixed(
-                      4
-                    )}, ${this.currentLocation.lng.toFixed(4)}`
+                    `${this.currentLocation.lat.toFixed(4)}, ${this.currentLocation.lng.toFixed(4)}`
                   }
                   <small>(${this.currentLocation.source})</small>
                 </div>
               `
-                  : ""
+                  : ''
               }
             </div>
           </div>
@@ -1015,79 +983,57 @@ export class LocationService extends BaseService {
 
   private setupEventHandlers(): void {
     if (!this.domService) {
-      console.warn(
-        "LocationService: DOMService not available, skipping event handlers"
-      );
+      console.warn('LocationService: DOMService not available, skipping event handlers');
       return;
     }
 
     // Location button click
-    this.domService.delegate(document.body, "#location-button", "click", () => {
+    this.domService.delegate(document.body, '#location-button', 'click', () => {
       this.showLocationModal();
     });
 
     // Modal close
-    this.domService.delegate(
-      document.body,
-      "#close-location-modal",
-      "click",
-      () => {
-        this.hideLocationModal();
-      }
-    );
+    this.domService.delegate(document.body, '#close-location-modal', 'click', () => {
+      this.hideLocationModal();
+    });
 
     // Close modal when clicking on backdrop
-    this.domService.delegate(
-      document.body,
-      ".location-modal-overlay",
-      "click",
-      (event) => {
-        if (event.target === this.locationModal) {
-          this.hideLocationModal();
-        }
+    this.domService.delegate(document.body, '.location-modal-overlay', 'click', (event) => {
+      if (event.target === this.locationModal) {
+        this.hideLocationModal();
       }
-    );
+    });
 
     // GPS button
-    this.domService.delegate(
-      document.body,
-      "#use-gps-btn",
-      "click",
-      async () => {
-        try {
-          const gpsBtn = document.getElementById(
-            "use-gps-btn"
-          ) as HTMLButtonElement;
-          gpsBtn.textContent = "🔄 Getting location...";
-          gpsBtn.disabled = true;
+    this.domService.delegate(document.body, '#use-gps-btn', 'click', async () => {
+      try {
+        const gpsBtn = document.getElementById('use-gps-btn') as HTMLButtonElement;
+        gpsBtn.textContent = '🔄 Getting location...';
+        gpsBtn.disabled = true;
 
-          const location = await this.getCurrentLocation(false, false);
-          if (location) {
-            this.hideLocationModal();
-          } else {
-            // Error already shown via toast, just reset button
-          }
-
-          gpsBtn.textContent = "🛰️ Use GPS Location";
-          gpsBtn.disabled = false;
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
-          alert(`Failed to get GPS location: ${errorMessage}`);
-          const gpsBtn = document.getElementById(
-            "use-gps-btn"
-          ) as HTMLButtonElement;
-          gpsBtn.textContent = "🛰️ Use GPS Location";
-          gpsBtn.disabled = false;
+        const location = await this.getCurrentLocation(false, false);
+        if (location) {
+          this.hideLocationModal();
+        } else {
+          // Error already shown via toast, just reset button
         }
+
+        gpsBtn.textContent = '🛰️ Use GPS Location';
+        gpsBtn.disabled = false;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        alert(`Failed to get GPS location: ${errorMessage}`);
+        const gpsBtn = document.getElementById('use-gps-btn') as HTMLButtonElement;
+        gpsBtn.textContent = '🛰️ Use GPS Location';
+        gpsBtn.disabled = false;
       }
-    );
+    });
 
     // Search input
     this.domService.delegate(
       document.body,
-      "#location-search-input",
-      "input",
+      '#location-search-input',
+      'input',
       this.debounce(async (event: Event) => {
         const input = event.target as HTMLInputElement;
         const query = input.value.trim();
@@ -1103,35 +1049,30 @@ export class LocationService extends BaseService {
     );
 
     // Keyboard navigation for modals
-    document.addEventListener("keydown", (event) => {
+    document.addEventListener('keydown', (event) => {
       // Close modal with Escape key
       if (
-        event.key === "Escape" &&
+        event.key === 'Escape' &&
         this.locationModal &&
-        this.locationModal.style.display === "flex"
+        this.locationModal.style.display === 'flex'
       ) {
         this.hideLocationModal();
       }
 
       // Trap focus within modal when open
-      if (this.locationModal && this.locationModal.style.display === "flex") {
+      if (this.locationModal && this.locationModal.style.display === 'flex') {
         const focusableElements = this.locationModal.querySelectorAll(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
 
         const firstElement = focusableElements[0] as HTMLElement;
-        const lastElement = focusableElements[
-          focusableElements.length - 1
-        ] as HTMLElement;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
 
-        if (event.key === "Tab") {
+        if (event.key === 'Tab') {
           if (event.shiftKey && document.activeElement === firstElement) {
             event.preventDefault();
             lastElement.focus();
-          } else if (
-            !event.shiftKey &&
-            document.activeElement === lastElement
-          ) {
+          } else if (!event.shiftKey && document.activeElement === lastElement) {
             event.preventDefault();
             firstElement.focus();
           }
@@ -1141,12 +1082,11 @@ export class LocationService extends BaseService {
   }
 
   private displaySearchResults(results: LocationSearchResult[]): void {
-    const resultsContainer = document.getElementById("location-search-results");
+    const resultsContainer = document.getElementById('location-search-results');
     if (!resultsContainer) return;
 
     if (results.length === 0) {
-      resultsContainer.innerHTML =
-        '<div class="no-results">No locations found</div>';
+      resultsContainer.innerHTML = '<div class="no-results">No locations found</div>';
       return;
     }
 
@@ -1154,47 +1094,40 @@ export class LocationService extends BaseService {
       .map(
         (result) => `
       <div class="search-result-item" data-lat="${result.lat}" data-lng="${
-          result.lng
-        }" data-name="${result.name}">
+        result.lng
+      }" data-name="${result.name}">
         <div class="result-name">${result.name}</div>
         ${
           result.region || result.country
             ? `<div class="result-details">${[result.region, result.country]
                 .filter(Boolean)
-                .join(", ")}</div>`
-            : ""
+                .join(', ')}</div>`
+            : ''
         }
       </div>
     `
       )
-      .join("");
+      .join('');
 
     // Add click handlers for results
     if (this.domService) {
-      this.domService.delegate(
-        resultsContainer,
-        ".search-result-item",
-        "click",
-        (event) => {
-          const item = event.currentTarget as HTMLElement;
-          const lat = parseFloat(item.dataset.lat!);
-          const lng = parseFloat(item.dataset.lng!);
-          const name = item.dataset.name!;
+      this.domService.delegate(resultsContainer, '.search-result-item', 'click', (event) => {
+        const item = event.currentTarget as HTMLElement;
+        const lat = parseFloat(item.dataset.lat!);
+        const lng = parseFloat(item.dataset.lng!);
+        const name = item.dataset.name!;
 
-          console.log(
-            `LocationService: Setting location to ${name} (${lat}, ${lng})`
-          );
-          this.setManualLocation(lat, lng, name);
-          this.hideLocationModal();
-        }
-      );
+        console.log(`LocationService: Setting location to ${name} (${lat}, ${lng})`);
+        this.setManualLocation(lat, lng, name);
+        this.hideLocationModal();
+      });
     }
   }
 
   private clearSearchResults(): void {
-    const resultsContainer = document.getElementById("location-search-results");
+    const resultsContainer = document.getElementById('location-search-results');
     if (resultsContainer) {
-      resultsContainer.innerHTML = "";
+      resultsContainer.innerHTML = '';
     }
   }
 }

@@ -9,11 +9,7 @@ export class RateLimiter {
   private readonly refillIntervalMs: number;
   private readonly refillAmount: number;
 
-  constructor(
-    capacity: number,
-    refillIntervalMs: number,
-    refillAmount: number = capacity
-  ) {
+  constructor(capacity: number, refillIntervalMs: number, refillAmount: number = capacity) {
     this.capacity = capacity;
     this.refillIntervalMs = refillIntervalMs;
     this.refillAmount = refillAmount;
@@ -27,11 +23,11 @@ export class RateLimiter {
   private refill(): void {
     const now = Date.now();
     const elapsed = now - this.lastRefill;
-    
+
     if (elapsed >= this.refillIntervalMs) {
       const cycles = Math.floor(elapsed / this.refillIntervalMs);
       const tokensToAdd = cycles * this.refillAmount;
-      
+
       this.tokens = Math.min(this.capacity, this.tokens + tokensToAdd);
       this.lastRefill += cycles * this.refillIntervalMs;
     }
@@ -69,7 +65,7 @@ export class RateLimiter {
     return new Promise((resolve) => {
       const attempt = () => {
         this.refill();
-        
+
         if (this.tokens >= count) {
           this.tokens -= count;
           resolve();
@@ -81,11 +77,11 @@ export class RateLimiter {
             cyclesNeeded * this.refillIntervalMs,
             this.getTimeUntilRefill() + 100 // Add small buffer
           );
-          
+
           setTimeout(attempt, Math.max(100, waitTime));
         }
       };
-      
+
       attempt();
     });
   }
@@ -95,12 +91,12 @@ export class RateLimiter {
    */
   tryConsume(count: number = 1): boolean {
     this.refill();
-    
+
     if (this.tokens >= count) {
       this.tokens -= count;
       return true;
     }
-    
+
     return false;
   }
 
@@ -123,13 +119,13 @@ export class RateLimiter {
     refillIntervalMs: number;
   } {
     this.refill();
-    
+
     return {
       tokens: this.tokens,
       capacity: this.capacity,
       timeUntilRefill: this.getTimeUntilRefill(),
       refillAmount: this.refillAmount,
-      refillIntervalMs: this.refillIntervalMs
+      refillIntervalMs: this.refillIntervalMs,
     };
   }
 }
@@ -142,9 +138,9 @@ export class StravaRateLimiter extends RateLimiter {
   constructor() {
     // Conservative approach: 180 requests per 15 minutes to leave buffer
     super(
-      180,              // capacity
-      15 * 60 * 1000,   // 15 minutes in milliseconds
-      180               // refill amount
+      180, // capacity
+      15 * 60 * 1000, // 15 minutes in milliseconds
+      180 // refill amount
     );
   }
 }
@@ -156,10 +152,10 @@ export class RateLimiterFactory {
   private static limiters = new Map<string, RateLimiter>();
 
   static getStravaLimiter(): StravaRateLimiter {
-    if (!this.limiters.has('strava')) {
-      this.limiters.set('strava', new StravaRateLimiter());
+    if (!RateLimiterFactory.limiters.has('strava')) {
+      RateLimiterFactory.limiters.set('strava', new StravaRateLimiter());
     }
-    return this.limiters.get('strava') as StravaRateLimiter;
+    return RateLimiterFactory.limiters.get('strava') as StravaRateLimiter;
   }
 
   static createCustomLimiter(
@@ -169,19 +165,19 @@ export class RateLimiterFactory {
     refillAmount?: number
   ): RateLimiter {
     const limiter = new RateLimiter(capacity, refillIntervalMs, refillAmount);
-    this.limiters.set(key, limiter);
+    RateLimiterFactory.limiters.set(key, limiter);
     return limiter;
   }
 
   static getLimiter(key: string): RateLimiter | undefined {
-    return this.limiters.get(key);
+    return RateLimiterFactory.limiters.get(key);
   }
 
   static clearLimiter(key: string): void {
-    this.limiters.delete(key);
+    RateLimiterFactory.limiters.delete(key);
   }
 
   static clearAll(): void {
-    this.limiters.clear();
+    RateLimiterFactory.limiters.clear();
   }
 }

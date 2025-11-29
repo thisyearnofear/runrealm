@@ -1,10 +1,10 @@
-import { UIService } from "@runrealm/shared-core/services/ui-service";
-import { DOMService } from "@runrealm/shared-core/services/dom-service";
-import { EnhancedOnboarding } from "@runrealm/shared-core/components/enhanced-onboarding";
-import { AccessibilityEnhancer } from "@runrealm/shared-core/components/accessibility-enhancer";
-import { AnimationService } from "@runrealm/shared-core/services/animation-service";
-import { WidgetSystem } from "@runrealm/shared-core/components/widget-system";
-import { ExternalFitnessIntegration } from "@runrealm/shared-core/components/external-fitness-integration";
+import { AccessibilityEnhancer } from '@runrealm/shared-core/components/accessibility-enhancer';
+import { EnhancedOnboarding } from '@runrealm/shared-core/components/enhanced-onboarding';
+import { ExternalFitnessIntegration } from '@runrealm/shared-core/components/external-fitness-integration';
+import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
+import { AnimationService } from '@runrealm/shared-core/services/animation-service';
+import { DOMService } from '@runrealm/shared-core/services/dom-service';
+import { UIService } from '@runrealm/shared-core/services/ui-service';
 
 /**
  * UIEffectsManager - Handles UI effects, animations, onboarding, and accessibility
@@ -47,7 +47,7 @@ export class UIEffectsManager {
       }
     );
     await this.enhancedOnboarding.initialize();
-    console.log("UIEffectsManager: Enhanced onboarding initialized");
+    console.log('UIEffectsManager: Enhanced onboarding initialized');
 
     // Initialize accessibility enhancer
     this.accessibilityEnhancer = new AccessibilityEnhancer(this.domService, {
@@ -58,7 +58,7 @@ export class UIEffectsManager {
       announceChanges: true,
     });
     await this.accessibilityEnhancer.initialize();
-    console.log("UIEffectsManager: Accessibility enhancer initialized");
+    console.log('UIEffectsManager: Accessibility enhancer initialized');
   }
 
   /**
@@ -66,17 +66,16 @@ export class UIEffectsManager {
    */
   showWelcomeExperience(): void {
     // Check if user is new or wants to see onboarding
-    const isNewUser = !localStorage.getItem("runrealm_welcomed");
+    const isNewUser = !localStorage.getItem('runrealm_welcomed');
     const urlParams = new URLSearchParams(window.location.search);
     const forceOnboarding =
-      urlParams.get("onboarding") === "true" ||
-      urlParams.get("onboarding") === "reset";
+      urlParams.get('onboarding') === 'true' || urlParams.get('onboarding') === 'reset';
 
     if (isNewUser || forceOnboarding) {
       setTimeout(() => {
         this.enhancedOnboarding.startOnboarding();
         if (isNewUser) {
-          localStorage.setItem("runrealm_welcomed", "true");
+          localStorage.setItem('runrealm_welcomed', 'true');
         }
       }, 1500);
     }
@@ -88,19 +87,19 @@ export class UIEffectsManager {
   showWelcomeTooltips(): void {
     const tooltips = [
       {
-        target: "#location-btn",
-        message: "Set your location to see nearby territories",
-        position: "bottom",
+        target: '#location-btn',
+        message: 'Set your location to see nearby territories',
+        position: 'bottom',
       },
       {
-        target: "#gamefi-toggle",
-        message: "Enable GameFi mode to earn rewards and claim territories",
-        position: "bottom",
+        target: '#gamefi-toggle',
+        message: 'Enable GameFi mode to earn rewards and claim territories',
+        position: 'bottom',
       },
       {
-        target: "#action-panel",
-        message: "Use these controls to plan and track your runs",
-        position: "left",
+        target: '#action-panel',
+        message: 'Use these controls to plan and track your runs',
+        position: 'left',
       },
     ];
 
@@ -132,7 +131,7 @@ export class UIEffectsManager {
       if (!container) {
         container = this.domService.createElement('div', {
           id: 'external-fitness-container',
-          parent: document.body
+          parent: document.body,
         });
       }
 
@@ -147,26 +146,24 @@ export class UIEffectsManager {
    */
   addButtonFeedback(button: HTMLElement): void {
     // Visual feedback
-    button.style.transform = "scale(0.95)";
-    button.style.transition = "transform 0.1s ease";
+    button.style.transform = 'scale(0.95)';
+    button.style.transition = 'transform 0.1s ease';
 
     // Haptic feedback for mobile
-    this.triggerHapticFeedback("light");
+    this.triggerHapticFeedback('light');
 
     setTimeout(() => {
-      button.style.transform = "scale(1)";
+      button.style.transform = 'scale(1)';
     }, 100);
   }
 
   /**
    * Trigger haptic feedback on supported devices
    */
-  triggerHapticFeedback(
-    type: "light" | "medium" | "heavy" = "light"
-  ): void {
+  triggerHapticFeedback(type: 'light' | 'medium' | 'heavy' = 'light'): void {
     try {
       // Modern browsers with Vibration API
-      if ("vibrate" in navigator) {
+      if ('vibrate' in navigator) {
         const patterns = {
           light: [10],
           medium: [20],
@@ -176,7 +173,7 @@ export class UIEffectsManager {
       }
 
       // iOS Safari haptic feedback (if available)
-      if ("hapticFeedback" in window) {
+      if ('hapticFeedback' in window) {
         (window as any).hapticFeedback(type);
       }
     } catch (error) {
@@ -188,10 +185,10 @@ export class UIEffectsManager {
    * Show loading state for AI actions
    */
   showAILoadingState(action: string, button: HTMLElement): void {
-    const widget = this.widgetSystem.getWidget("ai-coach");
+    const widget = this.widgetSystem.getWidget('ai-coach');
     if (!widget) return;
 
-    const actionName = action === "ai.requestRoute" ? "route" : "ghost runner";
+    const actionName = action === 'ai.requestRoute' ? 'route' : 'ghost runner';
     const loadingHtml = `
       <div class="widget-tip widget-loading">
         🤖 Generating ${actionName}...
@@ -210,7 +207,7 @@ export class UIEffectsManager {
       </div>
     `;
 
-    this.widgetSystem.updateWidget("ai-coach", loadingHtml);
+    this.widgetSystem.updateWidget('ai-coach', loadingHtml);
 
     // Set a timeout to clear loading state if no response comes back
     setTimeout(() => {
@@ -222,7 +219,7 @@ export class UIEffectsManager {
    * Hide loading state
    */
   hideAILoadingState(): void {
-    const widget = this.widgetSystem.getWidget("ai-coach");
+    const widget = this.widgetSystem.getWidget('ai-coach');
     if (!widget) return;
 
     // Don't restore content here - let the success/error handlers manage it
@@ -232,14 +229,14 @@ export class UIEffectsManager {
    * Clear stuck loading state and restore default AI coach content
    */
   clearStuckLoadingState(): void {
-    const widget = this.widgetSystem.getWidget("ai-coach");
+    const widget = this.widgetSystem.getWidget('ai-coach');
     if (!widget) return;
 
     // Check if still showing loading state
-    const widgetElement = this.widgetSystem.getWidgetElement("ai-coach");
-    const content = widgetElement?.innerHTML || "";
-    if (content.includes("widget-loading")) {
-      console.log("UIEffectsManager: Clearing stuck AI loading state");
+    const widgetElement = this.widgetSystem.getWidgetElement('ai-coach');
+    const content = widgetElement?.innerHTML || '';
+    if (content.includes('widget-loading')) {
+      console.log('UIEffectsManager: Clearing stuck AI loading state');
       const errorHtml = `
         <div class="widget-tip error">
           🤖 Request timed out
@@ -262,7 +259,7 @@ export class UIEffectsManager {
           </div>
         </div>
       `;
-      this.widgetSystem.updateWidget("ai-coach", errorHtml);
+      this.widgetSystem.updateWidget('ai-coach', errorHtml);
     }
   }
 
@@ -270,36 +267,36 @@ export class UIEffectsManager {
    * Add celebration effect for successful AI actions
    */
   addCelebrationEffect(): void {
-    const widget = this.widgetSystem.getWidget("ai-coach");
+    const widget = this.widgetSystem.getWidget('ai-coach');
     if (!widget) {
-      console.warn("UIEffectsManager: AI coach widget not found for celebration");
+      console.warn('UIEffectsManager: AI coach widget not found for celebration');
       return;
     }
 
-    const widgetElement = this.widgetSystem.getWidgetElement("ai-coach");
+    const widgetElement = this.widgetSystem.getWidgetElement('ai-coach');
     if (!widgetElement) {
-      console.warn("UIEffectsManager: AI coach widget element not found for celebration");
+      console.warn('UIEffectsManager: AI coach widget element not found for celebration');
       return;
     }
 
     if (!widgetElement.classList) {
-      console.warn("UIEffectsManager: Widget element invalid for celebration");
+      console.warn('UIEffectsManager: Widget element invalid for celebration');
       return;
     }
 
     // Prevent multiple celebrations
-    if (widgetElement.classList.contains("celebrating")) return;
+    if (widgetElement.classList.contains('celebrating')) return;
 
     // Add celebration class
-    widgetElement.classList.add("celebrating");
+    widgetElement.classList.add('celebrating');
 
     // Use requestAnimationFrame for better performance
     requestAnimationFrame(() => {
       // Create floating particles
       const particleCount = window.innerWidth < 768 ? 3 : 6; // Fewer particles on mobile
       for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement("div");
-        particle.className = "celebration-particle";
+        const particle = document.createElement('div');
+        particle.className = 'celebration-particle';
         particle.style.cssText = `
           position: absolute;
           width: 6px;
@@ -327,7 +324,7 @@ export class UIEffectsManager {
     // Remove celebration class after animation
     setTimeout(() => {
       if (widgetElement && widgetElement.classList) {
-        widgetElement.classList.remove("celebrating");
+        widgetElement.classList.remove('celebrating');
       }
     }, 1500);
   }
@@ -335,29 +332,33 @@ export class UIEffectsManager {
   /**
    * Toggle GameFi mode
    */
-  toggleGameFiMode(isGameFiMode: boolean, updateGameFiToggle: (enabled: boolean) => void, widgetCreator: any): boolean {
+  toggleGameFiMode(
+    isGameFiMode: boolean,
+    updateGameFiToggle: (enabled: boolean) => void,
+    widgetCreator: any
+  ): boolean {
     const newMode = !isGameFiMode;
     console.log(`UIEffectsManager: Toggling GameFi mode to: ${newMode}`);
 
     if (newMode) {
       // Enable GameFi mode with widgets
-      document.body.classList.add("gamefi-mode");
+      document.body.classList.add('gamefi-mode');
       widgetCreator.createGameFiWidgets();
       updateGameFiToggle(true);
-      this.uiService.showToast("🎮 GameFi enabled", { type: "success" });
+      this.uiService.showToast('🎮 GameFi enabled', { type: 'success' });
       console.log(
-        "UIEffectsManager: GameFi widgets created:",
+        'UIEffectsManager: GameFi widgets created:'
         // Debug for widget system
       );
     } else {
       // Disable GameFi mode and remove widgets
-      document.body.classList.remove("gamefi-mode");
+      document.body.classList.remove('gamefi-mode');
       widgetCreator.removeGameFiWidgets();
       updateGameFiToggle(false);
-      this.uiService.showToast("🎮 GameFi disabled", { type: "info" });
-      console.log("UIEffectsManager: GameFi widgets removed");
+      this.uiService.showToast('🎮 GameFi disabled', { type: 'info' });
+      console.log('UIEffectsManager: GameFi widgets removed');
     }
-    
+
     return newMode;
   }
 

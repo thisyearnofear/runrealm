@@ -20,15 +20,15 @@ export class UserContextService extends BaseService {
     }
     return UserContextService.instance;
   }
-  
+
   public getSmartSuggestions(): { distance: number; difficulty: number; goals: string[] } {
     const profile = this.getUserProfile();
     const timeContext = this.getTimeContext();
-    
+
     return {
       distance: this.calculateOptimalDistance(profile, timeContext),
       difficulty: this.calculateDifficulty(profile),
-      goals: this.suggestGoals(profile, timeContext)
+      goals: this.suggestGoals(profile, timeContext),
     };
   }
 
@@ -40,7 +40,7 @@ export class UserContextService extends BaseService {
       preferredDistance: this.calculateAvgDistance(runs),
       timeOfDay: this.getPreferredTime(),
       goals: ['exploration'],
-      completedRuns: runs.length
+      completedRuns: runs.length,
     };
   }
 
@@ -58,9 +58,9 @@ export class UserContextService extends BaseService {
   }
 
   private calculateDifficulty(profile: UserProfile): number {
-    const base = profile.fitnessLevel === 'beginner' ? 30 : 
-                 profile.fitnessLevel === 'intermediate' ? 50 : 70;
-    return Math.min(base + (profile.completedRuns * 2), 90);
+    const base =
+      profile.fitnessLevel === 'beginner' ? 30 : profile.fitnessLevel === 'intermediate' ? 50 : 70;
+    return Math.min(base + profile.completedRuns * 2, 90);
   }
 
   private suggestGoals(profile: UserProfile, timeContext: string): string[] {
@@ -86,20 +86,20 @@ export class UserContextService extends BaseService {
       action,
       timestamp: Date.now(),
       sessionId: this.getSessionId(),
-      data
+      data,
     };
-    
+
     // Store for analytics
     const events = JSON.parse(localStorage.getItem('user-analytics') || '[]');
     events.push(event);
-    
+
     // Keep only last 1000 events
     if (events.length > 1000) {
       events.splice(0, events.length - 1000);
     }
-    
+
     localStorage.setItem('user-analytics', JSON.stringify(events));
-    
+
     // Note: This event is not in the AppEvents interface
     // this.safeEmit('analytics:userAction', event);
   }

@@ -4,9 +4,9 @@
  */
 
 import { BaseService } from '../core/base-service';
+import { AnimationService } from '../services/animation-service';
 import { DOMService } from '../services/dom-service';
 import { UIService } from '../services/ui-service';
-import { AnimationService } from '../services/animation-service';
 
 export interface TransactionInfo {
   hash: string;
@@ -39,7 +39,7 @@ export class TransactionStatus extends BaseService {
   private uiService: UIService;
   private animationService: AnimationService;
   private options: TransactionStatusOptions;
-  
+
   private activeTransactions: Map<string, TransactionInfo> = new Map();
   private statusContainer: HTMLElement | null = null;
   private pollInterval: number | null = null;
@@ -60,7 +60,7 @@ export class TransactionStatus extends BaseService {
       autoHide: true,
       autoHideDelay: 5000,
       showGasInfo: true,
-      ...options
+      ...options,
     };
   }
 
@@ -79,52 +79,58 @@ export class TransactionStatus extends BaseService {
         hash: data.hash,
         type: (data.type as TransactionInfo['type']) || 'generic',
         status: 'pending',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     });
 
     this.subscribe('web3:transactionConfirmed', (data: { hash: string; blockNumber: number }) => {
       this.updateTransaction(data.hash, {
         status: 'confirmed',
-        blockNumber: data.blockNumber
+        blockNumber: data.blockNumber,
       });
     });
 
     this.subscribe('web3:transactionFailed', (data) => {
       this.updateTransaction(data.hash || 'unknown', {
         status: 'failed',
-        error: data.error
+        error: data.error,
       });
     });
 
     // Territory claiming events
-    this.subscribe('territory:claimStarted', (data: { territoryId: string; territoryName: string }) => {
-      this.addTransaction({
-        hash: 'pending_' + Date.now(),
-        type: 'territory_claim',
-        status: 'pending',
-        timestamp: Date.now(),
-        metadata: {
-          territoryId: data.territoryId,
-          description: `Claiming territory: ${data.territoryName || 'Unknown'}`
-        }
-      });
-    });
+    this.subscribe(
+      'territory:claimStarted',
+      (data: { territoryId: string; territoryName: string }) => {
+        this.addTransaction({
+          hash: 'pending_' + Date.now(),
+          type: 'territory_claim',
+          status: 'pending',
+          timestamp: Date.now(),
+          metadata: {
+            territoryId: data.territoryId,
+            description: `Claiming territory: ${data.territoryName || 'Unknown'}`,
+          },
+        });
+      }
+    );
 
     // Token events
-    this.subscribe('token:transferStarted', (data: { transactionHash: string; amount: number; token: string }) => {
-      this.addTransaction({
-        hash: data.transactionHash,
-        type: 'token_transfer',
-        status: 'pending',
-        timestamp: Date.now(),
-        metadata: {
-          amount: data.amount.toString(),
-          token: data.token || 'REALM',
-          description: `Transferring ${data.amount} ${data.token || 'REALM'}`
-        }
-      });
-    });
+    this.subscribe(
+      'token:transferStarted',
+      (data: { transactionHash: string; amount: number; token: string }) => {
+        this.addTransaction({
+          hash: data.transactionHash,
+          type: 'token_transfer',
+          status: 'pending',
+          timestamp: Date.now(),
+          metadata: {
+            amount: data.amount.toString(),
+            token: data.token || 'REALM',
+            description: `Transferring ${data.amount} ${data.token || 'REALM'}`,
+          },
+        });
+      }
+    );
 
     // Staking events
     this.subscribe('staking:stakeStarted', (data: { transactionHash: string; amount: number }) => {
@@ -136,16 +142,18 @@ export class TransactionStatus extends BaseService {
         metadata: {
           amount: data.amount.toString(),
           token: 'REALM',
-          description: `Staking ${data.amount} REALM tokens`
-        }
+          description: `Staking ${data.amount} REALM tokens`,
+        },
       });
     });
   }
 
-  public addTransaction(transaction: Omit<TransactionInfo, 'timestamp'> & { timestamp?: number }): void {
+  public addTransaction(
+    transaction: Omit<TransactionInfo, 'timestamp'> & { timestamp?: number }
+  ): void {
     const txInfo: TransactionInfo = {
       ...transaction,
-      timestamp: transaction.timestamp || Date.now()
+      timestamp: transaction.timestamp || Date.now(),
     };
 
     this.activeTransactions.set(transaction.hash, txInfo);
@@ -201,9 +209,9 @@ export class TransactionStatus extends BaseService {
         break;
     }
 
-    this.uiService.showToast(message, { 
-      type: toastType, 
-      duration: status === 'pending' ? 0 : 4000
+    this.uiService.showToast(message, {
+      type: toastType,
+      duration: status === 'pending' ? 0 : 4000,
     });
   }
 
@@ -232,7 +240,7 @@ export class TransactionStatus extends BaseService {
     this.statusContainer = this.domService.createElement('div', {
       id: 'transaction-status-container',
       className: 'transaction-status-container',
-      parent: document.body
+      parent: document.body,
     });
   }
 
@@ -240,7 +248,7 @@ export class TransactionStatus extends BaseService {
     if (!this.statusContainer) return;
 
     const pendingTransactions = Array.from(this.activeTransactions.values())
-      .filter(tx => tx.status === 'pending')
+      .filter((tx) => tx.status === 'pending')
       .sort((a, b) => b.timestamp - a.timestamp);
 
     if (pendingTransactions.length === 0) {
@@ -259,7 +267,7 @@ export class TransactionStatus extends BaseService {
         </button>
       </div>
       <div class="transaction-list">
-        ${pendingTransactions.map(tx => this.renderTransactionItem(tx)).join('')}
+        ${pendingTransactions.map((tx) => this.renderTransactionItem(tx)).join('')}
       </div>
     `;
   }
@@ -318,7 +326,7 @@ export class TransactionStatus extends BaseService {
     if (!this.statusContainer) return;
 
     const timeElements = this.statusContainer.querySelectorAll('.transaction-time');
-    timeElements.forEach(element => {
+    timeElements.forEach((element) => {
       const item = element.closest('.transaction-item');
       const hash = item?.getAttribute('data-hash');
       if (hash) {
@@ -347,14 +355,15 @@ export class TransactionStatus extends BaseService {
           </div>
         </div>
       `,
-      parent: document.body
+      parent: document.body,
     });
 
     this.animationService.fadeIn(modal, { duration: 200 });
   }
 
   private renderTransactionDetails(transaction: TransactionInfo): string {
-    const { hash, type, status, metadata, gasUsed, gasPrice, blockNumber, confirmations, error } = transaction;
+    const { hash, type, status, metadata, gasUsed, gasPrice, blockNumber, confirmations, error } =
+      transaction;
 
     return `
       <div class="transaction-details-grid">
@@ -370,30 +379,46 @@ export class TransactionStatus extends BaseService {
           <span class="detail-label">Hash:</span>
           <span class="detail-value hash-value">${hash}</span>
         </div>
-        ${blockNumber ? `
+        ${
+          blockNumber
+            ? `
           <div class="detail-row">
             <span class="detail-label">Block:</span>
             <span class="detail-value">${blockNumber}</span>
           </div>
-        ` : ''}
-        ${confirmations ? `
+        `
+            : ''
+        }
+        ${
+          confirmations
+            ? `
           <div class="detail-row">
             <span class="detail-label">Confirmations:</span>
             <span class="detail-value">${confirmations}</span>
           </div>
-        ` : ''}
-        ${gasUsed && this.options.showGasInfo ? `
+        `
+            : ''
+        }
+        ${
+          gasUsed && this.options.showGasInfo
+            ? `
           <div class="detail-row">
             <span class="detail-label">Gas Used:</span>
             <span class="detail-value">${gasUsed}</span>
           </div>
-        ` : ''}
-        ${error ? `
+        `
+            : ''
+        }
+        ${
+          error
+            ? `
           <div class="detail-row error-row">
             <span class="detail-label">Error:</span>
             <span class="detail-value">${error}</span>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
       <div class="transaction-actions-modal">
         <a href="https://explorer.zetachain.com/tx/${hash}" target="_blank" class="explorer-link">
@@ -697,7 +722,7 @@ export class TransactionStatus extends BaseService {
           }
         }
       `,
-      parent: document.head
+      parent: document.head,
     });
   }
 

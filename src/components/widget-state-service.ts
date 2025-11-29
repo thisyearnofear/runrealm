@@ -33,15 +33,15 @@ export class WidgetStateService extends BaseService {
       position: 'top-left',
       minimized: true,
       visible: true,
-      priority: 0
+      priority: 0,
     };
-    
+
     const newState = { ...currentState, ...state, lastAccessed: Date.now() };
     this.widgetStates.set(widgetId, newState);
-    
+
     // Emit state change event
     this.safeEmit('widget:stateChanged', { widgetId, state: newState });
-    
+
     // Persist to storage
     this.saveStates();
   }
@@ -66,7 +66,7 @@ export class WidgetStateService extends BaseService {
   public resetWidgetState(widgetId: string): void {
     this.widgetStates.delete(widgetId);
     this.saveStates();
-    
+
     // Emit reset event
     this.safeEmit('widget:stateReset', { widgetId });
   }
@@ -77,7 +77,7 @@ export class WidgetStateService extends BaseService {
   public resetAllWidgetStates(): void {
     this.widgetStates.clear();
     localStorage.removeItem(this.storageKey);
-    
+
     // Emit reset event
     this.safeEmit('widget:allStatesReset', {});
   }
@@ -116,14 +116,17 @@ export class WidgetStateService extends BaseService {
    */
   public getWidgetsByPosition(position: string): WidgetState[] {
     return Array.from(this.widgetStates.values())
-      .filter(widget => widget.position === position)
+      .filter((widget) => widget.position === position)
       .sort((a, b) => b.priority - a.priority);
   }
 
   /**
    * Update widget position
    */
-  public updateWidgetPosition(widgetId: string, position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'): void {
+  public updateWidgetPosition(
+    widgetId: string,
+    position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+  ): void {
     const state = this.widgetStates.get(widgetId);
     if (state) {
       this.setWidgetState(widgetId, { position });

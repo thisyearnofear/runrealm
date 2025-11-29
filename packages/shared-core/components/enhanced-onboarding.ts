@@ -4,8 +4,8 @@
  */
 
 import { BaseService } from '../core/base-service';
-import { DOMService } from '../services/dom-service';
 import { AnimationService } from '../services/animation-service';
+import { DOMService } from '../services/dom-service';
 import { UIService } from '../services/ui-service';
 
 export interface OnboardingStep {
@@ -36,7 +36,7 @@ export class EnhancedOnboarding extends BaseService {
   private animationService: AnimationService;
   private uiService: UIService;
   private options: OnboardingOptions;
-  
+
   private currentStep: number = 0;
   private steps: OnboardingStep[] = [];
   private overlay: HTMLElement | null = null;
@@ -60,7 +60,7 @@ export class EnhancedOnboarding extends BaseService {
       autoAdvance: false,
       theme: 'auto',
       hapticFeedback: true,
-      ...options
+      ...options,
     };
   }
 
@@ -76,55 +76,61 @@ export class EnhancedOnboarding extends BaseService {
       {
         id: 'welcome',
         title: '🏃‍♂️ Welcome to RunRealm!',
-        description: 'Transform your runs into an epic Web3 adventure. Claim territories, earn rewards, and compete with runners worldwide.',
+        description:
+          'Transform your runs into an epic Web3 adventure. Claim territories, earn rewards, and compete with runners worldwide.',
         position: 'center',
-        skippable: false
+        skippable: false,
       },
       {
         id: 'location-setup',
         title: '📍 Enable Location Services',
-        description: 'We need your location to track your runs and help you claim territories. Your privacy is protected.',
+        description:
+          'We need your location to track your runs and help you claim territories. Your privacy is protected.',
         target: '#location-info',
         position: 'bottom',
         action: {
           type: 'click',
-          element: '#set-location-btn'
+          element: '#set-location-btn',
         },
-        validation: () => this.checkLocationPermission()
+        validation: () => this.checkLocationPermission(),
       },
       {
         id: 'wallet-connect',
         title: '🦊 Connect Your Wallet',
-        description: 'Connect your Web3 wallet to claim territories as NFTs and earn $REALM tokens. You can do this now or later.',
+        description:
+          'Connect your Web3 wallet to claim territories as NFTs and earn $REALM tokens. You can do this now or later.',
         target: '#wallet-info',
         position: 'bottom',
         action: {
           type: 'click',
-          element: '#connect-wallet-btn'
+          element: '#connect-wallet-btn',
         },
-        skippable: true
+        skippable: true,
       },
       {
         id: 'run-controls',
         title: '🎮 Run Controls',
-        description: 'Use these controls to start tracking your runs. GPS accuracy and real-time stats help you optimize performance.',
+        description:
+          'Use these controls to start tracking your runs. GPS accuracy and real-time stats help you optimize performance.',
         target: '.run-controls-widget',
-        position: 'top'
+        position: 'top',
       },
       {
         id: 'territory-system',
         title: '🏆 Territory System',
-        description: 'Complete runs to become eligible for territory claims. Each territory is a unique NFT with special rewards!',
+        description:
+          'Complete runs to become eligible for territory claims. Each territory is a unique NFT with special rewards!',
         target: '#ai-coach',
-        position: 'left'
+        position: 'left',
       },
       {
         id: 'ready-to-run',
         title: '🚀 Ready to Run!',
-        description: 'You\'re all set! Start your first run to begin your RunRealm journey. Remember: every step counts!',
+        description:
+          "You're all set! Start your first run to begin your RunRealm journey. Remember: every step counts!",
         position: 'center',
-        skippable: false
-      }
+        skippable: false,
+      },
     ];
   }
 
@@ -139,10 +145,10 @@ export class EnhancedOnboarding extends BaseService {
 
     this.isActive = true;
     this.currentStep = 0;
-    
+
     await this.createOverlay();
     await this.showStep(this.currentStep);
-    
+
     this.safeEmit('onboarding:started' as any, {});
   }
 
@@ -156,7 +162,7 @@ export class EnhancedOnboarding extends BaseService {
     this.overlay = this.domService.createElement('div', {
       id: 'onboarding-overlay',
       className: 'onboarding-overlay',
-      parent: document.body
+      parent: document.body,
     });
 
     // Animate overlay in
@@ -197,7 +203,7 @@ export class EnhancedOnboarding extends BaseService {
 
   private highlightTarget(target?: string): void {
     // Remove previous highlights
-    document.querySelectorAll('.onboarding-highlight').forEach(el => {
+    document.querySelectorAll('.onboarding-highlight').forEach((el) => {
       el.classList.remove('onboarding-highlight');
     });
 
@@ -205,12 +211,12 @@ export class EnhancedOnboarding extends BaseService {
       const element = document.querySelector(target);
       if (element) {
         element.classList.add('onboarding-highlight');
-        
+
         // Scroll element into view
-        element.scrollIntoView({ 
-          behavior: 'smooth', 
+        element.scrollIntoView({
+          behavior: 'smooth',
           block: 'center',
-          inline: 'center'
+          inline: 'center',
         });
       }
     }
@@ -218,13 +224,14 @@ export class EnhancedOnboarding extends BaseService {
 
   private async createTooltip(step: OnboardingStep): Promise<void> {
     const position = step.position || 'center';
-    const progress = this.options.showProgress ? 
-      `<div class="onboarding-progress">
+    const progress = this.options.showProgress
+      ? `<div class="onboarding-progress">
         <div class="progress-bar">
           <div class="progress-fill" style="width: ${((this.currentStep + 1) / this.steps.length) * 100}%"></div>
         </div>
         <span class="progress-text">${this.currentStep + 1} of ${this.steps.length}</span>
-      </div>` : '';
+      </div>`
+      : '';
 
     this.tooltip = this.domService.createElement('div', {
       className: `onboarding-tooltip tooltip-${position}`,
@@ -232,23 +239,29 @@ export class EnhancedOnboarding extends BaseService {
         <div class="tooltip-content">
           <div class="tooltip-header">
             <h3 class="tooltip-title">${step.title}</h3>
-            ${this.options.allowSkip && step.skippable !== false ? 
-              '<button class="tooltip-skip" aria-label="Skip">×</button>' : ''}
+            ${
+              this.options.allowSkip && step.skippable !== false
+                ? '<button class="tooltip-skip" aria-label="Skip">×</button>'
+                : ''
+            }
           </div>
           <div class="tooltip-body">
             <p class="tooltip-description">${step.description}</p>
             ${progress}
           </div>
           <div class="tooltip-footer">
-            ${this.currentStep > 0 ? 
-              '<button class="tooltip-btn secondary" id="onboarding-prev">Previous</button>' : ''}
+            ${
+              this.currentStep > 0
+                ? '<button class="tooltip-btn secondary" id="onboarding-prev">Previous</button>'
+                : ''
+            }
             <button class="tooltip-btn primary" id="onboarding-next">
               ${this.currentStep === this.steps.length - 1 ? 'Get Started!' : 'Next'}
             </button>
           </div>
         </div>
       `,
-      parent: this.overlay!
+      parent: this.overlay!,
     });
 
     // Position tooltip
@@ -270,7 +283,7 @@ export class EnhancedOnboarding extends BaseService {
     if (!this.tooltip) return;
 
     const position = step.position || 'center';
-    
+
     if (position === 'center') {
       this.tooltip.style.position = 'fixed';
       this.tooltip.style.top = '50%';
@@ -284,7 +297,7 @@ export class EnhancedOnboarding extends BaseService {
       if (targetElement) {
         const rect = targetElement.getBoundingClientRect();
         const tooltipRect = this.tooltip.getBoundingClientRect();
-        
+
         switch (position) {
           case 'top':
             this.tooltip.style.top = `${rect.top - tooltipRect.height - 20}px`;
@@ -356,13 +369,17 @@ export class EnhancedOnboarding extends BaseService {
           if (element) {
             // Add visual indicator
             element.classList.add('onboarding-action-target');
-            
+
             // Auto-advance when clicked
-            element.addEventListener('click', () => {
-              if (this.options.autoAdvance) {
-                setTimeout(() => this.nextStep(), 1000);
-              }
-            }, { once: true });
+            element.addEventListener(
+              'click',
+              () => {
+                if (this.options.autoAdvance) {
+                  setTimeout(() => this.nextStep(), 1000);
+                }
+              },
+              { once: true }
+            );
           }
         }
         break;
@@ -380,7 +397,7 @@ export class EnhancedOnboarding extends BaseService {
 
   public async nextStep(): Promise<void> {
     const currentStepData = this.steps[this.currentStep];
-    
+
     // Validate step if required
     if (currentStepData.validation && !currentStepData.validation()) {
       this.uiService.showToast('Please complete this step before continuing', { type: 'warning' });
@@ -389,7 +406,7 @@ export class EnhancedOnboarding extends BaseService {
 
     // Mark step as completed
     this.completedSteps.add(currentStepData.id);
-    
+
     // Add haptic feedback
     if (this.options.hapticFeedback) {
       this.hapticFeedback('light');
@@ -405,7 +422,11 @@ export class EnhancedOnboarding extends BaseService {
   }
 
   public async skipOnboarding(): Promise<void> {
-    if (confirm('Are you sure you want to skip the tutorial? You can restart it anytime from settings.')) {
+    if (
+      confirm(
+        'Are you sure you want to skip the tutorial? You can restart it anytime from settings.'
+      )
+    ) {
       await this.completeOnboarding(true);
     }
   }
@@ -414,7 +435,7 @@ export class EnhancedOnboarding extends BaseService {
     this.isActive = false;
 
     // Clean up highlights
-    document.querySelectorAll('.onboarding-highlight, .onboarding-action-target').forEach(el => {
+    document.querySelectorAll('.onboarding-highlight, .onboarding-action-target').forEach((el) => {
       el.classList.remove('onboarding-highlight', 'onboarding-action-target');
     });
 
@@ -436,13 +457,16 @@ export class EnhancedOnboarding extends BaseService {
 
     // Show completion message
     if (!skipped) {
-      this.uiService.showToast('🎉 Welcome to RunRealm! Ready to start your adventure?', { 
-        type: 'success', 
-        duration: 4000 
+      this.uiService.showToast('🎉 Welcome to RunRealm! Ready to start your adventure?', {
+        type: 'success',
+        duration: 4000,
       });
     }
 
-    this.safeEmit('onboarding:completed' as any, { skipped, completedSteps: Array.from(this.completedSteps) });
+    this.safeEmit('onboarding:completed' as any, {
+      skipped,
+      completedSteps: Array.from(this.completedSteps),
+    });
   }
 
   private checkLocationPermission(): boolean {
@@ -451,7 +475,7 @@ export class EnhancedOnboarding extends BaseService {
 
   private hapticFeedback(type: 'light' | 'medium' | 'heavy' = 'light'): void {
     if (!navigator.vibrate) return;
-    
+
     switch (type) {
       case 'light':
         navigator.vibrate(10);
@@ -713,7 +737,7 @@ export class EnhancedOnboarding extends BaseService {
           }
         }
       `,
-      parent: document.head
+      parent: document.head,
     });
   }
 
@@ -758,7 +782,7 @@ export class EnhancedOnboarding extends BaseService {
       if (widget && widget.minimized) {
         widgetSystem.toggleWidget(widgetId);
         // Wait a bit for the animation to complete
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
     }
   }

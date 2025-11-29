@@ -1,7 +1,7 @@
-import { BaseService } from "../core/base-service";
-import { ConfigService, StravaConfig } from "../core/app-config";
-import { ExternalActivity } from "./run-tracking-service";
-import { RateLimiterFactory } from "../utils/rate-limiter";
+import { ConfigService, StravaConfig } from '../core/app-config';
+import { BaseService } from '../core/base-service';
+import { RateLimiterFactory } from '../utils/rate-limiter';
+import { ExternalActivity } from './run-tracking-service';
 
 export class ExternalFitnessService extends BaseService {
   private configService: ConfigService;
@@ -23,7 +23,7 @@ export class ExternalFitnessService extends BaseService {
     const stravaAccessToken = localStorage.getItem('runrealm_strava_access_token');
     const stravaRefreshToken = localStorage.getItem('runrealm_strava_refresh_token');
     const stravaExpiresAt = localStorage.getItem('runrealm_strava_expires_at');
-    
+
     if (stravaAccessToken) {
       this.accessTokens.set('strava', stravaAccessToken);
     }
@@ -38,11 +38,16 @@ export class ExternalFitnessService extends BaseService {
   /**
    * Store tokens securely
    */
-  private storeTokens(source: string, accessToken: string, refreshToken: string, expiresAt: number): void {
+  private storeTokens(
+    source: string,
+    accessToken: string,
+    refreshToken: string,
+    expiresAt: number
+  ): void {
     this.accessTokens.set(source, accessToken);
     this.refreshTokens.set(source, refreshToken);
     this.tokenExpirations.set(source, expiresAt);
-    
+
     // Update config service
     if (source === 'strava') {
       this.configService.updateStravaTokens(accessToken, refreshToken, expiresAt);
@@ -56,20 +61,20 @@ export class ExternalFitnessService extends BaseService {
     const accessToken = this.accessTokens.get(source);
     const expiresAt = this.tokenExpirations.get(source);
     const refreshToken = this.refreshTokens.get(source);
-    
+
     if (!accessToken) {
       throw new Error(`${source} not connected`);
     }
-    
+
     // Check if token is expired (with 5 minute buffer)
     const now = Math.floor(Date.now() / 1000);
-    const isExpired = expiresAt && (now > (expiresAt - 300));
-    
+    const isExpired = expiresAt && now > expiresAt - 300;
+
     if (isExpired && refreshToken) {
       console.log(`${source} token expired, refreshing...`);
       return await this.refreshAccessToken(source, refreshToken);
     }
-    
+
     return accessToken;
   }
 
@@ -80,28 +85,32 @@ export class ExternalFitnessService extends BaseService {
     if (source !== 'strava') {
       throw new Error(`Token refresh not implemented for ${source}`);
     }
-    
+
     try {
       const response = await fetch('/api/strava/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ refresh_token: refreshToken })
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Token refresh failed: ${response.statusText}`);
       }
-      
+
       const tokenData = await response.json();
-      
+
       // Store new tokens
-      this.storeTokens(source, tokenData.access_token, tokenData.refresh_token, tokenData.expires_at);
-      
+      this.storeTokens(
+        source,
+        tokenData.access_token,
+        tokenData.refresh_token,
+        tokenData.expires_at
+      );
+
       console.log(`${source} token refreshed successfully`);
       return tokenData.access_token;
-      
     } catch (error) {
       console.error(`Failed to refresh ${source} token:`, error);
       // Clear invalid tokens
@@ -116,7 +125,7 @@ export class ExternalFitnessService extends BaseService {
   public initiateStravaAuth(callbackUrl?: string): string {
     const stravaConfig = this.configService.getStravaConfig();
     if (!stravaConfig?.clientId) {
-      throw new Error("Strava configuration not found. Please check your credentials.");
+      throw new Error('Strava configuration not found. Please check your credentials.');
     }
 
     const redirect_uri = callbackUrl || stravaConfig.redirectUri;
@@ -124,9 +133,9 @@ export class ExternalFitnessService extends BaseService {
     const params = new URLSearchParams({
       client_id: stravaConfig.clientId,
       redirect_uri: redirect_uri,
-      response_type: "code",
-      scope: "read,activity:read_all",
-      approval_prompt: "auto"
+      response_type: 'code',
+      scope: 'read,activity:read_all',
+      approval_prompt: 'auto',
     });
 
     const authUrl = `https://www.strava.com/oauth/authorize?${params.toString()}`;
@@ -137,7 +146,9 @@ export class ExternalFitnessService extends BaseService {
   /**
    * Complete the Strava connection by exchanging the authorization code for a token.
    */
-  public async completeStravaConnection(url: string): Promise<{ success: boolean; error?: string }> {
+  public async completeStravaConnection(
+    url: string
+  ): Promise<{ success: boolean; error?: string }> {
     const urlParams = new URLSearchParams(new URL(url).search);
     const code = urlParams.get('code');
     const error = urlParams.get('error');
@@ -165,12 +176,17 @@ export class ExternalFitnessService extends BaseService {
       }
 
       const tokenData = await response.json();
-      this.storeTokens('strava', tokenData.access_token, tokenData.refresh_token, tokenData.expires_at);
-      this.safeEmit("fitness:connected", { source: "strava" });
+      this.storeTokens(
+        'strava',
+        tokenData.access_token,
+        tokenData.refresh_token,
+        tokenData.expires_at
+      );
+      this.safeEmit('fitness:connected', { source: 'strava' });
       return { success: true };
     } catch (err: any) {
       console.error('Failed to exchange Strava code for token:', err);
-      this.safeEmit("fitness:connectionFailed", { source: "strava", error: err.message });
+      this.safeEmit('fitness:connectionFailed', { source: 'strava', error: err.message });
       return { success: false, error: err.message };
     }
   }
@@ -184,17 +200,17 @@ export class ExternalFitnessService extends BaseService {
     const refreshToken = urlParams.get('refresh_token');
     const expiresAt = urlParams.get('expires_at');
     const error = urlParams.get('strava_error');
-    
+
     if (error) {
       console.error('Strava OAuth error:', error);
-      this.safeEmit("fitness:connectionFailed", { source: "strava", error });
+      this.safeEmit('fitness:connectionFailed', { source: 'strava', error });
       return;
     }
-    
+
     if (accessToken && refreshToken && expiresAt) {
       this.storeTokens('strava', accessToken, refreshToken, parseInt(expiresAt));
-      this.safeEmit("fitness:connected", { source: "strava" });
-      
+      this.safeEmit('fitness:connected', { source: 'strava' });
+
       // Clean up URL
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
@@ -207,12 +223,12 @@ export class ExternalFitnessService extends BaseService {
   public async exchangeStravaCode(code: string): Promise<void> {
     const stravaConfig = this.configService.getStravaConfig();
     if (!stravaConfig?.clientId) {
-      throw new Error("Strava configuration not found");
+      throw new Error('Strava configuration not found');
     }
 
     // This would require client secret, which should not be in client-side code
     // Instead, redirect users to the OAuth flow
-    throw new Error("Please use the OAuth flow instead of manual code exchange");
+    throw new Error('Please use the OAuth flow instead of manual code exchange');
   }
 
   /**
@@ -222,16 +238,16 @@ export class ExternalFitnessService extends BaseService {
     try {
       // Apply rate limiting before making API call
       await this.stravaRateLimiter.consume(1);
-      
+
       const token = await this.ensureValidToken('strava');
-      
+
       const response = await fetch(
         `https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${limit}`,
-        { 
-          headers: { 
+        {
+          headers: {
             Authorization: `Bearer ${token}`,
-            'Accept': 'application/json'
-          } 
+            Accept: 'application/json',
+          },
         }
       );
 
@@ -240,36 +256,37 @@ export class ExternalFitnessService extends BaseService {
       }
 
       const activities = await response.json();
-      
+
       const runActivities = activities
-        .filter((activity: any) => activity.type === "Run")
-        .map((activity: any): ExternalActivity => ({
-          id: activity.id.toString(),
-          source: "strava",
-          name: activity.name,
-          startTime: new Date(activity.start_date).getTime(),
-          distance: activity.distance,
-          duration: activity.moving_time * 1000,
-          polyline: activity.map?.summary_polyline,
-          averageSpeed: activity.average_speed,
-          maxSpeed: activity.max_speed,
-          elevationGain: activity.total_elevation_gain,
-          sourceUrl: `https://www.strava.com/activities/${activity.id}`
-        }));
-      
-      this.safeEmit("fitness:activities", { activities: runActivities, source: "strava" });
+        .filter((activity: any) => activity.type === 'Run')
+        .map(
+          (activity: any): ExternalActivity => ({
+            id: activity.id.toString(),
+            source: 'strava',
+            name: activity.name,
+            startTime: new Date(activity.start_date).getTime(),
+            distance: activity.distance,
+            duration: activity.moving_time * 1000,
+            polyline: activity.map?.summary_polyline,
+            averageSpeed: activity.average_speed,
+            maxSpeed: activity.max_speed,
+            elevationGain: activity.total_elevation_gain,
+            sourceUrl: `https://www.strava.com/activities/${activity.id}`,
+          })
+        );
+
+      this.safeEmit('fitness:activities', { activities: runActivities, source: 'strava' });
       return runActivities;
-      
     } catch (error) {
       console.error('Failed to fetch Strava activities:', error);
-      
+
       // Check if it's a rate limit error
       if (error instanceof Error && error.message.includes('429')) {
         console.warn('Strava rate limit exceeded, backing off...');
         // Reset rate limiter to prevent immediate retries
         this.stravaRateLimiter.reset();
       }
-      
+
       throw error;
     }
   }
@@ -277,17 +294,17 @@ export class ExternalFitnessService extends BaseService {
   /**
    * Check if service is connected
    */
-  public isConnected(source: "strava" | "garmin" | "apple_health" | "google_fit"): boolean {
+  public isConnected(source: 'strava' | 'garmin' | 'apple_health' | 'google_fit'): boolean {
     return this.accessTokens.has(source) && this.isTokenValid(source);
   }
-  
+
   /**
    * Check if token is still valid
    */
   private isTokenValid(source: string): boolean {
     const expiresAt = this.tokenExpirations.get(source);
     if (!expiresAt) return true; // No expiration info, assume valid
-    
+
     const now = Math.floor(Date.now() / 1000);
     return now < expiresAt;
   }
@@ -299,13 +316,13 @@ export class ExternalFitnessService extends BaseService {
     this.accessTokens.delete(source);
     this.refreshTokens.delete(source);
     this.tokenExpirations.delete(source);
-    
+
     // Clear from config service
     if (source === 'strava') {
       this.configService.clearStravaTokens();
     }
-    
-    this.safeEmit("fitness:disconnected", { source });
+
+    this.safeEmit('fitness:disconnected', { source });
   }
 
   /**
@@ -316,7 +333,7 @@ export class ExternalFitnessService extends BaseService {
       strava: this.isConnected('strava'),
       garmin: this.isConnected('garmin'),
       apple_health: this.isConnected('apple_health'),
-      google_fit: this.isConnected('google_fit')
+      google_fit: this.isConnected('google_fit'),
     };
   }
 
@@ -325,7 +342,7 @@ export class ExternalFitnessService extends BaseService {
    */
   public getRateLimiterStatus() {
     return {
-      strava: this.stravaRateLimiter.getStatus()
+      strava: this.stravaRateLimiter.getStatus(),
     };
   }
 
@@ -341,12 +358,12 @@ export class ExternalFitnessService extends BaseService {
    */
   protected async onInitialize(): Promise<void> {
     console.log('Initializing ExternalFitnessService...');
-    
+
     // Check for OAuth callback parameters
     if (window.location.search.includes('strava_success=true')) {
       this.handleOAuthCallback();
     }
-    
+
     // Log connection status
     const status = this.getConnectionStatus();
     console.log('Fitness service connection status:', status);

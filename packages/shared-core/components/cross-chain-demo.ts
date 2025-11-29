@@ -1,4 +1,4 @@
-import { BaseService } from "../core/base-service";
+import { BaseService } from '../core/base-service';
 
 /**
  * CrossChainDemoComponent - Demonstrates cross-chain functionality for the Google Buildathon
@@ -11,10 +11,10 @@ export class CrossChainDemoComponent extends BaseService {
     super();
   }
 
-  public async initialize(containerId: string = "cross-chain-demo"): Promise<void> {
+  public async initialize(containerId: string = 'cross-chain-demo'): Promise<void> {
     this.container = document.getElementById(containerId);
     if (!this.container) {
-      console.warn("CrossChainDemoComponent: Container not found");
+      console.warn('CrossChainDemoComponent: Container not found');
       return;
     }
 
@@ -102,56 +102,56 @@ export class CrossChainDemoComponent extends BaseService {
 
   private setupEventListeners(): void {
     // Chain selection buttons
-    const chainButtons = this.container?.querySelectorAll(".chain-btn");
-    chainButtons?.forEach(button => {
-      button.addEventListener("click", (e) => {
+    const chainButtons = this.container?.querySelectorAll('.chain-btn');
+    chainButtons?.forEach((button) => {
+      button.addEventListener('click', (e) => {
         const target = e.target as HTMLButtonElement;
-        const chainId = parseInt(target.dataset.chain || "1");
+        const chainId = parseInt(target.dataset.chain || '1');
         this.selectChain(chainId);
       });
     });
 
     // Demo start button
-    const startDemoBtn = document.getElementById("start-demo");
+    const startDemoBtn = document.getElementById('start-demo');
     if (startDemoBtn) {
-      startDemoBtn.addEventListener("click", () => {
+      startDemoBtn.addEventListener('click', () => {
         this.startDemo();
       });
     }
 
     // API demo button
-    const showApiDemoBtn = document.getElementById("show-api-demo");
+    const showApiDemoBtn = document.getElementById('show-api-demo');
     if (showApiDemoBtn) {
-      showApiDemoBtn.addEventListener("click", () => {
+      showApiDemoBtn.addEventListener('click', () => {
         this.showApiDemo();
       });
     }
 
     // Listen for cross-chain events
     if (this.eventBus) {
-      this.eventBus.on("crosschain:territoryClaimInitiated", (data: any) => {
-        this.updateDemoStatus("🟡", "Cross-chain claim initiated...", 30);
+      this.eventBus.on('crosschain:territoryClaimInitiated', (data: any) => {
+        this.updateDemoStatus('🟡', 'Cross-chain claim initiated...', 30);
       });
 
-      this.eventBus.on("web3:crossChainTerritoryClaimed", (data: any) => {
-        this.updateDemoStatus("✅", "Territory claimed successfully!", 100);
+      this.eventBus.on('web3:crossChainTerritoryClaimed', (data: any) => {
+        this.updateDemoStatus('✅', 'Territory claimed successfully!', 100);
         this.showDemoResults(data);
       });
 
-      this.eventBus.on("crosschain:territoryClaimFailed", (data: any) => {
-        this.updateDemoStatus("❌", `Claim failed: ${data.error}`, 100);
+      this.eventBus.on('crosschain:territoryClaimFailed', (data: any) => {
+        this.updateDemoStatus('❌', `Claim failed: ${data.error}`, 100);
       });
     }
   }
 
   private selectChain(chainId: number): void {
     // Update UI to show selected chain
-    const chainButtons = this.container?.querySelectorAll(".chain-btn");
-    chainButtons?.forEach(button => {
-      button.classList.remove("selected");
+    const chainButtons = this.container?.querySelectorAll('.chain-btn');
+    chainButtons?.forEach((button) => {
+      button.classList.remove('selected');
       const htmlButton = button as HTMLElement;
-      if (parseInt(htmlButton.dataset.chain || "1") === chainId) {
-        button.classList.add("selected");
+      if (parseInt(htmlButton.dataset.chain || '1') === chainId) {
+        button.classList.add('selected');
       }
     });
 
@@ -159,24 +159,24 @@ export class CrossChainDemoComponent extends BaseService {
   }
 
   private async startDemo(): Promise<void> {
-    console.log("CrossChainDemoComponent: Starting cross-chain demo");
-    
+    console.log('CrossChainDemoComponent: Starting cross-chain demo');
+
     // Show status indicator
-    const statusEl = document.getElementById("demo-status");
+    const statusEl = document.getElementById('demo-status');
     if (statusEl) {
-      statusEl.style.display = "block";
+      statusEl.style.display = 'block';
     }
 
-    this.updateDemoStatus("🟡", "Initializing cross-chain claim...", 10);
-    
+    this.updateDemoStatus('🟡', 'Initializing cross-chain claim...', 10);
+
     // Get services
     const services = (window as any).RunRealm?.services;
     const web3Service = services?.web3;
     const crossChainService = services?.crossChain;
-    
+
     // Check if wallet is connected
     if (!web3Service?.isConnected()) {
-      this.updateDemoStatus("❌", "Please connect your wallet first", 100);
+      this.updateDemoStatus('❌', 'Please connect your wallet first', 100);
       // Show wallet connection UI
       if (services?.walletWidget) {
         services.walletWidget.showWalletModal();
@@ -187,43 +187,43 @@ export class CrossChainDemoComponent extends BaseService {
     // Get wallet info
     const wallet = web3Service.getCurrentWallet();
     if (!wallet) {
-      this.updateDemoStatus("❌", "Wallet not available", 100);
+      this.updateDemoStatus('❌', 'Wallet not available', 100);
       return;
     }
 
-    this.updateDemoStatus("🟡", "Preparing territory data...", 20);
-    
+    this.updateDemoStatus('🟡', 'Preparing territory data...', 20);
+
     // Create mock territory data
     const mockTerritoryData = {
-      geohash: "u4pruydqqvj",
+      geohash: 'u4pruydqqvj',
       difficulty: 75,
       distance: 5000,
-      landmarks: ["Central Park", "Fountain"],
+      landmarks: ['Central Park', 'Fountain'],
       originChainId: wallet.chainId,
-      originAddress: wallet.address
+      originAddress: wallet.address,
     };
 
-    this.updateDemoStatus("🟡", "Sending cross-chain message...", 40);
-    
+    this.updateDemoStatus('🟡', 'Sending cross-chain message...', 40);
+
     // Emit cross-chain claim event
     if (this.eventBus) {
-      this.eventBus.emit("crosschain:territoryClaimRequested", {
+      this.eventBus.emit('crosschain:territoryClaimRequested', {
         territoryData: mockTerritoryData,
-        targetChainId: 7001 // ZetaChain testnet
+        targetChainId: 7001, // ZetaChain testnet
       });
     }
 
     // Simulate processing time
     setTimeout(() => {
-      this.updateDemoStatus("🟡", "Waiting for cross-chain confirmation...", 70);
-      
+      this.updateDemoStatus('🟡', 'Waiting for cross-chain confirmation...', 70);
+
       // Simulate successful claim after delay
       setTimeout(() => {
         if (this.eventBus) {
-          this.eventBus.emit("web3:crossChainTerritoryClaimed", {
+          this.eventBus.emit('web3:crossChainTerritoryClaimed', {
             hash: `0x${Math.random().toString(16).substring(2, 10)}`,
             geohash: mockTerritoryData.geohash,
-            originChainId: mockTerritoryData.originChainId
+            originChainId: mockTerritoryData.originChainId,
           });
         }
       }, 2000);
@@ -262,15 +262,15 @@ ZetaChain Gateway API Usage Examples:
      gasLimit: 500000
    });
     `;
-    
+
     alert(apiDemo);
     console.log(apiDemo);
   }
 
   private updateDemoStatus(icon: string, text: string, progress: number): void {
-    const statusIconEl = document.getElementById("demo-status-icon");
-    const statusTextEl = document.getElementById("demo-status-text");
-    const progressFillEl = document.getElementById("demo-progress-fill");
+    const statusIconEl = document.getElementById('demo-status-icon');
+    const statusTextEl = document.getElementById('demo-status-text');
+    const progressFillEl = document.getElementById('demo-progress-fill');
 
     if (statusIconEl) statusIconEl.textContent = icon;
     if (statusTextEl) statusTextEl.textContent = text;
@@ -278,24 +278,24 @@ ZetaChain Gateway API Usage Examples:
   }
 
   private showDemoResults(data: any): void {
-    const resultsEl = document.getElementById("demo-results");
+    const resultsEl = document.getElementById('demo-results');
     if (resultsEl) {
-      resultsEl.style.display = "block";
+      resultsEl.style.display = 'block';
     }
 
     // Update result values
-    const txHashEl = document.getElementById("tx-hash");
-    const originChainEl = document.getElementById("origin-chain");
-    
-    if (txHashEl) txHashEl.textContent = data.hash || "0x...";
+    const txHashEl = document.getElementById('tx-hash');
+    const originChainEl = document.getElementById('origin-chain');
+
+    if (txHashEl) txHashEl.textContent = data.hash || '0x...';
     if (originChainEl) {
       const chainNames: Record<number, string> = {
-        1: "Ethereum",
-        56: "Binance Smart Chain",
-        137: "Polygon",
-        43114: "Avalanche",
-        8453: "Base",
-        42161: "Arbitrum"
+        1: 'Ethereum',
+        56: 'Binance Smart Chain',
+        137: 'Polygon',
+        43114: 'Avalanche',
+        8453: 'Base',
+        42161: 'Arbitrum',
       };
       originChainEl.textContent = chainNames[data.originChainId] || `Chain ${data.originChainId}`;
     }

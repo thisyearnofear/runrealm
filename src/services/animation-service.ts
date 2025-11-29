@@ -3,8 +3,8 @@
  * Provides consistent animations and transitions across the application
  */
 
-import { BaseService } from '../core/base-service';
 import type { Map as MapboxMap } from 'mapbox-gl';
+import { BaseService } from '../core/base-service';
 import { GhostRunner } from './ai-service';
 import { RunPoint } from './run-tracking-service';
 
@@ -18,17 +18,17 @@ export class AnimationService extends BaseService {
   private static instance: AnimationService;
   public map: MapboxMap | null = null;
   private userLocationMarker: any = null;
-  
+
   // Common easing functions
   private easingFunctions = {
     linear: (t: number) => t,
     easeInQuad: (t: number) => t * t,
     easeOutQuad: (t: number) => t * (2 - t),
-    easeInOutQuad: (t: number) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+    easeInOutQuad: (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
     easeOutElastic: (t: number) => {
       const p = 0.3;
-      return Math.pow(2, -10 * t) * Math.sin((t - p / 4) * (2 * Math.PI) / p) + 1;
-    }
+      return 2 ** (-10 * t) * Math.sin(((t - p / 4) * (2 * Math.PI)) / p) + 1;
+    },
   };
 
   constructor() {
@@ -47,29 +47,31 @@ export class AnimationService extends BaseService {
    */
   public fadeIn(element: HTMLElement, config: AnimationConfig = {}): Promise<void> {
     const { duration = 300, easing = 'easeOutQuad', delay = 0 } = config;
-    
+
     return new Promise((resolve) => {
       setTimeout(() => {
         element.style.opacity = '0';
         element.style.display = 'block';
-        
+
         const startTime = performance.now();
-        const easingFn = this.easingFunctions[easing as keyof typeof this.easingFunctions] || this.easingFunctions.easeOutQuad;
-        
+        const easingFn =
+          this.easingFunctions[easing as keyof typeof this.easingFunctions] ||
+          this.easingFunctions.easeOutQuad;
+
         const animate = (currentTime: number) => {
           const elapsed = currentTime - startTime;
           const progress = Math.min(elapsed / duration, 1);
           const easedProgress = easingFn(progress);
-          
+
           element.style.opacity = easedProgress.toString();
-          
+
           if (progress < 1) {
             requestAnimationFrame(animate);
           } else {
             resolve();
           }
         };
-        
+
         requestAnimationFrame(animate);
       }, delay);
     });
@@ -80,19 +82,21 @@ export class AnimationService extends BaseService {
    */
   public fadeOut(element: HTMLElement, config: AnimationConfig = {}): Promise<void> {
     const { duration = 300, easing = 'easeOutQuad', delay = 0 } = config;
-    
+
     return new Promise((resolve) => {
       setTimeout(() => {
         const startTime = performance.now();
-        const easingFn = this.easingFunctions[easing as keyof typeof this.easingFunctions] || this.easingFunctions.easeOutQuad;
-        
+        const easingFn =
+          this.easingFunctions[easing as keyof typeof this.easingFunctions] ||
+          this.easingFunctions.easeOutQuad;
+
         const animate = (currentTime: number) => {
           const elapsed = currentTime - startTime;
           const progress = Math.min(elapsed / duration, 1);
           const easedProgress = easingFn(progress);
-          
+
           element.style.opacity = (1 - easedProgress).toString();
-          
+
           if (progress < 1) {
             requestAnimationFrame(animate);
           } else {
@@ -100,7 +104,7 @@ export class AnimationService extends BaseService {
             resolve();
           }
         };
-        
+
         requestAnimationFrame(animate);
       }, delay);
     });
@@ -111,29 +115,31 @@ export class AnimationService extends BaseService {
    */
   public slideInBottom(element: HTMLElement, config: AnimationConfig = {}): Promise<void> {
     const { duration = 300, easing = 'easeOutQuad', delay = 0 } = config;
-    
+
     return new Promise((resolve) => {
       setTimeout(() => {
         // Store original styles
         const originalTransform = element.style.transform;
         const originalOpacity = element.style.opacity;
-        
+
         // Set initial state
         element.style.transform = 'translateY(100%)';
         element.style.opacity = '0';
         element.style.display = 'block';
-        
+
         const startTime = performance.now();
-        const easingFn = this.easingFunctions[easing as keyof typeof this.easingFunctions] || this.easingFunctions.easeOutQuad;
-        
+        const easingFn =
+          this.easingFunctions[easing as keyof typeof this.easingFunctions] ||
+          this.easingFunctions.easeOutQuad;
+
         const animate = (currentTime: number) => {
           const elapsed = currentTime - startTime;
           const progress = Math.min(elapsed / duration, 1);
           const easedProgress = easingFn(progress);
-          
+
           element.style.transform = `translateY(${(1 - easedProgress) * 100}%)`;
           element.style.opacity = easedProgress.toString();
-          
+
           if (progress < 1) {
             requestAnimationFrame(animate);
           } else {
@@ -142,7 +148,7 @@ export class AnimationService extends BaseService {
             resolve();
           }
         };
-        
+
         requestAnimationFrame(animate);
       }, delay);
     });
@@ -153,7 +159,7 @@ export class AnimationService extends BaseService {
    */
   public bounce(element: HTMLElement, config: AnimationConfig = {}): Promise<void> {
     const { duration = 600, delay = 0 } = config;
-    
+
     return new Promise((resolve) => {
       setTimeout(() => {
         const keyframes = [
@@ -161,14 +167,14 @@ export class AnimationService extends BaseService {
           { transform: 'scale(1.2)', offset: 0.3 },
           { transform: 'scale(0.9)', offset: 0.6 },
           { transform: 'scale(1.1)', offset: 0.8 },
-          { transform: 'scale(1)', offset: 1 }
+          { transform: 'scale(1)', offset: 1 },
         ];
-        
+
         const animation = element.animate(keyframes, {
           duration,
-          easing: 'ease-out'
+          easing: 'ease-out',
         });
-        
+
         animation.onfinish = () => resolve();
       }, delay);
     });
@@ -179,7 +185,7 @@ export class AnimationService extends BaseService {
    */
   public confetti(element: HTMLElement, config: AnimationConfig = {}): Promise<void> {
     const { duration = 3000, delay = 0 } = config;
-    
+
     return new Promise((resolve) => {
       setTimeout(() => {
         // Create confetti container
@@ -192,13 +198,13 @@ export class AnimationService extends BaseService {
         confettiContainer.style.pointerEvents = 'none';
         confettiContainer.style.zIndex = '10000';
         confettiContainer.style.overflow = 'hidden';
-        
+
         element.appendChild(confettiContainer);
-        
+
         // Create confetti pieces
         const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
         const confettiCount = 100;
-        
+
         for (let i = 0; i < confettiCount; i++) {
           const confetti = document.createElement('div');
           confetti.style.position = 'absolute';
@@ -210,24 +216,30 @@ export class AnimationService extends BaseService {
           confetti.style.top = '-20px';
           confetti.style.opacity = '0';
           confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
-          
+
           confettiContainer.appendChild(confetti);
-          
+
           // Animate confetti
-          const animation = confetti.animate([
-            { transform: 'translateY(0) rotate(0deg)', opacity: 0 },
-            { transform: 'translateY(20px) rotate(90deg)', opacity: 1, offset: 0.1 },
-            { transform: `translateY(${window.innerHeight}px) rotate(${Math.random() * 360}deg)`, opacity: 0 }
-          ], {
-            duration: duration,
-            easing: 'cubic-bezier(0.1, 0.8, 0.2, 1)'
-          });
-          
+          const animation = confetti.animate(
+            [
+              { transform: 'translateY(0) rotate(0deg)', opacity: 0 },
+              { transform: 'translateY(20px) rotate(90deg)', opacity: 1, offset: 0.1 },
+              {
+                transform: `translateY(${window.innerHeight}px) rotate(${Math.random() * 360}deg)`,
+                opacity: 0,
+              },
+            ],
+            {
+              duration: duration,
+              easing: 'cubic-bezier(0.1, 0.8, 0.2, 1)',
+            }
+          );
+
           animation.onfinish = () => {
             confetti.remove();
           };
         }
-        
+
         // Add some special effects
         const specialEffects = document.createElement('div');
         specialEffects.style.position = 'absolute';
@@ -240,23 +252,26 @@ export class AnimationService extends BaseService {
         specialEffects.style.opacity = '0';
         specialEffects.style.zIndex = '10001';
         specialEffects.textContent = '🎉';
-        
+
         confettiContainer.appendChild(specialEffects);
-        
+
         // Animate special effects
-        const specialAnimation = specialEffects.animate([
-          { transform: 'translate(-50%, -50%) scale(0)', opacity: 1 },
-          { transform: 'translate(-50%, -50%) scale(1.5)', opacity: 1, offset: 0.5 },
-          { transform: 'translate(-50%, -50%) scale(2)', opacity: 0 }
-        ], {
-          duration: duration / 2,
-          easing: 'ease-out'
-        });
-        
+        const specialAnimation = specialEffects.animate(
+          [
+            { transform: 'translate(-50%, -50%) scale(0)', opacity: 1 },
+            { transform: 'translate(-50%, -50%) scale(1.5)', opacity: 1, offset: 0.5 },
+            { transform: 'translate(-50%, -50%) scale(2)', opacity: 0 },
+          ],
+          {
+            duration: duration / 2,
+            easing: 'ease-out',
+          }
+        );
+
         specialAnimation.onfinish = () => {
           specialEffects.remove();
         };
-        
+
         // Remove container after animation
         setTimeout(() => {
           confettiContainer.remove();
@@ -271,20 +286,20 @@ export class AnimationService extends BaseService {
    */
   public pulse(element: HTMLElement, config: AnimationConfig = {}): Promise<void> {
     const { duration = 1000, delay = 0 } = config;
-    
+
     return new Promise((resolve) => {
       setTimeout(() => {
         const keyframes = [
           { transform: 'scale(1)', opacity: 1, offset: 0 },
           { transform: 'scale(1.05)', opacity: 0.7, offset: 0.5 },
-          { transform: 'scale(1)', opacity: 1, offset: 1 }
+          { transform: 'scale(1)', opacity: 1, offset: 1 },
         ];
-        
+
         const animation = element.animate(keyframes, {
           duration,
-          iterations: 2
+          iterations: 2,
         });
-        
+
         animation.onfinish = () => resolve();
       }, delay);
     });
@@ -295,7 +310,7 @@ export class AnimationService extends BaseService {
    */
   public shake(element: HTMLElement, config: AnimationConfig = {}): Promise<void> {
     const { duration = 500, delay = 0 } = config;
-    
+
     return new Promise((resolve) => {
       setTimeout(() => {
         const keyframes = [
@@ -309,14 +324,14 @@ export class AnimationService extends BaseService {
           { transform: 'translateX(-10px)', offset: 0.7 },
           { transform: 'translateX(10px)', offset: 0.8 },
           { transform: 'translateX(-5px)', offset: 0.9 },
-          { transform: 'translateX(0)', offset: 1 }
+          { transform: 'translateX(0)', offset: 1 },
         ];
-        
+
         const animation = element.animate(keyframes, {
           duration,
-          easing: 'ease-in-out'
+          easing: 'ease-in-out',
         });
-        
+
         animation.onfinish = () => resolve();
       }, delay);
     });
@@ -341,7 +356,7 @@ export class AnimationService extends BaseService {
     markerElement.style.position = 'relative';
     markerElement.style.width = '24px';
     markerElement.style.height = '24px';
-    
+
     // Inner circle
     const innerCircle = document.createElement('div');
     innerCircle.style.width = '16px';
@@ -352,7 +367,7 @@ export class AnimationService extends BaseService {
     innerCircle.style.top = '4px';
     innerCircle.style.left = '4px';
     innerCircle.style.zIndex = '2';
-    
+
     // Outer circle with pulse animation
     const outerCircle = document.createElement('div');
     outerCircle.style.width = '24px';
@@ -365,7 +380,7 @@ export class AnimationService extends BaseService {
     outerCircle.style.zIndex = '1';
     outerCircle.style.boxShadow = '0 0 0 0 rgba(0, 189, 0, 0.7)';
     outerCircle.style.animation = 'pulse 2s infinite';
-    
+
     // Add CSS for pulse animation
     if (!document.getElementById('pulse-animation-style')) {
       const style = document.createElement('style');
@@ -388,7 +403,7 @@ export class AnimationService extends BaseService {
       `;
       document.head.appendChild(style);
     }
-    
+
     markerElement.appendChild(outerCircle);
     markerElement.appendChild(innerCircle);
 
@@ -397,14 +412,14 @@ export class AnimationService extends BaseService {
     if (mapboxgl && mapboxgl.Marker) {
       this.userLocationMarker = new mapboxgl.Marker({
         element: markerElement,
-        anchor: 'center'
+        anchor: 'center',
       })
         .setLngLat([lng, lat])
         .addTo(this.map);
-        
+
       // Add a subtle bounce effect when the marker is added
       markerElement.style.animation = 'bounce 0.5s';
-      
+
       // Add CSS for bounce animation
       if (!document.getElementById('bounce-animation-style')) {
         const style = document.createElement('style');
@@ -456,7 +471,11 @@ export class AnimationService extends BaseService {
   /**
    * Animate route drawing for enhanced user experience
    */
-  private async animateRouteDrawing(coordinates: [number, number][], style: any, metadata: any): Promise<void> {
+  private async animateRouteDrawing(
+    coordinates: [number, number][],
+    style: any,
+    metadata: any
+  ): Promise<void> {
     if (!this.map) return;
 
     // Add source for the route
@@ -467,13 +486,13 @@ export class AnimationService extends BaseService {
           type: 'Feature',
           properties: {
             ...metadata,
-            source: 'ai-route'
+            source: 'ai-route',
           },
           geometry: {
             type: 'LineString',
-            coordinates: [] // Start with empty coordinates
-          }
-        }
+            coordinates: [], // Start with empty coordinates
+          },
+        },
       });
 
       // Add layer for the route
@@ -483,43 +502,43 @@ export class AnimationService extends BaseService {
         source: 'ai-route-source',
         layout: {
           'line-join': 'round',
-          'line-cap': 'round'
+          'line-cap': 'round',
         },
         paint: {
           'line-color': style?.color || '#00ff88',
           'line-width': style?.width || 4,
           'line-opacity': style?.opacity || 0.8,
-          'line-dasharray': style?.dashArray || [5, 5]
-        }
+          'line-dasharray': style?.dashArray || [5, 5],
+        },
       });
 
       // Animate the drawing of the route
       const animationDuration = 2000; // 2 seconds
       const startTime = performance.now();
       const totalPoints = coordinates.length;
-      
+
       const animate = (currentTime: number) => {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / animationDuration, 1);
         const pointsToShow = Math.floor(progress * totalPoints);
-        
+
         // Update the source with progressively more coordinates
         if (this.map && this.map.getSource('ai-route-source')) {
           const partialCoordinates = coordinates.slice(0, Math.max(2, pointsToShow));
-          
+
           (this.map.getSource('ai-route-source') as any).setData({
             type: 'Feature',
             properties: {
               ...metadata,
-              source: 'ai-route'
+              source: 'ai-route',
             },
             geometry: {
               type: 'LineString',
-              coordinates: partialCoordinates
-            }
+              coordinates: partialCoordinates,
+            },
           });
         }
-        
+
         if (progress < 1) {
           requestAnimationFrame(animate);
         } else {
@@ -529,18 +548,18 @@ export class AnimationService extends BaseService {
               type: 'Feature',
               properties: {
                 ...metadata,
-                source: 'ai-route'
+                source: 'ai-route',
               },
               geometry: {
                 type: 'LineString',
-                coordinates: coordinates
-              }
+                coordinates: coordinates,
+              },
             });
           }
           console.log('AnimationService: AI route visualized successfully with animation');
         }
       };
-      
+
       requestAnimationFrame(animate);
     } catch (error) {
       console.error('AnimationService: Failed to visualize AI route:', error);
@@ -584,13 +603,13 @@ export class AnimationService extends BaseService {
         type: 'Feature',
         properties: {
           ...wp,
-          index
+          index,
         },
         geometry: {
           type: 'Point',
-          coordinates: [wp.coordinates[0], wp.coordinates[1]] // [lng, lat]
-        }
-      }))
+          coordinates: [wp.coordinates[0], wp.coordinates[1]], // [lng, lat]
+        },
+      })),
     };
 
     // Remove existing waypoints layer if it exists
@@ -600,7 +619,7 @@ export class AnimationService extends BaseService {
     if (this.map.getSource('ai-waypoints-source')) {
       this.map.removeSource('ai-waypoints-source');
     }
-    
+
     // Remove existing waypoints popup layer if it exists
     if (this.map.getLayer('ai-waypoints-labels')) {
       this.map.removeLayer('ai-waypoints-labels');
@@ -610,7 +629,7 @@ export class AnimationService extends BaseService {
     try {
       this.map.addSource('ai-waypoints-source', {
         type: 'geojson',
-        data: geoJson as any
+        data: geoJson as any,
       });
 
       // Add layer for the waypoints
@@ -623,18 +642,22 @@ export class AnimationService extends BaseService {
           'circle-color': [
             'match',
             ['get', 'type'],
-            'territory_claim', '#ff0000',
-            'rest_stop', '#0000ff',
-            'landmark', '#ffff00',
-            'strategic', '#ff00ff',
-            '#00ffff' // default color
+            'territory_claim',
+            '#ff0000',
+            'rest_stop',
+            '#0000ff',
+            'landmark',
+            '#ffff00',
+            'strategic',
+            '#ff00ff',
+            '#00ffff', // default color
           ],
           'circle-stroke-width': 3,
           'circle-stroke-color': '#ffffff',
-          'circle-opacity': 0.9
-        }
+          'circle-opacity': 0.9,
+        },
       });
-      
+
       // Add labels for the waypoints
       this.map.addLayer({
         id: 'ai-waypoints-labels',
@@ -645,18 +668,18 @@ export class AnimationService extends BaseService {
           'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
           'text-size': 12,
           'text-offset': [0, 1.5],
-          'text-anchor': 'top'
+          'text-anchor': 'top',
         },
         paint: {
           'text-color': '#000000',
           'text-halo-color': '#ffffff',
-          'text-halo-width': 2
-        }
+          'text-halo-width': 2,
+        },
       });
 
       // Add popup interactions
       this.addWaypointPopups(waypoints);
-      
+
       // Add hover effect
       this.addWaypointHoverEffect();
 
@@ -669,11 +692,14 @@ export class AnimationService extends BaseService {
   /**
    * Animate a route being drawn on the map
    */
-  public animateRoute(coordinates: [number, number][], options: { 
-    duration?: number; 
-    color?: string; 
-    metadata?: any 
-  } = {}): void {
+  public animateRoute(
+    coordinates: [number, number][],
+    options: {
+      duration?: number;
+      color?: string;
+      metadata?: any;
+    } = {}
+  ): void {
     if (!this.map || !coordinates || coordinates.length < 2) {
       console.warn('AnimationService: Invalid coordinates for route animation');
       return;
@@ -688,24 +714,24 @@ export class AnimationService extends BaseService {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / animationDuration, 1);
       const pointsToShow = Math.floor(progress * totalPoints);
-      
+
       // Update the source with progressively more coordinates
       if (this.map && this.map.getSource('planned-route-source')) {
         const partialCoordinates = coordinates.slice(0, Math.max(2, pointsToShow));
-        
+
         (this.map.getSource('planned-route-source') as any).setData({
           type: 'Feature',
           properties: {
             ...metadata,
-            source: 'planned-route'
+            source: 'planned-route',
           },
           geometry: {
             type: 'LineString',
-            coordinates: partialCoordinates
-          }
+            coordinates: partialCoordinates,
+          },
         });
       }
-      
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
@@ -715,18 +741,18 @@ export class AnimationService extends BaseService {
             type: 'Feature',
             properties: {
               ...metadata,
-              source: 'planned-route'
+              source: 'planned-route',
             },
             geometry: {
               type: 'LineString',
-              coordinates: coordinates
-            }
+              coordinates: coordinates,
+            },
           });
         }
         console.log('AnimationService: Route animated successfully');
       }
     };
-    
+
     requestAnimationFrame(animate);
   }
 
@@ -735,24 +761,24 @@ export class AnimationService extends BaseService {
    */
   private addWaypointPopups(waypoints: any[]): void {
     if (!this.map) return;
-    
+
     // Create popup element
     const popup = new (window as any).mapboxgl.Popup({
       closeButton: false,
-      closeOnClick: false
+      closeOnClick: false,
     });
 
     // Add mouse event listeners
     this.map.on('mouseenter', 'ai-waypoints-layer', (e: any) => {
       if (!this.map) return;
-      
+
       // Change the cursor style as a UI indicator
       this.map.getCanvas().style.cursor = 'pointer';
 
       // Copy coordinates array
       const coordinates = e.features[0].geometry.coordinates.slice();
       const props = e.features[0].properties;
-      
+
       // Ensure that if the map is zoomed out such that multiple
       // copies of the feature are visible, the popup appears
       // over the copy being pointed to
@@ -763,19 +789,19 @@ export class AnimationService extends BaseService {
       // Populate the popup and set its coordinates
       let description = `<strong>${props.name}</strong><br/>`;
       description += `<small>Type: ${props.type}</small><br/>`;
-      
+
       if (props.description) {
         description += `<p>${props.description}</p>`;
       }
-      
+
       if (props.territoryValue) {
         description += `<p>Territory Value: ${props.territoryValue}/100</p>`;
       }
-      
+
       if (props.estimatedReward) {
         description += `<p>Estimated Reward: ${props.estimatedReward} REALM</p>`;
       }
-      
+
       if (props.claimPriority) {
         description += `<p>Priority: ${props.claimPriority}</p>`;
       }
@@ -785,7 +811,7 @@ export class AnimationService extends BaseService {
 
     this.map.on('mouseleave', 'ai-waypoints-layer', () => {
       if (!this.map) return;
-      
+
       this.map.getCanvas().style.cursor = '';
       popup.remove();
     });
@@ -796,7 +822,7 @@ export class AnimationService extends BaseService {
    */
   private addWaypointHoverEffect(): void {
     if (!this.map) return;
-    
+
     // When the user moves their mouse over the waypoints, we'll update the cursor
     this.map.on('mouseenter', 'ai-waypoints-layer', () => {
       if (this.map) {
@@ -845,8 +871,10 @@ export class AnimationService extends BaseService {
       // Find the current segment
       let currentSegmentIndex = -1;
       for (let i = 0; i < ghost.route.length - 1; i++) {
-        if (elapsedTime >= (ghost.route[i].timestamp - ghost.route[0].timestamp) &&
-            elapsedTime <= (ghost.route[i+1].timestamp - ghost.route[0].timestamp)) {
+        if (
+          elapsedTime >= ghost.route[i].timestamp - ghost.route[0].timestamp &&
+          elapsedTime <= ghost.route[i + 1].timestamp - ghost.route[0].timestamp
+        ) {
           currentSegmentIndex = i;
           break;
         }
@@ -863,11 +891,11 @@ export class AnimationService extends BaseService {
         const lat = segmentStart.lat + (segmentEnd.lat - segmentStart.lat) * segmentProgress;
 
         ghostMarker.setLngLat([lng, lat]);
-        
+
         this.safeEmit('ghost:progress', {
-            ghostId: ghost.id,
-            progress: progress * 100,
-            location: { lat, lng }
+          ghostId: ghost.id,
+          progress: progress * 100,
+          location: { lat, lng },
         });
       }
 
@@ -893,9 +921,12 @@ export class AnimationService extends BaseService {
 
     try {
       // Ensure we have a valid GeoJSON structure
-      const featureCollection = geojson.type === 'FeatureCollection' ? geojson : 
-                              geojson.type === 'Feature' ? { type: 'FeatureCollection', features: [geojson] } :
-                              null;
+      const featureCollection =
+        geojson.type === 'FeatureCollection'
+          ? geojson
+          : geojson.type === 'Feature'
+            ? { type: 'FeatureCollection', features: [geojson] }
+            : null;
 
       if (!featureCollection) {
         console.warn('AnimationService: Invalid GeoJSON for planned route');
@@ -913,7 +944,7 @@ export class AnimationService extends BaseService {
       // Add source for the planned route
       this.map.addSource('planned-route-source', {
         type: 'geojson',
-        data: featureCollection as any
+        data: featureCollection as any,
       });
 
       // Add layer for the planned route
@@ -925,17 +956,19 @@ export class AnimationService extends BaseService {
           'line-color': '#00ff88',
           'line-width': 4,
           'line-opacity': 0.8,
-          'line-dasharray': [2, 2]
-        }
+          'line-dasharray': [2, 2],
+        },
       });
 
       // If we have a LineString feature, animate it
-      const lineFeature = featureCollection.features.find((f: any) => f.geometry.type === 'LineString');
+      const lineFeature = featureCollection.features.find(
+        (f: any) => f.geometry.type === 'LineString'
+      );
       if (lineFeature) {
         this.animateRoute(lineFeature.geometry.coordinates, {
           duration: 2000,
           color: '#00ff88',
-          metadata: lineFeature.properties
+          metadata: lineFeature.properties,
         });
       }
 

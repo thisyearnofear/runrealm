@@ -11,13 +11,13 @@ jest.mock('./src/core/app-config', () => {
             return {
               ai: {
                 enabled: true,
-                geminiApiKey: 'test-key'
-              }
+                geminiApiKey: 'test-key',
+              },
             };
-          }
+          },
         };
-      }
-    }
+      },
+    },
   };
 });
 
@@ -29,10 +29,10 @@ jest.mock('./src/core/event-bus', () => {
         return {
           emit: jest.fn(),
           on: jest.fn(),
-          off: jest.fn()
+          off: jest.fn(),
         };
-      }
-    }
+      },
+    },
   };
 });
 
@@ -54,12 +54,12 @@ describe('AIService', () => {
             getGenerativeModel: jest.fn().mockReturnValue({
               generateContent: jest.fn().mockResolvedValue({
                 response: {
-                  text: jest.fn().mockReturnValue('{"test": "response"}')
-                }
-              })
-            })
+                  text: jest.fn().mockReturnValue('{"test": "response"}'),
+                },
+              }),
+            }),
           };
-        })
+        }),
       };
     });
 

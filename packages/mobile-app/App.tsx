@@ -2,11 +2,11 @@
  * App.tsx - Clean and simple entry point
  * Just renders MobileApp with error boundary
  */
-import "./polyfills";
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import MobileApp from "./src/MobileApp";
+import './polyfills';
+import { StatusBar } from 'expo-status-bar';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import MobileApp from './src/MobileApp';
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -22,7 +22,7 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("App Error:", error, errorInfo);
+    console.error('App Error:', error, errorInfo);
   }
 
   render() {
@@ -30,9 +30,7 @@ class ErrorBoundary extends React.Component<
       return (
         <View style={styles.container}>
           <Text style={styles.errorText}>Something went wrong</Text>
-          <Text style={styles.errorDetail}>
-            {this.state.error?.message || "Unknown error"}
-          </Text>
+          <Text style={styles.errorDetail}>{this.state.error?.message || 'Unknown error'}</Text>
           <StatusBar style="auto" />
         </View>
       );
@@ -54,20 +52,20 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
   },
   errorText: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 10,
-    color: "#ff0000",
+    color: '#ff0000',
   },
   errorDetail: {
     fontSize: 14,
-    color: "#666",
-    textAlign: "center",
+    color: '#666',
+    textAlign: 'center',
   },
 });

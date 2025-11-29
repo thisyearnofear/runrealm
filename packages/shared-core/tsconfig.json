@@ -15,8 +15,5 @@
     "baseUrl": ".",
     "typeRoots": ["../../node_modules/@types", "../../types"]
   },
-  "include": [
-    "**/*",
-    "types/**/*"
-  ]
+  "include": ["**/*", "types/**/*"]
 }

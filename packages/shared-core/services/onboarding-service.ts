@@ -72,15 +72,16 @@ export class OnboardingService extends BaseService {
         id: 'welcome',
         title: 'Welcome to RunRealm! 🏃‍♂️',
         description: 'Plan routes, track runs, discover your city.',
-        targetElement: '.map-container'
+        targetElement: '.map-container',
       },
       {
         id: 'strava-integration',
         title: 'Connect with Strava 🔗',
-        description: 'Import your Strava activities to claim territories and see your runs on the map.',
+        description:
+          'Import your Strava activities to claim territories and see your runs on the map.',
         targetElement: '.service-card.strava',
-        position: 'bottom'
-      }
+        position: 'bottom',
+      },
     ];
   }
 
@@ -90,8 +91,8 @@ export class OnboardingService extends BaseService {
         id: 'ai-intro',
         title: 'AI Coach Available 🤖',
         description: 'Try "Smart Morning" for personalized route suggestions.',
-        targetElement: '[data-payload*="smart_morning"]'
-      }
+        targetElement: '[data-payload*="smart_morning"]',
+      },
     ];
   }
 
@@ -101,8 +102,8 @@ export class OnboardingService extends BaseService {
         id: 'web3-intro',
         title: 'Own Your Runs 🏆',
         description: 'Connect wallet to claim territories and earn rewards.',
-        targetElement: '.wallet-widget'
-      }
+        targetElement: '.wallet-widget',
+      },
     ];
   }
 
@@ -117,61 +118,64 @@ export class OnboardingService extends BaseService {
       {
         id: 'mobile-gps',
         title: 'GPS Tracking 🛰️',
-        description: 'Grant location permission to track your runs and discover nearby territories.',
+        description:
+          'Grant location permission to track your runs and discover nearby territories.',
       },
       {
         id: 'mobile-first-run',
         title: 'Start Your First Run 🏃‍♂️',
-        description: 'Tap "Start Run" to begin tracking. Complete loops to become eligible for territory claiming!',
+        description:
+          'Tap "Start Run" to begin tracking. Complete loops to become eligible for territory claiming!',
       },
       {
         id: 'mobile-territories',
         title: 'Claim Territories 🏰',
-        description: 'Run in loops to create claimable territories. Territories are NFTs on the ZetaChain blockchain.',
-      }
+        description:
+          'Run in loops to create claimable territories. Territories are NFTs on the ZetaChain blockchain.',
+      },
     ];
   }
 
   /**
-  * Start the onboarding process
-  */
+   * Start the onboarding process
+   */
   public async start(config: OnboardingConfig): Promise<void> {
-  if (this.isActive) {
-  console.warn('Onboarding is already active');
-  return;
-  }
+    if (this.isActive) {
+      console.warn('Onboarding is already active');
+      return;
+    }
 
-  this.onboardingConfig = config;
-  this.currentStepIndex = 0;
-  this.isActive = true;
+    this.onboardingConfig = config;
+    this.currentStepIndex = 0;
+    this.isActive = true;
 
-  // Mark onboarding as in progress
-  localStorage.setItem('runrealm_onboarding_in_progress', 'true');
+    // Mark onboarding as in progress
+    localStorage.setItem('runrealm_onboarding_in_progress', 'true');
 
-  // Platform-specific initialization
-  if (config.platform === 'mobile') {
-  // Mobile onboarding is handled by React component directly
-  // No events needed for mobile platform
-    return;
+    // Platform-specific initialization
+    if (config.platform === 'mobile') {
+      // Mobile onboarding is handled by React component directly
+      // No events needed for mobile platform
+      return;
     } else {
-    // Web onboarding with DOM manipulation
+      // Web onboarding with DOM manipulation
       this.createOverlay();
-    this.createTooltip();
-    await this.showStep(0);
+      this.createTooltip();
+      await this.showStep(0);
       this.setupEventListeners();
     }
   }
 
   /**
-    * Start mobile-specific onboarding
-    */
+   * Start mobile-specific onboarding
+   */
   public async startMobileOnboarding(): Promise<void> {
     const config: OnboardingConfig = {
       steps: this.getMobileSteps(),
       mode: 'mobile',
       platform: 'mobile',
       allowSkip: true,
-      showProgress: true
+      showProgress: true,
     };
     await this.start(config);
   }
@@ -212,7 +216,11 @@ export class OnboardingService extends BaseService {
   public async goToStep(stepIndex: number): Promise<void> {
     if (!this.isActive || !this.config) return;
 
-    if (!this.onboardingConfig || stepIndex < 0 || stepIndex >= this.onboardingConfig.steps.length) {
+    if (
+      !this.onboardingConfig ||
+      stepIndex < 0 ||
+      stepIndex >= this.onboardingConfig.steps.length
+    ) {
       console.warn('Invalid step index');
       return;
     }
@@ -252,7 +260,7 @@ export class OnboardingService extends BaseService {
   public shouldShowOnboarding(): boolean {
     const isComplete = localStorage.getItem('runrealm_onboarding_complete') === 'true';
     const isInProgress = localStorage.getItem('runrealm_onboarding_in_progress') === 'true';
-    
+
     return !isComplete || isInProgress;
   }
 
@@ -264,9 +272,9 @@ export class OnboardingService extends BaseService {
 
     const savedStep = localStorage.getItem('runrealm_onboarding_step');
     const stepIndex = savedStep ? parseInt(savedStep, 10) : 0;
-    
+
     this.currentStepIndex = Math.max(0, Math.min(stepIndex, config.steps.length - 1));
-    
+
     await this.start(config);
   }
 
@@ -285,8 +293,8 @@ export class OnboardingService extends BaseService {
         height: '100%',
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         zIndex: '9999',
-        display: 'none'
-      }
+        display: 'none',
+      },
     });
 
     // Add click to advance
@@ -311,8 +319,8 @@ export class OnboardingService extends BaseService {
         zIndex: '10000',
         maxWidth: '300px',
         display: 'none',
-        pointerEvents: 'auto'
-      }
+        pointerEvents: 'auto',
+      },
     });
   }
 
@@ -323,7 +331,7 @@ export class OnboardingService extends BaseService {
     if (!this.onboardingConfig || !this.overlay || !this.tooltip) return;
 
     const step = this.onboardingConfig.steps[stepIndex];
-    
+
     // Hide previous tooltip
     if (this.tooltip) {
       this.tooltip.style.display = 'none';
@@ -349,7 +357,7 @@ export class OnboardingService extends BaseService {
     this.safeEmit('onboarding:stepChanged', {
       stepIndex,
       stepId: step.id,
-      totalSteps: this.onboardingConfig.steps.length
+      totalSteps: this.onboardingConfig.steps.length,
     });
   }
 
@@ -359,13 +367,15 @@ export class OnboardingService extends BaseService {
   private highlightElement(selector: string): void {
     // Remove previous highlights
     const previousHighlights = document.querySelectorAll('.onboarding-highlight');
-    previousHighlights.forEach(el => el.classList.remove('onboarding-highlight'));
+    previousHighlights.forEach((el) => {
+      el.classList.remove('onboarding-highlight');
+    });
 
     // Add highlight to target element
     const target = document.querySelector(selector);
     if (target) {
       target.classList.add('onboarding-highlight');
-      
+
       // Scroll to element if needed
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -386,8 +396,8 @@ export class OnboardingService extends BaseService {
       style: {
         margin: '0 0 10px 0',
         color: '#333',
-        fontSize: '18px'
-      }
+        fontSize: '18px',
+      },
     });
 
     const description = this.domService.createElement('p', {
@@ -396,8 +406,8 @@ export class OnboardingService extends BaseService {
         margin: '0 0 15px 0',
         color: '#666',
         fontSize: '14px',
-        lineHeight: '1.4'
-      }
+        lineHeight: '1.4',
+      },
     });
 
     // Create progress indicator
@@ -406,24 +416,24 @@ export class OnboardingService extends BaseService {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: '15px'
-      }
+        marginTop: '15px',
+      },
     });
 
     const progressText = this.domService.createElement('span', {
       textContent: `${this.currentStepIndex + 1} of ${this.onboardingConfig?.steps.length}`,
       style: {
         fontSize: '12px',
-        color: '#999'
-      }
+        color: '#999',
+      },
     });
 
     // Create navigation buttons
     const buttons = this.domService.createElement('div', {
       style: {
         display: 'flex',
-        gap: '10px'
-      }
+        gap: '10px',
+      },
     });
 
     if (this.currentStepIndex > 0) {
@@ -435,8 +445,8 @@ export class OnboardingService extends BaseService {
           padding: '8px 12px',
           borderRadius: '4px',
           cursor: 'pointer',
-          fontSize: '12px'
-        }
+          fontSize: '12px',
+        },
       });
       prevButton.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -446,7 +456,10 @@ export class OnboardingService extends BaseService {
     }
 
     const nextButton = this.domService.createElement('button', {
-      textContent: this.currentStepIndex === (this.onboardingConfig?.steps.length || 0) - 1 ? 'Finish' : 'Next',
+      textContent:
+        this.currentStepIndex === (this.onboardingConfig?.steps.length || 0) - 1
+          ? 'Finish'
+          : 'Next',
       style: {
         background: '#00bd00',
         color: 'white',
@@ -454,8 +467,8 @@ export class OnboardingService extends BaseService {
         padding: '8px 12px',
         borderRadius: '4px',
         cursor: 'pointer',
-        fontSize: '12px'
-      }
+        fontSize: '12px',
+      },
     });
     nextButton.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -550,10 +563,14 @@ export class OnboardingService extends BaseService {
 
     // Remove highlights
     const highlights = document.querySelectorAll('.onboarding-highlight');
-    highlights.forEach(el => el.classList.remove('onboarding-highlight'));
+    highlights.forEach((el) => {
+      el.classList.remove('onboarding-highlight');
+    });
 
     // Clean up event listeners
-    this.cleanupFunctions.forEach(fn => fn());
+    this.cleanupFunctions.forEach((fn) => {
+      fn();
+    });
     this.cleanupFunctions = [];
   }
 

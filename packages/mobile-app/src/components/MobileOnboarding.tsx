@@ -4,16 +4,9 @@
  * CLEAN: Clear separation with React Native UI
  */
 
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Dimensions,
-  Alert,
-} from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import { Alert, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Define OnboardingStep interface locally for mobile component
 interface OnboardingStep {
@@ -22,55 +15,49 @@ interface OnboardingStep {
   description: string;
 }
 
-const { width, height } = Dimensions.get("window");
+const { width, height } = Dimensions.get('window');
 
 interface MobileOnboardingProps {
   onComplete: () => void;
   onSkip?: () => void;
 }
 
-const MobileOnboarding: React.FC<MobileOnboardingProps> = ({
-  onComplete,
-  onSkip,
-}) => {
+const MobileOnboarding: React.FC<MobileOnboardingProps> = ({ onComplete, onSkip }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
   // Mobile onboarding steps - defined directly in component for simplicity
   const steps: OnboardingStep[] = [
     {
-      id: "mobile-welcome",
-      title: "Welcome to RunRealm Mobile! 📱",
-      description: "Track runs, claim territories, earn rewards.",
+      id: 'mobile-welcome',
+      title: 'Welcome to RunRealm Mobile! 📱',
+      description: 'Track runs, claim territories, earn rewards.',
     },
     {
-      id: "mobile-gps",
-      title: "GPS Tracking 🛰️",
-      description:
-        "Grant location permission to track your runs and discover nearby territories.",
+      id: 'mobile-gps',
+      title: 'GPS Tracking 🛰️',
+      description: 'Grant location permission to track your runs and discover nearby territories.',
     },
     {
-      id: "mobile-first-run",
-      title: "Start Your First Run 🏃‍♂️",
+      id: 'mobile-first-run',
+      title: 'Start Your First Run 🏃‍♂️',
       description:
         'Tap "Start Run" to begin tracking. Complete loops to become eligible for territory claiming!',
     },
     {
-      id: "mobile-territories",
-      title: "Claim Territories 🏰",
+      id: 'mobile-territories',
+      title: 'Claim Territories 🏰',
       description:
-        "Run in loops to create claimable territories. Territories are NFTs on the ZetaChain blockchain.",
+        'Run in loops to create claimable territories. Territories are NFTs on the ZetaChain blockchain.',
     },
   ];
 
   useEffect(() => {
     (async () => {
-      const hasCompleted = await AsyncStorage.getItem(
-        "runrealm_onboarding_complete"
-      );
+      const hasCompleted = await AsyncStorage.getItem('runrealm_onboarding_complete');
       if (!hasCompleted) {
         setIsVisible(true);
-        await AsyncStorage.setItem("runrealm_onboarding_in_progress", "true");
+        await AsyncStorage.setItem('runrealm_onboarding_in_progress', 'true');
       }
     })();
   }, []);
@@ -91,12 +78,12 @@ const MobileOnboarding: React.FC<MobileOnboardingProps> = ({
 
   const skipOnboarding = () => {
     Alert.alert(
-      "Skip Onboarding?",
-      "Are you sure you want to skip the introduction? You can always access help later.",
+      'Skip Onboarding?',
+      'Are you sure you want to skip the introduction? You can always access help later.',
       [
-        { text: "Continue Tutorial", style: "cancel" },
+        { text: 'Continue Tutorial', style: 'cancel' },
         {
-          text: "Skip",
+          text: 'Skip',
           onPress: () => {
             completeOnboarding();
             onSkip?.();
@@ -107,8 +94,8 @@ const MobileOnboarding: React.FC<MobileOnboardingProps> = ({
   };
 
   const completeOnboarding = async () => {
-    await AsyncStorage.setItem("runrealm_onboarding_complete", "true");
-    await AsyncStorage.removeItem("runrealm_onboarding_in_progress");
+    await AsyncStorage.setItem('runrealm_onboarding_complete', 'true');
+    await AsyncStorage.removeItem('runrealm_onboarding_in_progress');
     setIsVisible(false);
     onComplete();
   };
@@ -152,19 +139,13 @@ const MobileOnboarding: React.FC<MobileOnboardingProps> = ({
 
           <View style={styles.spacer} />
 
-          <TouchableOpacity
-            style={[styles.button, styles.skipButton]}
-            onPress={skipOnboarding}
-          >
+          <TouchableOpacity style={[styles.button, styles.skipButton]} onPress={skipOnboarding}>
             <Text style={styles.skipButtonText}>Skip</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={nextStep}
-          >
+          <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={nextStep}>
             <Text style={styles.primaryButtonText}>
-              {currentStep === steps.length - 1 ? "Get Started!" : "Next"}
+              {currentStep === steps.length - 1 ? 'Get Started!' : 'Next'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -175,18 +156,18 @@ const MobileOnboarding: React.FC<MobileOnboardingProps> = ({
 
 const styles = StyleSheet.create({
   overlay: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 1000,
   },
   container: {
-    backgroundColor: "white",
+    backgroundColor: 'white',
     borderRadius: 20,
     padding: 24,
     margin: 20,
@@ -194,48 +175,48 @@ const styles = StyleSheet.create({
     minHeight: height * 0.5,
   },
   progressContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: 24,
   },
   progressBar: {
-    width: "100%",
+    width: '100%',
     height: 4,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: '#e0e0e0',
     borderRadius: 2,
     marginBottom: 8,
   },
   progressFill: {
-    height: "100%",
-    backgroundColor: "#4CAF50",
+    height: '100%',
+    backgroundColor: '#4CAF50',
     borderRadius: 2,
   },
   progressText: {
     fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
+    color: '#666',
+    fontWeight: '500',
   },
   content: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 32,
   },
   title: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
     marginBottom: 16,
   },
   description: {
     fontSize: 16,
-    color: "#666",
-    textAlign: "center",
+    color: '#666',
+    textAlign: 'center',
     lineHeight: 24,
   },
   navigation: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   spacer: {
     flex: 1,
@@ -245,32 +226,32 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     minWidth: 80,
-    alignItems: "center",
+    alignItems: 'center',
   },
   primaryButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: '#4CAF50',
   },
   secondaryButton: {
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: "#666",
+    borderColor: '#666',
   },
   skipButton: {
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
   },
   primaryButtonText: {
-    color: "white",
-    fontWeight: "600",
+    color: 'white',
+    fontWeight: '600',
     fontSize: 16,
   },
   secondaryButtonText: {
-    color: "#666",
-    fontWeight: "500",
+    color: '#666',
+    fontWeight: '500',
     fontSize: 16,
   },
   skipButtonText: {
-    color: "#999",
-    fontWeight: "500",
+    color: '#999',
+    fontWeight: '500',
     fontSize: 16,
   },
 });

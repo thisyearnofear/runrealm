@@ -257,22 +257,24 @@ export class AchievementService extends BaseService {
   }
 
   public getAchievements(): Achievement[] {
-    return this.achievements.map(achievement => ({
+    return this.achievements.map((achievement) => ({
       ...achievement,
-      unlockedAt: this.unlockedAchievements.has(achievement.id) ? achievement.unlockedAt : undefined,
+      unlockedAt: this.unlockedAchievements.has(achievement.id)
+        ? achievement.unlockedAt
+        : undefined,
     }));
   }
 
   public getUnlockedAchievements(): Achievement[] {
-    return this.achievements.filter(achievement =>
-      this.unlockedAchievements.has(achievement.id)
-    );
+    return this.achievements.filter((achievement) => this.unlockedAchievements.has(achievement.id));
   }
 
   public getAchievementProgress(): AchievementProgress[] {
     return this.achievements
-      .filter(achievement => achievement.progress && !this.unlockedAchievements.has(achievement.id))
-      .map(achievement => {
+      .filter(
+        (achievement) => achievement.progress && !this.unlockedAchievements.has(achievement.id)
+      )
+      .map((achievement) => {
         const progress = achievement.progress!(this.userStats);
         return {
           achievementId: achievement.id,

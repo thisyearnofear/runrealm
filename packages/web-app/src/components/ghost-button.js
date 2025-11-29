@@ -11,13 +11,13 @@ export class GhostButton {
     this.button = this.domService.createElement('button', {
       className: 'ghost-button',
       innerHTML: '👻',
-      title: 'Ghost Runners'
+      title: 'Ghost Runners',
     });
-    
+
     this.button.addEventListener('click', () => {
       this.ghostManagement.toggle();
     });
-    
+
     parentElement.appendChild(this.button);
   }
 }

@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
 import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export const DashboardScreen: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -19,14 +19,14 @@ export const DashboardScreen: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
-    
+
     // Set up listeners for real-time updates
     const handleDataUpdate = (data: any) => {
       setDashboardData(data.data);
     };
-    
+
     dashboardService.subscribeToDataUpdates(handleDataUpdate);
-    
+
     // Cleanup listener on unmount
     return () => {
       dashboardService.unsubscribeFromDataUpdates(handleDataUpdate);
@@ -36,7 +36,7 @@ export const DashboardScreen: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Get current dashboard data
       const data = dashboardService.getData();
       setDashboardData(data);
@@ -85,14 +85,14 @@ export const DashboardScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00ff88" />
       }
     >
       <Text style={styles.title}>🎮 User Dashboard</Text>
-      
+
       {/* Player Stats */}
       {dashboardData?.userStats && (
         <View style={styles.section}>
@@ -109,7 +109,9 @@ export const DashboardScreen: React.FC = () => {
               <Text style={styles.statLabel}>XP</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{formatDistance(dashboardData.userStats.totalDistance)}</Text>
+              <Text style={styles.statNumber}>
+                {formatDistance(dashboardData.userStats.totalDistance)}
+              </Text>
               <Text style={styles.statLabel}>Distance</Text>
             </View>
             <View style={styles.statCard}>
@@ -119,7 +121,7 @@ export const DashboardScreen: React.FC = () => {
           </View>
         </View>
       )}
-      
+
       {/* Current Run */}
       {dashboardData?.currentRun && dashboardData.currentRun.status !== 'completed' && (
         <View style={styles.section}>
@@ -128,15 +130,21 @@ export const DashboardScreen: React.FC = () => {
           </View>
           <View style={styles.runStats}>
             <View style={styles.runStat}>
-              <Text style={styles.statNumber}>{formatDistance(dashboardData.currentRun.totalDistance)}</Text>
+              <Text style={styles.statNumber}>
+                {formatDistance(dashboardData.currentRun.totalDistance)}
+              </Text>
               <Text style={styles.statLabel}>Distance</Text>
             </View>
             <View style={styles.runStat}>
-              <Text style={styles.statNumber}>{formatDuration(dashboardData.currentRun.totalDuration)}</Text>
+              <Text style={styles.statNumber}>
+                {formatDuration(dashboardData.currentRun.totalDuration)}
+              </Text>
               <Text style={styles.statLabel}>Time</Text>
             </View>
             <View style={styles.runStat}>
-              <Text style={styles.statNumber}>{(dashboardData.currentRun.averageSpeed * 3.6).toFixed(1)}</Text>
+              <Text style={styles.statNumber}>
+                {(dashboardData.currentRun.averageSpeed * 3.6).toFixed(1)}
+              </Text>
               <Text style={styles.statLabel}>km/h</Text>
             </View>
           </View>
@@ -147,7 +155,7 @@ export const DashboardScreen: React.FC = () => {
           )}
         </View>
       )}
-      
+
       {/* Recent Activity */}
       {dashboardData?.recentActivity && (
         <View style={styles.section}>
@@ -160,28 +168,30 @@ export const DashboardScreen: React.FC = () => {
               <View style={styles.activityContent}>
                 <Text style={styles.activityTitle}>Completed Run</Text>
                 <Text style={styles.activityDescription}>
-                  {formatDistance(dashboardData.recentActivity.lastRun.totalDistance)} in {formatDuration(dashboardData.recentActivity.lastRun.totalDuration)}
+                  {formatDistance(dashboardData.recentActivity.lastRun.totalDistance)} in{' '}
+                  {formatDuration(dashboardData.recentActivity.lastRun.totalDuration)}
                 </Text>
               </View>
             </View>
           ) : (
             <Text style={styles.emptyText}>No recent activity</Text>
           )}
-          
-          {dashboardData.recentActivity.recentAchievements && dashboardData.recentActivity.recentAchievements.length > 0 && (
-            <View style={styles.activityItem}>
-              <Text style={styles.activityIcon}>🏆</Text>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Achievement Unlocked</Text>
-                <Text style={styles.activityDescription}>
-                  {dashboardData.recentActivity.recentAchievements.slice(-1)[0]}
-                </Text>
+
+          {dashboardData.recentActivity.recentAchievements &&
+            dashboardData.recentActivity.recentAchievements.length > 0 && (
+              <View style={styles.activityItem}>
+                <Text style={styles.activityIcon}>🏆</Text>
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityTitle}>Achievement Unlocked</Text>
+                  <Text style={styles.activityDescription}>
+                    {dashboardData.recentActivity.recentAchievements.slice(-1)[0]}
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
+            )}
         </View>
       )}
-      
+
       {/* Territories */}
       {dashboardData?.territories && (
         <View style={styles.section}>
@@ -198,17 +208,26 @@ export const DashboardScreen: React.FC = () => {
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryNumber}>
-                    {dashboardData.territories.reduce((sum: number, t: any) => sum + (t.estimatedReward || 0), 0).toFixed(2)}
+                    {dashboardData.territories
+                      .reduce((sum: number, t: any) => sum + (t.estimatedReward || 0), 0)
+                      .toFixed(2)}
                   </Text>
                   <Text style={styles.summaryLabel}>Total REALM</Text>
                 </View>
               </View>
               <View style={styles.territoriesList}>
                 {dashboardData.territories.slice(0, 3).map((territory: any) => (
-                  <View key={territory.id} style={[styles.territoryItem, styles[territory.rarity || 'common']]}>
-                    <Text style={styles.territoryName}>{territory.metadata?.name || 'Unnamed Territory'}</Text>
+                  <View
+                    key={territory.id}
+                    style={[styles.territoryItem, styles[territory.rarity || 'common']]}
+                  >
+                    <Text style={styles.territoryName}>
+                      {territory.metadata?.name || 'Unnamed Territory'}
+                    </Text>
                     <View style={styles.territoryDetails}>
-                      <Text style={styles.territoryReward}>+{territory.estimatedReward || 0} REALM</Text>
+                      <Text style={styles.territoryReward}>
+                        +{territory.estimatedReward || 0} REALM
+                      </Text>
                       {territory.rarity && (
                         <Text style={styles.territoryRarity}>{territory.rarity}</Text>
                       )}
@@ -216,7 +235,9 @@ export const DashboardScreen: React.FC = () => {
                   </View>
                 ))}
                 {dashboardData.territories.length > 3 && (
-                  <Text style={styles.moreTerritories}>+{dashboardData.territories.length - 3} more territories</Text>
+                  <Text style={styles.moreTerritories}>
+                    +{dashboardData.territories.length - 3} more territories
+                  </Text>
                 )}
               </View>
             </>
@@ -225,7 +246,7 @@ export const DashboardScreen: React.FC = () => {
           )}
         </View>
       )}
-      
+
       {/* Wallet Info */}
       {dashboardData?.walletInfo ? (
         <View style={styles.section}>
@@ -236,16 +257,22 @@ export const DashboardScreen: React.FC = () => {
             <View style={styles.walletRow}>
               <Text style={styles.walletLabel}>Address</Text>
               <Text style={styles.walletValue} numberOfLines={1} ellipsizeMode="middle">
-                {dashboardData.walletInfo.address ? `${dashboardData.walletInfo.address.substring(0, 6)}...${dashboardData.walletInfo.address.substring(dashboardData.walletInfo.address.length - 4)}` : 'Not connected'}
+                {dashboardData.walletInfo.address
+                  ? `${dashboardData.walletInfo.address.substring(0, 6)}...${dashboardData.walletInfo.address.substring(dashboardData.walletInfo.address.length - 4)}`
+                  : 'Not connected'}
               </Text>
             </View>
             <View style={styles.walletRow}>
               <Text style={styles.walletLabel}>Balance</Text>
-              <Text style={styles.walletValue}>{dashboardData.walletInfo.balance || '0'} REALM</Text>
+              <Text style={styles.walletValue}>
+                {dashboardData.walletInfo.balance || '0'} REALM
+              </Text>
             </View>
             <View style={styles.walletRow}>
               <Text style={styles.walletLabel}>Network</Text>
-              <Text style={styles.walletValue}>{dashboardData.walletInfo.networkName || 'Unknown'}</Text>
+              <Text style={styles.walletValue}>
+                {dashboardData.walletInfo.networkName || 'Unknown'}
+              </Text>
             </View>
           </View>
         </View>
@@ -257,7 +284,7 @@ export const DashboardScreen: React.FC = () => {
           <Text style={styles.emptyText}>Connect wallet to view info</Text>
         </View>
       )}
-      
+
       {/* AI Insights */}
       {dashboardData?.aiInsights && (
         <View style={styles.section}>
@@ -270,7 +297,8 @@ export const DashboardScreen: React.FC = () => {
               <View style={styles.insightContent}>
                 <Text style={styles.insightTitle}>Route Suggestion</Text>
                 <Text style={styles.insightDescription}>
-                  {(dashboardData.aiInsights.suggestedRoute.distance / 1000).toFixed(1)}km route available
+                  {(dashboardData.aiInsights.suggestedRoute.distance / 1000).toFixed(1)}km route
+                  available
                 </Text>
               </View>
             </View>
@@ -279,15 +307,20 @@ export const DashboardScreen: React.FC = () => {
               <Text style={styles.insightIcon}>🏰</Text>
               <View style={styles.insightContent}>
                 <Text style={styles.insightTitle}>Territory Analysis</Text>
-                <Text style={styles.insightDescription}>Analysis available for claimed territories</Text>
+                <Text style={styles.insightDescription}>
+                  Analysis available for claimed territories
+                </Text>
               </View>
             </View>
-          ) : dashboardData.aiInsights.personalizedTips && dashboardData.aiInsights.personalizedTips.length > 0 ? (
+          ) : dashboardData.aiInsights.personalizedTips &&
+            dashboardData.aiInsights.personalizedTips.length > 0 ? (
             <View style={styles.insightItem}>
               <Text style={styles.insightIcon}>💡</Text>
               <View style={styles.insightContent}>
                 <Text style={styles.insightTitle}>Personalized Tip</Text>
-                <Text style={styles.insightDescription}>{dashboardData.aiInsights.personalizedTips[0]}</Text>
+                <Text style={styles.insightDescription}>
+                  {dashboardData.aiInsights.personalizedTips[0]}
+                </Text>
               </View>
             </View>
           ) : (

@@ -42,8 +42,8 @@ describe('RateLimiter', () => {
       // Wait for refill (using a shorter interval for testing)
       const fastLimiter = new RateLimiter(5, 100, 5);
       fastLimiter.tryConsume(5);
-      
-      await new Promise(resolve => setTimeout(resolve, 150));
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
       expect(fastLimiter.getTokenCount()).toBe(5);
     });
   });
@@ -51,7 +51,7 @@ describe('RateLimiter', () => {
   describe('Async Consumption', () => {
     test('should wait for tokens to become available', async () => {
       const fastLimiter = new RateLimiter(2, 100, 2);
-      
+
       // Use all tokens
       fastLimiter.tryConsume(2);
       expect(fastLimiter.getTokenCount()).toBe(0);
@@ -66,12 +66,12 @@ describe('RateLimiter', () => {
 
     test('should handle multiple concurrent requests', async () => {
       const fastLimiter = new RateLimiter(3, 100, 3);
-      
+
       const promises = [
         fastLimiter.consume(1),
         fastLimiter.consume(1),
         fastLimiter.consume(1),
-        fastLimiter.consume(1) // This should wait
+        fastLimiter.consume(1), // This should wait
       ];
 
       const startTime = Date.now();
@@ -86,13 +86,13 @@ describe('RateLimiter', () => {
   describe('Status and Debugging', () => {
     test('should provide accurate status information', () => {
       const status = rateLimiter.getStatus();
-      
+
       expect(status).toHaveProperty('tokens');
       expect(status).toHaveProperty('capacity');
       expect(status).toHaveProperty('timeUntilRefill');
       expect(status).toHaveProperty('refillAmount');
       expect(status).toHaveProperty('refillIntervalMs');
-      
+
       expect(status.tokens).toBe(5);
       expect(status.capacity).toBe(5);
     });
@@ -100,7 +100,7 @@ describe('RateLimiter', () => {
     test('should reset to full capacity', () => {
       rateLimiter.tryConsume(3);
       expect(rateLimiter.getTokenCount()).toBe(2);
-      
+
       rateLimiter.reset();
       expect(rateLimiter.getTokenCount()).toBe(5);
     });
@@ -111,7 +111,7 @@ describe('StravaRateLimiter', () => {
   test('should be configured for Strava API limits', () => {
     const stravaLimiter = new StravaRateLimiter();
     const status = stravaLimiter.getStatus();
-    
+
     expect(status.capacity).toBe(180); // Conservative limit
     expect(status.refillIntervalMs).toBe(15 * 60 * 1000); // 15 minutes
     expect(status.refillAmount).toBe(180);
@@ -122,7 +122,7 @@ describe('RateLimiterFactory', () => {
   test('should create and reuse Strava limiter', () => {
     const limiter1 = RateLimiterFactory.getStravaLimiter();
     const limiter2 = RateLimiterFactory.getStravaLimiter();
-    
+
     expect(limiter1).toBe(limiter2); // Should be the same instance
     expect(limiter1).toBeInstanceOf(StravaRateLimiter);
   });
@@ -130,7 +130,7 @@ describe('RateLimiterFactory', () => {
   test('should create custom limiters', () => {
     const customLimiter = RateLimiterFactory.createCustomLimiter('test', 10, 5000, 10);
     const retrieved = RateLimiterFactory.getLimiter('test');
-    
+
     expect(customLimiter).toBe(retrieved);
     expect(customLimiter.getStatus().capacity).toBe(10);
   });
@@ -138,7 +138,7 @@ describe('RateLimiterFactory', () => {
   test('should clear limiters', () => {
     RateLimiterFactory.createCustomLimiter('test', 10, 5000);
     expect(RateLimiterFactory.getLimiter('test')).toBeDefined();
-    
+
     RateLimiterFactory.clearLimiter('test');
     expect(RateLimiterFactory.getLimiter('test')).toBeUndefined();
   });

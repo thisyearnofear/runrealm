@@ -3,17 +3,17 @@
  * Handles geolocation, address search, and user location preferences
  */
 
-import { BaseService } from "../core/base-service";
-import { GeocodingService } from "../geocoding-service";
-import { PreferenceService } from "../preference-service";
-import { DOMService } from "./dom-service";
+import { BaseService } from '../core/base-service';
+import { GeocodingService } from '../geocoding-service';
+import { PreferenceService } from '../preference-service';
+import { DOMService } from './dom-service';
 
 export interface LocationInfo {
   lat: number;
   lng: number;
   accuracy?: number;
   address?: string;
-  source: "gps" | "search" | "manual" | "default";
+  source: 'gps' | 'search' | 'manual' | 'default';
   timestamp: number;
 }
 
@@ -39,13 +39,11 @@ export class LocationService extends BaseService {
 
   protected async onInitialize(): Promise<void> {
     // Initialize dependencies
-    this.geocodingService = new (
-      await import("../geocoding-service")
-    ).GeocodingService(this.config.getConfig().mapbox.accessToken);
-    this.preferenceService = new (
-      await import("../preference-service")
-    ).PreferenceService();
-    const { DOMService } = await import("./dom-service");
+    this.geocodingService = new (await import('../geocoding-service')).GeocodingService(
+      this.config.getConfig().mapbox.accessToken
+    );
+    this.preferenceService = new (await import('../preference-service')).PreferenceService();
+    const { DOMService } = await import('./dom-service');
     this.domService = DOMService.getInstance();
 
     this.createLocationUI();
@@ -54,8 +52,8 @@ export class LocationService extends BaseService {
     // Try to get last known location or default
     await this.loadLastKnownLocation();
 
-    this.safeEmit("service:initialized", {
-      service: "LocationService",
+    this.safeEmit('service:initialized', {
+      service: 'LocationService',
       success: true,
     });
   }
@@ -63,12 +61,10 @@ export class LocationService extends BaseService {
   /**
    * Get current user location via GPS
    */
-  public async getCurrentLocation(
-    highAccuracy: boolean = true
-  ): Promise<LocationInfo> {
+  public async getCurrentLocation(highAccuracy: boolean = true): Promise<LocationInfo> {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        reject(new Error("Geolocation is not supported by this browser"));
+        reject(new Error('Geolocation is not supported by this browser'));
         return;
       }
 
@@ -84,7 +80,7 @@ export class LocationService extends BaseService {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
             accuracy: position.coords.accuracy,
-            source: "gps",
+            source: 'gps',
             timestamp: Date.now(),
           };
 
@@ -98,23 +94,23 @@ export class LocationService extends BaseService {
               locationInfo.address = address;
             }
           } catch (error) {
-            console.warn("Failed to get address for location:", error);
+            console.warn('Failed to get address for location:', error);
           }
 
           this.setCurrentLocation(locationInfo);
           resolve(locationInfo);
         },
         (error) => {
-          let message = "Failed to get location";
+          let message = 'Failed to get location';
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              message = "Location access denied by user";
+              message = 'Location access denied by user';
               break;
             case error.POSITION_UNAVAILABLE:
-              message = "Location information unavailable";
+              message = 'Location information unavailable';
               break;
             case error.TIMEOUT:
-              message = "Location request timed out";
+              message = 'Location request timed out';
               break;
           }
           reject(new Error(message));
@@ -134,12 +130,11 @@ export class LocationService extends BaseService {
         name: result.name,
         lat: result.center[1],
         lng: result.center[0],
-        country: result.context?.find((c: any) => c.id.includes("country"))
-          ?.text,
-        region: result.context?.find((c: any) => c.id.includes("region"))?.text,
+        country: result.context?.find((c: any) => c.id.includes('country'))?.text,
+        region: result.context?.find((c: any) => c.id.includes('region'))?.text,
       }));
     } catch (error) {
-      console.error("Location search failed:", error);
+      console.error('Location search failed:', error);
       return [];
     }
   }
@@ -152,7 +147,7 @@ export class LocationService extends BaseService {
       lat,
       lng,
       address,
-      source: "manual",
+      source: 'manual',
       timestamp: Date.now(),
     };
 
@@ -167,8 +162,8 @@ export class LocationService extends BaseService {
       this.createLocationModal();
     }
 
-    this.locationModal!.style.display = "flex";
-    document.body.classList.add("modal-open");
+    this.locationModal!.style.display = 'flex';
+    document.body.classList.add('modal-open');
 
     // Focus first focusable element in modal
     setTimeout(() => {
@@ -186,11 +181,11 @@ export class LocationService extends BaseService {
    */
   public hideLocationModal(): void {
     if (this.locationModal) {
-      this.locationModal.style.display = "none";
-      document.body.classList.remove("modal-open");
+      this.locationModal.style.display = 'none';
+      document.body.classList.remove('modal-open');
 
       // Return focus to the button that opened the modal
-      const locationButton = document.getElementById("location-button");
+      const locationButton = document.getElementById('location-button');
       if (locationButton) {
         locationButton.focus();
       }
@@ -216,14 +211,14 @@ export class LocationService extends BaseService {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
           accuracy: position.coords.accuracy,
-          source: "gps",
+          source: 'gps',
           timestamp: Date.now(),
         };
 
         this.setCurrentLocation(locationInfo);
       },
       (error) => {
-        console.warn("Location tracking error:", error);
+        console.warn('Location tracking error:', error);
       },
       {
         enableHighAccuracy: true,
@@ -260,21 +255,15 @@ export class LocationService extends BaseService {
     // Update location marker on map if AnimationService is available
     try {
       const animationService = (window as any).RunRealm?.services?.animation;
-      if (
-        animationService &&
-        typeof animationService.updateUserLocationMarker === "function"
-      ) {
-        animationService.updateUserLocationMarker(
-          locationInfo.lng,
-          locationInfo.lat
-        );
+      if (animationService && typeof animationService.updateUserLocationMarker === 'function') {
+        animationService.updateUserLocationMarker(locationInfo.lng, locationInfo.lat);
       }
     } catch (error) {
-      console.warn("LocationService: Failed to update location marker:", error);
+      console.warn('LocationService: Failed to update location marker:', error);
     }
 
     // Emit location change event
-    this.safeEmit("location:changed", locationInfo);
+    this.safeEmit('location:changed', locationInfo);
   }
 
   private async loadLastKnownLocation(): Promise<void> {
@@ -283,31 +272,29 @@ export class LocationService extends BaseService {
     this.currentLocation = {
       lat: lastFocus.lat,
       lng: lastFocus.lng,
-      source: "default",
+      source: 'default',
       timestamp: Date.now(),
     };
   }
 
   private createLocationUI(): void {
     if (!this.domService) {
-      console.warn(
-        "LocationService: DOMService not available, skipping UI creation"
-      );
+      console.warn('LocationService: DOMService not available, skipping UI creation');
       return;
     }
 
     // Create location button in the UI
-    const locationButton = this.domService.createElement("button", {
-      id: "location-button",
-      className: "location-btn control-btn",
-      innerHTML: "📍 Set Location",
+    const locationButton = this.domService.createElement('button', {
+      id: 'location-button',
+      className: 'location-btn control-btn',
+      innerHTML: '📍 Set Location',
       attributes: {
-        title: "Set your location",
+        title: 'Set your location',
       },
     });
 
     // Add to controls area
-    const controlsContainer = document.querySelector(".controls");
+    const controlsContainer = document.querySelector('.controls');
     if (controlsContainer) {
       controlsContainer.appendChild(locationButton);
     }
@@ -315,15 +302,13 @@ export class LocationService extends BaseService {
 
   private createLocationModal(): void {
     if (!this.domService) {
-      console.warn(
-        "LocationService: DOMService not available, cannot create modal"
-      );
+      console.warn('LocationService: DOMService not available, cannot create modal');
       return;
     }
 
-    this.locationModal = this.domService.createElement("div", {
-      id: "location-modal",
-      className: "location-modal-overlay modal-overlay",
+    this.locationModal = this.domService.createElement('div', {
+      id: 'location-modal',
+      className: 'location-modal-overlay modal-overlay',
       innerHTML: `
         <div class="location-modal">
           <div class="modal-header">
@@ -353,14 +338,12 @@ export class LocationService extends BaseService {
                 <div class="location-display">
                   <strong>Current:</strong> ${
                     this.currentLocation.address ||
-                    `${this.currentLocation.lat.toFixed(
-                      4
-                    )}, ${this.currentLocation.lng.toFixed(4)}`
+                    `${this.currentLocation.lat.toFixed(4)}, ${this.currentLocation.lng.toFixed(4)}`
                   }
                   <small>(${this.currentLocation.source})</small>
                 </div>
               `
-                  : ""
+                  : ''
               }
             </div>
           </div>
@@ -374,73 +357,52 @@ export class LocationService extends BaseService {
 
   private setupEventHandlers(): void {
     if (!this.domService) {
-      console.warn(
-        "LocationService: DOMService not available, skipping event handlers"
-      );
+      console.warn('LocationService: DOMService not available, skipping event handlers');
       return;
     }
 
     // Location button click
-    this.domService.delegate(document.body, "#location-button", "click", () => {
+    this.domService.delegate(document.body, '#location-button', 'click', () => {
       this.showLocationModal();
     });
 
     // Modal close
-    this.domService.delegate(
-      document.body,
-      "#close-location-modal",
-      "click",
-      () => {
-        this.hideLocationModal();
-      }
-    );
+    this.domService.delegate(document.body, '#close-location-modal', 'click', () => {
+      this.hideLocationModal();
+    });
 
     // Close modal when clicking on backdrop
-    this.domService.delegate(
-      document.body,
-      ".location-modal-overlay",
-      "click",
-      (event) => {
-        if (event.target === this.locationModal) {
-          this.hideLocationModal();
-        }
+    this.domService.delegate(document.body, '.location-modal-overlay', 'click', (event) => {
+      if (event.target === this.locationModal) {
+        this.hideLocationModal();
       }
-    );
+    });
 
     // GPS button
-    this.domService.delegate(
-      document.body,
-      "#use-gps-btn",
-      "click",
-      async () => {
-        try {
-          const gpsBtn = document.getElementById(
-            "use-gps-btn"
-          ) as HTMLButtonElement;
-          gpsBtn.textContent = "🔄 Getting location...";
-          gpsBtn.disabled = true;
+    this.domService.delegate(document.body, '#use-gps-btn', 'click', async () => {
+      try {
+        const gpsBtn = document.getElementById('use-gps-btn') as HTMLButtonElement;
+        gpsBtn.textContent = '🔄 Getting location...';
+        gpsBtn.disabled = true;
 
-          await this.getCurrentLocation();
-          this.hideLocationModal();
+        await this.getCurrentLocation();
+        this.hideLocationModal();
 
-          gpsBtn.textContent = "🛰️ Use GPS Location";
-          gpsBtn.disabled = false;
-        } catch (error) {
-          alert(`Failed to get GPS location: ${error.message}`);
-          const gpsBtn = document.getElementById(
-            "use-gps-btn"
-          ) as HTMLButtonElement;
-          gpsBtn.textContent = "🛰️ Use GPS Location";
-          gpsBtn.disabled = false;
-        }
+        gpsBtn.textContent = '🛰️ Use GPS Location';
+        gpsBtn.disabled = false;
+      } catch (error) {
+        alert(`Failed to get GPS location: ${error.message}`);
+        const gpsBtn = document.getElementById('use-gps-btn') as HTMLButtonElement;
+        gpsBtn.textContent = '🛰️ Use GPS Location';
+        gpsBtn.disabled = false;
       }
-    );
+    });
 
     // Search input
     this.domService.delegate(
       document.body,
-      "#location-search-input",
-      "input",
+      '#location-search-input',
+      'input',
       this.debounce(async (event: Event) => {
         const input = event.target as HTMLInputElement;
         const query = input.value.trim();
@@ -456,35 +418,30 @@ export class LocationService extends BaseService {
     );
 
     // Keyboard navigation for modals
-    document.addEventListener("keydown", (event) => {
+    document.addEventListener('keydown', (event) => {
       // Close modal with Escape key
       if (
-        event.key === "Escape" &&
+        event.key === 'Escape' &&
         this.locationModal &&
-        this.locationModal.style.display === "flex"
+        this.locationModal.style.display === 'flex'
       ) {
         this.hideLocationModal();
       }
 
       // Trap focus within modal when open
-      if (this.locationModal && this.locationModal.style.display === "flex") {
+      if (this.locationModal && this.locationModal.style.display === 'flex') {
         const focusableElements = this.locationModal.querySelectorAll(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
 
         const firstElement = focusableElements[0] as HTMLElement;
-        const lastElement = focusableElements[
-          focusableElements.length - 1
-        ] as HTMLElement;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
 
-        if (event.key === "Tab") {
+        if (event.key === 'Tab') {
           if (event.shiftKey && document.activeElement === firstElement) {
             event.preventDefault();
             lastElement.focus();
-          } else if (
-            !event.shiftKey &&
-            document.activeElement === lastElement
-          ) {
+          } else if (!event.shiftKey && document.activeElement === lastElement) {
             event.preventDefault();
             firstElement.focus();
           }
@@ -494,12 +451,11 @@ export class LocationService extends BaseService {
   }
 
   private displaySearchResults(results: LocationSearchResult[]): void {
-    const resultsContainer = document.getElementById("location-search-results");
+    const resultsContainer = document.getElementById('location-search-results');
     if (!resultsContainer) return;
 
     if (results.length === 0) {
-      resultsContainer.innerHTML =
-        '<div class="no-results">No locations found</div>';
+      resultsContainer.innerHTML = '<div class="no-results">No locations found</div>';
       return;
     }
 
@@ -507,45 +463,38 @@ export class LocationService extends BaseService {
       .map(
         (result) => `
       <div class="search-result-item" data-lat="${result.lat}" data-lng="${
-          result.lng
-        }" data-name="${result.name}">
+        result.lng
+      }" data-name="${result.name}">
         <div class="result-name">${result.name}</div>
         ${
           result.region || result.country
             ? `<div class="result-details">${[result.region, result.country]
                 .filter(Boolean)
-                .join(", ")}</div>`
-            : ""
+                .join(', ')}</div>`
+            : ''
         }
       </div>
     `
       )
-      .join("");
+      .join('');
 
     // Add click handlers for results
-    this.domService.delegate(
-      resultsContainer,
-      ".search-result-item",
-      "click",
-      (event) => {
-        const item = event.currentTarget as HTMLElement;
-        const lat = parseFloat(item.dataset.lat!);
-        const lng = parseFloat(item.dataset.lng!);
-        const name = item.dataset.name!;
+    this.domService.delegate(resultsContainer, '.search-result-item', 'click', (event) => {
+      const item = event.currentTarget as HTMLElement;
+      const lat = parseFloat(item.dataset.lat!);
+      const lng = parseFloat(item.dataset.lng!);
+      const name = item.dataset.name!;
 
-        console.log(
-          `LocationService: Setting location to ${name} (${lat}, ${lng})`
-        );
-        this.setManualLocation(lat, lng, name);
-        this.hideLocationModal();
-      }
-    );
+      console.log(`LocationService: Setting location to ${name} (${lat}, ${lng})`);
+      this.setManualLocation(lat, lng, name);
+      this.hideLocationModal();
+    });
   }
 
   private clearSearchResults(): void {
-    const resultsContainer = document.getElementById("location-search-results");
+    const resultsContainer = document.getElementById('location-search-results');
     if (resultsContainer) {
-      resultsContainer.innerHTML = "";
+      resultsContainer.innerHTML = '';
     }
   }
 }

@@ -1,39 +1,36 @@
 // Clean, modular entry point for RunRealm
-import { RunRealmApp } from "@runrealm/shared-core/core/run-realm-app";
-import { DebugUI } from "@runrealm/shared-core/utils/debug-ui";
-import { MainUI } from "./src/components/main-ui";
-import { WalletWidget } from "./src/components/wallet-widget";
-import UserDashboard from "./src/components/user-dashboard";
+import { RunRealmApp } from '@runrealm/shared-core/core/run-realm-app';
+import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
+import { MainUI } from './src/components/main-ui';
+import UserDashboard from './src/components/user-dashboard';
+import { WalletWidget } from './src/components/wallet-widget';
 // CONSOLIDATED CSS - Following AGGRESSIVE CONSOLIDATION principle
-import "./styles/core-system.css"; // Variables, z-index, animations, utilities
-import "./styles/components.css"; // Widgets, GameFi UI, controls, rewards
-import "./styles/interfaces.css"; // Modals, location, wallet, cross-chain
-import "./styles/responsive.css"; // Mobile-first responsive design
-import "./styles/external-fitness.css"; // External fitness integration
+import './styles/core-system.css'; // Variables, z-index, animations, utilities
+import './styles/components.css'; // Widgets, GameFi UI, controls, rewards
+import './styles/interfaces.css'; // Modals, location, wallet, cross-chain
+import './styles/responsive.css'; // Mobile-first responsive design
+import './styles/external-fitness.css'; // External fitness integration
 
 // Register service worker for offline support
-if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   navigator.serviceWorker
-    .register("/sw.js")
-    .then(() => console.log("SW registered"))
-    .catch(() => console.log("SW registration failed"));
+    .register('/sw.js')
+    .then(() => console.log('SW registered'))
+    .catch(() => console.log('SW registration failed'));
 }
 
 // Handle script loading errors (cache busting)
 window.addEventListener(
-  "error",
+  'error',
   (event) => {
-    if (event.target && (event.target as any).tagName === "SCRIPT") {
+    if (event.target && (event.target as any).tagName === 'SCRIPT') {
       const script = event.target as HTMLScriptElement;
-      if (script.src && script.src.includes(".js")) {
-        console.warn("Script failed to load:", script.src);
+      if (script.src && script.src.includes('.js')) {
+        console.warn('Script failed to load:', script.src);
 
         // If it's a main app script and we're in production, try cache bust
-        if (
-          script.src.includes("/app.") &&
-          process.env.NODE_ENV === "production"
-        ) {
-          console.log("Attempting cache bust reload...");
+        if (script.src.includes('/app.') && process.env.NODE_ENV === 'production') {
+          console.log('Attempting cache bust reload...');
           // Force reload without cache
           window.location.reload();
         }
@@ -44,7 +41,7 @@ window.addEventListener(
 );
 
 // Filter out noisy browser extension errors and token exposure in production
-if (process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === 'production') {
   const originalError = console.error;
   const originalLog = console.log;
   const originalWarn = console.warn;
@@ -52,27 +49,27 @@ if (process.env.NODE_ENV === "production") {
   // Helper function to check if message contains sensitive tokens
   const containsToken = (message: string) => {
     return (
-      message.includes("access_token=") ||
-      message.includes("pk.eyJ") || // Mapbox token prefix
-      message.includes("AIzaSy")
+      message.includes('access_token=') ||
+      message.includes('pk.eyJ') || // Mapbox token prefix
+      message.includes('AIzaSy')
     ); // Google API key prefix
   };
 
   // Helper function to sanitize messages with tokens
   const sanitizeMessage = (message: string) => {
     return message
-      .replace(/access_token=[^&\s]*/g, "access_token=[REDACTED]")
-      .replace(/pk\.eyJ[A-Za-z0-9._-]*/g, "pk.[REDACTED]")
-      .replace(/AIzaSy[A-Za-z0-9._-]*/g, "AIzaSy[REDACTED]");
+      .replace(/access_token=[^&\s]*/g, 'access_token=[REDACTED]')
+      .replace(/pk\.eyJ[A-Za-z0-9._-]*/g, 'pk.[REDACTED]')
+      .replace(/AIzaSy[A-Za-z0-9._-]*/g, 'AIzaSy[REDACTED]');
   };
 
   console.error = (...args) => {
-    const message = args.join(" ");
+    const message = args.join(' ');
     // Filter out known browser extension noise
     if (
       message.includes("Backpack couldn't override") ||
-      message.includes("Could not establish connection") ||
-      message.includes("Receiving end does not exist")
+      message.includes('Could not establish connection') ||
+      message.includes('Receiving end does not exist')
     ) {
       return; // Suppress these errors
     }
@@ -80,7 +77,7 @@ if (process.env.NODE_ENV === "production") {
     // Sanitize token exposure in error messages
     if (containsToken(message)) {
       const sanitizedArgs = args.map((arg) =>
-        typeof arg === "string" ? sanitizeMessage(arg) : arg
+        typeof arg === 'string' ? sanitizeMessage(arg) : arg
       );
       originalError.apply(console, sanitizedArgs);
       return;
@@ -90,11 +87,11 @@ if (process.env.NODE_ENV === "production") {
   };
 
   console.log = (...args) => {
-    const message = args.join(" ");
+    const message = args.join(' ');
     // Sanitize token exposure in log messages
     if (containsToken(message)) {
       const sanitizedArgs = args.map((arg) =>
-        typeof arg === "string" ? sanitizeMessage(arg) : arg
+        typeof arg === 'string' ? sanitizeMessage(arg) : arg
       );
       originalLog.apply(console, sanitizedArgs);
       return;
@@ -104,11 +101,11 @@ if (process.env.NODE_ENV === "production") {
   };
 
   console.warn = (...args) => {
-    const message = args.join(" ");
+    const message = args.join(' ');
     // Sanitize token exposure in warning messages
     if (containsToken(message)) {
       const sanitizedArgs = args.map((arg) =>
-        typeof arg === "string" ? sanitizeMessage(arg) : arg
+        typeof arg === 'string' ? sanitizeMessage(arg) : arg
       );
       originalWarn.apply(console, sanitizedArgs);
       return;
@@ -124,27 +121,13 @@ async function initializeApp(): Promise<void> {
     const app = RunRealmApp.getInstance();
 
     // Initialize platform-specific UI components
-    const { DOMService } = await import(
-      "@runrealm/shared-core/services/dom-service"
-    );
-    const { LocationService } = await import(
-      "@runrealm/shared-core/services/location-service"
-    );
-    const { UIService } = await import(
-      "@runrealm/shared-core/services/ui-service"
-    );
-    const { GameFiUI } = await import(
-      "@runrealm/shared-core/components/gamefi-ui"
-    );
-    const { Web3Service } = await import(
-      "@runrealm/shared-core/services/web3-service"
-    );
-    const { ConfigService } = await import(
-      "@runrealm/shared-core/core/app-config"
-    );
-    const { AnimationService } = await import(
-      "@runrealm/shared-core/services/animation-service"
-    );
+    const { DOMService } = await import('@runrealm/shared-core/services/dom-service');
+    const { LocationService } = await import('@runrealm/shared-core/services/location-service');
+    const { UIService } = await import('@runrealm/shared-core/services/ui-service');
+    const { GameFiUI } = await import('@runrealm/shared-core/components/gamefi-ui');
+    const { Web3Service } = await import('@runrealm/shared-core/services/web3-service');
+    const { ConfigService } = await import('@runrealm/shared-core/core/app-config');
+    const { AnimationService } = await import('@runrealm/shared-core/services/animation-service');
 
     const domService = new DOMService();
     const locationService = LocationService.getInstance();
@@ -155,12 +138,7 @@ async function initializeApp(): Promise<void> {
     const animationService = AnimationService.getInstance();
 
     // Create MainUI with required dependencies
-    const walletWidget = new WalletWidget(
-      domService,
-      uiService,
-      animationService,
-      web3Service
-    );
+    const walletWidget = new WalletWidget(domService, uiService, animationService, web3Service);
     const mainUI = new MainUI(
       domService,
       locationService,
@@ -172,15 +150,15 @@ async function initializeApp(): Promise<void> {
     );
 
     // Import platform-specific ghost UI components
-    let ghostManagement;
-    let ghostButton;
+    let ghostManagement: unknown;
+    let ghostButton: unknown;
     try {
-      const { GhostManagement } = await import("./src/components/ghost-management.js");
-      const { GhostButton } = await import("./src/components/ghost-button.js");
+      const { GhostManagement } = await import('./src/components/ghost-management.js');
+      const { GhostButton } = await import('./src/components/ghost-button.js');
       ghostManagement = new GhostManagement();
       ghostButton = new GhostButton(ghostManagement);
     } catch (err) {
-      console.warn("Ghost management components not available:", err);
+      console.warn('Ghost management components not available:', err);
       // Continue without ghost features
     }
 
@@ -191,19 +169,19 @@ async function initializeApp(): Promise<void> {
 
     // Initialize User Dashboard (consolidated command center)
     const userDashboard = new UserDashboard();
-    const dashboardContainer = document.createElement("div");
-    dashboardContainer.id = "user-dashboard-root";
+    const dashboardContainer = document.createElement('div');
+    dashboardContainer.id = 'user-dashboard-root';
     document.body.appendChild(dashboardContainer);
     userDashboard.initialize(dashboardContainer);
 
     // Remove loading indicator from template
-    const loadingDiv = document.getElementById("loading");
+    const loadingDiv = document.getElementById('loading');
     if (loadingDiv) {
       loadingDiv.remove();
     }
 
     // Expose app instance globally for debugging (development only)
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === 'development') {
       (window as any).runRealmApp = app;
       (window as any).RunRealm = app; // Also expose as RunRealm for consistency
 
@@ -211,13 +189,10 @@ async function initializeApp(): Promise<void> {
       (window as any).debugWidgets = () => {
         const mainUI = (app as any).mainUI;
         if (mainUI && mainUI.widgetSystem) {
-          console.log(
-            "Widget System Debug Info:",
-            mainUI.widgetSystem.getDebugInfo()
-          );
+          console.log('Widget System Debug Info:', mainUI.widgetSystem.getDebugInfo());
           return mainUI.widgetSystem.getDebugInfo();
         }
-        console.log("Widget system not available");
+        console.log('Widget system not available');
         return null;
       };
 
@@ -238,43 +213,41 @@ async function initializeApp(): Promise<void> {
 
       // Only show debug panel if explicitly requested (URL param)
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("debug") === "true") {
+      if (urlParams.get('debug') === 'true') {
         const debugUI = DebugUI.getInstance();
         debugUI.createDebugPanel();
         debugUI.startDOMMonitoring();
       }
 
       // Add cross-chain demo function for Google Buildathon judges
-      (window as any).demoCrossChainFunctionality = async function () {
+      (window as any).demoCrossChainFunctionality = async () => {
         console.log(
-          "%c\n🌟 RunRealm Cross-Chain Demo Ready!",
-          "color: #00ff88; font-size: 16px; font-weight: bold;"
+          '%c\n🌟 RunRealm Cross-Chain Demo Ready!',
+          'color: #00ff88; font-size: 16px; font-weight: bold;'
         );
         console.log(
-          "%c🚀 Demonstrating ZetaChain Universal Contract capabilities...",
-          "color: #00cc6a;"
+          '%c🚀 Demonstrating ZetaChain Universal Contract capabilities...',
+          'color: #00cc6a;'
         );
 
         // Get services
         const services = (window as any).RunRealm?.services;
         if (!services) {
-          console.error("❌ Services not available");
+          console.error('❌ Services not available');
           return;
         }
 
         const { web3, crossChain } = services;
 
         if (!web3 || !crossChain) {
-          console.error("❌ Required services not available");
+          console.error('❌ Required services not available');
           return;
         }
 
         try {
           // 1. Check if wallet is connected
           if (!web3.isConnected()) {
-            console.log(
-              "🟡 Please connect your wallet to demo cross-chain functionality"
-            );
+            console.log('🟡 Please connect your wallet to demo cross-chain functionality');
             // Show wallet connection UI
             const walletWidget = (window as any).RunRealm?.mainUI?.walletWidget;
             if (walletWidget) {
@@ -284,140 +257,127 @@ async function initializeApp(): Promise<void> {
           }
 
           const wallet = web3.getCurrentWallet();
-          console.log(
-            `✅ Wallet connected: ${wallet.address} on chain ${wallet.chainId}`
-          );
+          console.log(`✅ Wallet connected: ${wallet.address} on chain ${wallet.chainId}`);
 
           // 2. Check if this is a cross-chain scenario
           const isCrossChain = wallet.chainId !== 7001; // Not on ZetaChain testnet
           console.log(
-            `🌐 Current chain: ${crossChain.getChainName(wallet.chainId)} (${wallet.chainId
-            })`
+            `🌐 Current chain: ${crossChain.getChainName(wallet.chainId)} (${wallet.chainId})`
           );
-          console.log(
-            `🔗 Cross-chain scenario: ${isCrossChain ? "Yes" : "No (on ZetaChain)"
-            }`
-          );
+          console.log(`🔗 Cross-chain scenario: ${isCrossChain ? 'Yes' : 'No (on ZetaChain)'}`);
 
           // 3. Demonstrate ZetaChain API usage
-          console.log("\n🔧 ZetaChain Gateway API Demonstration:");
+          console.log('\n🔧 ZetaChain Gateway API Demonstration:');
           crossChain.demonstrateZetaChainAPI();
 
           // 4. Simulate cross-chain territory claim
-          console.log("\n📍 Simulating cross-chain territory claim...");
+          console.log('\n📍 Simulating cross-chain territory claim...');
 
           // Create mock territory data
           const mockTerritory = {
-            geohash: "u4pruydqqvj",
+            geohash: 'u4pruydqqvj',
             difficulty: 75,
             distance: 5000,
-            landmarks: ["Central Park", "Fountain"],
+            landmarks: ['Central Park', 'Fountain'],
             originChainId: wallet.chainId,
             originAddress: wallet.address,
           };
 
-          console.log("🗺️ Territory data:", mockTerritory);
+          console.log('🗺️ Territory data:', mockTerritory);
 
           // 5. Emit cross-chain claim event
           const eventBus = (window as any).RunRealm?.services?.eventBus;
           if (eventBus) {
-            console.log("📤 Sending cross-chain territory claim request...");
-            eventBus.emit("crosschain:territoryClaimRequested", {
+            console.log('📤 Sending cross-chain territory claim request...');
+            eventBus.emit('crosschain:territoryClaimRequested', {
               territoryData: mockTerritory,
               targetChainId: 7001, // ZetaChain testnet
             });
           }
 
           // 6. Show demo UI updates
-          console.log("\n📱 UI Updates:");
-          console.log("  - Cross-chain widget shows pending claim");
-          console.log(
-            '  - Territory marked as "claimable" with cross-chain status'
-          );
-          console.log("  - Activity log shows claim initiation");
+          console.log('\n📱 UI Updates:');
+          console.log('  - Cross-chain widget shows pending claim');
+          console.log('  - Territory marked as "claimable" with cross-chain status');
+          console.log('  - Activity log shows claim initiation');
 
           // 7. Simulate cross-chain confirmation
           setTimeout(() => {
-            console.log("\n✅ Simulating cross-chain confirmation...");
+            console.log('\n✅ Simulating cross-chain confirmation...');
             if (eventBus) {
-              eventBus.emit("web3:crossChainTerritoryClaimed", {
-                hash: "0x" + Math.random().toString(16).substr(2, 10),
+              eventBus.emit('web3:crossChainTerritoryClaimed', {
+                hash: '0x' + Math.random().toString(16).substr(2, 10),
                 geohash: mockTerritory.geohash,
                 originChainId: mockTerritory.originChainId,
               });
             }
 
-            console.log("\n🎉 Cross-chain territory claim completed!");
-            console.log(
-              "📊 Territory now owned on ZetaChain with cross-chain history"
-            );
-            console.log("💰 Rewards distributed to user");
-            console.log("📈 Player stats updated with cross-chain activity");
+            console.log('\n🎉 Cross-chain territory claim completed!');
+            console.log('📊 Territory now owned on ZetaChain with cross-chain history');
+            console.log('💰 Rewards distributed to user');
+            console.log('📈 Player stats updated with cross-chain activity');
 
             // 8. Show final state
-            console.log("\n📋 Final State:");
+            console.log('\n📋 Final State:');
             console.log('  - Territory status: "claimed"');
-            console.log("  - Chain: ZetaChain Testnet (7001)");
-            console.log("  - Cross-chain history: 1 entry");
-            console.log("  - Rewards: Available for claiming");
-            console.log("  - UI: Shows cross-chain badge and chain indicator");
+            console.log('  - Chain: ZetaChain Testnet (7001)');
+            console.log('  - Cross-chain history: 1 entry');
+            console.log('  - Rewards: Available for claiming');
+            console.log('  - UI: Shows cross-chain badge and chain indicator');
 
-            console.log("\n✨ Cross-Chain Demo Complete!");
-            console.log("\n🎯 Key Features Demonstrated:");
-            console.log("  - Cross-chain territory claiming");
-            console.log("  - Gas abstraction (pay on origin chain)");
-            console.log("  - Cross-chain activity tracking");
-            console.log("  - Unified UI for multi-chain interactions");
-            console.log("  - Real-time status updates");
+            console.log('\n✨ Cross-Chain Demo Complete!');
+            console.log('\n🎯 Key Features Demonstrated:');
+            console.log('  - Cross-chain territory claiming');
+            console.log('  - Gas abstraction (pay on origin chain)');
+            console.log('  - Cross-chain activity tracking');
+            console.log('  - Unified UI for multi-chain interactions');
+            console.log('  - Real-time status updates');
           }, 3000);
         } catch (error) {
-          console.error("❌ Demo failed:", error);
+          console.error('❌ Demo failed:', error);
         }
       };
 
       console.log(
-        "%c\n🌟 RunRealm Cross-Chain Demo Ready!",
-        "color: #00ff88; font-size: 16px; font-weight: bold;"
+        '%c\n🌟 RunRealm Cross-Chain Demo Ready!',
+        'color: #00ff88; font-size: 16px; font-weight: bold;'
       );
       console.log(
-        "%c🚀 Run `demoCrossChainFunctionality()` in console to see cross-chain features in action",
-        "color: #00cc6a;"
+        '%c🚀 Run `demoCrossChainFunctionality()` in console to see cross-chain features in action',
+        'color: #00cc6a;'
       );
       console.log(
-        "%c🔗 Make sure your wallet is connected to a non-ZetaChain network for full demo",
-        "color: #00aaff;"
+        '%c🔗 Make sure your wallet is connected to a non-ZetaChain network for full demo',
+        'color: #00aaff;'
       );
     }
 
-    console.log("RunRealm initialized successfully");
+    console.log('RunRealm initialized successfully');
   } catch (error) {
     // Enhanced error logging
-    console.error("Failed to initialize RunRealm:", error);
+    console.error('Failed to initialize RunRealm:', error);
     if (error instanceof Error) {
-      console.error("Error name:", error.name);
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
     } else {
-      console.error("Error object:", JSON.stringify(error, null, 2));
+      console.error('Error object:', JSON.stringify(error, null, 2));
     }
 
     // Remove loading indicator
-    const loadingDiv = document.getElementById("loading");
+    const loadingDiv = document.getElementById('loading');
     if (loadingDiv) {
       loadingDiv.remove();
     }
 
     // Show user-friendly error message with more details
-    const errorMessage =
-      error instanceof Error
-        ? `${error.name}: ${error.message}`
-        : String(error);
+    const errorMessage = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     const errorStack =
       error instanceof Error && error.stack
         ? `<pre style="font-size: 11px; text-align: left; max-height: 200px; overflow: auto; background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 8px 0;">${error.stack}</pre>`
-        : "";
+        : '';
 
-    const errorDiv = document.createElement("div");
+    const errorDiv = document.createElement('div');
     errorDiv.innerHTML = `
       <div style="
         position: fixed;
@@ -462,16 +422,16 @@ async function initializeApp(): Promise<void> {
 }
 
 // Handle cleanup on page unload
-window.addEventListener("beforeunload", () => {
+window.addEventListener('beforeunload', () => {
   const app = (window as any).runRealmApp;
-  if (app && typeof app.cleanup === "function") {
+  if (app && typeof app.cleanup === 'function') {
     app.cleanup();
   }
 });
 
 // Initialize when DOM is ready
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initializeApp);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
   initializeApp();
 }

@@ -9,7 +9,9 @@ export function parsePace(text: string, useMetric: boolean): number | null {
   if (plain) return Number(plain[1]);
 
   // Allow mm:ss[/unit] or h:mm:ss[/unit]
-  const timeUnit = trimmed.match(/^([0-9]{1,2}):([0-9]{2})(?::([0-9]{2}))?(?:\s*\/\s*(mi|mile|miles|km|kilometer|kilometre|kilometers|kilometres))?$/);
+  const timeUnit = trimmed.match(
+    /^([0-9]{1,2}):([0-9]{2})(?::([0-9]{2}))?(?:\s*\/\s*(mi|mile|miles|km|kilometer|kilometre|kilometers|kilometres))?$/
+  );
   if (timeUnit) {
     const mm = Number(timeUnit[1]);
     const ss = Number(timeUnit[2]);

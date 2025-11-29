@@ -1,6 +1,6 @@
+import type { LngLatLike, Map as MapboxMap } from 'mapbox-gl';
 import { BaseService } from '../core/base-service';
 import { RunPoint } from './run-tracking-service';
-import type { Map as MapboxMap, LngLatLike } from 'mapbox-gl';
 import { TerritoryIntent, TerritoryPreview } from './territory-service';
 
 const TRAIL_SOURCE_ID = 'run-trail-source';
@@ -37,7 +37,7 @@ export class MapService extends BaseService {
     showIntents: true,
     allowSelection: true,
     previewOpacity: 0.2,
-    intentOpacity: 0.4
+    intentOpacity: 0.4,
   };
 
   public setMap(map: MapboxMap): void {
@@ -56,8 +56,8 @@ export class MapService extends BaseService {
       type: 'geojson',
       data: {
         type: 'FeatureCollection',
-        features: []
-      }
+        features: [],
+      },
     });
 
     this.map.addLayer({
@@ -65,19 +65,22 @@ export class MapService extends BaseService {
       type: 'fill',
       source: TERRITORY_PREVIEW_SOURCE_ID,
       layout: {
-        'visibility': this.territoryMapOptions.showPreviews ? 'visible' : 'none'
+        visibility: this.territoryMapOptions.showPreviews ? 'visible' : 'none',
       },
       paint: {
         'fill-color': [
           'case',
-          ['==', ['get', 'rarity'], 'legendary'], '#FFD700',
-          ['==', ['get', 'rarity'], 'epic'], '#9B59B6',
-          ['==', ['get', 'rarity'], 'rare'], '#3498DB',
-          '#2ECC71' // common
+          ['==', ['get', 'rarity'], 'legendary'],
+          '#FFD700',
+          ['==', ['get', 'rarity'], 'epic'],
+          '#9B59B6',
+          ['==', ['get', 'rarity'], 'rare'],
+          '#3498DB',
+          '#2ECC71', // common
         ],
         'fill-opacity': this.territoryMapOptions.previewOpacity || 0.2,
-        'fill-outline-color': '#FFFFFF'
-      }
+        'fill-outline-color': '#FFFFFF',
+      },
     });
 
     // Initialize territory intent layer
@@ -85,8 +88,8 @@ export class MapService extends BaseService {
       type: 'geojson',
       data: {
         type: 'FeatureCollection',
-        features: []
-      }
+        features: [],
+      },
     });
 
     this.map.addLayer({
@@ -94,13 +97,13 @@ export class MapService extends BaseService {
       type: 'fill',
       source: TERRITORY_INTENT_SOURCE_ID,
       layout: {
-        'visibility': this.territoryMapOptions.showIntents ? 'visible' : 'none'
+        visibility: this.territoryMapOptions.showIntents ? 'visible' : 'none',
       },
       paint: {
         'fill-color': '#E67E22',
         'fill-opacity': this.territoryMapOptions.intentOpacity || 0.4,
-        'fill-outline-color': '#D35400'
-      }
+        'fill-outline-color': '#D35400',
+      },
     });
 
     // Initialize territory selection layer
@@ -108,8 +111,8 @@ export class MapService extends BaseService {
       type: 'geojson',
       data: {
         type: 'FeatureCollection',
-        features: []
-      }
+        features: [],
+      },
     });
 
     this.map.addLayer({
@@ -117,14 +120,14 @@ export class MapService extends BaseService {
       type: 'line',
       source: TERRITORY_SELECTION_SOURCE_ID,
       layout: {
-        'visibility': 'visible'
+        visibility: 'visible',
       },
       paint: {
         'line-color': '#FF6B6B',
         'line-width': 3,
         'line-opacity': 0.8,
-        'line-dasharray': [2, 2]
-      }
+        'line-dasharray': [2, 2],
+      },
     });
 
     // Add click handler for territory selection
@@ -170,7 +173,7 @@ export class MapService extends BaseService {
   public highlightActivity(points: RunPoint[]): void {
     if (!this.map) return;
 
-    const coordinates = points.map(p => [p.lng, p.lat]);
+    const coordinates = points.map((p) => [p.lng, p.lat]);
 
     const source = this.map.getSource(ACTIVITY_HIGHLIGHT_SOURCE_ID) as any;
     if (source) {
@@ -209,10 +212,14 @@ export class MapService extends BaseService {
 
     const feature = e.features[0];
     const territoryId = feature.properties?.id;
-    
+
     if (territoryId) {
       this.selectTerritory(territoryId);
-      this.safeEmit('territory:preview', { territory: feature, bounds: feature.geometry, metadata: feature.properties });
+      this.safeEmit('territory:preview', {
+        territory: feature,
+        bounds: feature.geometry,
+        metadata: feature.properties,
+      });
     }
   }
 
@@ -254,7 +261,7 @@ export class MapService extends BaseService {
    */
   public selectTerritory(territoryId: string): void {
     this.selectedTerritoryId = territoryId;
-    
+
     const preview = this.territoryPreviews.get(territoryId);
     if (preview) {
       this.updateTerritorySelectionLayer(preview);
@@ -275,26 +282,26 @@ export class MapService extends BaseService {
   private updateTerritoryPreviewLayer(): void {
     if (!this.map) return;
 
-    const features = Array.from(this.territoryPreviews.values()).map(preview => ({
+    const features = Array.from(this.territoryPreviews.values()).map((preview) => ({
       type: 'Feature' as const,
       properties: {
         id: preview.geohash,
         rarity: preview.metadata.rarity,
         difficulty: preview.metadata.difficulty,
         estimatedReward: preview.metadata.estimatedReward,
-        name: preview.metadata.name
+        name: preview.metadata.name,
       },
       geometry: {
         type: 'Polygon' as const,
-        coordinates: [this.boundsToCoordinates(preview.bounds)]
-      }
+        coordinates: [this.boundsToCoordinates(preview.bounds)],
+      },
     }));
 
     const source = this.map.getSource(TERRITORY_PREVIEW_SOURCE_ID) as any;
     if (source) {
       source.setData({
         type: 'FeatureCollection',
-        features
+        features,
       });
     }
   }
@@ -305,25 +312,25 @@ export class MapService extends BaseService {
   private updateTerritoryIntentLayer(): void {
     if (!this.map) return;
 
-    const features = Array.from(this.territoryIntents.values()).map(intent => ({
+    const features = Array.from(this.territoryIntents.values()).map((intent) => ({
       type: 'Feature' as const,
       properties: {
         id: intent.id,
         status: intent.status,
         expiresAt: intent.expiresAt,
-        estimatedDistance: intent.estimatedDistance
+        estimatedDistance: intent.estimatedDistance,
       },
       geometry: {
         type: 'Polygon' as const,
-        coordinates: [this.boundsToCoordinates(intent.bounds)]
-      }
+        coordinates: [this.boundsToCoordinates(intent.bounds)],
+      },
     }));
 
     const source = this.map.getSource(TERRITORY_INTENT_SOURCE_ID) as any;
     if (source) {
       source.setData({
         type: 'FeatureCollection',
-        features
+        features,
       });
     }
   }
@@ -334,20 +341,24 @@ export class MapService extends BaseService {
   private updateTerritorySelectionLayer(preview: TerritoryPreview | null): void {
     if (!this.map) return;
 
-    const features = preview ? [{
-      type: 'Feature' as const,
-      properties: { id: preview.geohash },
-      geometry: {
-        type: 'Polygon' as const,
-        coordinates: [this.boundsToCoordinates(preview.bounds)]
-      }
-    }] : [];
+    const features = preview
+      ? [
+          {
+            type: 'Feature' as const,
+            properties: { id: preview.geohash },
+            geometry: {
+              type: 'Polygon' as const,
+              coordinates: [this.boundsToCoordinates(preview.bounds)],
+            },
+          },
+        ]
+      : [];
 
     const source = this.map.getSource(TERRITORY_SELECTION_SOURCE_ID) as any;
     if (source) {
       source.setData({
         type: 'FeatureCollection',
-        features
+        features,
       });
     }
   }
@@ -361,7 +372,7 @@ export class MapService extends BaseService {
       [bounds.east, bounds.south],
       [bounds.east, bounds.north],
       [bounds.west, bounds.north],
-      [bounds.west, bounds.south] // Close the polygon
+      [bounds.west, bounds.south], // Close the polygon
     ];
   }
 
@@ -370,21 +381,21 @@ export class MapService extends BaseService {
    */
   public updateTerritoryMapOptions(options: Partial<TerritoryMapOptions>): void {
     this.territoryMapOptions = { ...this.territoryMapOptions, ...options };
-    
+
     if (this.map) {
       // Update layer visibility
       if (options.showPreviews !== undefined) {
         this.map.setLayoutProperty(
-          TERRITORY_PREVIEW_LAYER_ID, 
-          'visibility', 
+          TERRITORY_PREVIEW_LAYER_ID,
+          'visibility',
           options.showPreviews ? 'visible' : 'none'
         );
       }
-      
+
       if (options.showIntents !== undefined) {
         this.map.setLayoutProperty(
-          TERRITORY_INTENT_LAYER_ID, 
-          'visibility', 
+          TERRITORY_INTENT_LAYER_ID,
+          'visibility',
           options.showIntents ? 'visible' : 'none'
         );
       }
@@ -392,18 +403,14 @@ export class MapService extends BaseService {
       // Update opacity
       if (options.previewOpacity !== undefined) {
         this.map.setPaintProperty(
-          TERRITORY_PREVIEW_LAYER_ID, 
-          'fill-opacity', 
+          TERRITORY_PREVIEW_LAYER_ID,
+          'fill-opacity',
           options.previewOpacity
         );
       }
 
       if (options.intentOpacity !== undefined) {
-        this.map.setPaintProperty(
-          TERRITORY_INTENT_LAYER_ID, 
-          'fill-opacity', 
-          options.intentOpacity
-        );
+        this.map.setPaintProperty(TERRITORY_INTENT_LAYER_ID, 'fill-opacity', options.intentOpacity);
       }
     }
   }
@@ -436,7 +443,7 @@ export class MapService extends BaseService {
     this.territoryPreviews.clear();
     this.territoryIntents.clear();
     this.selectedTerritoryId = null;
-    
+
     this.updateTerritoryPreviewLayer();
     this.updateTerritoryIntentLayer();
     this.updateTerritorySelectionLayer(null);
@@ -463,14 +470,14 @@ export class MapService extends BaseService {
       center: [lng, lat],
       zoom: zoom,
       duration: 2000, // 2 second animation
-      essential: true
+      essential: true,
     });
   }
 
   public drawRunTrail(points: RunPoint[]): void {
     if (!this.map) return;
 
-    const coordinates = points.map(p => [p.lng, p.lat]);
+    const coordinates = points.map((p) => [p.lng, p.lat]);
 
     const source = this.map.getSource(TRAIL_SOURCE_ID) as any;
     if (source) {
@@ -515,10 +522,10 @@ export class MapService extends BaseService {
   public drawTerritory(points: RunPoint[]): void {
     if (!this.map) return;
 
-    const coordinates = points.map(p => [p.lng, p.lat]);
+    const coordinates = points.map((p) => [p.lng, p.lat]);
     // Close the polygon
     if (coordinates.length > 0) {
-        coordinates.push(coordinates[0]);
+      coordinates.push(coordinates[0]);
     }
 
     const source = this.map.getSource(TERRITORY_SOURCE_ID) as any;
@@ -549,7 +556,7 @@ export class MapService extends BaseService {
         type: 'fill',
         source: TERRITORY_SOURCE_ID,
         layout: {
-          'visibility': this.territoriesVisible ? 'visible' : 'none'
+          visibility: this.territoriesVisible ? 'visible' : 'none',
         },
         paint: {
           'fill-color': '#00ff88',
@@ -591,7 +598,7 @@ export class MapService extends BaseService {
   public drawSuggestedRoute(points: any[]): void {
     if (!this.map) return;
 
-    const coordinates = points.map(p => [p.lng, p.lat]);
+    const coordinates = points.map((p) => [p.lng, p.lat]);
     const difficulty = points[0]?.difficulty || 50;
 
     const source = this.map.getSource('suggested-route-source') as any;
@@ -618,8 +625,15 @@ export class MapService extends BaseService {
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: {
           'line-color': [
-            'interpolate', ['linear'], ['get', 'difficulty'],
-            30, '#4A90E2', 60, '#F39C12', 90, '#E74C3C'
+            'interpolate',
+            ['linear'],
+            ['get', 'difficulty'],
+            30,
+            '#4A90E2',
+            60,
+            '#F39C12',
+            90,
+            '#E74C3C',
           ],
           'line-width': 4,
           'line-opacity': 0.8,

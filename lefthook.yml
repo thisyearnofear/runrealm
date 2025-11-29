@@ -6,9 +6,9 @@ pre-commit:
   parallel: true
   commands:
     lint:
-      run: npm run lint -- --quiet
+      run: npx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
       stage_fixed: true
-      glob: "**/*.{ts,tsx,js,jsx}"
+      glob: "**/*.{ts,tsx,js,jsx,json}"
 
 # Pre-push hooks - run before pushing to remote
 pre-push:

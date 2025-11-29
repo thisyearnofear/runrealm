@@ -53,7 +53,7 @@ export class StatusIndicator extends BaseService {
       showBattery: false,
       autoHide: true,
       autoHideDelay: 5000,
-      ...options
+      ...options,
     };
   }
 
@@ -69,7 +69,7 @@ export class StatusIndicator extends BaseService {
       id: 'status-indicator',
       className: `status-indicator status-${this.options.position}`,
       innerHTML: this.renderStatusContent(),
-      parent: document.body
+      parent: document.body,
     });
 
     this.addStatusStyles();
@@ -80,35 +80,51 @@ export class StatusIndicator extends BaseService {
 
     return `
       <div class="status-content">
-        ${this.options.showGPS ? `
+        ${
+          this.options.showGPS
+            ? `
           <div class="status-item gps-status ${gps?.available ? 'active' : 'inactive'}">
             <span class="status-icon">${this.getGPSIcon(gps)}</span>
             <span class="status-label">GPS</span>
             ${gps?.accuracy ? `<span class="status-detail">${Math.round(gps.accuracy)}m</span>` : ''}
           </div>
-        ` : ''}
+        `
+            : ''
+        }
         
-        ${this.options.showConnectivity ? `
+        ${
+          this.options.showConnectivity
+            ? `
           <div class="status-item connectivity-status ${connectivity?.online ? 'active' : 'inactive'}">
             <span class="status-icon">${this.getConnectivityIcon(connectivity)}</span>
             <span class="status-label">Network</span>
             ${connectivity?.type ? `<span class="status-detail">${connectivity.type}</span>` : ''}
           </div>
-        ` : ''}
+        `
+            : ''
+        }
         
-        ${this.options.showBattery && battery ? `
+        ${
+          this.options.showBattery && battery
+            ? `
           <div class="status-item battery-status ${battery.charging ? 'charging' : ''}">
             <span class="status-icon">${this.getBatteryIcon(battery)}</span>
             <span class="status-label">${battery.level}%</span>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
         
-        ${app?.state && app.state !== 'idle' ? `
+        ${
+          app?.state && app.state !== 'idle'
+            ? `
           <div class="status-item app-status ${app.state}">
             <span class="status-icon">${this.getAppIcon(app.state)}</span>
             <span class="status-label">${app.message || app.state}</span>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
   }
@@ -119,7 +135,7 @@ export class StatusIndicator extends BaseService {
       this.updateGPSStatus({
         available: true,
         accuracy: data.accuracy,
-        signal: this.getSignalQuality(data.accuracy)
+        signal: this.getSignalQuality(data.accuracy),
       });
     });
 
@@ -158,20 +174,20 @@ export class StatusIndicator extends BaseService {
       (navigator as any).getBattery().then((battery: any) => {
         this.updateBatteryStatus({
           level: Math.round(battery.level * 100),
-          charging: battery.charging
+          charging: battery.charging,
         });
 
         battery.addEventListener('levelchange', () => {
           this.updateBatteryStatus({
             level: Math.round(battery.level * 100),
-            charging: battery.charging
+            charging: battery.charging,
           });
         });
 
         battery.addEventListener('chargingchange', () => {
           this.updateBatteryStatus({
             level: Math.round(battery.level * 100),
-            charging: battery.charging
+            charging: battery.charging,
           });
         });
       });
@@ -182,7 +198,7 @@ export class StatusIndicator extends BaseService {
     // Monitor connectivity
     this.updateConnectivityStatus({
       online: navigator.onLine,
-      type: this.getConnectionType()
+      type: this.getConnectionType(),
     });
 
     // Check GPS periodically
@@ -202,7 +218,7 @@ export class StatusIndicator extends BaseService {
         this.updateGPSStatus({
           available: true,
           accuracy: position.coords.accuracy,
-          signal: this.getSignalQuality(position.coords.accuracy)
+          signal: this.getSignalQuality(position.coords.accuracy),
         });
       },
       () => {
@@ -268,32 +284,41 @@ export class StatusIndicator extends BaseService {
 
   private getGPSIcon(gps?: StatusData['gps']): string {
     if (!gps?.available) return '📍❌';
-    
+
     switch (gps.signal) {
-      case 'excellent': return '📍✨';
-      case 'good': return '📍✅';
-      case 'fair': return '📍⚠️';
-      case 'poor': return '📍❌';
-      default: return '📍';
+      case 'excellent':
+        return '📍✨';
+      case 'good':
+        return '📍✅';
+      case 'fair':
+        return '📍⚠️';
+      case 'poor':
+        return '📍❌';
+      default:
+        return '📍';
     }
   }
 
   private getConnectivityIcon(connectivity?: StatusData['connectivity']): string {
     if (!connectivity?.online) return '📶❌';
-    
+
     switch (connectivity.speed) {
-      case 'fast': return '📶✨';
-      case 'medium': return '📶✅';
-      case 'slow': return '📶⚠️';
-      default: return '📶';
+      case 'fast':
+        return '📶✨';
+      case 'medium':
+        return '📶✅';
+      case 'slow':
+        return '📶⚠️';
+      default:
+        return '📶';
     }
   }
 
   private getBatteryIcon(battery?: StatusData['battery']): string {
     if (!battery) return '🔋';
-    
+
     if (battery.charging) return '🔋⚡';
-    
+
     if (battery.level > 75) return '🔋';
     if (battery.level > 50) return '🔋';
     if (battery.level > 25) return '🔋⚠️';
@@ -302,10 +327,14 @@ export class StatusIndicator extends BaseService {
 
   private getAppIcon(state: string): string {
     switch (state) {
-      case 'tracking': return '🏃‍♂️';
-      case 'paused': return '⏸️';
-      case 'error': return '❌';
-      default: return 'ℹ️';
+      case 'tracking':
+        return '🏃‍♂️';
+      case 'paused':
+        return '⏸️';
+      case 'error':
+        return '❌';
+      default:
+        return 'ℹ️';
     }
   }
 
@@ -317,7 +346,10 @@ export class StatusIndicator extends BaseService {
   }
 
   private getConnectionType(): string {
-    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    const connection =
+      (navigator as any).connection ||
+      (navigator as any).mozConnection ||
+      (navigator as any).webkitConnection;
     return connection?.effectiveType || 'unknown';
   }
 
@@ -469,7 +501,7 @@ export class StatusIndicator extends BaseService {
           }
         }
       `,
-      parent: document.head
+      parent: document.head,
     });
   }
 

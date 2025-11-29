@@ -30,7 +30,7 @@ export class AccessibilityEnhancer extends BaseService {
       enableHighContrastMode: true,
       enableFocusIndicators: true,
       announceChanges: true,
-      ...options
+      ...options,
     };
   }
 
@@ -46,13 +46,13 @@ export class AccessibilityEnhancer extends BaseService {
   private setupAccessibilityFeatures(): void {
     // Add ARIA landmarks to main sections
     this.addLandmarks();
-    
+
     // Enhance form controls
     this.enhanceFormControls();
-    
+
     // Add skip links
     this.addSkipLinks();
-    
+
     // Setup high contrast mode detection
     this.setupHighContrastMode();
   }
@@ -67,7 +67,7 @@ export class AccessibilityEnhancer extends BaseService {
 
     // Add navigation landmark for widgets
     const widgets = document.querySelectorAll('.widget-system');
-    widgets.forEach(widget => {
+    widgets.forEach((widget) => {
       widget.setAttribute('role', 'navigation');
       widget.setAttribute('aria-label', 'App controls and information');
     });
@@ -82,7 +82,7 @@ export class AccessibilityEnhancer extends BaseService {
 
   private enhanceFormControls(): void {
     // Enhance buttons with better labels
-    document.querySelectorAll('button').forEach(button => {
+    document.querySelectorAll('button').forEach((button) => {
       if (!button.getAttribute('aria-label') && !button.textContent?.trim()) {
         const icon = button.querySelector('.btn-icon')?.textContent;
         if (icon) {
@@ -92,7 +92,7 @@ export class AccessibilityEnhancer extends BaseService {
     });
 
     // Enhance input fields
-    document.querySelectorAll('input').forEach(input => {
+    document.querySelectorAll('input').forEach((input) => {
       if (!input.getAttribute('aria-label') && !input.getAttribute('aria-labelledby')) {
         const label = input.closest('label')?.textContent?.trim();
         if (label) {
@@ -110,7 +110,7 @@ export class AccessibilityEnhancer extends BaseService {
         <a href="#enhanced-run-controls" class="skip-link">Skip to run controls</a>
         <a href="#location-info" class="skip-link">Skip to location info</a>
       `,
-      parent: document.body
+      parent: document.body,
     });
 
     // Insert at the beginning of the body
@@ -122,7 +122,7 @@ export class AccessibilityEnhancer extends BaseService {
 
     // Detect system high contrast preference
     const prefersHighContrast = window.matchMedia('(prefers-contrast: high)').matches;
-    
+
     if (prefersHighContrast) {
       document.body.classList.add('high-contrast-mode');
     }
@@ -147,9 +147,9 @@ export class AccessibilityEnhancer extends BaseService {
       className: 'sr-only',
       attributes: {
         'aria-live': 'polite',
-        'aria-atomic': 'true'
+        'aria-atomic': 'true',
       },
-      parent: document.body
+      parent: document.body,
     });
   }
 
@@ -161,15 +161,15 @@ export class AccessibilityEnhancer extends BaseService {
 
     // Setup keyboard event listeners
     document.addEventListener('keydown', this.handleKeydown.bind(this));
-    
+
     // Update focusable elements when DOM changes
     const observer = new MutationObserver(() => {
       this.updateFocusableElements();
     });
-    
+
     observer.observe(document.body, {
       childList: true,
-      subtree: true
+      subtree: true,
     });
   }
 
@@ -181,7 +181,7 @@ export class AccessibilityEnhancer extends BaseService {
       'textarea:not([disabled])',
       'a[href]',
       '[tabindex]:not([tabindex="-1"])',
-      '.widget-header[tabindex]'
+      '.widget-header[tabindex]',
     ];
 
     this.focusableElements = Array.from(
@@ -192,11 +192,11 @@ export class AccessibilityEnhancer extends BaseService {
     this.focusableElements.sort((a, b) => {
       const aTabIndex = parseInt(a.getAttribute('tabindex') || '0');
       const bTabIndex = parseInt(b.getAttribute('tabindex') || '0');
-      
+
       if (aTabIndex !== bTabIndex) {
         return aTabIndex - bTabIndex;
       }
-      
+
       // Use DOM order for same tab index
       return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
     });
@@ -236,8 +236,10 @@ export class AccessibilityEnhancer extends BaseService {
     }
 
     // Close any open modals
-    const modals = document.querySelectorAll('.modal-overlay, .location-modal-overlay, .wallet-modal-overlay');
-    modals.forEach(modal => {
+    const modals = document.querySelectorAll(
+      '.modal-overlay, .location-modal-overlay, .wallet-modal-overlay'
+    );
+    modals.forEach((modal) => {
       const htmlModal = modal as HTMLElement;
       if (htmlModal.style.display !== 'none') {
         const closeBtn = modal.querySelector('.close-btn, .modal-close') as HTMLElement;
@@ -249,7 +251,7 @@ export class AccessibilityEnhancer extends BaseService {
   private handleTabNavigation(event: KeyboardEvent): void {
     // Enhanced tab navigation with better focus management
     const activeElement = document.activeElement as HTMLElement;
-    
+
     if (activeElement && this.isInWidget(activeElement)) {
       // Handle tab navigation within widgets
       event.preventDefault();
@@ -259,20 +261,25 @@ export class AccessibilityEnhancer extends BaseService {
 
   private handleArrowNavigation(event: KeyboardEvent): void {
     const activeElement = document.activeElement as HTMLElement;
-    
+
     if (activeElement && this.isInWidget(activeElement)) {
       event.preventDefault();
-      this.navigateWithinWidget(activeElement, event.key === 'ArrowUp' || event.key === 'ArrowLeft');
+      this.navigateWithinWidget(
+        activeElement,
+        event.key === 'ArrowUp' || event.key === 'ArrowLeft'
+      );
     }
   }
 
   private handleActivation(event: KeyboardEvent): void {
     const target = event.target as HTMLElement;
-    
+
     // Handle custom clickable elements
-    if (target.classList.contains('widget-header') || 
-        target.classList.contains('stat-item') ||
-        target.hasAttribute('data-action')) {
+    if (
+      target.classList.contains('widget-header') ||
+      target.classList.contains('stat-item') ||
+      target.hasAttribute('data-action')
+    ) {
       event.preventDefault();
       target.click();
     }
@@ -291,7 +298,7 @@ export class AccessibilityEnhancer extends BaseService {
     ) as NodeListOf<HTMLElement>;
 
     const currentIndex = Array.from(focusableInWidget).indexOf(currentElement);
-    let nextIndex;
+    let nextIndex: number;
 
     if (reverse) {
       nextIndex = currentIndex > 0 ? currentIndex - 1 : focusableInWidget.length - 1;
@@ -310,7 +317,7 @@ export class AccessibilityEnhancer extends BaseService {
 
     // Enhance widgets with keyboard support
     this.enhanceWidgets();
-    
+
     // Add ARIA labels to icon-only buttons
     this.enhanceIconButtons();
   }
@@ -338,15 +345,15 @@ export class AccessibilityEnhancer extends BaseService {
   }
 
   private enhanceWidgets(): void {
-    document.querySelectorAll('.widget-header').forEach(header => {
+    document.querySelectorAll('.widget-header').forEach((header) => {
       if (!header.hasAttribute('tabindex')) {
         header.setAttribute('tabindex', '0');
       }
-      
+
       if (!header.hasAttribute('role')) {
         header.setAttribute('role', 'button');
       }
-      
+
       if (!header.hasAttribute('aria-label')) {
         const title = header.querySelector('.widget-title')?.textContent;
         if (title) {
@@ -357,10 +364,10 @@ export class AccessibilityEnhancer extends BaseService {
   }
 
   private enhanceIconButtons(): void {
-    document.querySelectorAll('button').forEach(button => {
+    document.querySelectorAll('button').forEach((button) => {
       const hasText = button.textContent?.trim();
       const hasAriaLabel = button.hasAttribute('aria-label');
-      
+
       if (!hasText && !hasAriaLabel) {
         const icon = button.querySelector('.btn-icon')?.textContent;
         if (icon) {
@@ -383,9 +390,9 @@ export class AccessibilityEnhancer extends BaseService {
       '✅': 'Confirm',
       '🏃‍♂️': 'Run',
       '🎮': 'GameFi',
-      '🤖': 'AI Coach'
+      '🤖': 'AI Coach',
     };
-    
+
     return iconLabels[icon] || 'Button';
   }
 
@@ -527,7 +534,7 @@ export class AccessibilityEnhancer extends BaseService {
           overflow: hidden;
         }
       `,
-      parent: document.head
+      parent: document.head,
     });
   }
 

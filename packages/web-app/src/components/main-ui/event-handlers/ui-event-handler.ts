@@ -1,12 +1,12 @@
-import { DOMService } from "@runrealm/shared-core/services/dom-service";
-import { LocationService } from "@runrealm/shared-core/services/location-service";
-import { UIService } from "@runrealm/shared-core/services/ui-service";
-import { WalletWidget } from "../../wallet-widget";
-import { WidgetSystem } from "@runrealm/shared-core/components/widget-system";
-import { WidgetCreator } from "../widget-managers/widget-creator";
-import { Web3Service } from "@runrealm/shared-core/services/web3-service";
-import { RouteStateService } from "@runrealm/shared-core/services/route-state-service";
-import { EventBus } from "@runrealm/shared-core/core/event-bus";
+import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
+import { EventBus } from '@runrealm/shared-core/core/event-bus';
+import { DOMService } from '@runrealm/shared-core/services/dom-service';
+import { LocationService } from '@runrealm/shared-core/services/location-service';
+import { RouteStateService } from '@runrealm/shared-core/services/route-state-service';
+import { UIService } from '@runrealm/shared-core/services/ui-service';
+import { Web3Service } from '@runrealm/shared-core/services/web3-service';
+import { WalletWidget } from '../../wallet-widget';
+import { WidgetCreator } from '../widget-managers/widget-creator';
 
 /**
  * EventHandler - Handles all UI event handling logic
@@ -31,7 +31,7 @@ export class EventHandler {
     uiService: UIService,
     widgetSystem: WidgetSystem,
     widgetCreator: WidgetCreator | null, // Allow null initially
-    web3Service: Web3Service,
+    web3Service: Web3Service
   ) {
     this.domService = domService;
     this.locationService = locationService;
@@ -73,260 +73,209 @@ export class EventHandler {
    */
   setupEventHandlers(): void {
     // Header buttons
-    this.domService.delegate(document.body, "#location-btn", "click", () => {
+    this.domService.delegate(document.body, '#location-btn', 'click', () => {
       this.locationService.showLocationModal();
-      this.trackUserAction("location_button_clicked");
+      this.trackUserAction('location_button_clicked');
     });
 
-    this.domService.delegate(document.body, "#wallet-btn", "click", () => {
+    this.domService.delegate(document.body, '#wallet-btn', 'click', () => {
       this.walletWidget.showWalletModal();
-      this.trackUserAction("wallet_button_clicked");
+      this.trackUserAction('wallet_button_clicked');
     });
 
     // Action panel
-    this.domService.delegate(document.body, "#panel-toggle", "click", () => {
+    this.domService.delegate(document.body, '#panel-toggle', 'click', () => {
       this.toggleActionPanel();
     });
 
     // Floating action button
-    this.domService.delegate(document.body, "#fab-main", "click", () => {
+    this.domService.delegate(document.body, '#fab-main', 'click', () => {
       this.toggleFabMenu();
     });
 
-    this.domService.delegate(document.body, ".fab-option", "click", (event) => {
+    this.domService.delegate(document.body, '.fab-option', 'click', (event) => {
       const action = (event.target as HTMLElement).dataset.action;
       this.handleFabAction(action!);
     });
 
-    this.domService.delegate(
-      document.body,
-      ".import-activities-btn",
-      "click",
-      () => {
-        this.showExternalFitnessIntegration();
-        this.trackUserAction("import_activities_clicked");
-      },
-    );
+    this.domService.delegate(document.body, '.import-activities-btn', 'click', () => {
+      this.showExternalFitnessIntegration();
+      this.trackUserAction('import_activities_clicked');
+    });
 
-    this.domService.delegate(
-      document.body,
-      "#set-location-btn",
-      "click",
-      () => {
-        this.locationService.getCurrentLocation();
-      },
-    );
+    this.domService.delegate(document.body, '#set-location-btn', 'click', () => {
+      this.locationService.getCurrentLocation();
+    });
 
-    this.domService.delegate(
-      document.body,
-      "#search-location-btn",
-      "click",
-      () => {
-        this.locationService.showLocationModal();
-      },
-    );
+    this.domService.delegate(document.body, '#search-location-btn', 'click', () => {
+      this.locationService.showLocationModal();
+    });
 
-    this.domService.delegate(
-      document.body,
-      "#connect-wallet-btn",
-      "click",
-      () => {
-        this.walletWidget.showWalletModal();
-      },
-    );
+    this.domService.delegate(document.body, '#connect-wallet-btn', 'click', () => {
+      this.walletWidget.showWalletModal();
+    });
 
     // Centralized UI action routing with enhanced UX
-    this.domService.delegate(
-      document.body,
-      "[data-action]",
-      "click",
-      async (event) => {
-        console.log(
-          "MainUI: Click detected on element with data-action:",
-          event.target,
-        );
+    this.domService.delegate(document.body, '[data-action]', 'click', async (event) => {
+      console.log('MainUI: Click detected on element with data-action:', event.target);
 
-        const target = (event.target as HTMLElement).closest(
-          "[data-action]",
-        ) as HTMLElement | null;
-        if (!target) {
-          console.log("MainUI: No data-action target found");
-          return;
-        }
+      const target = (event.target as HTMLElement).closest('[data-action]') as HTMLElement | null;
+      if (!target) {
+        console.log('MainUI: No data-action target found');
+        return;
+      }
 
-        const action = target.getAttribute("data-action");
-        const payloadAttr = target.getAttribute("data-payload");
-        let payload: any = undefined;
-        if (payloadAttr) {
-          try {
-            payload = JSON.parse(payloadAttr);
-          } catch {
-            payload = undefined;
-          }
-        }
-
-        // Add immediate visual feedback
-        this.addButtonFeedback(target);
-
-        // Show loading state for AI actions
-        if (action?.startsWith("ai.")) {
-          this.showAILoadingState(action, target);
-        }
-
-        console.log(
-          "MainUI: Dispatching action:",
-          action,
-          "with payload:",
-          payload,
-        );
-
+      const action = target.getAttribute('data-action');
+      const payloadAttr = target.getAttribute('data-payload');
+      let payload: any;
+      if (payloadAttr) {
         try {
-          const { ActionRouter } = await import(
-            "@runrealm/shared-core/ui/action-router"
-          );
-          ActionRouter.dispatch(action as any, payload);
-        } catch (err) {
-          console.error("Failed to dispatch UI action", action, err);
-          this.hideAILoadingState();
+          payload = JSON.parse(payloadAttr);
+        } catch {
+          payload = undefined;
         }
-      },
-    );
+      }
+
+      // Add immediate visual feedback
+      this.addButtonFeedback(target);
+
+      // Show loading state for AI actions
+      if (action?.startsWith('ai.')) {
+        this.showAILoadingState(action, target);
+      }
+
+      console.log('MainUI: Dispatching action:', action, 'with payload:', payload);
+
+      try {
+        const { ActionRouter } = await import('@runrealm/shared-core/ui/action-router');
+        ActionRouter.dispatch(action as any, payload);
+      } catch (err) {
+        console.error('Failed to dispatch UI action', action, err);
+        this.hideAILoadingState();
+      }
+    });
 
     // Listen for service events
-    this.subscribe("location:changed", (locationInfo) => {
+    this.subscribe('location:changed', (locationInfo) => {
       // This will be handled by the status manager
     });
 
     // Listen for GPS status updates from actual location usage
-    this.subscribe("location:updated" as any, (data: any) => {
+    this.subscribe('location:updated' as any, (data: any) => {
       // This will be handled by the status manager
     });
 
-    this.subscribe("location:error" as any, () => {
+    this.subscribe('location:error' as any, () => {
       // This will be handled by the status manager
     });
 
     // Check GPS status when it actually matters
-    this.subscribe("run:startRequested" as any, () => {
+    this.subscribe('run:startRequested' as any, () => {
       // This will be handled by the status manager
     });
 
     // GPS button clicks should update status
-    this.domService.delegate(
-      document.body,
-      "#set-location-btn",
-      "click",
-      () => {
-        // This will be handled by the status manager
-      },
-    );
+    this.domService.delegate(document.body, '#set-location-btn', 'click', () => {
+      // This will be handled by the status manager
+    });
 
     // Manual GPS status refresh
-    this.domService.delegate(
-      document.body,
-      "#refresh-status-btn",
-      "click",
-      () => {
-        // This will be handled by the status manager
-      },
-    );
+    this.domService.delegate(document.body, '#refresh-status-btn', 'click', () => {
+      // This will be handled by the status manager
+    });
 
     // Monitor network status changes
-    window.addEventListener("online", () => {
+    window.addEventListener('online', () => {
       // This will be handled by the status manager
     });
 
-    window.addEventListener("offline", () => {
+    window.addEventListener('offline', () => {
       // This will be handled by the status manager
     });
 
-    this.subscribe("web3:walletConnected", (walletInfo) => {
+    this.subscribe('web3:walletConnected', (walletInfo) => {
       // This will be handled by the status manager
     });
 
     // GameFiUI -> MainUI integration events
-    this.subscribe("ui:gamefiEnabled", () => {
+    this.subscribe('ui:gamefiEnabled', () => {
       // Ensure GameFi widgets are present (idempotent if already created)
     });
 
-    this.subscribe("ui:territoryPreview", (data) => {
+    this.subscribe('ui:territoryPreview', (data) => {
       // Update territory-info widget with preview details
       this.widgetCreator.updateTerritoryWidget(data);
     });
 
-    this.subscribe("web3:walletDisconnected", () => {
+    this.subscribe('web3:walletDisconnected', () => {
       // This will be handled by the status manager
     });
 
     // AI route events -> render planned route and update widget
-    this.subscribe("ai:routeReady", (data) => {
+    this.subscribe('ai:routeReady', (data) => {
       try {
         const coordinates = data.waypoints?.map((p) => [p.lng, p.lat]) || [];
         const geojson = {
-          type: "Feature",
+          type: 'Feature',
           properties: {},
-          geometry: { type: "LineString", coordinates },
+          geometry: { type: 'LineString', coordinates },
         };
-        this.safeEmit("run:plannedRouteChanged", { geojson });
+        this.safeEmit('run:plannedRouteChanged', { geojson });
 
         const km = (data.totalDistance || 0) / 1000;
-        const etaMin = data.estimatedTime
-          ? Math.round(data.estimatedTime / 60)
-          : undefined;
+        const etaMin = data.estimatedTime ? Math.round(data.estimatedTime / 60) : undefined;
         const diffLabel =
-          typeof data.difficulty === "number"
+          typeof data.difficulty === 'number'
             ? data.difficulty < 33
-              ? "Easy"
+              ? 'Easy'
               : data.difficulty < 67
-                ? "Medium"
-                : "Hard"
-            : "—";
+                ? 'Medium'
+                : 'Hard'
+            : '—';
         const statsHtml = `
           <div class="widget-stat"><span class="widget-stat-label">Planned Distance</span><span class="widget-stat-value">${km.toFixed(
-            2,
+            2
           )} km</span></div>
           <div class="widget-stat"><span class="widget-stat-label">Difficulty</span><span class="widget-stat-value">${diffLabel}</span></div>
           ${
             etaMin !== undefined
               ? `<div class="widget-stat"><span class="widget-stat-label">ETA</span><span class="widget-stat-value">~${etaMin} min</span></div>`
-              : ""
+              : ''
           }
           <div class="widget-buttons">
             <button class="widget-button" id="start-run-btn">▶️ Start Run</button>
             <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>👻 Start Ghost Runner</button>
           </div>`;
 
-        this.widgetSystem.updateWidget("territory-info", statsHtml);
-        const w = this.widgetSystem.getWidget("territory-info");
-        if (w && w.minimized) this.widgetSystem.toggleWidget("territory-info");
+        this.widgetSystem.updateWidget('territory-info', statsHtml);
+        const w = this.widgetSystem.getWidget('territory-info');
+        if (w && w.minimized) this.widgetSystem.toggleWidget('territory-info');
       } catch (e) {
-        console.error("Failed to render planned route", e);
+        console.error('Failed to render planned route', e);
       }
     });
 
-    this.subscribe("ai:routeFailed", (data: { message: string }) => {
-      const errorMessage = data?.message || "Unknown error occurred";
-      this.uiService.showToast("🤖 AI route failed", { type: "error" });
+    this.subscribe('ai:routeFailed', (data: { message: string }) => {
+      const errorMessage = data?.message || 'Unknown error occurred';
+      this.uiService.showToast('🤖 AI route failed', { type: 'error' });
       const tip = `<div class="widget-tip">🤖 Could not generate a route. ${
-        errorMessage.includes("API key")
-          ? "Please check your AI configuration."
-          : "Try again in a moment or adjust your goals."
+        errorMessage.includes('API key')
+          ? 'Please check your AI configuration.'
+          : 'Try again in a moment or adjust your goals.'
       }</div>`;
-      this.widgetSystem.updateWidget("territory-info", tip);
+      this.widgetSystem.updateWidget('territory-info', tip);
     });
 
     // Handle AI service initialization errors
-    this.subscribe(
-      "service:error",
-      (data: { service: string; context: string; error: string }) => {
-        if (data.service === "AIService") {
-          console.log("MainUI: AI Service error:", data.error);
-          this.hideAILoadingState();
+    this.subscribe('service:error', (data: { service: string; context: string; error: string }) => {
+      if (data.service === 'AIService') {
+        console.log('MainUI: AI Service error:', data.error);
+        this.hideAILoadingState();
 
-          // Show user-friendly error in AI coach widget
-          const widget = this.widgetSystem.getWidget("ai-coach");
-          if (widget) {
-            const errorHtml = `
+        // Show user-friendly error in AI coach widget
+        const widget = this.widgetSystem.getWidget('ai-coach');
+        if (widget) {
+          const errorHtml = `
             <div class="widget-tip error animate-in">
               🤖 AI service unavailable
               <br><small>Check your API configuration or try again later.</small>
@@ -340,31 +289,23 @@ export class EventHandler {
               </button>
             </div>
           `;
-            this.widgetSystem.updateWidget("ai-coach", errorHtml);
-          }
+          this.widgetSystem.updateWidget('ai-coach', errorHtml);
         }
-      },
-    );
+      }
+    });
 
     // Handle AI service events
     this.subscribe(
-      "ai:ghostRunnerGenerated",
-      (data: {
-        runner: any;
-        difficulty: number;
-        success?: boolean;
-        fallback?: boolean;
-      }) => {
-        console.log("MainUI: Ghost runner generated:", data.runner.name);
-        const widget = this.widgetSystem.getWidget("ai-coach");
+      'ai:ghostRunnerGenerated',
+      (data: { runner: any; difficulty: number; success?: boolean; fallback?: boolean }) => {
+        console.log('MainUI: Ghost runner generated:', data.runner.name);
+        const widget = this.widgetSystem.getWidget('ai-coach');
         if (widget) {
-          const fallbackText = data.fallback ? " (Fallback)" : "";
+          const fallbackText = data.fallback ? ' (Fallback)' : '';
           const successHtml = `
           <div class="widget-tip success animate-in">
             👻 ${data.runner.name}${fallbackText} is ready to race!
-            <br><small>Difficulty: ${data.difficulty}% • ${
-              data.runner.specialAbility
-            }</small>
+            <br><small>Difficulty: ${data.difficulty}% • ${data.runner.specialAbility}</small>
             <br><small class="ghost-backstory">${data.runner.backstory}</small>
           </div>
           <div class="widget-buttons">
@@ -373,7 +314,7 @@ export class EventHandler {
             </button>
             <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${Math.min(
               data.difficulty + 10,
-              100,
+              100
             )}}'>
               👻 Harder Ghost
             </button>
@@ -382,25 +323,23 @@ export class EventHandler {
             </button>
           </div>
         `;
-          this.widgetSystem.updateWidget("ai-coach", successHtml, {
+          this.widgetSystem.updateWidget('ai-coach', successHtml, {
             success: true,
           });
 
           // Add celebration effect
           this.addCelebrationEffect();
-          this.triggerHapticFeedback("medium");
+          this.triggerHapticFeedback('medium');
         }
-      },
+      }
     );
 
-    this.subscribe(
-      "ai:ghostRunnerFailed" as any,
-      (data: { message: string }) => {
-        console.log("MainUI: Ghost runner generation failed:", data.message);
-        this.hideAILoadingState();
-        const widget = this.widgetSystem.getWidget("ai-coach");
-        if (widget) {
-          const errorHtml = `
+    this.subscribe('ai:ghostRunnerFailed' as any, (data: { message: string }) => {
+      console.log('MainUI: Ghost runner generation failed:', data.message);
+      this.hideAILoadingState();
+      const widget = this.widgetSystem.getWidget('ai-coach');
+      if (widget) {
+        const errorHtml = `
           <div class="widget-tip error animate-in">
             👻 Ghost runner creation failed: ${data.message}
             <br><small>Try again or check your AI configuration.</small>
@@ -414,14 +353,13 @@ export class EventHandler {
             </button>
           </div>
         `;
-          this.widgetSystem.updateWidget("ai-coach", errorHtml);
-        }
-      },
-    );
+        this.widgetSystem.updateWidget('ai-coach', errorHtml);
+      }
+    });
 
     // Handle route generation success
     this.subscribe(
-      "ai:routeReady" as any,
+      'ai:routeReady' as any,
       (data: {
         route: any;
         distance: number;
@@ -431,9 +369,9 @@ export class EventHandler {
         difficulty?: number;
         estimatedTime?: number;
       }) => {
-        console.log("MainUI: Route generated successfully:", data);
+        console.log('MainUI: Route generated successfully:', data);
         this.hideAILoadingState();
-        const widget = this.widgetSystem.getWidget("ai-coach");
+        const widget = this.widgetSystem.getWidget('ai-coach');
         if (widget) {
           const waypointSummary =
             data.waypoints && data.waypoints.length > 0
@@ -442,16 +380,14 @@ export class EventHandler {
 
           const successHtml = `
           <div class="widget-tip success animate-in">
-            📍 Perfect route found! ${waypointSummary}, ${Math.round(
-              data.distance,
-            )}m
+            📍 Perfect route found! ${waypointSummary}, ${Math.round(data.distance)}m
             <br><small>Difficulty: ${
               data.difficulty || 50
             }% • Territory opportunities along route</small>
           </div>
           <div class="widget-buttons">
             <button class="widget-button primary" data-action="ai.showRoute" data-payload='{"coordinates":${JSON.stringify(
-              data.route,
+              data.route
             )}}'>
               🗺️ Show on Map
             </button>
@@ -465,22 +401,22 @@ export class EventHandler {
             </button>
           </div>
         `;
-          this.widgetSystem.updateWidget("ai-coach", successHtml, {
+          this.widgetSystem.updateWidget('ai-coach', successHtml, {
             success: true,
           });
 
           // Add celebration effect
           this.addCelebrationEffect();
-          this.triggerHapticFeedback("medium");
+          this.triggerHapticFeedback('medium');
         }
-      },
+      }
     );
 
     // Handle route generation failure
-    this.subscribe("ai:routeFailed", (data: { message: string }) => {
-      console.log("MainUI: Route generation failed:", data.message);
+    this.subscribe('ai:routeFailed', (data: { message: string }) => {
+      console.log('MainUI: Route generation failed:', data.message);
       this.hideAILoadingState();
-      const widget = this.widgetSystem.getWidget("ai-coach");
+      const widget = this.widgetSystem.getWidget('ai-coach');
       if (widget) {
         const errorHtml = `
           <div class="widget-tip error animate-in">
@@ -496,28 +432,26 @@ export class EventHandler {
             </button>
           </div>
         `;
-        this.widgetSystem.updateWidget("ai-coach", errorHtml);
+        this.widgetSystem.updateWidget('ai-coach', errorHtml);
       }
     });
 
     // Handle service errors
-    this.subscribe(
-      "service:error",
-      (data: { service: string; context: string; error: string }) => {
-        if (data.service === "AIService") {
-          console.log("MainUI: AI Service error:", data.error);
-          const widget = this.widgetSystem.getWidget("ai-coach");
-          if (widget) {
-            let errorMessage = "Service temporarily unavailable";
-            if (data.error.includes("API key")) {
-              errorMessage = "API key not configured properly";
-            } else if (data.error.includes("disabled")) {
-              errorMessage = "AI features are disabled";
-            } else if (data.error.includes("connection")) {
-              errorMessage = "Cannot connect to AI service";
-            }
+    this.subscribe('service:error', (data: { service: string; context: string; error: string }) => {
+      if (data.service === 'AIService') {
+        console.log('MainUI: AI Service error:', data.error);
+        const widget = this.widgetSystem.getWidget('ai-coach');
+        if (widget) {
+          let errorMessage = 'Service temporarily unavailable';
+          if (data.error.includes('API key')) {
+            errorMessage = 'API key not configured properly';
+          } else if (data.error.includes('disabled')) {
+            errorMessage = 'AI features are disabled';
+          } else if (data.error.includes('connection')) {
+            errorMessage = 'Cannot connect to AI service';
+          }
 
-            const errorHtml = `
+          const errorHtml = `
             <div class="widget-tip error">
               🤖 AI Service Issue: ${errorMessage}
               <br><small>Context: ${data.context}</small>
@@ -529,11 +463,10 @@ export class EventHandler {
               </button>
             </div>
           `;
-            this.widgetSystem.updateWidget("ai-coach", errorHtml);
-          }
+          this.widgetSystem.updateWidget('ai-coach', errorHtml);
         }
-      },
-    );
+      }
+    });
   }
 
   /**
@@ -542,44 +475,40 @@ export class EventHandler {
   setupRouteStateListeners(): void {
     // Listen for route state changes to update widgets
     this.subscribe(
-      "route:stateChanged",
+      'route:stateChanged',
       (data: { routeId: string; routeData: any; isActive: boolean }) => {
         if (data.isActive) {
           // Update territory-info widget with route details
-          const km =
-            (data.routeData.totalDistance || data.routeData.distance || 0) /
-            1000;
+          const km = (data.routeData.totalDistance || data.routeData.distance || 0) / 1000;
           const etaMin = data.routeData.estimatedTime
             ? Math.round(data.routeData.estimatedTime / 60)
             : undefined;
           const diffLabel =
-            typeof data.routeData.difficulty === "number"
+            typeof data.routeData.difficulty === 'number'
               ? data.routeData.difficulty < 33
-                ? "Easy"
+                ? 'Easy'
                 : data.routeData.difficulty < 67
-                  ? "Medium"
-                  : "Hard"
-              : "—";
+                  ? 'Medium'
+                  : 'Hard'
+              : '—';
 
           const statsHtml = `
           <div class="widget-stat"><span class="widget-stat-label">Planned Distance</span><span class="widget-stat-value">${km.toFixed(
-            2,
+            2
           )} km</span></div>
           <div class="widget-stat"><span class="widget-stat-label">Difficulty</span><span class="widget-stat-value">${diffLabel}</span></div>
           ${
             etaMin !== undefined
               ? `<div class="widget-stat"><span class="widget-stat-label">ETA</span><span class="widget-stat-value">~${etaMin} min</span></div>`
-              : ""
+              : ''
           }
           <div class="widget-tip success">
             🎉 Route ready! Click "Start Run" to begin.
           </div>
           <div class="widget-buttons">
             <button class="widget-button primary" data-action="ai.startRun" data-payload='{"coordinates":${JSON.stringify(
-              data.routeData.coordinates,
-            )}, "distance": ${
-              data.routeData.totalDistance || data.routeData.distance
-            }}'>
+              data.routeData.coordinates
+            )}, "distance": ${data.routeData.totalDistance || data.routeData.distance}}'>
               ▶️ Start Run
             </button>
             <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":${
@@ -589,16 +518,15 @@ export class EventHandler {
             </button>
           </div>`;
 
-          this.widgetSystem.updateWidget("territory-info", statsHtml);
-          const w = this.widgetSystem.getWidget("territory-info");
-          if (w && w.minimized)
-            this.widgetSystem.toggleWidget("territory-info");
+          this.widgetSystem.updateWidget('territory-info', statsHtml);
+          const w = this.widgetSystem.getWidget('territory-info');
+          if (w && w.minimized) this.widgetSystem.toggleWidget('territory-info');
         }
-      },
+      }
     );
 
     // Listen for route cleared events
-    this.subscribe("route:cleared", () => {
+    this.subscribe('route:cleared', () => {
       // Reset territory-info widget to default state
       const defaultHtml = `
         <div class="widget-tip">
@@ -613,133 +541,116 @@ export class EventHandler {
           </button>
         </div>
       `;
-      this.widgetSystem.updateWidget("territory-info", defaultHtml);
+      this.widgetSystem.updateWidget('territory-info', defaultHtml);
     });
   }
 
   // Settings widget event handlers
   setupSettingsEventHandlers(): void {
     // Wire actions
-    this.domService.delegate(
-      document.body,
-      "#restart-onboarding-widget",
-      "click",
-      async () => {
-        console.log("MainUI: Restarting onboarding...");
+    this.domService.delegate(document.body, '#restart-onboarding-widget', 'click', async () => {
+      console.log('MainUI: Restarting onboarding...');
 
-        // Add visual feedback
-        const button = document.getElementById("restart-onboarding-widget");
-        if (button) {
-          const originalText = button.textContent;
-          button.textContent = "🔄 Starting...";
-          button.style.opacity = "0.6";
+      // Add visual feedback
+      const button = document.getElementById('restart-onboarding-widget');
+      if (button) {
+        const originalText = button.textContent;
+        button.textContent = '🔄 Starting...';
+        button.style.opacity = '0.6';
 
-          setTimeout(() => {
-            button.textContent = originalText;
-            button.style.opacity = "1";
-          }, 1000);
-        }
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.opacity = '1';
+        }, 1000);
+      }
 
-        // Restart onboarding
-        localStorage.removeItem("runrealm_onboarding_complete");
-        localStorage.removeItem("runrealm_welcomed");
-        window.location.reload();
-      },
-    );
+      // Restart onboarding
+      localStorage.removeItem('runrealm_onboarding_complete');
+      localStorage.removeItem('runrealm_welcomed');
+      window.location.reload();
+    });
 
     // GameFi toggle from settings
-    this.domService.delegate(
-      document.body,
-      "#gamefi-toggle-widget",
-      "click",
-      (e) => {
-        const target = e.target as HTMLElement;
-        const isEnabled =
-          localStorage.getItem("runrealm_gamefi_enabled") === "true";
-        const newState = !isEnabled;
+    this.domService.delegate(document.body, '#gamefi-toggle-widget', 'click', (e) => {
+      const target = e.target as HTMLElement;
+      const isEnabled = localStorage.getItem('runrealm_gamefi_enabled') === 'true';
+      const newState = !isEnabled;
 
-        localStorage.setItem("runrealm_gamefi_enabled", String(newState));
-        EventBus.getInstance().emit("gamefi:toggled", { enabled: newState });
+      localStorage.setItem('runrealm_gamefi_enabled', String(newState));
+      EventBus.getInstance().emit('gamefi:toggled', { enabled: newState });
 
-        // Update button visual state
-        target.classList.toggle("active", newState);
-        const btnText = target.querySelector(".btn-text");
-        if (btnText) {
-          btnText.textContent = newState ? "GameFi ON" : "GameFi OFF";
-        }
+      // Update button visual state
+      target.classList.toggle('active', newState);
+      const btnText = target.querySelector('.btn-text');
+      if (btnText) {
+        btnText.textContent = newState ? 'GameFi ON' : 'GameFi OFF';
+      }
 
-        this.uiService.showToast(
-          newState ? "GameFi features enabled" : "GameFi features disabled",
-          { type: "info" },
-        );
-      },
-    );
+      this.uiService.showToast(newState ? 'GameFi features enabled' : 'GameFi features disabled', {
+        type: 'info',
+      });
+    });
 
     // Widget visibility toggles
-    this.domService.delegate(
-      document.body,
-      "#toggle-location",
-      "change",
-      (e) => {
-        const target = e.target as HTMLInputElement;
-        const widget = document.getElementById("widget-location-info");
-        if (widget) {
-          widget.style.display = target.checked ? "block" : "none";
-        }
-      },
-    );
-
-    this.domService.delegate(document.body, "#toggle-wallet", "change", (e) => {
+    this.domService.delegate(document.body, '#toggle-location', 'change', (e) => {
       const target = e.target as HTMLInputElement;
-      const widget = document.getElementById("widget-wallet-info");
+      const widget = document.getElementById('widget-location-info');
       if (widget) {
-        widget.style.display = target.checked ? "block" : "none";
+        widget.style.display = target.checked ? 'block' : 'none';
+      }
+    });
+
+    this.domService.delegate(document.body, '#toggle-wallet', 'change', (e) => {
+      const target = e.target as HTMLInputElement;
+      const widget = document.getElementById('widget-wallet-info');
+      if (widget) {
+        widget.style.display = target.checked ? 'block' : 'none';
       }
     });
 
     // Rewards visibility preference toggle
     this.domService.delegate(
       document.body,
-      "#toggle-rewards-hide-until-connected",
-      "change",
+      '#toggle-rewards-hide-until-connected',
+      'change',
       (e) => {
         const target = e.target as HTMLInputElement;
         // Store preference: checked means hide until connected
         localStorage.setItem(
-          "runrealm_rewards_hide_until_connected",
-          target.checked ? "true" : "false",
+          'runrealm_rewards_hide_until_connected',
+          target.checked ? 'true' : 'false'
         );
         // Notify rewards UI to react immediately
-        this.safeEmit("rewards:settingsChanged" as any, {});
+        this.safeEmit('rewards:settingsChanged' as any, {});
         // Update settings widget to reflect any state change
         // this.widgetSystem.updateWidget("settings", this.getSettingsContent());
-      },
+      }
     );
   }
 
   private toggleActionPanel(): void {
-    const panel = document.getElementById("action-panel");
+    const panel = document.getElementById('action-panel');
     if (panel) {
-      panel.classList.toggle("collapsed");
+      panel.classList.toggle('collapsed');
     }
   }
 
   private toggleFabMenu(): void {
-    const menu = document.getElementById("fab-menu");
+    const menu = document.getElementById('fab-menu');
     if (menu) {
-      menu.style.display = menu.style.display === "none" ? "flex" : "none";
+      menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
     }
   }
 
   private handleFabAction(action: string): void {
     switch (action) {
-      case "location":
+      case 'location':
         this.locationService.showLocationModal();
         break;
-      case "wallet":
+      case 'wallet':
         this.walletWidget.showWalletModal();
         break;
-      case "help":
+      case 'help':
         // This will be handled by the UI effects module
         break;
     }
@@ -751,23 +662,7 @@ export class EventHandler {
     console.log(`User action: ${action}`);
   }
 
-  // Helper methods to maintain compatibility
-  private subscribe(event: string, callback: (data?: any) => void): void {
-    // Subscribe to service events using the base service pattern
-    // This would connect to the actual event system
-    if ((this as any).addEventListener) {
-      (this as any).addEventListener(event, callback);
-    }
-  }
-
-  private safeEmit(event: string, data?: any): void {
-    // Emit service events using the base service pattern
-    // This would connect to the actual event system
-    if ((this as any).dispatchEvent) {
-      const eventObj = new CustomEvent(event, { detail: data });
-      (this as any).dispatchEvent(eventObj);
-    }
-  }
+  // Helper methods removed - using public subscribe and protected safeEmit from above
 
   private addButtonFeedback(button: HTMLElement): void {
     // This will be handled by the UI effects module
@@ -785,15 +680,13 @@ export class EventHandler {
     // This will be handled by the UI effects module
   }
 
-  private triggerHapticFeedback(
-    type: "light" | "medium" | "heavy" = "light",
-  ): void {
+  private triggerHapticFeedback(type: 'light' | 'medium' | 'heavy' = 'light'): void {
     // This will be handled by the UI effects module
   }
 
   private showExternalFitnessIntegration(): void {
     this.uiService.showModal({
-      title: "🌟 Connect Strava",
+      title: '🌟 Connect Strava',
       content: `
         <div style="padding: 20px; text-align: center;">
           <p style="margin-bottom: 20px;">Import your legendary runs from Strava and claim them as NFT territories!</p>
@@ -803,7 +696,7 @@ export class EventHandler {
       `,
       actions: [
         {
-          label: "Got it",
+          label: 'Got it',
           primary: true,
           action: () => {},
         },

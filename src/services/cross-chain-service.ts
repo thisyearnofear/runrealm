@@ -1,6 +1,6 @@
-import { BaseService } from "../core/base-service";
-import { Web3Service } from "./web3-service";
-import { ContractService } from "./contract-service";
+import { BaseService } from '../core/base-service';
+import { ContractService } from './contract-service';
+import { Web3Service } from './web3-service';
 
 // Type declaration for ZetaChainClient (external library)
 declare class ZetaChainClient {
@@ -45,19 +45,19 @@ export class CrossChainService extends BaseService {
 
   protected async onInitialize(): Promise<void> {
     // Wait for dependent services
-    this.web3Service = this.getService("Web3Service");
-    this.contractService = this.getService("ContractService");
+    this.web3Service = this.getService('Web3Service');
+    this.contractService = this.getService('ContractService');
 
     if (!this.web3Service || !this.contractService) {
-      console.warn("CrossChainService: Required services not available");
+      console.warn('CrossChainService: Required services not available');
       return;
     }
 
     await this.initializeZetaClient();
     this.setupEventListeners();
-    
-    this.safeEmit("service:initialized", {
-      service: "CrossChainService",
+
+    this.safeEmit('service:initialized', {
+      service: 'CrossChainService',
       success: true,
     });
   }
@@ -65,17 +65,17 @@ export class CrossChainService extends BaseService {
   private async initializeZetaClient(): Promise<void> {
     try {
       // Initialize ZetaChain client
-      console.log("CrossChainService: Initializing ZetaChain client");
+      console.log('CrossChainService: Initializing ZetaChain client');
 
       // Initialize ZetaChain client for Athens testnet
       this.zetaClient = new ZetaChainClient({
         network: 'athens', // or 'mainnet' for production
-        chainId: 7001
+        chainId: 7001,
       });
 
-      console.log("CrossChainService: ZetaChain client initialized successfully");
+      console.log('CrossChainService: ZetaChain client initialized successfully');
     } catch (error) {
-      console.error("CrossChainService: Failed to initialize ZetaChain client:", error);
+      console.error('CrossChainService: Failed to initialize ZetaChain client:', error);
       // Fallback to mock implementation for development
       this.zetaClient = null;
     }
@@ -83,17 +83,17 @@ export class CrossChainService extends BaseService {
 
   private setupEventListeners(): void {
     // Listen for wallet connections
-    this.subscribe("web3:walletConnected", async () => {
+    this.subscribe('web3:walletConnected', async () => {
       await this.initializeZetaClient();
     });
 
     // Listen for cross-chain territory claims
-    this.subscribe("crosschain:territoryClaimRequested", async (data: any) => {
+    this.subscribe('crosschain:territoryClaimRequested', async (data: any) => {
       await this.handleCrossChainTerritoryClaim(data);
     });
 
     // Listen for cross-chain stats updates
-    this.subscribe("crosschain:statsUpdateRequested", async (data: any) => {
+    this.subscribe('crosschain:statsUpdateRequested', async (data: any) => {
       await this.handleCrossChainStatsUpdate(data);
     });
   }
@@ -103,15 +103,15 @@ export class CrossChainService extends BaseService {
    */
   public async sendMessage(message: CrossChainMessage): Promise<string> {
     if (!this.zetaConnector) {
-      throw new Error("ZetaChain connector not initialized");
+      throw new Error('ZetaChain connector not initialized');
     }
 
     if (!this.web3Service?.isConnected()) {
-      throw new Error("Wallet not connected");
+      throw new Error('Wallet not connected');
     }
 
     try {
-      console.log("CrossChainService: Sending cross-chain message", message);
+      console.log('CrossChainService: Sending cross-chain message', message);
 
       // In a real implementation, this would use ZetaChain's Gateway API
       // For the hackathon, we'll simulate the process but show what the real implementation would look like
@@ -129,22 +129,24 @@ export class CrossChainService extends BaseService {
       const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // Emit event for UI updates
-      this.safeEmit("crosschain:messageSent", {
+      this.safeEmit('crosschain:messageSent', {
         messageId,
         targetChainId: message.targetChainId,
         targetAddress: message.targetAddress,
-        data: message.data
+        data: message.data,
       });
 
       // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Simulate successful message sending
-      console.log(`CrossChainService: Message ${messageId} sent successfully to chain ${message.targetChainId}`);
+      console.log(
+        `CrossChainService: Message ${messageId} sent successfully to chain ${message.targetChainId}`
+      );
 
       return messageId;
     } catch (error) {
-      console.error("CrossChainService: Failed to send message:", error);
+      console.error('CrossChainService: Failed to send message:', error);
       throw error;
     }
   }
@@ -185,7 +187,7 @@ export class CrossChainService extends BaseService {
     // return receipt.transactionHash;
 
     // For the hackathon, we'll simulate this behavior
-    console.log("CrossChainService: Simulating cross-chain message send", params);
+    console.log('CrossChainService: Simulating cross-chain message send', params);
     return `0x${Math.random().toString(16).substring(2, 10)}`;
   }
 
@@ -194,28 +196,27 @@ export class CrossChainService extends BaseService {
    */
   public async listenForMessages(): Promise<void> {
     if (!this.zetaConnector) {
-      throw new Error("ZetaChain connector not initialized");
+      throw new Error('ZetaChain connector not initialized');
     }
 
     try {
-      console.log("CrossChainService: Listening for cross-chain messages");
-      
+      console.log('CrossChainService: Listening for cross-chain messages');
+
       // In a real implementation, this would set up listeners for incoming messages
       // For the hackathon, we'll simulate this with periodic checks
-      
+
       // Real implementation would look like:
       // this.zetaConnector.on('crossChainMessage', async (message) => {
       //   await this.handleIncomingCrossChainMessage(message);
       // });
-      
+
       // For simulation, we'll periodically check for messages
       // In a real app, this would be event-driven
-      
+
       // Set up a mock listener for demonstration
       this.setupMockMessageListener();
-      
     } catch (error) {
-      console.error("CrossChainService: Failed to listen for messages:", error);
+      console.error('CrossChainService: Failed to listen for messages:', error);
     }
   }
 
@@ -226,9 +227,9 @@ export class CrossChainService extends BaseService {
     // This simulates receiving cross-chain messages
     // In a real implementation, ZetaChain would automatically call the onCall method
     // of our Universal Contract when a cross-chain message arrives
-    
-    console.log("CrossChainService: Setting up mock message listener");
-    
+
+    console.log('CrossChainService: Setting up mock message listener');
+
     // For demonstration purposes, we'll emit a mock message every 30 seconds
     // In a real app, this would be triggered by actual cross-chain events
     setInterval(() => {
@@ -239,16 +240,16 @@ export class CrossChainService extends BaseService {
           sourceChainId: this.getRandomSupportedChain(),
           targetChainId: 7001, // ZetaChain testnet
           sender: `0x${Math.random().toString(16).substring(2, 12)}`,
-          receiver: this.contractService?.getContractAddresses().universal || "",
+          receiver: this.contractService?.getContractAddresses().universal || '',
           data: JSON.stringify({
-            type: "territoryUpdate",
+            type: 'territoryUpdate',
             territoryId: Math.floor(Math.random() * 1000),
-            action: "claimed"
+            action: 'claimed',
           }),
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
-        
-        console.log("CrossChainService: Simulating incoming cross-chain message", mockMessage);
+
+        console.log('CrossChainService: Simulating incoming cross-chain message', mockMessage);
         this.handleIncomingCrossChainMessage(mockMessage);
       }
     }, 30000); // Check every 30 seconds
@@ -259,29 +260,29 @@ export class CrossChainService extends BaseService {
    */
   private async handleIncomingCrossChainMessage(message: CrossChainEvent): Promise<void> {
     try {
-      console.log("CrossChainService: Handling incoming cross-chain message", message);
-      
+      console.log('CrossChainService: Handling incoming cross-chain message', message);
+
       // Decode message data
       const decodedData = this.decodeMessageData(message.data);
-      
+
       // Emit event for UI updates
-      this.safeEmit("crosschain:messageReceived", {
+      this.safeEmit('crosschain:messageReceived', {
         message,
-        decodedData
+        decodedData,
       });
-      
+
       // Handle specific message types
-      if (decodedData.type === "territoryUpdate") {
-        this.safeEmit("crosschain:territoryUpdated", {
+      if (decodedData.type === 'territoryUpdate') {
+        this.safeEmit('crosschain:territoryUpdated', {
           territoryId: decodedData.territoryId,
           action: decodedData.action,
-          sourceChainId: message.sourceChainId
+          sourceChainId: message.sourceChainId,
         });
       }
-      
+
       console.log(`CrossChainService: Processed message from chain ${message.sourceChainId}`);
     } catch (error) {
-      console.error("CrossChainService: Failed to handle incoming message:", error);
+      console.error('CrossChainService: Failed to handle incoming message:', error);
     }
   }
 
@@ -298,38 +299,37 @@ export class CrossChainService extends BaseService {
    */
   private async handleCrossChainTerritoryClaim(data: any): Promise<void> {
     try {
-      console.log("CrossChainService: Handling cross-chain territory claim", data);
-      
+      console.log('CrossChainService: Handling cross-chain territory claim', data);
+
       // Validate data
       if (!data.territoryData || !data.targetChainId) {
-        throw new Error("Invalid territory claim data");
+        throw new Error('Invalid territory claim data');
       }
-      
+
       // Encode territory data for cross-chain transmission
       const encodedData = this.encodeTerritoryData(data.territoryData);
-      
+
       // Send cross-chain message
       const message: CrossChainMessage = {
         targetChainId: data.targetChainId,
-        targetAddress: this.contractService?.getContractAddresses().universal || "",
+        targetAddress: this.contractService?.getContractAddresses().universal || '',
         data: encodedData,
-        gasLimit: 500000
+        gasLimit: 500000,
       };
-      
+
       const messageId = await this.sendMessage(message);
-      
+
       // Emit success event
-      this.safeEmit("crosschain:territoryClaimInitiated", {
+      this.safeEmit('crosschain:territoryClaimInitiated', {
         messageId,
         territoryData: data.territoryData,
-        targetChainId: data.targetChainId
+        targetChainId: data.targetChainId,
       });
-      
     } catch (error) {
-      console.error("CrossChainService: Failed to handle territory claim:", error);
-      this.safeEmit("crosschain:territoryClaimFailed", {
-        error: error instanceof Error ? error.message : "Unknown error",
-        data
+      console.error('CrossChainService: Failed to handle territory claim:', error);
+      this.safeEmit('crosschain:territoryClaimFailed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data,
       });
     }
   }
@@ -339,38 +339,37 @@ export class CrossChainService extends BaseService {
    */
   private async handleCrossChainStatsUpdate(data: any): Promise<void> {
     try {
-      console.log("CrossChainService: Handling cross-chain stats update", data);
-      
+      console.log('CrossChainService: Handling cross-chain stats update', data);
+
       // Validate data
       if (!data.statsData || !data.targetChainId) {
-        throw new Error("Invalid stats update data");
+        throw new Error('Invalid stats update data');
       }
-      
+
       // Encode stats data for cross-chain transmission
       const encodedData = this.encodeStatsData(data.statsData);
-      
+
       // Send cross-chain message
       const message: CrossChainMessage = {
         targetChainId: data.targetChainId,
-        targetAddress: this.contractService?.getContractAddresses().universal || "",
+        targetAddress: this.contractService?.getContractAddresses().universal || '',
         data: encodedData,
-        gasLimit: 300000
+        gasLimit: 300000,
       };
-      
+
       const messageId = await this.sendMessage(message);
-      
+
       // Emit success event
-      this.safeEmit("crosschain:statsUpdateInitiated", {
+      this.safeEmit('crosschain:statsUpdateInitiated', {
         messageId,
         statsData: data.statsData,
-        targetChainId: data.targetChainId
+        targetChainId: data.targetChainId,
       });
-      
     } catch (error) {
-      console.error("CrossChainService: Failed to handle stats update:", error);
-      this.safeEmit("crosschain:statsUpdateFailed", {
-        error: error instanceof Error ? error.message : "Unknown error",
-        data
+      console.error('CrossChainService: Failed to handle stats update:', error);
+      this.safeEmit('crosschain:statsUpdateFailed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data,
       });
     }
   }
@@ -400,7 +399,7 @@ export class CrossChainService extends BaseService {
     try {
       return JSON.parse(data);
     } catch (error) {
-      console.error("CrossChainService: Failed to decode message data:", error);
+      console.error('CrossChainService: Failed to decode message data:', error);
       return null;
     }
   }
@@ -425,16 +424,16 @@ export class CrossChainService extends BaseService {
    */
   public getChainName(chainId: number): string {
     const chainNames: Record<number, string> = {
-      1: "Ethereum",
-      56: "Binance Smart Chain",
-      137: "Polygon",
-      43114: "Avalanche",
-      8453: "Base",
-      42161: "Arbitrum",
-      7001: "ZetaChain Athens Testnet",
-      7000: "ZetaChain Mainnet"
+      1: 'Ethereum',
+      56: 'Binance Smart Chain',
+      137: 'Polygon',
+      43114: 'Avalanche',
+      8453: 'Base',
+      42161: 'Arbitrum',
+      7001: 'ZetaChain Athens Testnet',
+      7000: 'ZetaChain Mainnet',
     };
-    
+
     return chainNames[chainId] || `Unknown Chain (${chainId})`;
   }
 
@@ -461,19 +460,19 @@ export class CrossChainService extends BaseService {
     gasLimit?: number;
   }): Promise<string> {
     try {
-      console.log("CrossChainService: Sending enhanced cross-chain message", params);
-      
+      console.log('CrossChainService: Sending enhanced cross-chain message', params);
+
       // Check if we have a real ZetaChain client
       if (this.zetaConnector && typeof this.zetaConnector.gateway?.sendMessage === 'function') {
         // Use the real ZetaChain client
-        console.log("CrossChainService: Using real ZetaChain client");
-        
+        console.log('CrossChainService: Using real ZetaChain client');
+
         // Get the signer from the connected wallet
         const signer = this.web3Service?.getSigner?.();
         if (!signer) {
-          throw new Error("No signer available");
+          throw new Error('No signer available');
         }
-        
+
         // Send the cross-chain message
         // const tx = await this.zetaConnector.gateway.sendMessage({
         //   signer,
@@ -482,17 +481,17 @@ export class CrossChainService extends BaseService {
         //   message: params.message,
         //   gasLimit: params.gasLimit || 500000
         // });
-        
+
         // For demonstration, we'll simulate the transaction
-        console.log("CrossChainService: Would send transaction with real ZetaChain client");
+        console.log('CrossChainService: Would send transaction with real ZetaChain client');
         return `0x${Math.random().toString(16).substring(2, 10)}`;
       } else {
         // Fall back to our simulation
-        console.log("CrossChainService: Using simulation mode");
+        console.log('CrossChainService: Using simulation mode');
         return `0x${Math.random().toString(16).substring(2, 10)}`;
       }
     } catch (error) {
-      console.error("CrossChainService: Failed to send enhanced cross-chain message:", error);
+      console.error('CrossChainService: Failed to send enhanced cross-chain message:', error);
       throw error;
     }
   }
@@ -503,44 +502,47 @@ export class CrossChainService extends BaseService {
    * ENHANCEMENT FIRST: Shows judges the real implementation approach
    */
   public demonstrateZetaChainAPI(): void {
-    console.log("%c=== ZetaChain Gateway API Demonstration for Google Buildathon Judges ===", "color: #00ff88; font-weight: bold;");
-    console.log("%c1. Cross-chain messaging:", "color: #00cc6a; font-weight: bold;");
-    console.log("   const tx = await zetaClient.gateway.sendMessage({");
-    console.log("     signer: walletSigner,");
-    console.log("     destinationChainId: 7001,");
+    console.log(
+      '%c=== ZetaChain Gateway API Demonstration for Google Buildathon Judges ===',
+      'color: #00ff88; font-weight: bold;'
+    );
+    console.log('%c1. Cross-chain messaging:', 'color: #00cc6a; font-weight: bold;');
+    console.log('   const tx = await zetaClient.gateway.sendMessage({');
+    console.log('     signer: walletSigner,');
+    console.log('     destinationChainId: 7001,');
     console.log("     destinationAddress: '0x...contractAddress...',");
-    console.log("     message: encodedData,");
-    console.log("     gasLimit: 500000");
-    console.log("   });");
-    
-    console.log("\n%c2. Cross-chain token transfer:", "color: #00cc6a; font-weight: bold;");
-    console.log("   const tx = await zetaClient.gateway.sendToken({");
-    console.log("     signer: walletSigner,");
-    console.log("     destinationChainId: 7001,");
+    console.log('     message: encodedData,');
+    console.log('     gasLimit: 500000');
+    console.log('   });');
+
+    console.log('\n%c2. Cross-chain token transfer:', 'color: #00cc6a; font-weight: bold;');
+    console.log('   const tx = await zetaClient.gateway.sendToken({');
+    console.log('     signer: walletSigner,');
+    console.log('     destinationChainId: 7001,');
     console.log("     destinationAddress: '0x...recipientAddress...',");
     console.log("     amount: ethers.parseEther('1.0'),");
-    console.log("     gasLimit: 500000");
-    console.log("   });");
-    
-    console.log("\n%c3. Cross-chain contract call:", "color: #00cc6a; font-weight: bold;");
-    console.log("   const tx = await zetaClient.gateway.callContract({");
-    console.log("     signer: walletSigner,");
-    console.log("     destinationChainId: 7001,");
+    console.log('     gasLimit: 500000');
+    console.log('   });');
+
+    console.log('\n%c3. Cross-chain contract call:', 'color: #00cc6a; font-weight: bold;');
+    console.log('   const tx = await zetaClient.gateway.callContract({');
+    console.log('     signer: walletSigner,');
+    console.log('     destinationChainId: 7001,');
     console.log("     destinationAddress: '0x...contractAddress...',");
-    console.log("     data: contractCallData,");
-    console.log("     gasLimit: 500000");
-    console.log("   });");
-    console.log("================================================================================");
-    
+    console.log('     data: contractCallData,');
+    console.log('     gasLimit: 500000');
+    console.log('   });');
+    console.log('================================================================================');
+
     // Also show the cross-chain flow explanation
-    console.log("\n%cCross-Chain Territory Claiming Flow:", "color: #00aaff; font-weight: bold;");
-    console.log("1. User connects wallet to any supported chain (Ethereum, BSC, Polygon, etc.)");
-    console.log("2. User completes a run and claims territory");
-    console.log("3. Cross-chain message sent via ZetaChain Gateway API");
-    console.log("4. Message routed to ZetaChain Athens Testnet (7001)");
+    console.log('\n%cCross-Chain Territory Claiming Flow:', 'color: #00aaff; font-weight: bold;');
+    console.log('1. User connects wallet to any supported chain (Ethereum, BSC, Polygon, etc.)');
+    console.log('2. User completes a run and claims territory');
+    console.log('3. Cross-chain message sent via ZetaChain Gateway API');
+    console.log('4. Message routed to ZetaChain Athens Testnet (7001)');
     console.log("5. Universal Contract's onCall function processes message");
-    console.log("6. Territory NFT minted on ZetaChain");
-    console.log("7. User pays gas only on origin chain");
-    console.log("8. Territory shows cross-chain history in UI");
+    console.log('6. Territory NFT minted on ZetaChain');
+    console.log('7. User pays gas only on origin chain');
+    console.log('8. Territory shows cross-chain history in UI');
   }
 }

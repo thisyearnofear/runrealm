@@ -99,7 +99,7 @@
 
     <!-- Cache detection and forced reload script -->
     <script>
-        (function () {
+        (() => {
             // Check if we're loading from cache by looking at the timestamp
             const cacheKey = 'runrealm_last_load';
             const currentVersion = 'v2.0.2-20250928';
@@ -113,7 +113,9 @@
                 // Clear all caches
                 if ('caches' in window) {
                     caches.keys().then(names => {
-                        names.forEach(name => caches.delete(name));
+                        names.forEach(name => {
+                            caches.delete(name);
+                        });
                     });
                 }
 
@@ -128,7 +130,7 @@
 
             // Monitor for script loading errors
             let scriptErrors = 0;
-            window.addEventListener('error', function (e) {
+            window.addEventListener('error', (e) => {
                 if (e.target && e.target.tagName === 'SCRIPT') {
                     scriptErrors++;
                     console.warn('Script loading error:', e.target.src);

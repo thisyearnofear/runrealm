@@ -8,9 +8,13 @@
  * ORGANIZED: Follows existing component patterns
  */
 
-import { UserDashboardService, DashboardData, DashboardState } from '@runrealm/shared-core/services/user-dashboard-service';
-import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
+import { DOMService } from '@runrealm/shared-core/services/dom-service';
+import {
+  DashboardData,
+  DashboardState,
+  UserDashboardService,
+} from '@runrealm/shared-core/services/user-dashboard-service';
 
 export class UserDashboard {
   private container: HTMLElement | null = null;
@@ -32,7 +36,7 @@ export class UserDashboard {
     this.container = this.domService.createElement('div', {
       id: 'user-dashboard',
       className: 'user-dashboard hidden',
-      parent: parentElement
+      parent: parentElement,
     });
 
     this.render();
@@ -89,7 +93,11 @@ export class UserDashboard {
 
       // Tab switching
       if (target.classList.contains('dashboard-tab')) {
-        const tabName = target.getAttribute('data-tab') as 'overview' | 'territories' | 'ghosts' | 'challenges';
+        const tabName = target.getAttribute('data-tab') as
+          | 'overview'
+          | 'territories'
+          | 'ghosts'
+          | 'challenges';
         if (tabName) {
           this.activeTab = tabName;
           this.render();
@@ -117,12 +125,14 @@ export class UserDashboard {
 
     // Update active state
     const filterButtons = this.container?.querySelectorAll('.filter-btn');
-    filterButtons?.forEach(btn => btn.classList.remove('active'));
+    filterButtons?.forEach((btn) => {
+      btn.classList.remove('active');
+    });
     target.classList.add('active');
 
     // Filter territory items
     const territoryItems = this.container?.querySelectorAll('.territory-item-compact');
-    territoryItems?.forEach(item => {
+    territoryItems?.forEach((item) => {
       const itemElement = item as HTMLElement;
       if (filter === 'all') {
         itemElement.style.display = 'flex';
@@ -209,7 +219,9 @@ export class UserDashboard {
         const territoryId = target.getAttribute('data-territory-id');
         if (territoryId) {
           // Get selected ghost from dropdown
-          const select = this.container?.querySelector(`.ghost-select[data-territory-id="${territoryId}"]`) as HTMLSelectElement;
+          const select = this.container?.querySelector(
+            `.ghost-select[data-territory-id="${territoryId}"]`
+          ) as HTMLSelectElement;
           const ghostId = select?.value;
 
           if (ghostId) {
@@ -220,7 +232,7 @@ export class UserDashboard {
           } else {
             this.eventBus.emit('ui:toast', {
               message: 'Please select a ghost to deploy',
-              type: 'warning'
+              type: 'warning',
             });
           }
         }
@@ -295,7 +307,8 @@ export class UserDashboard {
   }
 
   private renderPlayerStats(userStats: any): string {
-    if (!userStats) return '<div class="dashboard-section"><h3>Player Stats</h3><p>No data available</p></div>';
+    if (!userStats)
+      return '<div class="dashboard-section"><h3>Player Stats</h3><p>No data available</p></div>';
 
     return `
       <div class="dashboard-section">
@@ -392,14 +405,21 @@ export class UserDashboard {
         </div>
         
         <div class="territory-list-compact">
-          ${territories.slice(0, 10).map(t => this.renderTerritoryCard(t)).join('')}
+          ${territories
+            .slice(0, 10)
+            .map((t) => this.renderTerritoryCard(t))
+            .join('')}
         </div>
         
-        ${territories.length > 10 ? `
+        ${
+          territories.length > 10
+            ? `
           <button class="view-all-btn" data-action="view-all-territories">
             View All ${territories.length} Territories
           </button>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
   }
@@ -434,11 +454,15 @@ export class UserDashboard {
     `;
   }
 
-  private renderTerritoryDetails(territory: any, activityPoints: number, defenseStatus: string): string {
+  private renderTerritoryDetails(
+    territory: any,
+    activityPoints: number,
+    defenseStatus: string
+  ): string {
     // Get available ghosts for deployment
     const data = this.dashboardService.getData();
-    const availableGhosts = (data.ghosts || []).filter((g: any) =>
-      !g.cooldownUntil || new Date(g.cooldownUntil) < new Date()
+    const availableGhosts = (data.ghosts || []).filter(
+      (g: any) => !g.cooldownUntil || new Date(g.cooldownUntil) < new Date()
     );
 
     const activityPercentage = (activityPoints / 1000) * 100;
@@ -465,7 +489,9 @@ export class UserDashboard {
           </div>
         </div>
 
-        ${territory.deployedGhost ? `
+        ${
+          territory.deployedGhost
+            ? `
           <div class="deployed-ghost">
             <div class="ghost-info">
               <span class="ghost-avatar">${territory.deployedGhost.avatar || '👻'}</span>
@@ -475,17 +501,25 @@ export class UserDashboard {
               </div>
             </div>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
 
         <div class="territory-actions-expanded">
-          ${availableGhosts.length > 0 ? `
+          ${
+            availableGhosts.length > 0
+              ? `
             <div class="action-group">
               <label>Deploy Ghost</label>
               <select class="ghost-select" data-territory-id="${territory.geohash}">
                 <option value="">Select ghost...</option>
-                ${availableGhosts.map((g: any) => `
+                ${availableGhosts
+                  .map(
+                    (g: any) => `
                   <option value="${g.id}">${g.avatar || '👻'} ${g.name} (Lvl ${g.level})</option>
-                `).join('')}
+                `
+                  )
+                  .join('')}
               </select>
               <button class="action-btn" data-action="deploy-ghost-to-territory" 
                       data-territory-id="${territory.geohash}" 
@@ -493,11 +527,13 @@ export class UserDashboard {
                 Deploy Selected
               </button>
             </div>
-          ` : `
+          `
+              : `
             <div class="action-group">
               <p class="info-text">No ghosts available. All ghosts are on cooldown.</p>
             </div>
-          `}
+          `
+          }
           
           <div class="action-group">
             <label>Boost Activity</label>
@@ -533,7 +569,8 @@ export class UserDashboard {
   }
 
   private renderWalletInfo(walletInfo: any): string {
-    if (!walletInfo) return '<div class="dashboard-section"><h3>Wallet</h3><p>Not connected</p></div>';
+    if (!walletInfo)
+      return '<div class="dashboard-section"><h3>Wallet</h3><p>Not connected</p></div>';
 
     return `
       <div class="dashboard-section">
@@ -556,18 +593,29 @@ export class UserDashboard {
     return `
       <div class="dashboard-section">
         <h3>Recent Activity</h3>
-        ${lastRun ? `
+        ${
+          lastRun
+            ? `
           <div class="last-run">
             <div class="run-distance">${(lastRun.totalDistance / 1000).toFixed(2)}km</div>
             <div class="run-time">${Math.floor(lastRun.totalDuration / 60)}:${(lastRun.totalDuration % 60).toString().padStart(2, '0')}</div>
           </div>
-        ` : ''}
-        ${achievements.length > 0 ? `
+        `
+            : ''
+        }
+        ${
+          achievements.length > 0
+            ? `
           <div class="recent-achievements">
             <h4>Recent Achievements</h4>
-            ${achievements.slice(0, 3).map((a: string) => `<div class="achievement">${a}</div>`).join('')}
+            ${achievements
+              .slice(0, 3)
+              .map((a: string) => `<div class="achievement">${a}</div>`)
+              .join('')}
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
   }
@@ -592,9 +640,10 @@ export class UserDashboard {
           <button class="action-btn" data-action="manage-ghosts">Manage All</button>
         </div>
         <div class="ghost-list-horizontal">
-          ${ghosts.map(g => {
-      const isReady = !g.cooldownUntil || new Date(g.cooldownUntil) < new Date();
-      return `
+          ${ghosts
+            .map((g) => {
+              const isReady = !g.cooldownUntil || new Date(g.cooldownUntil) < new Date();
+              return `
               <div class="ghost-card-compact">
                 <div class="ghost-avatar">${g.avatar || '👻'}</div>
                 <div class="ghost-info">
@@ -604,12 +653,17 @@ export class UserDashboard {
                 <div class="ghost-status ${isReady ? 'ready' : 'cooldown'}">
                   ${isReady ? 'Ready' : 'Cooldown'}
                 </div>
-                ${isReady ? `
+                ${
+                  isReady
+                    ? `
                   <button class="ghost-action-btn" data-action="ghost.deploy" data-ghost-id="${g.id}">Deploy</button>
-                ` : ''}
+                `
+                    : ''
+                }
               </div>
             `;
-    }).join('')}
+            })
+            .join('')}
         </div>
       </div>
     `;
@@ -639,9 +693,10 @@ export class UserDashboard {
           <button class="action-btn" data-action="find-challenges">Find More</button>
         </div>
         <div class="challenges-list">
-          ${challenges.map((c: any) => {
-      const progress = Math.min((c.goal.current / c.goal.target) * 100, 100);
-      return `
+          ${challenges
+            .map((c: any) => {
+              const progress = Math.min((c.goal.current / c.goal.target) * 100, 100);
+              return `
               <div class="challenge-item">
                 <div class="challenge-icon">${c.icon}</div>
                 <div class="challenge-info">
@@ -659,7 +714,8 @@ export class UserDashboard {
                 </button>
               </div>
             `;
-    }).join('')}
+            })
+            .join('')}
         </div>
       </div>
     `;
@@ -676,7 +732,9 @@ export class UserDashboard {
     return `
       <div class="dashboard-section">
         <h3>AI Insights</h3>
-        ${suggestedRoute ? `
+        ${
+          suggestedRoute
+            ? `
           <div class="suggested-route">
             <h4>Suggested Route</h4>
             <div class="route-info">
@@ -684,15 +742,24 @@ export class UserDashboard {
               <div class="route-difficulty">Difficulty: ${suggestedRoute.difficulty}/100</div>
             </div>
           </div>
-        ` : ''}
-        ${tips.length > 0 ? `
+        `
+            : ''
+        }
+        ${
+          tips.length > 0
+            ? `
           <div class="ai-tips">
             <h4>Personalized Tips</h4>
             <ul>
-              ${tips.slice(0, 3).map((tip: string) => `<li>${tip}</li>`).join('')}
+              ${tips
+                .slice(0, 3)
+                .map((tip: string) => `<li>${tip}</li>`)
+                .join('')}
             </ul>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
   }
@@ -703,19 +770,27 @@ export class UserDashboard {
     const notificationItems = [];
 
     if (notifications.territoryEligible) {
-      notificationItems.push('<div class="notification territory-eligible">Territory eligible for claiming!</div>');
+      notificationItems.push(
+        '<div class="notification territory-eligible">Territory eligible for claiming!</div>'
+      );
     }
 
     if (notifications.territoryClaimed) {
-      notificationItems.push('<div class="notification territory-claimed">Territory claimed successfully!</div>');
+      notificationItems.push(
+        '<div class="notification territory-claimed">Territory claimed successfully!</div>'
+      );
     }
 
     if (notifications.achievementUnlocked) {
-      notificationItems.push(`<div class="notification achievement-unlocked">Achievement unlocked: ${notifications.achievementUnlocked}</div>`);
+      notificationItems.push(
+        `<div class="notification achievement-unlocked">Achievement unlocked: ${notifications.achievementUnlocked}</div>`
+      );
     }
 
     if (notifications.levelUp) {
-      notificationItems.push(`<div class="notification level-up">Level up! You are now level ${notifications.levelUp}</div>`);
+      notificationItems.push(
+        `<div class="notification level-up">Level up! You are now level ${notifications.levelUp}</div>`
+      );
     }
 
     if (notificationItems.length === 0) return '';
@@ -764,7 +839,11 @@ export class UserDashboard {
   }
 
   private updateVisibility(visible: boolean, minimized: boolean): void {
-    console.log('UserDashboard: updateVisibility called', { visible, minimized, container: this.container });
+    console.log('UserDashboard: updateVisibility called', {
+      visible,
+      minimized,
+      container: this.container,
+    });
     if (!this.container) return;
 
     if (visible) {

@@ -15,24 +15,12 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@shared/*": [
-        "../shared-core/*"
-      ],
-      "@shared-types/*": [
-        "../shared-types/*"
-      ],
-      "@shared-utils/*": [
-        "../shared-utils/*"
-      ],
-      "@blockchain/*": [
-        "../shared-blockchain/*"
-      ],
-      "@web/*": [
-        "./*"
-      ],
-      "@mobile/*": [
-        "./*"
-      ]
+      "@shared/*": ["../shared-core/*"],
+      "@shared-types/*": ["../shared-types/*"],
+      "@shared-utils/*": ["../shared-utils/*"],
+      "@blockchain/*": ["../shared-blockchain/*"],
+      "@web/*": ["./*"],
+      "@mobile/*": ["./*"]
     }
   }
 }

@@ -13,8 +13,11 @@
     "dev:backend": "node server.js",
     "test": "npm run test --workspaces",
     "test:unit": "npm run test:unit --workspaces",
-    "lint": "eslint 'packages/**/*.{ts,tsx}' --fix --ignore-pattern '**/node_modules/**' --ignore-pattern '**/dist/**'",
-    "lint:check": "eslint 'packages/**/*.{ts,tsx}' --ignore-pattern '**/node_modules/**' --ignore-pattern '**/dist/**'",
+    "lint": "biome check --write .",
+    "lint:check": "biome check .",
+    "lint:errors": "biome check --diagnostic-level=error .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
     "setup:env": "cp config/environment/.env.template .env && cp config/environment/.env.production.template .env.production",
     "clean": "rm -rf packages/*/dist packages/*/node_modules build artifacts",
     "install:all": "npm install && npm run install --workspaces"
@@ -23,6 +26,7 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@biomejs/biome": "2.3.8",
     "@types/jasmine": "^5.1.12",
     "@types/jest": "^30.0.0",
     "@types/mapbox__mapbox-sdk": "^0.16.3",
@@ -30,15 +34,12 @@
     "copy-webpack-plugin": "^13.0.1",
     "css-loader": "^7.1.2",
     "html-webpack-plugin": "^5.6.4",
+    "lefthook": "^1.7.0",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.4",
     "typescript": "^5.0.4",
     "webpack": "^5.102.1",
-    "webpack-cli": "^6.0.1",
-    "lefthook": "^1.7.0",
-    "eslint": "^8.57.0",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0"
+    "webpack-cli": "^6.0.1"
   },
   "dependencies": {
     "buffer": "^6.0.3",

@@ -3,11 +3,9 @@
  * Tests the basic functionality of the Strava API integration
  */
 
-const {
-  ExternalFitnessService,
-} = require("../src/services/external-fitness-service");
+const { ExternalFitnessService } = require('../src/services/external-fitness-service');
 
-describe("Strava Integration", () => {
+describe('Strava Integration', () => {
   let fitnessService;
 
   beforeEach(() => {
@@ -21,8 +19,8 @@ describe("Strava Integration", () => {
     // Mock window.location
     global.window = {
       location: {
-        search: "",
-        pathname: "/",
+        search: '',
+        pathname: '/',
       },
       history: {
         replaceState: jest.fn(),
@@ -33,71 +31,71 @@ describe("Strava Integration", () => {
     global.fetch = jest.fn();
   });
 
-  test("should generate correct Strava OAuth URL", () => {
+  test('should generate correct Strava OAuth URL', () => {
     // Mock config with test values
     const mockConfig = {
       getStravaConfig: () => ({
-        clientId: "test_client_id",
-        redirectUri: "http://localhost:3000/auth/strava/callback",
+        clientId: 'test_client_id',
+        redirectUri: 'http://localhost:3000/auth/strava/callback',
       }),
     };
 
     // This would need proper mocking in a real test environment
     // For now, we'll just verify the URL structure would be correct
     const expectedParams = new URLSearchParams({
-      client_id: "test_client_id",
-      redirect_uri: "http://localhost:3000/auth/strava/callback",
-      response_type: "code",
-      scope: "read,activity:read_all",
-      approval_prompt: "auto",
+      client_id: 'test_client_id',
+      redirect_uri: 'http://localhost:3000/auth/strava/callback',
+      response_type: 'code',
+      scope: 'read,activity:read_all',
+      approval_prompt: 'auto',
     });
 
     const expectedUrl = `https://www.strava.com/oauth/authorize?${expectedParams.toString()}`;
 
     // In a real test, we'd instantiate the service and call initiateStravaAuth()
-    expect(expectedUrl).toContain("client_id=test_client_id");
-    expect(expectedUrl).toContain("scope=read,activity:read_all");
+    expect(expectedUrl).toContain('client_id=test_client_id');
+    expect(expectedUrl).toContain('scope=read,activity:read_all');
   });
 
-  test("should handle OAuth callback correctly", () => {
+  test('should handle OAuth callback correctly', () => {
     // Mock URL with success parameters
     window.location.search =
-      "?strava_success=true&access_token=test_token&refresh_token=test_refresh&expires_at=1234567890";
+      '?strava_success=true&access_token=test_token&refresh_token=test_refresh&expires_at=1234567890';
 
     // In a real test, we'd verify that handleOAuthCallback processes these parameters correctly
     const urlParams = new URLSearchParams(window.location.search);
 
-    expect(urlParams.get("strava_success")).toBe("true");
-    expect(urlParams.get("access_token")).toBe("test_token");
-    expect(urlParams.get("refresh_token")).toBe("test_refresh");
+    expect(urlParams.get('strava_success')).toBe('true');
+    expect(urlParams.get('access_token')).toBe('test_token');
+    expect(urlParams.get('refresh_token')).toBe('test_refresh');
   });
 
-  test("should handle OAuth error correctly", () => {
+  test('should handle OAuth error correctly', () => {
     // Mock URL with error parameters
-    window.location.search = "?strava_error=access_denied";
+    window.location.search = '?strava_error=access_denied';
 
     const urlParams = new URLSearchParams(window.location.search);
-    expect(urlParams.get("strava_error")).toBe("access_denied");
+    expect(urlParams.get('strava_error')).toBe('access_denied');
   });
 });
 
-describe("Rate Limiting Integration", () => {
-  test("should have rate limiter configured for Strava", () => {
+describe('Rate Limiting Integration', () => {
+  test('should have rate limiter configured for Strava', () => {
     // Test that rate limiter factory creates Strava limiter
-    const { RateLimiterFactory } = require("../src/utils/rate-limiter");
+    const { RateLimiterFactory } = require('../src/utils/rate-limiter');
     const stravaLimiter = RateLimiterFactory.getStravaLimiter();
-    
+
     expect(stravaLimiter).toBeDefined();
-    
+
     const status = stravaLimiter.getStatus();
     expect(status.capacity).toBe(180); // Conservative limit
     expect(status.refillIntervalMs).toBe(15 * 60 * 1000); // 15 minutes
   });
 
-  test("should consume tokens correctly", () => {
-    const { RateLimiter } = require("../src/utils/rate-limiter");
+  test('should consume tokens correctly', () => {
+    const { RateLimiter } = require('../src/utils/rate-limiter');
     const testLimiter = new RateLimiter(5, 1000, 5);
-    
+
     expect(testLimiter.canConsume(3)).toBe(true);
     expect(testLimiter.tryConsume(3)).toBe(true);
     expect(testLimiter.canConsume(3)).toBe(false);

@@ -6,8 +6,8 @@
  * MODULAR: Can be tested independently
  */
 
-import { Web3Service, WalletInfo } from '@runrealm/shared-core/services/web3-service';
 import { BaseService } from '@runrealm/shared-core/core/base-service';
+import { WalletInfo, Web3Service } from '@runrealm/shared-core/services/web3-service';
 
 /**
  * Mobile-specific wallet connection state
@@ -63,11 +63,9 @@ export class MobileWeb3Adapter extends BaseService {
     //     error: null,
     //   });
     // });
-
     // this.web3Service.subscribe('web3:walletDisconnected', () => {
     //   this.updateState(this.getInitialState());
     // });
-
     // this.web3Service.subscribe('web3:networkChanged', (data: any) => {
     //   this.updateState({
     //     chainId: data.chainId,
@@ -96,7 +94,9 @@ export class MobileWeb3Adapter extends BaseService {
    * Notify all listeners of state change
    */
   private notifyListeners(): void {
-    this.listeners.forEach(listener => listener(this.state));
+    this.listeners.forEach((listener) => {
+      listener(this.state);
+    });
   }
 
   /**
@@ -110,7 +110,7 @@ export class MobileWeb3Adapter extends BaseService {
     try {
       // ENHANCEMENT FIRST: Delegate to existing Web3Service
       const walletInfo = await this.web3Service.connectWallet();
-      
+
       // Update mobile state
       this.updateState({
         connected: true,
@@ -226,7 +226,7 @@ export class MobileWeb3Adapter extends BaseService {
    */
   protected async onInitialize(): Promise<void> {
     console.log('MobileWeb3Adapter: Initializing...');
-    
+
     // Initialize Web3Service if not already initialized
     if (!this.web3Service.getIsInitialized()) {
       await this.web3Service.initialize();

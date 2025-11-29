@@ -4,10 +4,10 @@
  */
 
 import { EventBus } from '../core/event-bus';
-import { UIService } from './ui-service';
 import { SoundService } from '../services/sound-service';
-import { RouteStateService } from './route-state-service';
 import { UserContextService } from '../services/user-context-service';
+import { RouteStateService } from './route-state-service';
+import { UIService } from './ui-service';
 
 export interface AIRequestOptions {
   timeout?: number;
@@ -34,7 +34,7 @@ export class AIOrchestrator {
   private userContextService: UserContextService;
   private activeRequests: Map<string, AIRequestStatus> = new Map();
   private requestCache: Map<string, { data: any; timestamp: number }> = new Map();
-  
+
   private constructor() {
     this.eventBus = EventBus.getInstance();
     this.uiService = UIService.getInstance();
@@ -67,7 +67,7 @@ export class AIOrchestrator {
       // Show success notification
       this.uiService.showToast('📍 Route generated successfully!', {
         type: 'success',
-        duration: 5000
+        duration: 5000,
       });
       // Store route in state service
       this.routeStateService.setRouteData(requestId, {
@@ -78,13 +78,13 @@ export class AIOrchestrator {
         estimatedTime: data.estimatedTime || 0,
         totalDistance: data.totalDistance || 0,
         generatedAt: Date.now(),
-        source: 'ai'
+        source: 'ai',
       });
       // Cache the response for future use
       const cacheKey = `route_${JSON.stringify(this.getRouteParamsFromData(data))}`;
       this.requestCache.set(cacheKey, {
         data: data,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     });
 
@@ -97,7 +97,7 @@ export class AIOrchestrator {
       // Show error notification
       this.uiService.showToast(`Route generation failed: ${data.message}`, {
         type: 'error',
-        duration: 5000
+        duration: 5000,
       });
     });
 
@@ -115,13 +115,13 @@ export class AIOrchestrator {
       // Show success notification
       this.uiService.showToast(`👻 ${data.runner.name} is ready to race!`, {
         type: 'success',
-        duration: 5000
+        duration: 5000,
       });
       // Cache the response for future use
       const cacheKey = `ghost_${JSON.stringify(this.getGhostParamsFromData(data))}`;
       this.requestCache.set(cacheKey, {
         data: data,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     });
 
@@ -134,7 +134,7 @@ export class AIOrchestrator {
       // Show error notification
       this.uiService.showToast(`Ghost runner failed: ${data.message}`, {
         type: 'error',
-        duration: 5000
+        duration: 5000,
       });
     });
   }
@@ -142,55 +142,55 @@ export class AIOrchestrator {
   /**
    * Request an AI-generated route with enhanced UX
    */
-  public async requestRoute(
-    params: any,
-    options: AIRequestOptions = {}
-  ): Promise<void> {
+  public async requestRoute(params: any, options: AIRequestOptions = {}): Promise<void> {
     // Track AI route usage
     this.userContextService.trackUserAction('ai_route_requested', {
       adaptive: params.adaptive,
       distance: params.distance,
-      difficulty: params.difficulty
+      difficulty: params.difficulty,
     });
 
     // Apply smart defaults if adaptive flag is set
     const smartParams = params.adaptive ? this.applySmartDefaults(params) : params;
-    
+
     const requestId = this.generateRequestId('route');
     const defaultOptions: AIRequestOptions = {
       timeout: 30000,
       retries: 2,
       cache: true,
-      cacheTTL: 300000 // 5 minutes
+      cacheTTL: 300000, // 5 minutes
     };
-    
+
     const mergedOptions = { ...defaultOptions, ...options };
-    
+
     // Check cache first
     if (mergedOptions.cache) {
-      const cached = this.checkCache(`route_${JSON.stringify(smartParams)}`, mergedOptions.cacheTTL!);
+      const cached = this.checkCache(
+        `route_${JSON.stringify(smartParams)}`,
+        mergedOptions.cacheTTL!
+      );
       if (cached) {
         this.eventBus.emit('ai:routeReady', { ...cached, requestId });
         return;
       }
     }
-    
+
     // Create request status
     this.createRequestStatus(requestId, 'route', 'pending', 0);
-    
+
     // Show loading toast
     const loadingToast = this.uiService.showToast('🤖 Generating your route...', {
       type: 'info',
-      duration: 0 // Don't auto-hide
+      duration: 0, // Don't auto-hide
     });
-    
+
     try {
       // Add request ID to smart params
       const requestParams = { ...smartParams, requestId };
-      
+
       // Emit request with timeout
       await this.emitWithTimeout('ai:routeRequested', requestParams, mergedOptions.timeout!);
-      
+
       // Update UI when processing starts
       // Note: Dynamic event listeners would need to be handled differently
       // this.eventBus.on(`${requestId}:progress`, (data) => {
@@ -201,7 +201,6 @@ export class AIOrchestrator {
       //     duration: 0
       //   });
       // });
-      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.handleRequestError(requestId, 'route', errorMessage);
@@ -211,8 +210,8 @@ export class AIOrchestrator {
           text: 'Retry',
           callback: () => {
             this.requestRoute(params, options);
-          }
-        }
+          },
+        },
       });
     }
   }
@@ -220,20 +219,17 @@ export class AIOrchestrator {
   /**
    * Request a ghost runner with enhanced UX
    */
-  public async requestGhostRunner(
-    params: any,
-    options: AIRequestOptions = {}
-  ): Promise<void> {
+  public async requestGhostRunner(params: any, options: AIRequestOptions = {}): Promise<void> {
     const requestId = this.generateRequestId('ghostRunner');
     const defaultOptions: AIRequestOptions = {
       timeout: 20000,
       retries: 2,
       cache: true,
-      cacheTTL: 300000 // 5 minutes
+      cacheTTL: 300000, // 5 minutes
     };
-    
+
     const mergedOptions = { ...defaultOptions, ...options };
-    
+
     // Check cache first
     if (mergedOptions.cache) {
       const cached = this.checkCache(`ghost_${JSON.stringify(params)}`, mergedOptions.cacheTTL!);
@@ -242,23 +238,22 @@ export class AIOrchestrator {
         return;
       }
     }
-    
+
     // Create request status
     this.createRequestStatus(requestId, 'ghostRunner', 'pending', 0);
-    
+
     // Show loading toast
     this.uiService.showToast('👻 Summoning your ghost runner...', {
       type: 'info',
-      duration: 0 // Don't auto-hide
+      duration: 0, // Don't auto-hide
     });
-    
+
     try {
       // Add request ID to params
       const requestParams = { ...params, requestId };
-      
+
       // Emit request with timeout
       await this.emitWithTimeout('ai:ghostRunnerRequested', requestParams, mergedOptions.timeout!);
-      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.handleRequestError(requestId, 'ghostRunner', errorMessage);
@@ -268,8 +263,8 @@ export class AIOrchestrator {
           text: 'Retry',
           callback: () => {
             this.requestGhostRunner(params, options);
-          }
-        }
+          },
+        },
       });
     }
   }
@@ -306,26 +301,28 @@ export class AIOrchestrator {
 
   private applySmartDefaults(params: any): any {
     const runs = JSON.parse(localStorage.getItem('user-runs') || '[]');
-    const avgDistance = runs.length ? runs.reduce((sum: number, r: any) => sum + (r.distance || 0), 0) / runs.length : 2000;
-    
+    const avgDistance = runs.length
+      ? runs.reduce((sum: number, r: any) => sum + (r.distance || 0), 0) / runs.length
+      : 2000;
+
     const contexts: Record<string, any> = {
       smart_morning: {
         distance: Math.round(avgDistance * 0.8),
         difficulty: Math.min(30 + runs.length, 60),
-        goals: ['exploration']
+        goals: ['exploration'],
       },
       smart_territory: {
         distance: Math.round(avgDistance * 1.2),
         difficulty: Math.min(50 + runs.length * 2, 80),
-        goals: ['exploration', 'territory']
+        goals: ['exploration', 'territory'],
       },
       smart_training: {
         distance: Math.round(avgDistance * 1.1),
         difficulty: Math.min(40 + runs.length * 3, 90),
-        goals: ['training']
-      }
+        goals: ['training'],
+      },
     };
-    
+
     return contexts[params.type] || contexts.smart_morning;
   }
 
@@ -342,9 +339,9 @@ export class AIOrchestrator {
       status,
       progress,
       timestamp: Date.now(),
-      error
+      error,
     };
-    
+
     this.activeRequests.set(id, requestStatus);
     // Note: This event is not in the AppEvents interface
     // this.eventBus.emit('ai:requestStatusChanged', requestStatus);
@@ -364,17 +361,17 @@ export class AIOrchestrator {
         request.error = error;
       }
       request.timestamp = Date.now();
-      
+
       this.activeRequests.set(id, request);
       // Note: This event is not in the AppEvents interface
       // this.eventBus.emit('ai:requestStatusChanged', request);
-      
+
       // Cache successful responses
       if (status === 'success') {
         // We'd need to capture the actual response data to cache it
         // This would require modifying how we emit events
       }
-      
+
       // Remove completed requests after a delay
       if (status === 'success' || status === 'error' || status === 'cancelled') {
         setTimeout(() => {
@@ -399,53 +396,45 @@ export class AIOrchestrator {
     return null;
   }
 
-  private async emitWithTimeout(
-    event: string,
-    data: any,
-    timeout: number
-  ): Promise<void> {
+  private async emitWithTimeout(event: string, data: any, timeout: number): Promise<void> {
     return new Promise((resolve, reject) => {
       // Set up timeout
       const timer = setTimeout(() => {
         reject(new Error('Request timeout'));
       }, timeout);
-      
+
       // Set up success listener
       const successListener = () => {
         clearTimeout(timer);
         resolve();
       };
-      
+
       // Set up error listener
       const errorListener = (errorData: any) => {
         clearTimeout(timer);
         reject(new Error(errorData.message || 'Request failed'));
       };
-      
+
       // Listen for success or error events
       // Note: Dynamic event listeners would need to be handled differently
       // this.eventBus.once(`${data.requestId}:success`, successListener);
       // this.eventBus.once(`${data.requestId}:error`, errorListener);
-      
+
       // Emit the request
       this.eventBus.emit(event as any, data);
     });
   }
 
-  private handleRequestError(
-    requestId: string,
-    type: string,
-    errorMessage: string
-  ): void {
+  private handleRequestError(requestId: string, type: string, errorMessage: string): void {
     this.updateRequestStatus(requestId, 'error', 0, errorMessage);
-    
+
     // Play error sound
     this.soundService.playErrorSound();
-    
+
     // Log error for debugging
     console.error(`AI Orchestrator: ${type} request failed`, {
       requestId,
-      error: errorMessage
+      error: errorMessage,
     });
   }
 
@@ -454,13 +443,13 @@ export class AIOrchestrator {
     return {
       distance: data.distance,
       difficulty: data.difficulty,
-      goals: data.goals
+      goals: data.goals,
     };
   }
 
   private getGhostParamsFromData(data: any): any {
     return {
-      difficulty: data.difficulty
+      difficulty: data.difficulty,
     };
   }
 }

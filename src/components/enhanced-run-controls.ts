@@ -1,6 +1,11 @@
 import { BaseService } from '../core/base-service';
 import { RunSession } from '../services/run-tracking-service';
-import { getFormattedDistance, formatSpeed, formatPace, formatDuration } from '../utils/distance-formatter';
+import {
+  formatDuration,
+  formatPace,
+  formatSpeed,
+  getFormattedDistance,
+} from '../utils/distance-formatter';
 
 export interface RunStats {
   distance: number; // meters
@@ -24,7 +29,7 @@ export class EnhancedRunControls extends BaseService {
   private startTime: number = 0;
   private updateInterval: number | null = null;
   private boundClickHandler: (event: Event) => void;
-  
+
   // Guards to avoid duplicate rendering and ensure idempotency
   private widgetInitialized = false;
   private standaloneActive = false;
@@ -105,10 +110,10 @@ export class EnhancedRunControls extends BaseService {
       if (runTrackingService) {
         const currentRun = runTrackingService.getCurrentRun();
         if (currentRun) {
-            const mapService = this.getMapService();
-            if (mapService) {
-                mapService.drawRunTrail(currentRun.points);
-            }
+          const mapService = this.getMapService();
+          if (mapService) {
+            mapService.drawRunTrail(currentRun.points);
+          }
         }
       }
     });
@@ -126,10 +131,10 @@ export class EnhancedRunControls extends BaseService {
       if (runTrackingService) {
         const currentRun = runTrackingService.getCurrentRun();
         if (currentRun) {
-            const mapService = this.getMapService();
-            if (mapService) {
-                mapService.drawTerritory(currentRun.points);
-            }
+          const mapService = this.getMapService();
+          if (mapService) {
+            mapService.drawTerritory(currentRun.points);
+          }
         }
       }
     });
@@ -152,7 +157,7 @@ export class EnhancedRunControls extends BaseService {
         position: 'bottom-left',
         minimized: true, // Always start minimized to prevent viewport domination
         priority: 10,
-        content: this.getWidgetContent()
+        content: this.getWidgetContent(),
       });
 
       // Listen for widget updates
@@ -164,7 +169,7 @@ export class EnhancedRunControls extends BaseService {
 
       this.widgetInitialized = true;
       this.standaloneActive = false;
-      
+
       // Inject styles for the widget
       this.addWidgetStyles();
     } else {
@@ -174,7 +179,9 @@ export class EnhancedRunControls extends BaseService {
         document.getElementById('enhanced-run-controls');
 
       if (alreadyPresent) {
-        console.warn('[RunTracker] WidgetSystem not ready; existing element detected. Suppressing standalone.');
+        console.warn(
+          '[RunTracker] WidgetSystem not ready; existing element detected. Suppressing standalone.'
+        );
         return;
       }
 
@@ -207,8 +214,6 @@ export class EnhancedRunControls extends BaseService {
     this.attachEventHandlers();
   }
 
-  
-
   private _getWidgetBodyHTML(isStandalone: boolean): string {
     const stats = this.currentStats;
     const distance = stats ? this.formatDistance(stats.distance) : '0.00 km';
@@ -217,10 +222,18 @@ export class EnhancedRunControls extends BaseService {
     const pace = stats ? this.formatPace(stats.averageSpeed) : '--:--';
     const isRunning = this.isRecording || this.isPaused;
 
-    const distanceDisplay = isStandalone ? `<span class="stat-value" id="distance-display">${distance}</span>` : `<span class="stat-value">${distance}</span>`;
-    const durationDisplay = isStandalone ? `<span class="stat-value" id="duration-display">${duration}</span>` : `<span class="stat-value">${duration}</span>`;
-    const speedDisplay = isStandalone ? `<span class="stat-value" id="speed-display">${speed}</span>` : `<span class="stat-value">${speed}</span>`;
-    const paceDisplay = isStandalone ? `<span class="stat-value" id="pace-display">${pace}</span>` : `<span class="stat-value">${pace}</span>`;
+    const distanceDisplay = isStandalone
+      ? `<span class="stat-value" id="distance-display">${distance}</span>`
+      : `<span class="stat-value">${distance}</span>`;
+    const durationDisplay = isStandalone
+      ? `<span class="stat-value" id="duration-display">${duration}</span>`
+      : `<span class="stat-value">${duration}</span>`;
+    const speedDisplay = isStandalone
+      ? `<span class="stat-value" id="speed-display">${speed}</span>`
+      : `<span class="stat-value">${speed}</span>`;
+    const paceDisplay = isStandalone
+      ? `<span class="stat-value" id="pace-display">${pace}</span>`
+      : `<span class="stat-value">${pace}</span>`;
 
     return `
       <div class="run-stats">
@@ -246,22 +259,30 @@ export class EnhancedRunControls extends BaseService {
           </div>
         </div>
 
-        ${stats?.territoryEligible ? `
+        ${
+          stats?.territoryEligible
+            ? `
           <div class="territory-indicator animate-pulse">
             <span class="territory-icon">🏆</span>
             <span class="territory-text">Territory Eligible!</span>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
 
       <!-- Real-time visualization container -->
       <div class="run-visualization" id="run-visualization">
-        ${!isRunning ? `
+        ${
+          !isRunning
+            ? `
           <div class="motivation-quote">
             <p class="quote-text"><em>"The miracle isn't that I finished. The miracle is that I had the courage to start."</em></p>
             <p class="quote-author">- John Bingham</p>
           </div>
-        ` : ``}
+        `
+            : ``
+        }
       </div>
 
       <div id="run-splits-container" class="run-splits-container" style="display: none;">
@@ -276,8 +297,6 @@ export class EnhancedRunControls extends BaseService {
       <div class="run-feedback" id="run-feedback"></div>
     `;
   }
-
-
 
   private getWidgetContent(): string {
     return `
@@ -361,7 +380,7 @@ export class EnhancedRunControls extends BaseService {
     // Use event delegation instead of direct element binding for reliability
     // Remove any existing handlers first to prevent duplication
     this.removeEventHandlers();
-    
+
     // Use document-level event delegation for run tracker buttons
     document.addEventListener('click', this.boundClickHandler);
     console.log('Run tracker event handlers attached');
@@ -373,50 +392,64 @@ export class EnhancedRunControls extends BaseService {
 
   private handleRunTrackerClick(event: Event): void {
     const target = event.target as HTMLElement;
-    
+
     // Only handle clicks within the run tracker widget or enhanced run controls
     const runTrackerWidget = target.closest('#widget-run-tracker, #enhanced-run-controls');
     if (!runTrackerWidget) {
       return;
     }
-    
+
     // Debug logging
     console.log('Run tracker click detected:', target.id, target.className);
-    
+
     // Handle different button clicks with improved selector logic
-    if (target.matches('#start-run-btn, #start-run-btn *, .control-btn.primary') || 
-        target.closest('#start-run-btn')) {
+    if (
+      target.matches('#start-run-btn, #start-run-btn *, .control-btn.primary') ||
+      target.closest('#start-run-btn')
+    ) {
       event.preventDefault();
       event.stopPropagation();
       console.log('Start run button clicked');
       this.startRun();
-    } else if (target.matches('#pause-run-btn, #pause-run-btn *, .control-btn.warning') || 
-               target.closest('#pause-run-btn')) {
+    } else if (
+      target.matches('#pause-run-btn, #pause-run-btn *, .control-btn.warning') ||
+      target.closest('#pause-run-btn')
+    ) {
       event.preventDefault();
       event.stopPropagation();
       this.pauseRun();
-    } else if (target.matches('#resume-run-btn, #resume-run-btn *, .control-btn.primary') || 
-               target.closest('#resume-run-btn')) {
+    } else if (
+      target.matches('#resume-run-btn, #resume-run-btn *, .control-btn.primary') ||
+      target.closest('#resume-run-btn')
+    ) {
       event.preventDefault();
       event.stopPropagation();
       this.resumeRun();
-    } else if (target.matches('#stop-run-btn, #stop-run-btn *, .control-btn.success') || 
-               target.closest('#stop-run-btn')) {
+    } else if (
+      target.matches('#stop-run-btn, #stop-run-btn *, .control-btn.success') ||
+      target.closest('#stop-run-btn')
+    ) {
       event.preventDefault();
       event.stopPropagation();
       this.stopRun();
-    } else if (target.matches('#cancel-run-btn, #cancel-run-btn *, .control-btn.danger') || 
-               target.closest('#cancel-run-btn')) {
+    } else if (
+      target.matches('#cancel-run-btn, #cancel-run-btn *, .control-btn.danger') ||
+      target.closest('#cancel-run-btn')
+    ) {
       event.preventDefault();
       event.stopPropagation();
       this.cancelRun();
-    } else if (target.matches('#gps-check-btn, #gps-check-btn *, .control-btn.secondary') || 
-               target.closest('#gps-check-btn')) {
+    } else if (
+      target.matches('#gps-check-btn, #gps-check-btn *, .control-btn.secondary') ||
+      target.closest('#gps-check-btn')
+    ) {
       event.preventDefault();
       event.stopPropagation();
       this.checkGPS();
-    } else if (target.matches('#lap-run-btn, #lap-run-btn *, .control-btn.info') ||
-                target.closest('#lap-run-btn')) {
+    } else if (
+      target.matches('#lap-run-btn, #lap-run-btn *, .control-btn.info') ||
+      target.closest('#lap-run-btn')
+    ) {
       event.preventDefault();
       event.stopPropagation();
       this.recordLap();
@@ -447,7 +480,7 @@ export class EnhancedRunControls extends BaseService {
     try {
       console.log('EnhancedRunControls: Starting run...');
       this.showFeedback('🚀 Starting run...', 'info');
-      
+
       // Check GPS availability first
       const hasGPS = await this.checkGPSAvailability();
       if (!hasGPS) {
@@ -458,7 +491,6 @@ export class EnhancedRunControls extends BaseService {
 
       console.log('EnhancedRunControls: GPS available, emitting run:startRequested event');
       this.safeEmit('run:startRequested', {});
-      
     } catch (error) {
       console.error('EnhancedRunControls: Error starting run:', error);
       this.showFeedback(`❌ Failed to start run: ${error.message}`, 'error');
@@ -501,7 +533,7 @@ export class EnhancedRunControls extends BaseService {
   private async checkGPS(): Promise<void> {
     try {
       this.showFeedback('📍 Checking GPS...', 'info');
-      
+
       const available = await this.checkGPSAvailability();
       if (available) {
         this.showFeedback('✅ GPS is working correctly', 'success');
@@ -573,7 +605,10 @@ export class EnhancedRunControls extends BaseService {
     const duration = this.formatDuration(data.run.totalDuration);
 
     if (data.territoryEligible) {
-      this.showFeedback(`🏆 Run completed! ${distance} in ${duration}. Territory eligible!`, 'success');
+      this.showFeedback(
+        `🏆 Run completed! ${distance} in ${duration}. Territory eligible!`,
+        'success'
+      );
     } else {
       this.showFeedback(`✅ Run completed! ${distance} in ${duration}.`, 'success');
     }
@@ -640,7 +675,7 @@ export class EnhancedRunControls extends BaseService {
       if (this.isRecording && this.currentStats) {
         const currentTime = Date.now();
         const elapsedTime = currentTime - this.startTime;
-        
+
         // Update duration display
         const durationEl = this.container?.querySelector('#duration-display');
         if (durationEl) {
@@ -671,7 +706,7 @@ export class EnhancedRunControls extends BaseService {
   private showTerritoryEligibleNotification(data: any): void {
     this.showFeedback('🏆 Territory eligible! Complete your run to claim.', 'success');
     this.renderWidget(); // Re-render to show territory indicator
-    
+
     // Add haptic feedback for territory eligibility
     this.hapticFeedback('heavy');
   }
@@ -716,21 +751,21 @@ export class EnhancedRunControls extends BaseService {
 
     // Add a subtle glow effect to the container
     this.container.style.boxShadow = '0 0 20px rgba(0, 255, 136, 0.4)';
-    
+
     // Create floating particles for celebration
     const particleCount = 15;
-    
+
     for (let i = 0; i < particleCount; i++) {
       const particle = document.createElement('div');
       particle.className = 'celebration-bubble';
-      
+
       // Random position and size
       const size = Math.random() * 10 + 5;
       const posX = Math.random() * 100;
       const posY = Math.random() * 100;
       const delay = Math.random() * 0.5;
       const duration = Math.random() * 1 + 1;
-      
+
       particle.style.cssText = `
         position: absolute;
         width: ${size}px;
@@ -744,17 +779,20 @@ export class EnhancedRunControls extends BaseService {
         animation: floatUp ${duration}s ease-in ${delay}s forwards;
         box-shadow: 0 0 8px rgba(0, 255, 136, 0.8);
       `;
-      
+
       this.container.appendChild(particle);
-      
+
       // Remove particle after animation
-      setTimeout(() => {
-        if (particle.parentNode) {
-          particle.parentNode.removeChild(particle);
-        }
-      }, (duration + delay) * 1000);
+      setTimeout(
+        () => {
+          if (particle.parentNode) {
+            particle.parentNode.removeChild(particle);
+          }
+        },
+        (duration + delay) * 1000
+      );
     }
-    
+
     // Remove glow effect after a short time
     setTimeout(() => {
       if (this.container) {
@@ -768,7 +806,7 @@ export class EnhancedRunControls extends BaseService {
       success: '✅',
       error: '❌',
       warning: '⚠️',
-      info: 'ℹ️'
+      info: 'ℹ️',
     };
     return icons[type as keyof typeof icons] || icons.info;
   }
@@ -987,8 +1025,10 @@ export class EnhancedRunControls extends BaseService {
   }
 
   private isMobile(): boolean {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           window.innerWidth <= 768;
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      window.innerWidth <= 768
+    );
   }
 
   private setupSwipeGestures(): void {
@@ -997,28 +1037,36 @@ export class EnhancedRunControls extends BaseService {
     let startY = 0;
     let startTime = 0;
 
-    this.container.addEventListener('touchstart', (e) => {
-      startY = e.touches[0].clientY;
-      startTime = Date.now();
-    }, { passive: true });
+    this.container.addEventListener(
+      'touchstart',
+      (e) => {
+        startY = e.touches[0].clientY;
+        startTime = Date.now();
+      },
+      { passive: true }
+    );
 
-    this.container.addEventListener('touchend', (e) => {
-      const endY = e.changedTouches[0].clientY;
-      const endTime = Date.now();
-      const deltaY = startY - endY;
-      const deltaTime = endTime - startTime;
+    this.container.addEventListener(
+      'touchend',
+      (e) => {
+        const endY = e.changedTouches[0].clientY;
+        const endTime = Date.now();
+        const deltaY = startY - endY;
+        const deltaTime = endTime - startTime;
 
-      // Swipe up to expand stats
-      if (deltaY > 50 && deltaTime < 300) {
-        this.expandStats();
-        this.hapticFeedback('light');
-      }
-      // Swipe down to minimize
-      else if (deltaY < -50 && deltaTime < 300) {
-        this.minimizeStats();
-        this.hapticFeedback('light');
-      }
-    }, { passive: true });
+        // Swipe up to expand stats
+        if (deltaY > 50 && deltaTime < 300) {
+          this.expandStats();
+          this.hapticFeedback('light');
+        }
+        // Swipe down to minimize
+        else if (deltaY < -50 && deltaTime < 300) {
+          this.minimizeStats();
+          this.hapticFeedback('light');
+        }
+      },
+      { passive: true }
+    );
   }
 
   private setupLongPressActions(): void {
@@ -1026,7 +1074,7 @@ export class EnhancedRunControls extends BaseService {
 
     const buttons = this.container.querySelectorAll('.control-btn');
 
-    buttons.forEach(button => {
+    buttons.forEach((button) => {
       let pressTimer: number | null = null;
 
       button.addEventListener('touchstart', () => {

@@ -1,14 +1,6 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Switch,
-  TouchableOpacity,
-  Alert,
-  Linking,
-} from 'react-native';
 import { ExternalFitnessService } from '@runrealm/shared-core/services/external-fitness-service';
+import React, { useState } from 'react';
+import { Alert, Linking, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
 export const SettingsScreen: React.FC = () => {
   const [units, setUnits] = useState<'metric' | 'imperial'>('metric');
@@ -20,7 +12,7 @@ export const SettingsScreen: React.FC = () => {
     try {
       const authUrl = fitnessService.initiateStravaAuth();
       Linking.openURL(authUrl);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to connect to Strava');
     }
   };
@@ -36,7 +28,7 @@ export const SettingsScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>⚙️ Settings</Text>
-      
+
       {/* Units Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📏 Units</Text>
@@ -55,26 +47,20 @@ export const SettingsScreen: React.FC = () => {
           />
         </View>
       </View>
-      
+
       {/* Notifications Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>🔔 Notifications</Text>
         <View style={styles.settingRow}>
           <Text style={styles.settingLabel}>Enable Notifications</Text>
-          <Switch
-            value={notifications}
-            onValueChange={setNotifications}
-          />
+          <Switch value={notifications} onValueChange={setNotifications} />
         </View>
         <View style={styles.settingRow}>
           <Text style={styles.settingLabel}>Background Tracking</Text>
-          <Switch
-            value={backgroundTracking}
-            onValueChange={setBackgroundTracking}
-          />
+          <Switch value={backgroundTracking} onValueChange={setBackgroundTracking} />
         </View>
       </View>
-      
+
       {/* Fitness Integration Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>🏃 Fitness Integration</Text>
@@ -83,7 +69,7 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.settingValue}>↗️</Text>
         </TouchableOpacity>
       </View>
-      
+
       {/* About Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>ℹ️ About</Text>
@@ -100,7 +86,7 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.settingValue}>1.0.0</Text>
         </View>
       </View>
-      
+
       {/* Logout Button */}
       <TouchableOpacity style={styles.logoutButton}>
         <Text style={styles.logoutButtonText}>🚪 Logout</Text>

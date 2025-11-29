@@ -160,7 +160,9 @@
   font-weight: bold;
 }
 
-.ghost-status:contains('Ready') {
+/* :contains() is not a valid CSS pseudo-class - use data attribute or class instead */
+.ghost-status[data-status="Ready"],
+.ghost-status.ready {
   background: rgba(74, 222, 128, 0.2);
   color: #4ade80;
 }
@@ -231,7 +233,7 @@
   text-transform: uppercase;
 }
 
-.stat value {
+.stat .value {
   font-size: 18px;
   font-weight: bold;
   color: #fff;
@@ -258,7 +260,8 @@
   gap: 15px;
 }
 
-.upgrade-btn, .deploy-btn {
+.upgrade-btn,
+.deploy-btn {
   padding: 12px 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
@@ -269,7 +272,8 @@
   transition: transform 0.2s;
 }
 
-.upgrade-btn:hover, .deploy-btn:hover {
+.upgrade-btn:hover,
+.deploy-btn:hover {
   transform: translateY(-2px);
 }
 
@@ -315,7 +319,7 @@
     width: 95%;
     max-height: 90vh;
   }
-  
+
   .ghost-stats-detail {
     grid-template-columns: 1fr;
   }

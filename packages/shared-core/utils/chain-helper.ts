@@ -2,9 +2,9 @@ export class ChainHelper {
   static getSimpleName(chainId: number): string {
     const names: Record<number, string> = {
       1: 'Ethereum',
-      56: 'BSC', 
+      56: 'BSC',
       137: 'Polygon',
-      7001: 'ZetaChain'
+      7001: 'ZetaChain',
     };
     return names[chainId] || `Chain ${chainId}`;
   }
@@ -12,9 +12,9 @@ export class ChainHelper {
   static getGasEstimate(chainId: number): string {
     const estimates: Record<number, string> = {
       1: '$5-15',
-      56: '$0.20-0.50', 
+      56: '$0.20-0.50',
       137: '$0.01-0.10',
-      7001: 'Free*'
+      7001: 'Free*',
     };
     return estimates[chainId] || 'Unknown';
   }

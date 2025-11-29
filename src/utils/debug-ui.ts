@@ -5,7 +5,7 @@
 
 export class DebugUI {
   private static instance: DebugUI;
-  
+
   static getInstance(): DebugUI {
     if (!DebugUI.instance) {
       DebugUI.instance = new DebugUI();
@@ -18,38 +18,36 @@ export class DebugUI {
    */
   public checkUIElements(): void {
     console.group('🔍 UI Elements Debug');
-    
+
     // Check for main containers
-    const containers = [
-      'mapbox-container',
-      'gamefi-hud', 
-      'territory-dashboard-root',
-      'loading'
-    ];
-    
-    containers.forEach(id => {
+    const containers = ['mapbox-container', 'gamefi-hud', 'territory-dashboard-root', 'loading'];
+
+    containers.forEach((id) => {
       const element = document.getElementById(id);
       console.log(`${id}:`, element ? '✅ Found' : '❌ Missing', element);
     });
 
     // Check for game UI elements
-    const gameElements = [
-      '.game-ui',
-      '.controls',
-      '.control-btn'
-    ];
+    const gameElements = ['.game-ui', '.controls', '.control-btn'];
 
-    gameElements.forEach(selector => {
+    gameElements.forEach((selector) => {
       const elements = document.querySelectorAll(selector);
-      console.log(`${selector}:`, elements.length > 0 ? `✅ Found (${elements.length})` : '❌ Missing', elements);
+      console.log(
+        `${selector}:`,
+        elements.length > 0 ? `✅ Found (${elements.length})` : '❌ Missing',
+        elements
+      );
     });
 
     // Check body classes
     console.log('Body classes:', Array.from(document.body.classList));
-    
+
     // Check if GameFi mode is enabled
-    console.log('GameFi mode:', document.body.classList.contains('gamefi-mode') ? '✅ Enabled' : '❌ Disabled');
-    
+    console.log(
+      'GameFi mode:',
+      document.body.classList.contains('gamefi-mode') ? '✅ Enabled' : '❌ Disabled'
+    );
+
     console.groupEnd();
   }
 
@@ -58,26 +56,29 @@ export class DebugUI {
    */
   public checkServices(): void {
     console.group('🔧 Services Debug');
-    
+
     // Check if RunRealm app is available
     const app = (window as any).runRealmApp;
     console.log('RunRealm App:', app ? '✅ Available' : '❌ Missing', app);
-    
+
     if (app) {
       // Check service methods
       const methods = [
         'showLocationModal',
-        'showWalletModal', 
+        'showWalletModal',
         'getCurrentLocation',
         'connectWallet',
-        'enableGameMode'
+        'enableGameMode',
       ];
-      
-      methods.forEach(method => {
-        console.log(`${method}:`, typeof app[method] === 'function' ? '✅ Available' : '❌ Missing');
+
+      methods.forEach((method) => {
+        console.log(
+          `${method}:`,
+          typeof app[method] === 'function' ? '✅ Available' : '❌ Missing'
+        );
       });
     }
-    
+
     console.groupEnd();
   }
 
@@ -133,7 +134,7 @@ export class DebugUI {
     `;
 
     document.body.appendChild(debugPanel);
-    
+
     // Expose debug methods globally
     (window as any).debugUI = this;
   }
@@ -203,7 +204,7 @@ export class DebugUI {
 
     observer.observe(document.body, {
       childList: true,
-      subtree: true
+      subtree: true,
     });
 
     console.log('👀 DOM monitoring started');

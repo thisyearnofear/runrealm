@@ -35,7 +35,7 @@ export class RouteStateService extends BaseService {
     this.routeState = {
       currentRoute: null,
       plannedRoutes: new Map(),
-      activeRouteId: null
+      activeRouteId: null,
     };
   }
 
@@ -62,7 +62,7 @@ export class RouteStateService extends BaseService {
         estimatedTime: data.estimatedTime || 0,
         totalDistance: data.totalDistance || 0,
         generatedAt: Date.now(),
-        source: 'ai'
+        source: 'ai',
       });
     });
 
@@ -89,18 +89,18 @@ export class RouteStateService extends BaseService {
   public setRouteData(routeId: string, routeData: RouteData): void {
     // Store in planned routes
     this.routeState.plannedRoutes.set(routeId, routeData);
-    
+
     // Set as current route
     this.routeState.currentRoute = routeData;
     this.routeState.activeRouteId = routeId;
-    
+
     // Emit state change event
     this.safeEmit('route:stateChanged', {
       routeId,
       routeData,
-      isActive: true
+      isActive: true,
     });
-    
+
     // Clean up old routes
     this.cleanupOldRoutes();
   }
@@ -127,13 +127,13 @@ export class RouteStateService extends BaseService {
     if (route) {
       this.routeState.currentRoute = route;
       this.routeState.activeRouteId = routeId;
-      
+
       // Note: This event is not in the AppEvents interface
       // this.safeEmit('route:activated', {
       //   routeId,
       //   routeData: route
       // });
-      
+
       return true;
     }
     return false;
@@ -145,7 +145,7 @@ export class RouteStateService extends BaseService {
   public clearCurrentRoute(): void {
     this.routeState.currentRoute = null;
     this.routeState.activeRouteId = null;
-    
+
     this.safeEmit('route:cleared', {});
   }
 
@@ -154,11 +154,11 @@ export class RouteStateService extends BaseService {
    */
   public removeRoute(routeId: string): void {
     this.routeState.plannedRoutes.delete(routeId);
-    
+
     if (this.routeState.activeRouteId === routeId) {
       this.clearCurrentRoute();
     }
-    
+
     // Note: This event is not in the AppEvents interface
     // this.safeEmit('route:removed', { routeId });
   }
@@ -167,7 +167,7 @@ export class RouteStateService extends BaseService {
    * Check if route is still valid (not expired)
    */
   public isRouteValid(routeData: RouteData): boolean {
-    return (Date.now() - routeData.generatedAt) < this.cacheTimeout;
+    return Date.now() - routeData.generatedAt < this.cacheTimeout;
   }
 
   /**
@@ -176,14 +176,14 @@ export class RouteStateService extends BaseService {
   private cleanupOldRoutes(): void {
     const now = Date.now();
     const expiredRoutes: string[] = [];
-    
+
     this.routeState.plannedRoutes.forEach((route, routeId) => {
-      if ((now - route.generatedAt) > this.cacheTimeout) {
+      if (now - route.generatedAt > this.cacheTimeout) {
         expiredRoutes.push(routeId);
       }
     });
-    
-    expiredRoutes.forEach(routeId => {
+
+    expiredRoutes.forEach((routeId) => {
       this.removeRoute(routeId);
     });
   }

@@ -1,10 +1,13 @@
 import { SdkConfig } from '@mapbox/mapbox-sdk/lib/classes/mapi-client';
 import { MapiResponse } from '@mapbox/mapbox-sdk/lib/classes/mapi-response';
-import DirectionsFactory, { DirectionsService, DirectionsResponse } from '@mapbox/mapbox-sdk/services/directions';
-import { LngLat } from 'mapbox-gl';
-import length from '@turf/length';
+import DirectionsFactory, {
+  DirectionsResponse,
+  DirectionsService,
+} from '@mapbox/mapbox-sdk/services/directions';
 import * as turfHelpers from '@turf/helpers';
+import length from '@turf/length';
 import { LineString } from 'geojson';
+import { LngLat } from 'mapbox-gl';
 import { v4 as uuid } from 'uuid';
 
 // Legacy RunSegment interface for route planning (not GPS tracking)
@@ -37,7 +40,7 @@ export class NextSegmentService {
 
   constructor(mbk: string) {
     const cfg = {} as SdkConfig;
-    ((cfg as any)[atob('YWNjZXNzVG9rZW4=')] = mbk);
+    (cfg as any)[atob('YWNjZXNzVG9rZW4=')] = mbk;
     this.directionsService = DirectionsFactory(cfg);
   }
 
@@ -46,39 +49,50 @@ export class NextSegmentService {
    * @param previousLngLat The last LngLat in the run, the starting point for the next segment
    * @param nextLngLat The next LngLat in the run, the ending point for the next segment
    */
-  public getSegmentFromDirectionsService(previousLngLat: LngLat, nextLngLat: LngLat): Promise<RunSegment> {
-    return this.directionsService.getDirections({
-      profile: 'walking',
-      waypoints: [
-        {
-          coordinates: [previousLngLat.lng, previousLngLat.lat]
-        },
-        {
-          coordinates: [nextLngLat.lng, nextLngLat.lat]
-        }
-      ],
-      geometries: 'geojson'
-    }).send().then((res: MapiResponse) => {
-      if (res.statusCode === 200) {
-        const directionsResponse = res.body as DirectionsResponse;
-        if (directionsResponse.routes.length <= 0) {
-          throw new Error('No routes found between the two points.');
-        }
+  public getSegmentFromDirectionsService(
+    previousLngLat: LngLat,
+    nextLngLat: LngLat
+  ): Promise<RunSegment> {
+    return this.directionsService
+      .getDirections({
+        profile: 'walking',
+        waypoints: [
+          {
+            coordinates: [previousLngLat.lng, previousLngLat.lat],
+          },
+          {
+            coordinates: [nextLngLat.lng, nextLngLat.lat],
+          },
+        ],
+        geometries: 'geojson',
+      })
+      .send()
+      .then(
+        (res: MapiResponse) => {
+          if (res.statusCode === 200) {
+            const directionsResponse = res.body as DirectionsResponse;
+            if (directionsResponse.routes.length <= 0) {
+              throw new Error('No routes found between the two points.');
+            }
 
-        const route = directionsResponse.routes[0];
-        return new RunSegmentImpl(
-          uuid(),
-          nextLngLat,
-          route.distance,
-          route.geometry as unknown as LineString,
-          true
-        );
-      } else {
-        throw new Error(`Non-successful status code when getting directions: ${JSON.stringify(res)}`);
-      }
-    }, (err: any) => {
-      throw new Error(`An error occurred: ${JSON.stringify(err)}`);
-    });
+            const route = directionsResponse.routes[0];
+            return new RunSegmentImpl(
+              uuid(),
+              nextLngLat,
+              route.distance,
+              route.geometry as unknown as LineString,
+              true
+            );
+          } else {
+            throw new Error(
+              `Non-successful status code when getting directions: ${JSON.stringify(res)}`
+            );
+          }
+        },
+        (err: any) => {
+          throw new Error(`An error occurred: ${JSON.stringify(err)}`);
+        }
+      );
   }
 
   /**
@@ -89,17 +103,11 @@ export class NextSegmentService {
   public segmentFromStraightLine(previousLngLat: LngLat, nextLngLat: LngLat): RunSegment {
     const lineCoordinates = [
       [previousLngLat.lng, previousLngLat.lat],
-      [nextLngLat.lng, nextLngLat.lat]
+      [nextLngLat.lng, nextLngLat.lat],
     ];
 
     const distance = length(turfHelpers.lineString(lineCoordinates), { units: 'meters' });
     const line = turfHelpers.lineString(lineCoordinates).geometry;
-    return new RunSegmentImpl(
-      uuid(),
-      nextLngLat,
-      distance,
-      line,
-      false
-    );
+    return new RunSegmentImpl(uuid(), nextLngLat, distance, line, false);
   }
 }

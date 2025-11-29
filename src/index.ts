@@ -2,35 +2,40 @@
 import { RunRealmApp } from '@runrealm/shared-core';
 import { DebugUI } from './utils/debug-ui';
 // CONSOLIDATED CSS - Following AGGRESSIVE CONSOLIDATION principle
-import './styles/core-system.css';     // Variables, z-index, animations, utilities
-import './styles/components.css';      // Widgets, GameFi UI, controls, rewards
-import './styles/interfaces.css';      // Modals, location, wallet, cross-chain
-import './styles/responsive.css';      // Mobile-first responsive design
+import './styles/core-system.css'; // Variables, z-index, animations, utilities
+import './styles/components.css'; // Widgets, GameFi UI, controls, rewards
+import './styles/interfaces.css'; // Modals, location, wallet, cross-chain
+import './styles/responsive.css'; // Mobile-first responsive design
 import './styles/external-fitness.css'; // External fitness integration
 
 // Register service worker for offline support
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-  navigator.serviceWorker.register('/sw.js')
+  navigator.serviceWorker
+    .register('/sw.js')
     .then(() => console.log('SW registered'))
     .catch(() => console.log('SW registration failed'));
 }
 
 // Handle script loading errors (cache busting)
-window.addEventListener('error', (event) => {
-  if (event.target && (event.target as any).tagName === 'SCRIPT') {
-    const script = event.target as HTMLScriptElement;
-    if (script.src && script.src.includes('.js')) {
-      console.warn('Script failed to load:', script.src);
-      
-      // If it's a main app script and we're in production, try cache bust
-      if (script.src.includes('/app.') && process.env.NODE_ENV === 'production') {
-        console.log('Attempting cache bust reload...');
-        // Force reload without cache
-        window.location.reload();
+window.addEventListener(
+  'error',
+  (event) => {
+    if (event.target && (event.target as any).tagName === 'SCRIPT') {
+      const script = event.target as HTMLScriptElement;
+      if (script.src && script.src.includes('.js')) {
+        console.warn('Script failed to load:', script.src);
+
+        // If it's a main app script and we're in production, try cache bust
+        if (script.src.includes('/app.') && process.env.NODE_ENV === 'production') {
+          console.log('Attempting cache bust reload...');
+          // Force reload without cache
+          window.location.reload();
+        }
       }
     }
-  }
-}, true);
+  },
+  true
+);
 
 // Filter out noisy browser extension errors and token exposure in production
 if (process.env.NODE_ENV === 'production') {
@@ -40,9 +45,11 @@ if (process.env.NODE_ENV === 'production') {
 
   // Helper function to check if message contains sensitive tokens
   const containsToken = (message: string) => {
-    return message.includes('access_token=') ||
-           message.includes('pk.eyJ') || // Mapbox token prefix
-           message.includes('AIzaSy'); // Google API key prefix
+    return (
+      message.includes('access_token=') ||
+      message.includes('pk.eyJ') || // Mapbox token prefix
+      message.includes('AIzaSy')
+    ); // Google API key prefix
   };
 
   // Helper function to sanitize messages with tokens
@@ -57,7 +64,7 @@ if (process.env.NODE_ENV === 'production') {
     const message = args.join(' ');
     // Filter out known browser extension noise
     if (
-      message.includes('Backpack couldn\'t override') ||
+      message.includes("Backpack couldn't override") ||
       message.includes('Could not establish connection') ||
       message.includes('Receiving end does not exist')
     ) {
@@ -66,7 +73,7 @@ if (process.env.NODE_ENV === 'production') {
 
     // Sanitize token exposure in error messages
     if (containsToken(message)) {
-      const sanitizedArgs = args.map(arg =>
+      const sanitizedArgs = args.map((arg) =>
         typeof arg === 'string' ? sanitizeMessage(arg) : arg
       );
       originalError.apply(console, sanitizedArgs);
@@ -80,7 +87,7 @@ if (process.env.NODE_ENV === 'production') {
     const message = args.join(' ');
     // Sanitize token exposure in log messages
     if (containsToken(message)) {
-      const sanitizedArgs = args.map(arg =>
+      const sanitizedArgs = args.map((arg) =>
         typeof arg === 'string' ? sanitizeMessage(arg) : arg
       );
       originalLog.apply(console, sanitizedArgs);
@@ -94,7 +101,7 @@ if (process.env.NODE_ENV === 'production') {
     const message = args.join(' ');
     // Sanitize token exposure in warning messages
     if (containsToken(message)) {
-      const sanitizedArgs = args.map(arg =>
+      const sanitizedArgs = args.map((arg) =>
         typeof arg === 'string' ? sanitizeMessage(arg) : arg
       );
       originalWarn.apply(console, sanitizedArgs);
@@ -155,26 +162,32 @@ async function initializeApp(): Promise<void> {
         debugUI.createDebugPanel();
         debugUI.startDOMMonitoring();
       }
-      
+
       // Add cross-chain demo function for Google Buildathon judges
-      (window as any).demoCrossChainFunctionality = async function() {
-        console.log('%c\n🌟 RunRealm Cross-Chain Demo Ready!', 'color: #00ff88; font-size: 16px; font-weight: bold;');
-        console.log('%c🚀 Demonstrating ZetaChain Universal Contract capabilities...', 'color: #00cc6a;');
-        
+      (window as any).demoCrossChainFunctionality = async () => {
+        console.log(
+          '%c\n🌟 RunRealm Cross-Chain Demo Ready!',
+          'color: #00ff88; font-size: 16px; font-weight: bold;'
+        );
+        console.log(
+          '%c🚀 Demonstrating ZetaChain Universal Contract capabilities...',
+          'color: #00cc6a;'
+        );
+
         // Get services
         const services = (window as any).RunRealm?.services;
         if (!services) {
           console.error('❌ Services not available');
           return;
         }
-        
+
         const { web3, crossChain } = services;
-        
+
         if (!web3 || !crossChain) {
           console.error('❌ Required services not available');
           return;
         }
-        
+
         try {
           // 1. Check if wallet is connected
           if (!web3.isConnected()) {
@@ -186,22 +199,24 @@ async function initializeApp(): Promise<void> {
             }
             return;
           }
-          
+
           const wallet = web3.getCurrentWallet();
           console.log(`✅ Wallet connected: ${wallet.address} on chain ${wallet.chainId}`);
-          
+
           // 2. Check if this is a cross-chain scenario
           const isCrossChain = wallet.chainId !== 7001; // Not on ZetaChain testnet
-          console.log(`🌐 Current chain: ${crossChain.getChainName(wallet.chainId)} (${wallet.chainId})`);
+          console.log(
+            `🌐 Current chain: ${crossChain.getChainName(wallet.chainId)} (${wallet.chainId})`
+          );
           console.log(`🔗 Cross-chain scenario: ${isCrossChain ? 'Yes' : 'No (on ZetaChain)'}`);
-          
+
           // 3. Demonstrate ZetaChain API usage
           console.log('\n🔧 ZetaChain Gateway API Demonstration:');
           crossChain.demonstrateZetaChainAPI();
-          
+
           // 4. Simulate cross-chain territory claim
           console.log('\n📍 Simulating cross-chain territory claim...');
-          
+
           // Create mock territory data
           const mockTerritory = {
             geohash: 'u4pruydqqvj',
@@ -209,27 +224,27 @@ async function initializeApp(): Promise<void> {
             distance: 5000,
             landmarks: ['Central Park', 'Fountain'],
             originChainId: wallet.chainId,
-            originAddress: wallet.address
+            originAddress: wallet.address,
           };
-          
+
           console.log('🗺️ Territory data:', mockTerritory);
-          
+
           // 5. Emit cross-chain claim event
           const eventBus = (window as any).RunRealm?.services?.eventBus;
           if (eventBus) {
             console.log('📤 Sending cross-chain territory claim request...');
             eventBus.emit('crosschain:territoryClaimRequested', {
               territoryData: mockTerritory,
-              targetChainId: 7001 // ZetaChain testnet
+              targetChainId: 7001, // ZetaChain testnet
             });
           }
-          
+
           // 6. Show demo UI updates
           console.log('\n📱 UI Updates:');
           console.log('  - Cross-chain widget shows pending claim');
           console.log('  - Territory marked as "claimable" with cross-chain status');
           console.log('  - Activity log shows claim initiation');
-          
+
           // 7. Simulate cross-chain confirmation
           setTimeout(() => {
             console.log('\n✅ Simulating cross-chain confirmation...');
@@ -237,15 +252,15 @@ async function initializeApp(): Promise<void> {
               eventBus.emit('web3:crossChainTerritoryClaimed', {
                 hash: '0x' + Math.random().toString(16).substr(2, 10),
                 geohash: mockTerritory.geohash,
-                originChainId: mockTerritory.originChainId
+                originChainId: mockTerritory.originChainId,
               });
             }
-            
+
             console.log('\n🎉 Cross-chain territory claim completed!');
             console.log('📊 Territory now owned on ZetaChain with cross-chain history');
             console.log('💰 Rewards distributed to user');
             console.log('📈 Player stats updated with cross-chain activity');
-            
+
             // 8. Show final state
             console.log('\n📋 Final State:');
             console.log('  - Territory status: "claimed"');
@@ -253,7 +268,7 @@ async function initializeApp(): Promise<void> {
             console.log('  - Cross-chain history: 1 entry');
             console.log('  - Rewards: Available for claiming');
             console.log('  - UI: Shows cross-chain badge and chain indicator');
-            
+
             console.log('\n✨ Cross-Chain Demo Complete!');
             console.log('\n🎯 Key Features Demonstrated:');
             console.log('  - Cross-chain territory claiming');
@@ -261,17 +276,24 @@ async function initializeApp(): Promise<void> {
             console.log('  - Cross-chain activity tracking');
             console.log('  - Unified UI for multi-chain interactions');
             console.log('  - Real-time status updates');
-            
           }, 3000);
-          
         } catch (error) {
           console.error('❌ Demo failed:', error);
         }
       };
-      
-      console.log('%c\n🌟 RunRealm Cross-Chain Demo Ready!', 'color: #00ff88; font-size: 16px; font-weight: bold;');
-      console.log('%c🚀 Run `demoCrossChainFunctionality()` in console to see cross-chain features in action', 'color: #00cc6a;');
-      console.log('%c🔗 Make sure your wallet is connected to a non-ZetaChain network for full demo', 'color: #00aaff;');
+
+      console.log(
+        '%c\n🌟 RunRealm Cross-Chain Demo Ready!',
+        'color: #00ff88; font-size: 16px; font-weight: bold;'
+      );
+      console.log(
+        '%c🚀 Run `demoCrossChainFunctionality()` in console to see cross-chain features in action',
+        'color: #00cc6a;'
+      );
+      console.log(
+        '%c🔗 Make sure your wallet is connected to a non-ZetaChain network for full demo',
+        'color: #00aaff;'
+      );
     }
 
     console.log('RunRealm initialized successfully');
