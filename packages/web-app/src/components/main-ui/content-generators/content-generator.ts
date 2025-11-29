@@ -17,8 +17,8 @@ export class ContentGenerator {
    */
   private cleanupOldUI(): void {
     // Remove old game-ui and controls from template
-    const oldGameUI = document.querySelector(".game-ui");
-    const oldControls = document.querySelector(".controls");
+    const oldGameUI = document.querySelector('.game-ui');
+    const oldControls = document.querySelector('.controls');
 
     if (oldGameUI) oldGameUI.remove();
     if (oldControls) oldControls.remove();
@@ -32,15 +32,12 @@ export class ContentGenerator {
       point,
       totalDistance,
       difficulty = 50,
-      estimatedReward = Math.floor(
-        (totalDistance || 0) * 0.01 + Math.random() * 20
-      ),
-      rarity = "Common",
+      estimatedReward = Math.floor((totalDistance || 0) * 0.01 + Math.random() * 20),
+      rarity = 'Common',
       landmarks = [],
     } = data || {};
 
-    const difficultyLabel =
-      difficulty < 33 ? "Easy" : difficulty < 67 ? "Medium" : "Hard";
+    const difficultyLabel = difficulty < 33 ? 'Easy' : difficulty < 67 ? 'Medium' : 'Hard';
     const rarityClass = String(rarity).toLowerCase();
     const valueScore = this.calculateTerritoryValue(estimatedReward, difficulty, rarity);
     const valueColor = valueScore > 70 ? '#00ff88' : valueScore > 40 ? '#ffaa00' : '#ff6b6b';
@@ -48,11 +45,11 @@ export class ContentGenerator {
     const landmarksHtml =
       Array.isArray(landmarks) && landmarks.length
         ? `<ul class="widget-list">${landmarks
-          .map(
-            (l: string) =>
-              `<li class="widget-list-item"><span class="widget-list-icon">📍</span><span class="widget-list-content">${l}</span></li>`
-          )
-          .join("")}</ul>`
+            .map(
+              (l: string) =>
+                `<li class="widget-list-item"><span class="widget-list-icon">📍</span><span class="widget-list-content">${l}</span></li>`
+            )
+            .join('')}</ul>`
         : '<div class="widget-tip">No notable landmarks</div>';
 
     return `
@@ -79,7 +76,8 @@ export class ContentGenerator {
    * Calculate territory value score
    */
   private calculateTerritoryValue(reward: number, difficulty: number, rarity: string): number {
-    const rarityMultiplier = { common: 1, rare: 1.5, epic: 2, legendary: 3 }[rarity.toLowerCase()] || 1;
+    const rarityMultiplier =
+      { common: 1, rare: 1.5, epic: 2, legendary: 3 }[rarity.toLowerCase()] || 1;
     return Math.min(Math.round((reward * 0.8 + difficulty * 0.4) * rarityMultiplier), 100);
   }
 

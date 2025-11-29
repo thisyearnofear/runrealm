@@ -1,6 +1,6 @@
 import { BaseService } from '../core/base-service';
-import { PreferenceService } from '../services/preference-service';
 import { MapService } from '../services/map-service';
+import { PreferenceService } from '../services/preference-service';
 
 export class TerritoryToggle extends BaseService {
   private preferenceService: PreferenceService;
@@ -20,13 +20,13 @@ export class TerritoryToggle extends BaseService {
 
   public toggle(): void {
     if (!this.mapService) return;
-    
+
     const current = this.mapService.getTerritoriesVisible();
     const newState = !current;
-    
+
     this.mapService.setTerritoriesVisible(newState);
     this.preferenceService.saveShowTerritories(newState);
-    
+
     this.safeEmit('territory:toggleVisibility', {});
   }
 

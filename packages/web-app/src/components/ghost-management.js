@@ -1,7 +1,7 @@
 import { BaseService } from '@runrealm/shared-core/core/base-service';
+import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { GhostRunnerService } from '@runrealm/shared-core/services/ghost-runner-service';
 import { TerritoryService } from '@runrealm/shared-core/services/territory-service';
-import { DOMService } from '@runrealm/shared-core/services/dom-service';
 
 export class GhostManagement extends BaseService {
   constructor() {
@@ -35,7 +35,7 @@ export class GhostManagement extends BaseService {
           <div class="ghost-list"></div>
           <div class="ghost-details hidden"></div>
         </div>
-      `
+      `,
     });
     parent.appendChild(this.container);
   }
@@ -80,7 +80,9 @@ export class GhostManagement extends BaseService {
       return;
     }
 
-    listEl.innerHTML = ghosts.map(g => `
+    listEl.innerHTML = ghosts
+      .map(
+        (g) => `
       <div class="ghost-card" data-ghost-id="${g.id}">
         <div class="ghost-avatar">${g.avatar || '👻'}</div>
         <div class="ghost-info">
@@ -95,7 +97,9 @@ export class GhostManagement extends BaseService {
           ${this.getGhostStatus(g)}
         </div>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
     this.updateBalance();
   }
@@ -107,8 +111,8 @@ export class GhostManagement extends BaseService {
     this.selectedGhost = ghost;
     const detailsEl = this.container.querySelector('.ghost-details');
     const territories = this.territoryService.getClaimedTerritories();
-    const vulnerableTerritories = territories.filter(t =>
-      t.defenseStatus === 'vulnerable' || t.defenseStatus === 'moderate'
+    const vulnerableTerritories = territories.filter(
+      (t) => t.defenseStatus === 'vulnerable' || t.defenseStatus === 'moderate'
     );
 
     detailsEl.innerHTML = `
@@ -142,28 +146,40 @@ export class GhostManagement extends BaseService {
         </div>
 
         <div class="ghost-actions">
-          ${ghost.level < 5 ? `
+          ${
+            ghost.level < 5
+              ? `
             <button class="upgrade-btn" data-cost="${ghost.upgradeCost}">
               Upgrade to Level ${ghost.level + 1} (${ghost.upgradeCost} $REALM)
             </button>
-          ` : '<div class="max-level">⭐ Max Level</div>'}
+          `
+              : '<div class="max-level">⭐ Max Level</div>'
+          }
           
-          ${this.getGhostStatus(ghost) === 'Ready' ? `
+          ${
+            this.getGhostStatus(ghost) === 'Ready'
+              ? `
             <div class="deploy-section">
               <label>Deploy to Territory:</label>
               <select class="territory-select">
                 <option value="">Select territory...</option>
-                ${vulnerableTerritories.map(t => `
+                ${vulnerableTerritories
+                  .map(
+                    (t) => `
                   <option value="${t.id}">
                     ${t.metadata.name} (${t.defenseStatus})
                   </option>
-                `).join('')}
+                `
+                  )
+                  .join('')}
               </select>
               <button class="deploy-btn" data-cost="${ghost.deployCost}">
                 Deploy (${ghost.deployCost} $REALM)
               </button>
             </div>
-          ` : `<div class="cooldown">⏱️ ${this.getCooldownText(ghost)}</div>`}
+          `
+              : `<div class="cooldown">⏱️ ${this.getCooldownText(ghost)}</div>`
+          }
         </div>
       </div>
     `;
@@ -208,7 +224,7 @@ export class GhostManagement extends BaseService {
 
       this.safeEmit('ui:toast', {
         message: '👻 Ghost deployed successfully!',
-        type: 'success'
+        type: 'success',
       });
 
       this.hideDetails();
@@ -216,7 +232,7 @@ export class GhostManagement extends BaseService {
     } catch (error) {
       this.safeEmit('ui:toast', {
         message: `❌ ${error.message}`,
-        type: 'error'
+        type: 'error',
       });
     }
   }
@@ -245,7 +261,7 @@ export class GhostManagement extends BaseService {
       sprinter: '⚡ Sprinter',
       endurance: '🏃 Endurance',
       hill: '⛰️ Hill Climber',
-      allrounder: '🌟 All-Rounder'
+      allrounder: '🌟 All-Rounder',
     };
     return types[type] || type;
   }

@@ -1,18 +1,18 @@
-import { EventBus } from "../core/event-bus";
-import { AIOrchestrator } from "../services/ai-orchestrator";
+import { EventBus } from '../core/event-bus';
+import { AIOrchestrator } from '../services/ai-orchestrator';
 
 export type UIAction =
-  | "ai.requestRoute"
-  | "ai.requestGhostRunner"
-  | "ai.showRoute"
-  | "ai.quickPrompt"
-  | "ai.startRun"
-  | "territory.toggle"
-  | "connect-wallet"
-  | "disconnect-wallet"
-  | "switch-network"
-  | "claim-rewards"
-  | "retry-connection";
+  | 'ai.requestRoute'
+  | 'ai.requestGhostRunner'
+  | 'ai.showRoute'
+  | 'ai.quickPrompt'
+  | 'ai.startRun'
+  | 'territory.toggle'
+  | 'connect-wallet'
+  | 'disconnect-wallet'
+  | 'switch-network'
+  | 'claim-rewards'
+  | 'retry-connection';
 
 const bus = EventBus.getInstance();
 const aiOrchestrator = AIOrchestrator.getInstance();
@@ -22,7 +22,7 @@ export const AI_DEFAULTS = {
   ROUTE: {
     distance: undefined as number | undefined,
     difficulty: undefined as number | undefined,
-    goals: ["exploration"] as string[],
+    goals: ['exploration'] as string[],
   },
   GHOST_RUNNER: {
     difficulty: 50 as number, // Medium difficulty default
@@ -31,25 +31,16 @@ export const AI_DEFAULTS = {
 
 function normalizeRoutePayload(p: any) {
   return {
-    distance:
-      typeof p?.distance === "number" ? p.distance : AI_DEFAULTS.ROUTE.distance,
-    difficulty:
-      typeof p?.difficulty === "number"
-        ? p.difficulty
-        : AI_DEFAULTS.ROUTE.difficulty,
-    goals:
-      Array.isArray(p?.goals) && p.goals.length
-        ? p.goals
-        : AI_DEFAULTS.ROUTE.goals,
+    distance: typeof p?.distance === 'number' ? p.distance : AI_DEFAULTS.ROUTE.distance,
+    difficulty: typeof p?.difficulty === 'number' ? p.difficulty : AI_DEFAULTS.ROUTE.difficulty,
+    goals: Array.isArray(p?.goals) && p.goals.length ? p.goals : AI_DEFAULTS.ROUTE.goals,
   };
 }
 
 function normalizeGhostPayload(p: any) {
   return {
     difficulty:
-      typeof p?.difficulty === "number"
-        ? p.difficulty
-        : AI_DEFAULTS.GHOST_RUNNER.difficulty,
+      typeof p?.difficulty === 'number' ? p.difficulty : AI_DEFAULTS.GHOST_RUNNER.difficulty,
   };
 }
 
@@ -57,56 +48,53 @@ function normalizeGhostPayload(p: any) {
 function normalizeQuickPrompt(payload: any) {
   const scenarios = {
     morning_run: {
-      contextPrompt:
-        "Perfect for a gentle morning start with territory exploration",
-      goals: ["exploration"],
+      contextPrompt: 'Perfect for a gentle morning start with territory exploration',
+      goals: ['exploration'],
       distance: 2000,
       difficulty: 30,
-      timeOfDay: "morning",
+      timeOfDay: 'morning',
     },
     territory_hunt: {
-      contextPrompt:
-        "Focused on claiming high-value territories and strategic locations",
-      goals: ["exploration", "territory"],
+      contextPrompt: 'Focused on claiming high-value territories and strategic locations',
+      goals: ['exploration', 'territory'],
       distance: 3000,
       difficulty: 50,
-      priority: "territory_claiming",
+      priority: 'territory_claiming',
     },
     training_session: {
-      contextPrompt: "Challenging workout route with hills and varied terrain",
-      goals: ["training"],
+      contextPrompt: 'Challenging workout route with hills and varied terrain',
+      goals: ['training'],
       distance: 4000,
       difficulty: 70,
-      focus: "fitness_improvement",
+      focus: 'fitness_improvement',
     },
     quick_15min: {
-      contextPrompt: "Short but efficient route for busy schedules",
-      goals: ["exploration"],
+      contextPrompt: 'Short but efficient route for busy schedules',
+      goals: ['exploration'],
       distance: 1500,
       difficulty: 40,
-      timeConstraint: "15_minutes",
+      timeConstraint: '15_minutes',
     },
     lunch_break: {
-      contextPrompt:
-        "Perfect lunch break route with nearby territory opportunities",
-      goals: ["exploration"],
+      contextPrompt: 'Perfect lunch break route with nearby territory opportunities',
+      goals: ['exploration'],
       distance: 2500,
       difficulty: 45,
-      timeConstraint: "30_minutes",
+      timeConstraint: '30_minutes',
     },
     evening_adventure: {
-      contextPrompt: "Extended adventure route for serious territory expansion",
-      goals: ["exploration", "territory"],
+      contextPrompt: 'Extended adventure route for serious territory expansion',
+      goals: ['exploration', 'territory'],
       distance: 5000,
       difficulty: 60,
-      timeOfDay: "evening",
-      focus: "adventure",
+      timeOfDay: 'evening',
+      focus: 'adventure',
     },
   };
 
   const scenario = scenarios[payload?.type as keyof typeof scenarios];
   if (!scenario) {
-    console.warn("Unknown quick prompt type:", payload?.type);
+    console.warn('Unknown quick prompt type:', payload?.type);
     return normalizeRoutePayload(payload);
   }
 
@@ -129,92 +117,82 @@ function normalizeQuickPrompt(payload: any) {
 
 export const ActionRouter = {
   dispatch(action: UIAction, payload?: any) {
-    console.log(
-      "ActionRouter: Dispatching action:",
-      action,
-      "with payload:",
-      payload,
-    );
+    console.log('ActionRouter: Dispatching action:', action, 'with payload:', payload);
 
     switch (action) {
-      case "ai.requestRoute":
-        console.log("ActionRouter: Requesting AI route through orchestrator");
+      case 'ai.requestRoute':
+        console.log('ActionRouter: Requesting AI route through orchestrator');
         aiOrchestrator.requestRoute(normalizeRoutePayload(payload));
         break;
-      case "ai.requestGhostRunner":
-        console.log(
-          "ActionRouter: Requesting ghost runner through orchestrator",
-        );
+      case 'ai.requestGhostRunner':
+        console.log('ActionRouter: Requesting ghost runner through orchestrator');
         aiOrchestrator.requestGhostRunner(normalizeGhostPayload(payload));
         break;
-      case "ai.showRoute": {
+      case 'ai.showRoute': {
         console.log(
-          "ActionRouter: Emitting ai:routeVisualize event with coordinates:",
-          payload?.coordinates?.length || 0,
+          'ActionRouter: Emitting ai:routeVisualize event with coordinates:',
+          payload?.coordinates?.length || 0
         );
-        console.log("ActionRouter: Route coordinates:", payload?.coordinates);
+        console.log('ActionRouter: Route coordinates:', payload?.coordinates);
         // Trigger route visualization on map
         const visualizeData = {
           coordinates: payload?.coordinates || [],
-          type: "ai-suggested",
+          type: 'ai-suggested',
           style: {
-            color: "#00ff88",
+            color: '#00ff88',
             width: 4,
             opacity: 0.8,
             dashArray: [5, 5],
           },
           metadata: {
-            source: "user-requested",
+            source: 'user-requested',
           },
         };
-        console.log(
-          "ActionRouter: Emitting visualization data:",
-          visualizeData,
-        );
-        bus.emit("ai:routeVisualize", visualizeData);
+        console.log('ActionRouter: Emitting visualization data:', visualizeData);
+        bus.emit('ai:routeVisualize', visualizeData);
         break;
       }
-      case "ai.startRun":
-        console.log("ActionRouter: Starting run with AI-generated route");
+      case 'ai.startRun':
+        console.log('ActionRouter: Starting run with AI-generated route');
         // Note: This event is not in the AppEvents interface
         // bus.emit('run:startWithRoute', {
         //   coordinates: payload?.coordinates || [],
         //   distance: payload?.distance || 0
         // });
         break;
-      case "ai.quickPrompt": {
-        console.log("ActionRouter: Processing quick prompt:", payload?.type);
+      case 'ai.quickPrompt': {
+        console.log('ActionRouter: Processing quick prompt:', payload?.type);
         // Convert quick prompt to route request with enhanced context
         const quickPromptData = normalizeQuickPrompt(payload);
         aiOrchestrator.requestRoute(quickPromptData);
         break;
       }
-      case "territory.toggle":
-        console.log("ActionRouter: Toggling territory visibility");
-        bus.emit("territory:toggleVisibility", {});
+      case 'territory.toggle':
+        console.log('ActionRouter: Toggling territory visibility');
+        bus.emit('territory:toggleVisibility', {});
         break;
-      case "connect-wallet":
-        console.log("ActionRouter: Initiating wallet connection");
-        bus.emit("wallet:connect", payload);
+      case 'connect-wallet':
+        console.log('ActionRouter: Initiating wallet connection');
+        bus.emit('wallet:connect', payload);
         break;
-      case "disconnect-wallet":
-        console.log("ActionRouter: Disconnecting wallet");
-        bus.emit("wallet:disconnect", {});
+      case 'disconnect-wallet':
+        console.log('ActionRouter: Disconnecting wallet');
+        bus.emit('wallet:disconnect', {});
         break;
-      case "switch-network":
-        console.log("ActionRouter: Switching network");
-        bus.emit("wallet:switchNetwork", payload);
+      case 'switch-network':
+        console.log('ActionRouter: Switching network');
+        bus.emit('wallet:switchNetwork', payload);
         break;
-      case "claim-rewards":
-        console.log("ActionRouter: Claiming rewards");
-        bus.emit("rewards:claim", {});
+      case 'claim-rewards':
+        console.log('ActionRouter: Claiming rewards');
+        bus.emit('rewards:claim', {});
         break;
-      case "retry-connection":
-        console.log("ActionRouter: Retrying connection");
-        bus.emit("wallet:retryConnection", {});
+      case 'retry-connection':
+        console.log('ActionRouter: Retrying connection');
+        bus.emit('wallet:retryConnection', {});
         break;
       default:
-        console.warn("Unknown UI action:", action, payload);
+        console.warn('Unknown UI action:', action, payload);
     }
   },
 };

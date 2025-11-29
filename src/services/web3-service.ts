@@ -3,13 +3,12 @@
  * Handles wallet connections, network management, and basic blockchain operations
  */
 
+// Type definitions for ethers
+import type { ethers as EthersType } from 'ethers';
+import type { Web3Config } from '../core/app-config';
 // Dynamically import ethers to reduce initial bundle size
 // import { ethers } from 'ethers';
 import { BaseService } from '../core/base-service';
-import type { Web3Config } from '../core/app-config';
-
-// Type definitions for ethers
-import type { ethers as EthersType } from 'ethers';
 
 type Ethers = typeof EthersType;
 
@@ -86,13 +85,13 @@ export class Web3Service extends BaseService {
 
   protected async onInitialize(): Promise<void> {
     this.setupEventListeners();
-    
+
     const web3Config = this.config.getWeb3Config();
     if (web3Config?.enabled) {
       // Load ethers.js dynamically
       await this.loadEthers();
     }
-    
+
     if (web3Config?.wallet.autoConnect) {
       // Try to reconnect to previously connected wallet
       await this.attemptAutoConnect();
@@ -108,7 +107,7 @@ export class Web3Service extends BaseService {
       name: 'ZetaChain Athens Testnet',
       rpcUrl: 'https://zetachain-athens-evm.blockpi.network/v1/rpc/public',
       blockExplorer: 'https://athens.explorer.zetachain.com',
-      nativeCurrency: { name: 'ZETA', symbol: 'ZETA', decimals: 18 }
+      nativeCurrency: { name: 'ZETA', symbol: 'ZETA', decimals: 18 },
     });
 
     // ZetaChain Mainnet
@@ -117,7 +116,7 @@ export class Web3Service extends BaseService {
       name: 'ZetaChain Mainnet',
       rpcUrl: 'https://zetachain-evm.blockpi.network/v1/rpc/public',
       blockExplorer: 'https://explorer.zetachain.com',
-      nativeCurrency: { name: 'ZETA', symbol: 'ZETA', decimals: 18 }
+      nativeCurrency: { name: 'ZETA', symbol: 'ZETA', decimals: 18 },
     });
 
     // Ethereum Mainnet
@@ -126,7 +125,7 @@ export class Web3Service extends BaseService {
       name: 'Ethereum Mainnet',
       rpcUrl: 'https://mainnet.infura.io/v3/',
       blockExplorer: 'https://etherscan.io',
-      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     });
 
     // Polygon
@@ -135,7 +134,7 @@ export class Web3Service extends BaseService {
       name: 'Polygon',
       rpcUrl: 'https://polygon-rpc.com/',
       blockExplorer: 'https://polygonscan.com',
-      nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 }
+      nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
     });
   }
 
@@ -143,7 +142,7 @@ export class Web3Service extends BaseService {
     // Listen for account changes in wallet
     if (typeof window !== 'undefined' && (window as any).ethereum) {
       const ethereum = (window as any).ethereum;
-      
+
       ethereum.on('accountsChanged', (accounts: string[]) => {
         if (accounts.length === 0) {
           this.handleWalletDisconnected();
@@ -191,7 +190,7 @@ export class Web3Service extends BaseService {
         address,
         chainId: Number(network.chainId),
         networkName: this.getNetworkName(Number(network.chainId)),
-        balance: (this.ethers as any).formatEther(balance)
+        balance: (this.ethers as any).formatEther(balance),
       };
 
       // Save connection state
@@ -200,12 +199,11 @@ export class Web3Service extends BaseService {
 
       this.safeEmit('web3:walletConnected', {
         address: this.currentWallet.address,
-        chainId: this.currentWallet.chainId
+        chainId: this.currentWallet.chainId,
       });
 
       console.log('Wallet connected:', this.currentWallet);
       return this.currentWallet;
-
     } catch (error) {
       this.handleError(error, 'connectWallet');
       throw error;
@@ -249,7 +247,6 @@ export class Web3Service extends BaseService {
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: `0x${chainId.toString(16)}` }],
       });
-
     } catch (switchError: any) {
       // If network doesn't exist, add it
       if (switchError.code === 4902) {
@@ -263,13 +260,15 @@ export class Web3Service extends BaseService {
   private async addNetwork(networkInfo: NetworkInfo): Promise<void> {
     await (window as any).ethereum.request({
       method: 'wallet_addEthereumChain',
-      params: [{
-        chainId: `0x${networkInfo.chainId.toString(16)}`,
-        chainName: networkInfo.name,
-        rpcUrls: [networkInfo.rpcUrl],
-        nativeCurrency: networkInfo.nativeCurrency,
-        blockExplorerUrls: networkInfo.blockExplorer ? [networkInfo.blockExplorer] : undefined
-      }]
+      params: [
+        {
+          chainId: `0x${networkInfo.chainId.toString(16)}`,
+          chainName: networkInfo.name,
+          rpcUrls: [networkInfo.rpcUrl],
+          nativeCurrency: networkInfo.nativeCurrency,
+          blockExplorerUrls: networkInfo.blockExplorer ? [networkInfo.blockExplorer] : undefined,
+        },
+      ],
     });
   }
 
@@ -285,30 +284,29 @@ export class Web3Service extends BaseService {
 
     try {
       const tx = await this.signer.sendTransaction(transaction);
-      
+
       this.safeEmit('web3:transactionSubmitted', {
         hash: tx.hash,
-        type: 'generic'
+        type: 'generic',
       });
 
       console.log('Transaction submitted:', tx.hash);
 
       // Wait for confirmation
       const receipt = await tx.wait();
-      
+
       if (receipt) {
         this.safeEmit('web3:transactionConfirmed', {
           hash: tx.hash,
-          blockNumber: receipt.blockNumber
+          blockNumber: receipt.blockNumber,
         });
         console.log('Transaction confirmed:', tx.hash);
       }
 
       return tx.hash;
-
     } catch (error) {
       this.safeEmit('web3:transactionFailed', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -396,12 +394,12 @@ export class Web3Service extends BaseService {
 
   private async attemptAutoConnect(): Promise<void> {
     const wasConnected = localStorage.getItem('runrealm_wallet_connected') === 'true';
-    
+
     if (wasConnected && this.isWalletAvailable()) {
       try {
         // Check if accounts are still connected
         const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' });
-        
+
         if (accounts.length > 0) {
           await this.connectWallet();
         }
@@ -420,7 +418,7 @@ export class Web3Service extends BaseService {
   private async handleAccountChanged(newAccount: string): Promise<void> {
     if (this.currentWallet) {
       this.currentWallet.address = newAccount;
-      
+
       // Update balance
       if (this.provider) {
         const balance = await this.provider.getBalance(newAccount);
@@ -428,10 +426,10 @@ export class Web3Service extends BaseService {
       }
 
       localStorage.setItem('runrealm_wallet_address', newAccount);
-      
+
       this.safeEmit('web3:walletConnected', {
         address: newAccount,
-        chainId: this.currentWallet.chainId
+        chainId: this.currentWallet.chainId,
       });
     }
   }
@@ -443,7 +441,7 @@ export class Web3Service extends BaseService {
 
       this.safeEmit('web3:networkChanged', {
         chainId,
-        networkName: this.currentWallet.networkName
+        networkName: this.currentWallet.networkName,
       });
     }
   }

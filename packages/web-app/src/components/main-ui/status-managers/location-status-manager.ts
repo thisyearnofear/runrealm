@@ -1,7 +1,7 @@
-import { LocationService } from "@runrealm/shared-core/services/location-service";
-import { WidgetSystem } from "@runrealm/shared-core/components/widget-system";
-import { WidgetCreator } from "../widget-managers/widget-creator";
-import { EventHandler } from "../event-handlers/ui-event-handler";
+import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
+import { LocationService } from '@runrealm/shared-core/services/location-service';
+import { EventHandler } from '../event-handlers/ui-event-handler';
+import { WidgetCreator } from '../widget-managers/widget-creator';
 
 /**
  * StatusManager - Handles GPS, network, and other status-related functionality
@@ -16,7 +16,7 @@ export class StatusManager {
   private gpsStatus: {
     available: boolean;
     accuracy?: number;
-    signal?: "excellent" | "good" | "fair" | "poor";
+    signal?: 'excellent' | 'good' | 'fair' | 'poor';
   } = { available: false };
 
   private networkStatus: {
@@ -66,10 +66,10 @@ export class StatusManager {
     }
 
     // Show checking state
-    const refreshBtn = document.getElementById("refresh-status-btn");
+    const refreshBtn = document.getElementById('refresh-status-btn');
     if (refreshBtn) {
-      refreshBtn.textContent = "🔄 Checking...";
-      refreshBtn.setAttribute("disabled", "true");
+      refreshBtn.textContent = '🔄 Checking...';
+      refreshBtn.setAttribute('disabled', 'true');
     }
 
     navigator.geolocation.getCurrentPosition(
@@ -99,10 +99,10 @@ export class StatusManager {
    * Restore refresh button to normal state
    */
   private restoreRefreshButton(): void {
-    const refreshBtn = document.getElementById("refresh-status-btn");
+    const refreshBtn = document.getElementById('refresh-status-btn');
     if (refreshBtn) {
-      refreshBtn.textContent = "🔄 Check GPS";
-      refreshBtn.removeAttribute("disabled");
+      refreshBtn.textContent = '🔄 Check GPS';
+      refreshBtn.removeAttribute('disabled');
     }
   }
 
@@ -121,8 +121,12 @@ export class StatusManager {
 
     // Regenerate and update the entire widget content
     const currentLocation = this.locationService.getCurrentLocationInfo();
-    const newContent = this.widgetCreator.getLocationContent(this.gpsStatus, this.networkStatus, currentLocation);
-    this.widgetSystem.updateWidget("location-info", newContent);
+    const newContent = this.widgetCreator.getLocationContent(
+      this.gpsStatus,
+      this.networkStatus,
+      currentLocation
+    );
+    this.widgetSystem.updateWidget('location-info', newContent);
   }
 
   /**
@@ -140,15 +144,13 @@ export class StatusManager {
         <div class="widget-stat">
           <span class="widget-stat-label">Address</span>
           <span class="widget-stat-value">${walletInfo.address.slice(
-        0,
-        6
-      )}...${walletInfo.address.slice(-4)}</span>
+            0,
+            6
+          )}...${walletInfo.address.slice(-4)}</span>
         </div>
         <div class="widget-stat">
           <span class="widget-stat-label">Balance</span>
-          <span class="widget-stat-value">${parseFloat(
-        walletInfo.balance
-      ).toFixed(4)} ETH</span>
+          <span class="widget-stat-value">${parseFloat(walletInfo.balance).toFixed(4)} ETH</span>
         </div>
         <div class="widget-buttons">
           <button class="widget-button secondary" id="disconnect-wallet-btn">
@@ -161,14 +163,14 @@ export class StatusManager {
       content = ''; // This would come from walletWidget.getWidgetContent()
     }
 
-    this.widgetSystem.updateWidget("wallet-info", content);
+    this.widgetSystem.updateWidget('wallet-info', content);
 
     // Update header button
-    const walletBtn = document.getElementById("wallet-btn");
+    const walletBtn = document.getElementById('wallet-btn');
     if (walletBtn && walletInfo) {
-      const btnIcon = walletBtn.querySelector(".btn-icon");
-      const btnText = walletBtn.querySelector(".btn-text");
-      if (btnIcon) btnIcon.textContent = "🦊";
+      const btnIcon = walletBtn.querySelector('.btn-icon');
+      const btnText = walletBtn.querySelector('.btn-text');
+      if (btnIcon) btnIcon.textContent = '🦊';
       if (btnText) btnText.textContent = `${walletInfo.address.slice(0, 6)}...`;
     }
   }
@@ -176,13 +178,11 @@ export class StatusManager {
   /**
    * Get GPS signal quality based on accuracy
    */
-  private getSignalQuality(
-    accuracy: number
-  ): "excellent" | "good" | "fair" | "poor" {
-    if (accuracy <= 5) return "excellent";
-    if (accuracy <= 10) return "good";
-    if (accuracy <= 20) return "fair";
-    return "poor";
+  private getSignalQuality(accuracy: number): 'excellent' | 'good' | 'fair' | 'poor' {
+    if (accuracy <= 5) return 'excellent';
+    if (accuracy <= 10) return 'good';
+    if (accuracy <= 20) return 'fair';
+    return 'poor';
   }
 
   /**
@@ -193,7 +193,7 @@ export class StatusManager {
       (navigator as any).connection ||
       (navigator as any).mozConnection ||
       (navigator as any).webkitConnection;
-    return connection?.effectiveType || "unknown";
+    return connection?.effectiveType || 'unknown';
   }
 
   // Getters for status information

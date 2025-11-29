@@ -20,13 +20,13 @@ export class TerritoryToggle extends BaseService {
 
   public toggle(): void {
     if (!this.mapService) return;
-    
+
     const current = this.mapService.getTerritoriesVisible();
     const newState = !current;
-    
+
     this.mapService.setTerritoriesVisible(newState);
     this.preferenceService.saveShowTerritories(newState);
-    
+
     this.safeEmit('territory:toggleVisibility', {});
   }
 

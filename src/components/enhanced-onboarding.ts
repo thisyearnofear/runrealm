@@ -4,8 +4,8 @@
  */
 
 import { BaseService } from '../core/base-service';
-import { DOMService } from '../services/dom-service';
 import { AnimationService } from '../services/animation-service';
+import { DOMService } from '../services/dom-service';
 import { UIService } from '../services/ui-service';
 
 export interface OnboardingStep {
@@ -60,7 +60,7 @@ export class EnhancedOnboarding extends BaseService {
       autoAdvance: false,
       theme: 'auto',
       hapticFeedback: true,
-      ...options
+      ...options,
     };
   }
 
@@ -76,58 +76,64 @@ export class EnhancedOnboarding extends BaseService {
       {
         id: 'welcome',
         title: '🏃‍♂️ Welcome to RunRealm!',
-        description: 'Transform your runs into an epic Web3 adventure. Claim territories, earn rewards, and compete with runners worldwide.',
+        description:
+          'Transform your runs into an epic Web3 adventure. Claim territories, earn rewards, and compete with runners worldwide.',
         position: 'center',
-        skippable: true
+        skippable: true,
       },
       {
         id: 'location-setup',
         title: '📍 Enable Location Services',
-        description: 'We need your location to track your runs and help you claim territories. Your privacy is protected and location data stays on your device.',
+        description:
+          'We need your location to track your runs and help you claim territories. Your privacy is protected and location data stays on your device.',
         target: '#location-info',
         position: 'bottom',
         action: {
           type: 'click',
-          element: '#set-location-btn'
+          element: '#set-location-btn',
         },
         validation: () => this.checkLocationPermission(),
-        skippable: true
+        skippable: true,
       },
       {
         id: 'wallet-connect',
         title: '🦊 Connect Your Wallet (Optional)',
-        description: 'Connect your Web3 wallet to claim territories as NFTs and earn $REALM tokens. You can skip this and connect later from settings.',
+        description:
+          'Connect your Web3 wallet to claim territories as NFTs and earn $REALM tokens. You can skip this and connect later from settings.',
         target: '#wallet-info',
         position: 'bottom',
         action: {
           type: 'click',
-          element: '#connect-wallet-btn'
+          element: '#connect-wallet-btn',
         },
-        skippable: true
+        skippable: true,
       },
       {
         id: 'run-controls',
         title: '🎮 Start Your First Run',
-        description: 'Use these controls to start tracking your runs. GPS accuracy and real-time stats help you optimize performance and claim territories.',
+        description:
+          'Use these controls to start tracking your runs. GPS accuracy and real-time stats help you optimize performance and claim territories.',
         target: '.run-controls-widget',
         position: 'top',
-        skippable: true
+        skippable: true,
       },
       {
         id: 'territory-system',
         title: '🏆 AI Coach & Territory System',
-        description: 'Get personalized route suggestions and tips. Complete runs to become eligible for territory claims - each territory is a unique NFT!',
+        description:
+          'Get personalized route suggestions and tips. Complete runs to become eligible for territory claims - each territory is a unique NFT!',
         target: '#ai-coach',
         position: 'left',
-        skippable: true
+        skippable: true,
       },
       {
         id: 'ready-to-run',
         title: '🚀 Ready to Run!',
-        description: 'You\'re all set! Start exploring the map, plan your routes, and begin your RunRealm journey. Every step counts towards claiming territories!',
+        description:
+          "You're all set! Start exploring the map, plan your routes, and begin your RunRealm journey. Every step counts towards claiming territories!",
         position: 'center',
-        skippable: true
-      }
+        skippable: true,
+      },
     ];
   }
 
@@ -159,7 +165,7 @@ export class EnhancedOnboarding extends BaseService {
     this.overlay = this.domService.createElement('div', {
       id: 'onboarding-overlay',
       className: 'onboarding-overlay',
-      parent: document.body
+      parent: document.body,
     });
 
     // Animate overlay in
@@ -200,7 +206,7 @@ export class EnhancedOnboarding extends BaseService {
 
   private highlightTarget(target?: string): void {
     // Remove previous highlights
-    document.querySelectorAll('.onboarding-highlight').forEach(el => {
+    document.querySelectorAll('.onboarding-highlight').forEach((el) => {
       el.classList.remove('onboarding-highlight');
     });
 
@@ -213,7 +219,7 @@ export class EnhancedOnboarding extends BaseService {
         element.scrollIntoView({
           behavior: 'smooth',
           block: 'center',
-          inline: 'center'
+          inline: 'center',
         });
       }
     }
@@ -221,13 +227,14 @@ export class EnhancedOnboarding extends BaseService {
 
   private async createTooltip(step: OnboardingStep): Promise<void> {
     const position = step.position || 'center';
-    const progress = this.options.showProgress ?
-      `<div class="onboarding-progress">
+    const progress = this.options.showProgress
+      ? `<div class="onboarding-progress">
         <div class="progress-bar">
           <div class="progress-fill" style="width: ${((this.currentStep + 1) / this.steps.length) * 100}%"></div>
         </div>
         <span class="progress-text">${this.currentStep + 1} of ${this.steps.length}</span>
-      </div>` : '';
+      </div>`
+      : '';
 
     this.tooltip = this.domService.createElement('div', {
       className: `onboarding-tooltip tooltip-${position}`,
@@ -235,8 +242,11 @@ export class EnhancedOnboarding extends BaseService {
         <div class="tooltip-content">
           <div class="tooltip-header">
             <h3 class="tooltip-title">${step.title}</h3>
-            ${this.options.allowSkip ?
-          '<button class="tooltip-skip" aria-label="Skip Tutorial">Skip</button>' : ''}
+            ${
+              this.options.allowSkip
+                ? '<button class="tooltip-skip" aria-label="Skip Tutorial">Skip</button>'
+                : ''
+            }
           </div>
           <div class="tooltip-body">
             <p class="tooltip-description">${step.description}</p>
@@ -244,12 +254,18 @@ export class EnhancedOnboarding extends BaseService {
           </div>
           <div class="tooltip-footer">
             <div class="footer-left">
-              ${this.options.allowSkip ?
-          '<button class="tooltip-btn secondary" id="onboarding-skip-all">Skip</button>' : ''}
+              ${
+                this.options.allowSkip
+                  ? '<button class="tooltip-btn secondary" id="onboarding-skip-all">Skip</button>'
+                  : ''
+              }
             </div>
             <div class="footer-right">
-              ${this.currentStep > 0 ?
-          '<button class="tooltip-btn secondary" id="onboarding-prev">Previous</button>' : ''}
+              ${
+                this.currentStep > 0
+                  ? '<button class="tooltip-btn secondary" id="onboarding-prev">Previous</button>'
+                  : ''
+              }
               <button class="tooltip-btn primary" id="onboarding-next">
                 ${this.currentStep === this.steps.length - 1 ? 'Get Started!' : 'Next'}
               </button>
@@ -257,7 +273,7 @@ export class EnhancedOnboarding extends BaseService {
           </div>
         </div>
       `,
-      parent: this.overlay!
+      parent: this.overlay!,
     });
 
     // Position tooltip
@@ -287,7 +303,12 @@ export class EnhancedOnboarding extends BaseService {
     this.tooltip.style.transform = 'translate(-50%, -50%)';
 
     // Remove any positioning classes
-    this.tooltip.classList.remove('positioned-top', 'positioned-bottom', 'positioned-left', 'positioned-right');
+    this.tooltip.classList.remove(
+      'positioned-top',
+      'positioned-bottom',
+      'positioned-left',
+      'positioned-right'
+    );
     this.tooltip.classList.add('positioned-center');
   }
 
@@ -346,11 +367,15 @@ export class EnhancedOnboarding extends BaseService {
             element.classList.add('onboarding-action-target');
 
             // Auto-advance when clicked
-            element.addEventListener('click', () => {
-              if (this.options.autoAdvance) {
-                setTimeout(() => this.nextStep(), 1000);
-              }
-            }, { once: true });
+            element.addEventListener(
+              'click',
+              () => {
+                if (this.options.autoAdvance) {
+                  setTimeout(() => this.nextStep(), 1000);
+                }
+              },
+              { once: true }
+            );
           }
         }
         break;
@@ -393,7 +418,11 @@ export class EnhancedOnboarding extends BaseService {
   }
 
   public async skipOnboarding(): Promise<void> {
-    if (confirm('Are you sure you want to skip the tutorial? You can restart it anytime from settings.')) {
+    if (
+      confirm(
+        'Are you sure you want to skip the tutorial? You can restart it anytime from settings.'
+      )
+    ) {
       await this.completeOnboarding(true);
     }
   }
@@ -402,7 +431,7 @@ export class EnhancedOnboarding extends BaseService {
     this.isActive = false;
 
     // Clean up highlights
-    document.querySelectorAll('.onboarding-highlight, .onboarding-action-target').forEach(el => {
+    document.querySelectorAll('.onboarding-highlight, .onboarding-action-target').forEach((el) => {
       el.classList.remove('onboarding-highlight', 'onboarding-action-target');
     });
 
@@ -426,11 +455,14 @@ export class EnhancedOnboarding extends BaseService {
     if (!skipped) {
       this.uiService.showToast('🎉 Welcome to RunRealm! Ready to start your adventure?', {
         type: 'success',
-        duration: 4000
+        duration: 4000,
       });
     }
 
-    this.safeEmit('onboarding:completed' as any, { skipped, completedSteps: Array.from(this.completedSteps) });
+    this.safeEmit('onboarding:completed' as any, {
+      skipped,
+      completedSteps: Array.from(this.completedSteps),
+    });
   }
 
   private checkLocationPermission(): boolean {
@@ -739,7 +771,7 @@ export class EnhancedOnboarding extends BaseService {
           }
         }
       `,
-      parent: document.head
+      parent: document.head,
     });
   }
 
@@ -784,7 +816,7 @@ export class EnhancedOnboarding extends BaseService {
       if (widget && widget.minimized) {
         widgetSystem.toggleWidget(widgetId);
         // Wait a bit for the animation to complete
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
     }
   }

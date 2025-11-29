@@ -22,47 +22,49 @@ console.log(`Token: ${MAPBOX_TOKEN.substring(0, 20)}...`);
 function testTokenValidity() {
   return new Promise((resolve, reject) => {
     const url = `https://api.mapbox.com/tokens/v2?access_token=${MAPBOX_TOKEN}`;
-    
-    https.get(url, (res) => {
-      let data = '';
-      
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          try {
-            const tokenInfo = JSON.parse(data);
-            console.log('✅ Token is valid');
-            console.log(`   Token ID: ${tokenInfo.id}`);
-            console.log(`   Usage: ${tokenInfo.usage}`);
-            console.log(`   Scopes: ${tokenInfo.scopes.join(', ')}`);
-            
-            // Check for required scopes
-            const requiredScopes = ['styles:read', 'fonts:read', 'sprites:read'];
-            const hasAllScopes = requiredScopes.every(scope => 
-              tokenInfo.scopes.includes(scope)
-            );
-            
-            if (hasAllScopes) {
-              console.log('✅ Token has all required scopes');
-            } else {
-              console.log('⚠️  Token missing some required scopes');
-              console.log(`   Required: ${requiredScopes.join(', ')}`);
+
+    https
+      .get(url, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            try {
+              const tokenInfo = JSON.parse(data);
+              console.log('✅ Token is valid');
+              console.log(`   Token ID: ${tokenInfo.id}`);
+              console.log(`   Usage: ${tokenInfo.usage}`);
+              console.log(`   Scopes: ${tokenInfo.scopes.join(', ')}`);
+
+              // Check for required scopes
+              const requiredScopes = ['styles:read', 'fonts:read', 'sprites:read'];
+              const hasAllScopes = requiredScopes.every((scope) =>
+                tokenInfo.scopes.includes(scope)
+              );
+
+              if (hasAllScopes) {
+                console.log('✅ Token has all required scopes');
+              } else {
+                console.log('⚠️  Token missing some required scopes');
+                console.log(`   Required: ${requiredScopes.join(', ')}`);
+              }
+
+              resolve(tokenInfo);
+            } catch (error) {
+              reject(new Error('Failed to parse token response'));
             }
-            
-            resolve(tokenInfo);
-          } catch (error) {
-            reject(new Error('Failed to parse token response'));
+          } else {
+            reject(new Error(`Token validation failed: ${res.statusCode} - ${data}`));
           }
-        } else {
-          reject(new Error(`Token validation failed: ${res.statusCode} - ${data}`));
-        }
+        });
+      })
+      .on('error', (error) => {
+        reject(error);
       });
-    }).on('error', (error) => {
-      reject(error);
-    });
   });
 }
 
@@ -70,27 +72,29 @@ function testTokenValidity() {
 function testStyleLoading() {
   return new Promise((resolve, reject) => {
     const url = `https://api.mapbox.com/styles/v1/mapbox/streets-v11?access_token=${MAPBOX_TOKEN}`;
-    
-    https.get(url, (res) => {
-      let data = '';
-      
-      res.on('data', (chunk) => {
-        data += chunk;
+
+    https
+      .get(url, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            console.log('✅ Style loading test passed');
+            resolve();
+          } else {
+            console.log(`❌ Style loading failed: ${res.statusCode}`);
+            console.log(`   Response: ${data}`);
+            reject(new Error(`Style loading failed: ${res.statusCode}`));
+          }
+        });
+      })
+      .on('error', (error) => {
+        reject(error);
       });
-      
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          console.log('✅ Style loading test passed');
-          resolve();
-        } else {
-          console.log(`❌ Style loading failed: ${res.statusCode}`);
-          console.log(`   Response: ${data}`);
-          reject(new Error(`Style loading failed: ${res.statusCode}`));
-        }
-      });
-    }).on('error', (error) => {
-      reject(error);
-    });
   });
 }
 
@@ -98,12 +102,11 @@ async function validateToken() {
   try {
     // Test basic token validity
     await testTokenValidity();
-    
+
     // Test style loading
     await testStyleLoading();
-    
+
     console.log('\n🎉 All tests passed! Your Mapbox token should work.');
-    
   } catch (error) {
     console.log('\n❌ Token validation failed:');
     console.log(`   Error: ${error.message}`);

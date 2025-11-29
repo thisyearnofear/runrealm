@@ -2,20 +2,21 @@
  * GPS Tracking Component for Mobile
  * Provides mobile-optimized run tracking UI and functionality
  */
-import React, { useState, useEffect, useRef } from 'react';
+
+import * as Location from 'expo-location';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  Animated,
   Button,
   PermissionsAndroid,
   Platform,
-  Alert,
-  Animated,
-  ActivityIndicator,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import * as Location from 'expo-location';
 
 // Lazy load TaskManager to avoid initialization errors
 // Don't import at module level - load it when needed
@@ -30,7 +31,7 @@ const defineLocationTask = () => {
   // The require() call was causing Metro to try to load TaskManager at bundle time
   console.warn('Background location tracking disabled - TaskManager integration pending');
   return;
-  
+
   /* DISABLED CODE - Re-enable when TaskManager is fixed
   // Only define once
   if (taskDefined) return;
@@ -80,14 +81,14 @@ interface GPSTrackingProps {
 }
 
 const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunStop }) => {
-const [isTracking, setIsTracking] = useState(false);
-const [currentRunId, setCurrentRunId] = useState<string | null>(null);
-const [distance, setDistance] = useState(0);
-const [duration, setDuration] = useState(0);
-const [speed, setSpeed] = useState(0);
-const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
+  const [isTracking, setIsTracking] = useState(false);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [distance, setDistance] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [speed, setSpeed] = useState(0);
+  const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
 
-// Visual feedback states
+  // Visual feedback states
   const [gpsAccuracy, setGpsAccuracy] = useState(0); // 0-100
   const [isLoadingGPS, setIsLoadingGPS] = useState(false);
   const [territoryEligible, setTerritoryEligible] = useState(false);
@@ -111,7 +112,7 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
 
   // Visual feedback functions
   const updateGPSAccuracy = (accuracy: number) => {
-    const normalizedAccuracy = Math.max(0, Math.min(100, (20 - accuracy) / 20 * 100)); // 0-20m range
+    const normalizedAccuracy = Math.max(0, Math.min(100, ((20 - accuracy) / 20) * 100)); // 0-20m range
     setGpsAccuracy(normalizedAccuracy);
 
     // Animate the accuracy ring
@@ -186,7 +187,7 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
           // Get initial location to verify permissions work
           try {
             const position = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.High
+              accuracy: Location.Accuracy.High,
             });
             setLocation({
               latitude: position.coords.latitude,
@@ -226,23 +227,23 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
   };
 
   const handleStartRun = async () => {
-  animateButtonPress();
-  try {
-  const runId = await mobileTrackingService.startRun();
+    animateButtonPress();
+    try {
+      const runId = await mobileTrackingService.startRun();
 
-  setCurrentRunId(runId);
-  setIsTracking(true);
-  setDistance(0);
-  setDuration(0);
-  setTerritoryEligible(false);
+      setCurrentRunId(runId);
+      setIsTracking(true);
+      setDistance(0);
+      setDuration(0);
+      setTerritoryEligible(false);
 
       // Start real-time location updates for UI
-  startLocationUpdates();
-  startPulseAnimation();
+      startLocationUpdates();
+      startPulseAnimation();
 
-  console.log('Run started with ID:', runId);
-  onRunStart && onRunStart();
-  } catch (error) {
+      console.log('Run started with ID:', runId);
+      onRunStart && onRunStart();
+    } catch (error) {
       console.error('Failed to start run:', error);
       Alert.alert('Error', 'Failed to start run. Please check location permissions.');
     }
@@ -290,45 +291,45 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
   };
 
   const handleStopRun = async () => {
-  animateButtonPress();
-  try {
-  const runData = mobileTrackingService.stopRun();
+    animateButtonPress();
+    try {
+      const runData = mobileTrackingService.stopRun();
 
-  setIsTracking(false);
-  setCurrentRunId(null);
-  stopPulseAnimation();
+      setIsTracking(false);
+      setCurrentRunId(null);
+      stopPulseAnimation();
 
-  // Clear location watch
-  try {
-    await Location.stopLocationUpdatesAsync('LOCATION_TASK_NAME');
-  } catch (error) {
-    console.error('Error stopping location updates:', error);
-  }
+      // Clear location watch
+      try {
+        await Location.stopLocationUpdatesAsync('LOCATION_TASK_NAME');
+      } catch (error) {
+        console.error('Error stopping location updates:', error);
+      }
 
-    console.log('Run stopped:', runData);
-  onRunStop && onRunStop(runData);
-  } catch (error) {
-    console.error('Failed to stop run:', error);
+      console.log('Run stopped:', runData);
+      onRunStop && onRunStop(runData);
+    } catch (error) {
+      console.error('Failed to stop run:', error);
       Alert.alert('Error', 'Failed to stop run.');
     }
   };
 
   const handlePauseRun = async () => {
     animateButtonPress();
-  mobileTrackingService.pauseRun();
-  setIsTracking(false);
-  stopPulseAnimation();
+    mobileTrackingService.pauseRun();
+    setIsTracking(false);
+    stopPulseAnimation();
 
-  // Clear location watch when paused
-  try {
-    await Location.stopLocationUpdatesAsync('LOCATION_TASK_NAME');
-  } catch (error) {
-    console.error('Error stopping location updates:', error);
-  }
+    // Clear location watch when paused
+    try {
+      await Location.stopLocationUpdatesAsync('LOCATION_TASK_NAME');
+    } catch (error) {
+      console.error('Error stopping location updates:', error);
+    }
   };
 
   const handleResumeRun = async () => {
-  animateButtonPress();
+    animateButtonPress();
     mobileTrackingService.resumeRun();
     setIsTracking(true);
     startPulseAnimation();
@@ -358,17 +359,19 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
             style={[
               styles.gpsAccuracyRing,
               {
-                transform: [{
-                  scale: gpsAccuracyAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1],
-                  })
-                }],
+                transform: [
+                  {
+                    scale: gpsAccuracyAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    }),
+                  },
+                ],
                 opacity: gpsAccuracyAnim.interpolate({
                   inputRange: [0, 0.3, 1],
                   outputRange: [0.3, 0.7, 1],
                 }),
-              }
+              },
             ]}
           >
             <View style={styles.gpsAccuracyInner}>
@@ -397,7 +400,7 @@ const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
                   inputRange: [1, 1.1],
                   outputRange: [0.8, 1],
                 }),
-              }
+              },
             ]}
           >
             <Text style={styles.eligibilityText}>🏰 Territory Eligible!</Text>

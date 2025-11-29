@@ -3,7 +3,10 @@
  * Provides mobile-specific run tracking functionality
  * using shared core RunTrackingService
  */
-import { RunTrackingService, RunSession } from '@runrealm/shared-core/services/run-tracking-service';
+import {
+  RunSession,
+  RunTrackingService,
+} from '@runrealm/shared-core/services/run-tracking-service';
 import { BackgroundTrackingService } from './BackgroundTrackingService';
 
 class MobileRunTrackingService {
@@ -18,8 +21,8 @@ class MobileRunTrackingService {
   }
 
   /**
-  * Initialize location tracking with mobile-specific permissions and settings
-  */
+   * Initialize location tracking with mobile-specific permissions and settings
+   */
   async initializeLocationTracking(): Promise<void> {
     // Mobile-specific location initialization
     console.log('Initializing mobile location tracking with shared service');
@@ -27,18 +30,18 @@ class MobileRunTrackingService {
     try {
       // Create a mobile-specific location service that integrates with React Native Geolocation
       const mobileLocationService = {
-        async getCurrentLocation(highAccuracy: boolean = false) {
-          return new Promise((resolve, reject) => {
+        async getCurrentLocation() {
+          return new Promise((resolve, _reject) => {
             // This would be replaced with actual React Native Geolocation call
             // For now, return mock data
             resolve({
               lat: 40.7128,
-              lng: -74.0060,
+              lng: -74.006,
               accuracy: 10,
-              timestamp: Date.now()
+              timestamp: Date.now(),
             });
           });
-        }
+        },
       };
 
       // Set the location service on the shared RunTrackingService
@@ -50,7 +53,7 @@ class MobileRunTrackingService {
       console.error('Failed to initialize location tracking:', error);
       throw error;
     }
-   }
+  }
 
   /**
    * Start a run with mobile-specific tracking
@@ -60,7 +63,7 @@ class MobileRunTrackingService {
     try {
       // Set location service if needed
       // this.runTrackingService.setLocationService(/* mobile location service */);
-      
+
       const runId = await this.runTrackingService.startRun();
       console.log(`Run started with ID: ${runId}`);
       return runId;

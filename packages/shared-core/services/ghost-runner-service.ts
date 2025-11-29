@@ -98,12 +98,15 @@ export class GhostRunnerService extends BaseService {
     return this.userRealmBalance;
   }
 
-  async unlockGhost(type: 'sprinter' | 'endurance' | 'hill' | 'allrounder', reason: string): Promise<GhostRunnerNFT> {
+  async unlockGhost(
+    type: 'sprinter' | 'endurance' | 'hill' | 'allrounder',
+    reason: string
+  ): Promise<GhostRunnerNFT> {
     const userStats = this.getUserStats();
     const difficulty = this.getTypeBaseDifficulty(type);
-    
+
     const aiGhost = await this.aiService.generateGhostRunner(difficulty, userStats);
-    
+
     const ghost: GhostRunnerNFT = {
       ...aiGhost,
       type,
@@ -121,7 +124,7 @@ export class GhostRunnerService extends BaseService {
 
     this.ghosts.set(ghost.id, ghost);
     this.saveGhosts();
-    
+
     this.safeEmit('ghost:unlocked', { ghost, reason });
     return ghost;
   }
@@ -129,7 +132,7 @@ export class GhostRunnerService extends BaseService {
   async deployGhost(ghostId: string, territoryId: string): Promise<GhostRun> {
     const ghost = this.ghosts.get(ghostId);
     if (!ghost) throw new Error('Ghost not found');
-    
+
     if (ghost.cooldownUntil && ghost.cooldownUntil > new Date()) {
       throw new Error('Ghost is on cooldown');
     }
@@ -144,21 +147,21 @@ export class GhostRunnerService extends BaseService {
 
     // Simulate ghost run
     const ghostRun = await this.simulateGhostRun(ghost, territoryId);
-    
+
     // Update ghost stats
     ghost.totalRuns++;
     ghost.totalDistance += ghostRun.distance;
     ghost.lastRunDate = new Date();
     ghost.cooldownUntil = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24hr cooldown
     ghost.lastDeployedTerritory = territoryId;
-    
+
     this.ghosts.set(ghostId, ghost);
     this.saveGhosts();
     this.ghostRuns.push(ghostRun);
 
     this.safeEmit('ghost:deployed', { ghost, territoryId });
     this.safeEmit('ghost:completed', { ghostRun });
-    
+
     return ghostRun;
   }
 
@@ -175,7 +178,7 @@ export class GhostRunnerService extends BaseService {
 
     ghost.level++;
     ghost.pace *= 0.98; // 2% faster per level
-    
+
     this.ghosts.set(ghostId, ghost);
     this.saveGhosts();
 
@@ -187,7 +190,7 @@ export class GhostRunnerService extends BaseService {
     // Simple simulation - in reality this would be more complex
     const distance = 5000; // 5K default
     const duration = distance * ghost.pace;
-    
+
     return {
       ghostId: ghost.id,
       territoryId,
@@ -202,30 +205,38 @@ export class GhostRunnerService extends BaseService {
   }
 
   private getUserStats() {
-     const runs = this.runTrackingService.getRunHistory();
-     if (runs.length === 0) return undefined;
+    const runs = this.runTrackingService.getRunHistory();
+    if (runs.length === 0) return undefined;
 
-     const totalDistance = runs.reduce((sum: number, r) => sum + r.distance, 0);
-     const avgPace = runs.reduce((sum: number, r) => sum + (r.duration / r.distance), 0) / runs.length;
+    const totalDistance = runs.reduce((sum: number, r) => sum + r.distance, 0);
+    const avgPace = runs.reduce((sum: number, r) => sum + r.duration / r.distance, 0) / runs.length;
 
-     return { averagePace: avgPace, totalDistance };
-   }
+    return { averagePace: avgPace, totalDistance };
+  }
 
   private getTypeBaseDifficulty(type: string): number {
     switch (type) {
-      case 'sprinter': return 0.9;
-      case 'endurance': return 0.85;
-      case 'hill': return 0.95;
-      default: return 0.7;
+      case 'sprinter':
+        return 0.9;
+      case 'endurance':
+        return 0.85;
+      case 'hill':
+        return 0.95;
+      default:
+        return 0.7;
     }
   }
 
   private getDeployCost(type: string): number {
     switch (type) {
-      case 'sprinter': return 50;
-      case 'endurance': return 100;
-      case 'hill': return 75;
-      default: return 25;
+      case 'sprinter':
+        return 50;
+      case 'endurance':
+        return 100;
+      case 'hill':
+        return 75;
+      default:
+        return 25;
     }
   }
 
@@ -234,28 +245,28 @@ export class GhostRunnerService extends BaseService {
     const realmEarned = Math.floor(data.distance / 50); // ~100 REALM for 5K
     this.userRealmBalance += realmEarned;
     this.saveRealmBalance();
-    
+
     this.safeEmit('realm:earned', { amount: realmEarned, reason: 'run_completed' });
   }
 
   private checkGhostUnlocks(): void {
     const runs = this.runTrackingService.getRunHistory();
-    
+
     // Unlock all-rounder after first run
     if (runs.length === 1 && !this.hasGhostType('allrounder')) {
       this.unlockGhost('allrounder', 'First run completed');
     }
-    
+
     // Unlock specialist after 10 runs
     if (runs.length === 10 && this.ghosts.size === 1) {
-      this.safeEmit('ghost:unlockAvailable', { 
+      this.safeEmit('ghost:unlockAvailable', {
         message: 'Choose your specialist ghost!',
-        types: ['sprinter', 'endurance', 'hill']
+        types: ['sprinter', 'endurance', 'hill'],
       });
     }
   }
 
   private hasGhostType(type: string): boolean {
-    return Array.from(this.ghosts.values()).some(g => g.type === type);
+    return Array.from(this.ghosts.values()).some((g) => g.type === type);
   }
 }

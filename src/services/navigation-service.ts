@@ -31,7 +31,7 @@ export class NavigationService extends BaseService {
   private state: NavigationState = {
     currentRoute: 'map',
     history: [],
-    params: {}
+    params: {},
   };
   private navigationContainer: HTMLElement | null = null;
 
@@ -52,10 +52,10 @@ export class NavigationService extends BaseService {
    * Register navigation routes
    */
   public registerRoutes(routes: NavigationRoute[]): void {
-    routes.forEach(route => {
+    routes.forEach((route) => {
       this.routes.set(route.id, route);
     });
-    
+
     // Emit event for UI updates
     this.safeEmit('navigation:routesRegistered', { routes });
   }
@@ -83,13 +83,13 @@ export class NavigationService extends BaseService {
 
     // Update UI
     this.updateNavigationUI();
-    
+
     // Emit navigation event
     this.safeEmit('navigation:routeChanged', {
       routeId,
       route,
       params,
-      previousRoute: this.state.previousRoute
+      previousRoute: this.state.previousRoute,
     });
   }
 
@@ -101,14 +101,14 @@ export class NavigationService extends BaseService {
       const previousRoute = this.state.history.pop()!;
       this.state.previousRoute = this.state.currentRoute;
       this.state.currentRoute = previousRoute;
-      
+
       this.updateNavigationUI();
-      
+
       this.safeEmit('navigation:routeChanged', {
         routeId: previousRoute,
         route: this.routes.get(previousRoute),
         params: this.state.params,
-        previousRoute: this.state.previousRoute
+        previousRoute: this.state.previousRoute,
       });
     }
   }
@@ -167,7 +167,9 @@ export class NavigationService extends BaseService {
     this.navigationContainer.innerHTML = '';
 
     // Filter visible routes
-    const visibleRoutes = Array.from(this.routes.values()).filter(route => route.visible !== false);
+    const visibleRoutes = Array.from(this.routes.values()).filter(
+      (route) => route.visible !== false
+    );
 
     // Create navigation bar
     const navBar = this.domService.createElement('nav', {
@@ -183,14 +185,14 @@ export class NavigationService extends BaseService {
         height: '60px',
         backgroundColor: 'white',
         boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
-        zIndex: '1000'
-      }
+        zIndex: '1000',
+      },
     });
 
     // Create navigation items
-    visibleRoutes.forEach(route => {
+    visibleRoutes.forEach((route) => {
       const isActive = this.isRouteActive(route.id);
-      
+
       const navItem = this.domService.createElement('button', {
         className: `nav-item ${isActive ? 'active' : ''}`,
         style: {
@@ -204,8 +206,8 @@ export class NavigationService extends BaseService {
           padding: '8px 0',
           cursor: 'pointer',
           color: isActive ? '#00bd00' : '#999',
-          fontSize: '12px'
-        }
+          fontSize: '12px',
+        },
       });
 
       // Add icon if available
@@ -215,8 +217,8 @@ export class NavigationService extends BaseService {
           innerHTML: route.icon,
           style: {
             fontSize: '20px',
-            marginBottom: '4px'
-          }
+            marginBottom: '4px',
+          },
         });
         navItem.appendChild(icon);
       }
@@ -225,8 +227,8 @@ export class NavigationService extends BaseService {
       const title = this.domService.createElement('span', {
         textContent: route.title,
         style: {
-          fontSize: '10px'
-        }
+          fontSize: '10px',
+        },
       });
       navItem.appendChild(title);
 
@@ -261,8 +263,8 @@ export class NavigationService extends BaseService {
         display: 'flex',
         flexDirection: 'column',
         gap: '15px',
-        zIndex: '999'
-      }
+        zIndex: '999',
+      },
     });
 
     // Common quick actions
@@ -271,23 +273,25 @@ export class NavigationService extends BaseService {
         id: 'start-run',
         icon: '🏃',
         title: 'Start Run',
-        action: () => this.eventBus.emit('run:startRequested', { runId: 'quick-action-' + Date.now() })
+        action: () =>
+          this.eventBus.emit('run:startRequested', { runId: 'quick-action-' + Date.now() }),
       },
       {
         id: 'claim-territory',
         icon: '🗺️',
         title: 'Claim Territory',
-        action: () => this.eventBus.emit('territory:claimRequested', { runId: 'quick-action-' + Date.now() })
+        action: () =>
+          this.eventBus.emit('territory:claimRequested', { runId: 'quick-action-' + Date.now() }),
       },
       {
         id: 'ai-route',
         icon: '🤖',
         title: 'AI Route',
-        action: () => this.eventBus.emit('ai:routeRequested', {})
-      }
+        action: () => this.eventBus.emit('ai:routeRequested', {}),
+      },
     ];
 
-    actions.forEach(action => {
+    actions.forEach((action) => {
       const button = this.domService.createElement('button', {
         id: `quick-action-${action.id}`,
         className: 'quick-action-button',
@@ -308,8 +312,8 @@ export class NavigationService extends BaseService {
           justifyContent: 'center',
           cursor: 'pointer',
           boxShadow: '0 4px 12px rgba(0,189,0,0.3)',
-          transition: 'all 0.2s ease'
-        }
+          transition: 'all 0.2s ease',
+        },
       });
 
       button.addEventListener('mouseenter', () => {
@@ -341,29 +345,29 @@ export class NavigationService extends BaseService {
         path: '/',
         title: 'Map',
         icon: '🗺️',
-        visible: true
+        visible: true,
       },
       {
         id: 'territories',
         path: '/territories',
         title: 'Territories',
         icon: '🏆',
-        visible: true
+        visible: true,
       },
       {
         id: 'profile',
         path: '/profile',
         title: 'Profile',
         icon: '👤',
-        visible: true
+        visible: true,
       },
       {
         id: 'leaderboard',
         path: '/leaderboard',
         title: 'Leaderboard',
         icon: '🏅',
-        visible: true
-      }
+        visible: true,
+      },
     ]);
 
     this.safeEmit('service:initialized', { service: 'NavigationService', success: true });

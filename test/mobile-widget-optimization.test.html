@@ -229,16 +229,24 @@
             if (width <= 360) {
                 body.classList.add('mobile-small');
                 // Simulate ultra-compact mode
-                document.querySelectorAll('.widget').forEach(w => w.classList.add('ultra-compact'));
+                document.querySelectorAll('.widget').forEach(w => {
+                    w.classList.add('ultra-compact');
+                });
             } else if (width <= 414) {
                 body.classList.add('mobile-medium');
-                document.querySelectorAll('.widget').forEach(w => w.classList.remove('ultra-compact'));
+                document.querySelectorAll('.widget').forEach(w => {
+                    w.classList.remove('ultra-compact');
+                });
             } else if (width <= 480) {
                 body.classList.add('mobile-large');
-                document.querySelectorAll('.widget').forEach(w => w.classList.remove('ultra-compact'));
+                document.querySelectorAll('.widget').forEach(w => {
+                  w.classList.remove('ultra-compact')
+                });
             } else {
                 body.classList.add('tablet');
-                document.querySelectorAll('.widget').forEach(w => w.classList.remove('ultra-compact'));
+                document.querySelectorAll('.widget').forEach(w => {
+                  w.classList.remove('ultra-compact')
+                });
             }
         }
         
@@ -279,7 +287,7 @@
         }
         
         // Setup widget toggle functionality
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', (e) => {
             if (e.target.classList.contains('widget-toggle') || e.target.classList.contains('widget-header')) {
                 const widgetId = e.target.dataset.widgetId || e.target.closest('[data-widget-id]')?.dataset.widgetId;
                 if (!widgetId) return;

@@ -7,10 +7,10 @@ const png32 = fs.readFileSync('./public/favicon-32x32.png');
 
 // Create ICO file
 toIco([png16, png32])
-  .then(buf => {
+  .then((buf) => {
     fs.writeFileSync('./public/favicon.ico', buf);
     console.log('Favicon.ico created successfully!');
   })
-  .catch(err => {
+  .catch((err) => {
     console.error('Error creating favicon.ico:', err);
   });

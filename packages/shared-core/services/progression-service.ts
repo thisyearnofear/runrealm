@@ -80,7 +80,7 @@ export class ProgressionService extends BaseService {
     totalTime: 0,
     achievements: [],
     activeChallenges: [],
-    streak: 0
+    streak: 0,
   };
 
   private achievements: Map<string, PlayerAchievement> = new Map();
@@ -94,7 +94,7 @@ export class ProgressionService extends BaseService {
       description: 'Complete your first run',
       icon: '👟',
       criteria: { type: 'distance', value: 1000 },
-      reward: { experience: 50 }
+      reward: { experience: 50 },
     },
     {
       id: '5k-runner',
@@ -102,7 +102,7 @@ export class ProgressionService extends BaseService {
       description: 'Run 5 kilometers',
       icon: '🏅',
       criteria: { type: 'distance', value: 5000 },
-      reward: { experience: 100 }
+      reward: { experience: 100 },
     },
     {
       id: '10k-runner',
@@ -110,7 +110,7 @@ export class ProgressionService extends BaseService {
       description: 'Run 10 kilometers',
       icon: '🏆',
       criteria: { type: 'distance', value: 10000 },
-      reward: { experience: 200 }
+      reward: { experience: 200 },
     },
     {
       id: 'first-territory',
@@ -118,7 +118,7 @@ export class ProgressionService extends BaseService {
       description: 'Claim your first territory',
       icon: '🗺️',
       criteria: { type: 'territories', value: 1 },
-      reward: { experience: 150 }
+      reward: { experience: 150 },
     },
     {
       id: 'streak-7',
@@ -126,7 +126,7 @@ export class ProgressionService extends BaseService {
       description: 'Run for 7 consecutive days',
       icon: '🔥',
       criteria: { type: 'streak', value: 7 },
-      reward: { experience: 250 }
+      reward: { experience: 250 },
     },
     {
       id: 'level-5',
@@ -134,8 +134,8 @@ export class ProgressionService extends BaseService {
       description: 'Reach level 5',
       icon: '⭐',
       criteria: { type: 'level', value: 5 },
-      reward: { experience: 300 }
-    }
+      reward: { experience: 300 },
+    },
   ];
 
   // Default level configurations
@@ -149,7 +149,11 @@ export class ProgressionService extends BaseService {
     { level: 7, experienceRequired: 2100, rewards: { experienceBoost: 15 } },
     { level: 8, experienceRequired: 2800, rewards: { territorySlots: 1 } },
     { level: 9, experienceRequired: 3600, rewards: { experienceBoost: 20 } },
-    { level: 10, experienceRequired: 4500, rewards: { territorySlots: 2, specialAbilities: ['route-optimization'] } }
+    {
+      level: 10,
+      experienceRequired: 4500,
+      rewards: { territorySlots: 2, specialAbilities: ['route-optimization'] },
+    },
   ];
 
   private constructor() {
@@ -215,13 +219,13 @@ export class ProgressionService extends BaseService {
    * Initialize achievements
    */
   private initializeAchievements(): void {
-    this.defaultAchievements.forEach(achievement => {
+    this.defaultAchievements.forEach((achievement) => {
       this.achievements.set(achievement.id, achievement);
     });
 
     // Load any custom achievements from config
     this.safeEmit('progression:achievementsLoaded', {
-      count: this.achievements.size
+      count: this.achievements.size,
     });
   }
 
@@ -232,7 +236,7 @@ export class ProgressionService extends BaseService {
     this.levelConfigs = [...this.defaultLevelConfigs];
 
     this.safeEmit('progression:levelsLoaded', {
-      maxLevel: this.levelConfigs[this.levelConfigs.length - 1].level
+      maxLevel: this.levelConfigs[this.levelConfigs.length - 1].level,
     });
   }
 
@@ -364,7 +368,7 @@ export class ProgressionService extends BaseService {
 
       this.safeEmit('game:levelUp', {
         newLevel: this.stats.level,
-        player: this.getWalletAddress()
+        player: this.getWalletAddress(),
       });
 
       // Check for level-based achievements
@@ -374,7 +378,7 @@ export class ProgressionService extends BaseService {
       this.safeEmit('ui:toast', {
         message: `🎉 Level Up! You're now level ${this.stats.level}`,
         type: 'success',
-        duration: 4000
+        duration: 4000,
       });
     }
   }
@@ -415,10 +419,11 @@ export class ProgressionService extends BaseService {
    * Check distance-based achievements
    */
   private checkDistanceAchievements(): void {
-    const distanceAchievements = Array.from(this.achievements.values())
-      .filter(a => a.criteria.type === 'distance' && !this.stats.achievements.includes(a.id));
+    const distanceAchievements = Array.from(this.achievements.values()).filter(
+      (a) => a.criteria.type === 'distance' && !this.stats.achievements.includes(a.id)
+    );
 
-    distanceAchievements.forEach(achievement => {
+    distanceAchievements.forEach((achievement) => {
       if (this.stats.totalDistance >= achievement.criteria.value) {
         this.unlockAchievement(achievement.id);
       }
@@ -429,10 +434,11 @@ export class ProgressionService extends BaseService {
    * Check territory-based achievements
    */
   private checkTerritoryAchievements(): void {
-    const territoryAchievements = Array.from(this.achievements.values())
-      .filter(a => a.criteria.type === 'territories' && !this.stats.achievements.includes(a.id));
+    const territoryAchievements = Array.from(this.achievements.values()).filter(
+      (a) => a.criteria.type === 'territories' && !this.stats.achievements.includes(a.id)
+    );
 
-    territoryAchievements.forEach(achievement => {
+    territoryAchievements.forEach((achievement) => {
       if (this.stats.territoriesClaimed >= achievement.criteria.value) {
         this.unlockAchievement(achievement.id);
       }
@@ -443,10 +449,11 @@ export class ProgressionService extends BaseService {
    * Check level-based achievements
    */
   private checkLevelAchievements(): void {
-    const levelAchievements = Array.from(this.achievements.values())
-      .filter(a => a.criteria.type === 'level' && !this.stats.achievements.includes(a.id));
+    const levelAchievements = Array.from(this.achievements.values()).filter(
+      (a) => a.criteria.type === 'level' && !this.stats.achievements.includes(a.id)
+    );
 
-    levelAchievements.forEach(achievement => {
+    levelAchievements.forEach((achievement) => {
       if (this.stats.level >= achievement.criteria.value) {
         this.unlockAchievement(achievement.id);
       }
@@ -457,10 +464,11 @@ export class ProgressionService extends BaseService {
    * Check streak-based achievements
    */
   private checkStreakAchievements(): void {
-    const streakAchievements = Array.from(this.achievements.values())
-      .filter(a => a.criteria.type === 'streak' && !this.stats.achievements.includes(a.id));
+    const streakAchievements = Array.from(this.achievements.values()).filter(
+      (a) => a.criteria.type === 'streak' && !this.stats.achievements.includes(a.id)
+    );
 
-    streakAchievements.forEach(achievement => {
+    streakAchievements.forEach((achievement) => {
       if (this.stats.streak >= achievement.criteria.value) {
         this.unlockAchievement(achievement.id);
       }
@@ -491,14 +499,14 @@ export class ProgressionService extends BaseService {
     this.safeEmit('game:achievementUnlocked', {
       achievementId,
       achievement,
-      player: this.getWalletAddress()
+      player: this.getWalletAddress(),
     });
 
     // Show notification
     this.safeEmit('ui:toast', {
       message: `🏆 Achievement Unlocked: ${achievement.name}`,
       type: 'success',
-      duration: 5000
+      duration: 5000,
     });
 
     this.saveStats();
@@ -516,7 +524,7 @@ export class ProgressionService extends BaseService {
    * Get level configuration by level number
    */
   public getLevelConfig(level: number): LevelConfig | undefined {
-    return this.levelConfigs.find(config => config.level === level);
+    return this.levelConfigs.find((config) => config.level === level);
   }
 
   /**
@@ -531,7 +539,7 @@ export class ProgressionService extends BaseService {
    */
   public getUnlockedAchievements(): PlayerAchievement[] {
     return this.stats.achievements
-      .map(id => this.achievements.get(id))
+      .map((id) => this.achievements.get(id))
       .filter((a): a is PlayerAchievement => a !== undefined);
   }
 
@@ -539,8 +547,9 @@ export class ProgressionService extends BaseService {
    * Get locked achievements
    */
   public getLockedAchievements(): PlayerAchievement[] {
-    return Array.from(this.achievements.values())
-      .filter(a => !this.stats.achievements.includes(a.id));
+    return Array.from(this.achievements.values()).filter(
+      (a) => !this.stats.achievements.includes(a.id)
+    );
   }
 
   /**
@@ -555,7 +564,7 @@ export class ProgressionService extends BaseService {
    */
   private emitStatsUpdate(): void {
     this.safeEmit('game:statsUpdated', {
-      stats: this.getStats()
+      stats: this.getStats(),
     });
   }
 
@@ -574,13 +583,13 @@ export class ProgressionService extends BaseService {
   private checkAndGenerateChallenges(): void {
     const now = Date.now();
     const hasActiveDaily = this.stats.activeChallenges.some(
-      c => c.type === 'daily' && c.expiresAt > now
+      (c) => c.type === 'daily' && c.expiresAt > now
     );
 
     if (!hasActiveDaily) {
       // Remove expired daily challenges
       this.stats.activeChallenges = this.stats.activeChallenges.filter(
-        c => c.type !== 'daily' || c.claimed
+        (c) => c.type !== 'daily' || c.claimed
       );
 
       // Generate new ones
@@ -605,15 +614,15 @@ export class ProgressionService extends BaseService {
           type: 'distance',
           target: 3000,
           current: 0,
-          unit: 'm'
+          unit: 'm',
         },
         reward: {
           type: 'xp',
-          amount: 100
+          amount: 100,
         },
         expiresAt: new Date().setHours(24, 0, 0, 0),
         completed: false,
-        claimed: false
+        claimed: false,
       },
       {
         id: `daily-speed-${Date.now()}`,
@@ -625,16 +634,16 @@ export class ProgressionService extends BaseService {
           type: 'speed',
           target: 10,
           current: 0,
-          unit: 'km/h'
+          unit: 'km/h',
         },
         reward: {
           type: 'realm',
-          amount: 50
+          amount: 50,
         },
         expiresAt: new Date().setHours(24, 0, 0, 0),
         completed: false,
-        claimed: false
-      }
+        claimed: false,
+      },
     ];
     return challenges;
   }
@@ -645,7 +654,7 @@ export class ProgressionService extends BaseService {
   public updateChallengeProgress(type: 'distance' | 'territories' | 'time', amount: number): void {
     let updated = false;
 
-    this.stats.activeChallenges.forEach(challenge => {
+    this.stats.activeChallenges.forEach((challenge) => {
       if (challenge.completed || challenge.goal.type !== type) return;
 
       challenge.goal.current += amount;
@@ -656,7 +665,7 @@ export class ProgressionService extends BaseService {
 
         this.safeEmit('ui:toast', {
           message: `🎯 Challenge Complete: ${challenge.title}`,
-          type: 'success'
+          type: 'success',
         });
       }
       updated = true;
@@ -672,7 +681,7 @@ export class ProgressionService extends BaseService {
    * Claim challenge reward
    */
   public claimChallengeReward(challengeId: string): void {
-    const challenge = this.stats.activeChallenges.find(c => c.id === challengeId);
+    const challenge = this.stats.activeChallenges.find((c) => c.id === challengeId);
     if (!challenge || !challenge.completed || challenge.claimed) return;
 
     challenge.claimed = true;
@@ -702,7 +711,7 @@ export class ProgressionService extends BaseService {
       totalTime: 0,
       achievements: [],
       activeChallenges: [],
-      streak: 0
+      streak: 0,
     };
 
     this.saveStats();

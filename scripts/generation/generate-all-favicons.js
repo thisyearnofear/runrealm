@@ -9,7 +9,8 @@ const configuration = {
   path: '/',
   appName: 'RunRealm',
   appShortName: 'RunRealm',
-  appDescription: 'Cross-chain fitness GameFi app - claim, trade, and defend real-world running territories as NFTs',
+  appDescription:
+    'Cross-chain fitness GameFi app - claim, trade, and defend real-world running territories as NFTs',
   developerName: 'RunRealm Team',
   developerURL: null,
   dir: 'auto',
@@ -33,8 +34,8 @@ const configuration = {
     favicons: true,
     firefox: false,
     windows: false,
-    yandex: false
-  }
+    yandex: false,
+  },
 };
 
 favicons(source, configuration, (error, response) => {
@@ -42,18 +43,18 @@ favicons(source, configuration, (error, response) => {
     console.error('Error generating favicons:', error);
     return;
   }
-  
+
   // Write the HTML tags to a file for reference
   fs.writeFileSync(path.join(destination, 'favicon-tags.html'), response.html.join('\n'));
-  
+
   // Write all the files
-  response.images.forEach(image => {
+  response.images.forEach((image) => {
     fs.writeFileSync(path.join(destination, image.name), image.contents);
   });
-  
-  response.files.forEach(file => {
+
+  response.files.forEach((file) => {
     fs.writeFileSync(path.join(destination, file.name), file.contents);
   });
-  
+
   console.log('Favicons generated successfully!');
 });

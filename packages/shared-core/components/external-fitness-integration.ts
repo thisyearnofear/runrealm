@@ -1,6 +1,6 @@
-import { BaseService } from "../core/base-service";
-import { ExternalActivity } from "../services/run-tracking-service";
-import { ExternalFitnessService } from "../services/external-fitness-service";
+import { BaseService } from '../core/base-service';
+import { ExternalFitnessService } from '../services/external-fitness-service';
+import { ExternalActivity } from '../services/run-tracking-service';
 
 export class ExternalFitnessIntegration extends BaseService {
   private container: HTMLElement;
@@ -92,47 +92,47 @@ export class ExternalFitnessIntegration extends BaseService {
   public show(): void {
     const portal = this.container.querySelector('.fitness-portal') as HTMLElement;
     portal.style.display = 'flex';
-    
+
     // Animate in
     requestAnimationFrame(() => {
       portal.classList.add('portal-active');
     });
-    
+
     this.isVisible = true;
   }
 
   public hide(): void {
     const portal = this.container.querySelector('.fitness-portal') as HTMLElement;
     portal.classList.remove('portal-active');
-    
+
     setTimeout(() => {
       portal.style.display = 'none';
     }, 300);
-    
+
     this.isVisible = false;
   }
 
   private async connectStrava(): Promise<void> {
     const stravaCard = this.container.querySelector('.service-card.strava') as HTMLElement;
     const status = stravaCard.querySelector('.service-status') as HTMLElement;
-    
+
     status.textContent = 'Connecting...';
     stravaCard.classList.add('connecting');
 
     try {
       const authUrl = this.fitnessService.initiateStravaAuth();
-      
+
       // Open OAuth window
       const authWindow = window.open(
-        authUrl, 
-        'strava-auth', 
+        authUrl,
+        'strava-auth',
         'width=600,height=600,scrollbars=yes,resizable=yes'
       );
-      
+
       if (!authWindow) {
         throw new Error('Unable to open authentication window. Please allow popups.');
       }
-      
+
       // Monitor for successful authentication
       const pollTimer = setInterval(() => {
         try {
@@ -150,12 +150,11 @@ export class ExternalFitnessIntegration extends BaseService {
           // Ignore cross-origin errors
         }
       }, 1000);
-      
     } catch (error) {
       console.error('Failed to connect Strava:', error);
       status.textContent = 'Failed';
       stravaCard.classList.remove('connecting');
-      
+
       // Show user-friendly error
       this.showError(error instanceof Error ? error.message : 'Connection failed');
     }
@@ -164,17 +163,17 @@ export class ExternalFitnessIntegration extends BaseService {
   private onConnectionFailed(source: string, error: string): void {
     const serviceCard = this.container.querySelector(`.service-card.${source}`) as HTMLElement;
     const status = serviceCard.querySelector('.service-status') as HTMLElement;
-    
+
     serviceCard.classList.remove('connecting');
     status.textContent = 'Failed';
-    
+
     this.showError(`Failed to connect to ${source}: ${error}`);
   }
 
   private onServiceConnected(source: string): void {
     const serviceCard = this.container.querySelector(`.service-card.${source}`) as HTMLElement;
     const status = serviceCard.querySelector('.service-status') as HTMLElement;
-    
+
     serviceCard.classList.remove('connecting');
     serviceCard.classList.add('connected');
     status.textContent = '✓ Connected';
@@ -205,12 +204,14 @@ export class ExternalFitnessIntegration extends BaseService {
     const loadMoreBtn = this.container.querySelector('.load-more-btn') as HTMLButtonElement;
 
     if (activities.length === 0 && this.currentPage > 1) {
-      loadMoreBtn.textContent = "No more activities";
+      loadMoreBtn.textContent = 'No more activities';
       loadMoreBtn.disabled = true;
       return;
     }
 
-    const activitiesHtml = activities.map(activity => `
+    const activitiesHtml = activities
+      .map(
+        (activity) => `
       <div class="activity-card" data-activity-id="${activity.id}">
         <div class="activity-header">
           <div class="activity-icon">🏃‍♂️</div>
@@ -246,14 +247,18 @@ export class ExternalFitnessIntegration extends BaseService {
           <span class="btn-text">Claim Territory</span>
         </button>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
     grid.insertAdjacentHTML('beforeend', activitiesHtml);
 
     // Add preview listeners
-    grid.querySelectorAll('.preview-btn').forEach(btn => {
+    grid.querySelectorAll('.preview-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
-        const activityData = (e.target as HTMLElement).closest('.preview-btn')?.getAttribute('data-activity');
+        const activityData = (e.target as HTMLElement)
+          .closest('.preview-btn')
+          ?.getAttribute('data-activity');
         if (activityData) {
           this.previewTerritoryForActivity(JSON.parse(activityData));
         }
@@ -261,9 +266,11 @@ export class ExternalFitnessIntegration extends BaseService {
     });
 
     // Add hover listeners for map highlighting
-    grid.querySelectorAll('.activity-card').forEach(card => {
+    grid.querySelectorAll('.activity-card').forEach((card) => {
       card.addEventListener('mouseover', async (e) => {
-        const activityData = (e.currentTarget as HTMLElement).querySelector('.preview-btn')?.getAttribute('data-activity');
+        const activityData = (e.currentTarget as HTMLElement)
+          .querySelector('.preview-btn')
+          ?.getAttribute('data-activity');
         if (activityData) {
           const activity = JSON.parse(activityData);
           const mapService = this.getService('MapService');
@@ -292,10 +299,12 @@ export class ExternalFitnessIntegration extends BaseService {
 
     if (!runTrackingService || !mapService) return;
 
-    const previewBtn = this.container.querySelector(`[data-activity-id="${activity.id}"] .preview-btn`) as HTMLElement;
+    const previewBtn = this.container.querySelector(
+      `[data-activity-id="${activity.id}"] .preview-btn`
+    ) as HTMLElement;
     const btnText = previewBtn.querySelector('.btn-text') as HTMLElement;
     const btnIcon = previewBtn.querySelector('.btn-icon') as HTMLElement;
-    
+
     // Animate preview process
     btnIcon.textContent = '🔄';
     btnText.textContent = 'Loading...';
@@ -304,26 +313,31 @@ export class ExternalFitnessIntegration extends BaseService {
     try {
       // Import activity to generate run session and territory data
       const runSession = await runTrackingService.importExternalActivity(activity);
-      
+
       if (runSession.territoryEligible && runSession.geohash) {
         // Create territory preview data
         const territoryPreview = {
           geohash: runSession.geohash,
           bounds: {
             center: runSession.points[0], // Use first point as center
-            radius: Math.max(runSession.totalDistance / 4, 100) // Dynamic radius based on run distance
+            radius: Math.max(runSession.totalDistance / 4, 100), // Dynamic radius based on run distance
           },
           isAvailable: true, // Assume available for preview
           metadata: {
             difficulty: Math.floor((runSession.totalDistance / 1000) * 10), // Rough difficulty calculation
-            rarity: runSession.totalDistance > 10000 ? 'Epic' : runSession.totalDistance > 5000 ? 'Rare' : 'Common',
-            estimatedReward: Math.floor(runSession.totalDistance / 100)
-          }
+            rarity:
+              runSession.totalDistance > 10000
+                ? 'Epic'
+                : runSession.totalDistance > 5000
+                  ? 'Rare'
+                  : 'Common',
+            estimatedReward: Math.floor(runSession.totalDistance / 100),
+          },
         };
 
         // Add territory preview to map
         mapService.addTerritoryPreview(territoryPreview);
-        
+
         // Focus map on territory
         if (runSession.points.length > 0) {
           const centerPoint = runSession.points[Math.floor(runSession.points.length / 2)];
@@ -335,23 +349,25 @@ export class ExternalFitnessIntegration extends BaseService {
         btnText.textContent = 'Territory Previewed';
         previewBtn.classList.remove('loading');
         previewBtn.classList.add('previewed');
-        
+
         // Show claim confirmation
         this.showTerritoryClaimConfirmation(activity, territoryPreview);
-        
+
         // Emit territory preview event
-         this.safeEmit('territory:preview', {
-           territory: territoryPreview,
-           bounds: territoryPreview.bounds,
-           metadata: territoryPreview.metadata
-         });
-        
+        this.safeEmit('territory:preview', {
+          territory: territoryPreview,
+          bounds: territoryPreview.bounds,
+          metadata: territoryPreview.metadata,
+        });
       } else {
         btnIcon.textContent = '❌';
         btnText.textContent = 'Not Eligible';
         previewBtn.classList.remove('loading');
         previewBtn.setAttribute('disabled', 'true');
-        previewBtn.setAttribute('title', 'This run is not eligible for territory claiming. Runs must be at least 500m and start and end in a similar location.');
+        previewBtn.setAttribute(
+          'title',
+          'This run is not eligible for territory claiming. Runs must be at least 500m and start and end in a similar location.'
+        );
       }
     } catch (error) {
       console.error('Failed to preview territory:', error);
@@ -366,9 +382,9 @@ export class ExternalFitnessIntegration extends BaseService {
     const sparkles = document.createElement('div');
     sparkles.className = 'success-sparkles';
     sparkles.innerHTML = '✨✨✨';
-    
+
     button.parentElement?.appendChild(sparkles);
-    
+
     setTimeout(() => sparkles.remove(), 2000);
   }
 
@@ -385,9 +401,9 @@ export class ExternalFitnessIntegration extends BaseService {
         <button class="close-error">×</button>
       </div>
     `;
-    
+
     errorContainer.prepend(errorDiv);
-    
+
     const closeBtn = errorDiv.querySelector('.close-error');
     closeBtn?.addEventListener('click', () => {
       errorDiv.remove();
@@ -444,50 +460,50 @@ export class ExternalFitnessIntegration extends BaseService {
         </div>
       </div>
     `;
-    
+
     document.body.appendChild(confirmDialog);
-    
+
     // Setup event handlers
     const closeBtn = confirmDialog.querySelector('#close-claim-modal');
     const cancelBtn = confirmDialog.querySelector('#cancel-claim');
     const confirmBtn = confirmDialog.querySelector('#confirm-claim');
-    
+
     const closeDialog = () => {
       document.body.removeChild(confirmDialog);
     };
-    
+
     closeBtn?.addEventListener('click', closeDialog);
     cancelBtn?.addEventListener('click', closeDialog);
-    
+
     confirmBtn?.addEventListener('click', async () => {
       try {
         const confirmBtnElement = confirmBtn as HTMLButtonElement;
         const btnIcon = confirmBtnElement.querySelector('.btn-icon');
         const btnText = confirmBtnElement.querySelector('.btn-text');
-        
+
         // Update button state
         if (btnIcon) btnIcon.textContent = '⏳';
         if (btnText) btnText.textContent = 'Claiming...';
         confirmBtnElement.disabled = true;
-        
+
         // Get territory service and claim territory
         const territoryService = this.getService('TerritoryService');
         if (territoryService) {
           const runTrackingService = this.getService('RunTrackingService');
           const runSession = await runTrackingService.importExternalActivity(activity);
           const result = await territoryService.claimTerritoryFromExternalActivity(runSession);
-          
+
           if (result.success) {
             this.safeEmit('territory:claimed', {
               territory: result.territory,
               transactionHash: result.transactionHash,
-              source: activity.source
+              source: activity.source,
             });
-            
+
             // Update UI to show success
             if (btnIcon) btnIcon.textContent = '✅';
             if (btnText) btnText.textContent = 'Claimed!';
-            
+
             setTimeout(closeDialog, 2000);
           } else {
             throw new Error(result.error || 'Failed to claim territory');
@@ -500,10 +516,10 @@ export class ExternalFitnessIntegration extends BaseService {
         const confirmBtnElement = confirmBtn as HTMLButtonElement;
         const btnIcon = confirmBtnElement.querySelector('.btn-icon');
         const btnText = confirmBtnElement.querySelector('.btn-text');
-        
+
         if (btnIcon) btnIcon.textContent = '❌';
         if (btnText) btnText.textContent = 'Failed';
-        
+
         setTimeout(() => {
           if (btnIcon) btnIcon.textContent = '⚡';
           if (btnText) btnText.textContent = 'Claim Territory';
@@ -511,7 +527,7 @@ export class ExternalFitnessIntegration extends BaseService {
         }, 3000);
       }
     });
-    
+
     // Close on backdrop click
     confirmDialog.addEventListener('click', (e) => {
       if (e.target === confirmDialog) {
@@ -525,7 +541,7 @@ export class ExternalFitnessIntegration extends BaseService {
    */
   protected async onInitialize(): Promise<void> {
     await this.fitnessService.initialize();
-    
+
     // Check if already connected
     const status = this.fitnessService.getConnectionStatus();
     if (status.strava) {

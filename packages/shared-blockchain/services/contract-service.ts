@@ -4,17 +4,17 @@
  * ENHANCEMENT FIRST: Fixed to work with actually deployed contracts
  */
 
-import { BaseService } from "@runrealm/shared-core/core/base-service";
-import { Web3Service } from "@runrealm/shared-core/services/web3-service";
-import { UserContextService } from "@runrealm/shared-core/services/user-context-service";
 import {
-  getCurrentNetworkConfig,
-  getContractConfig,
-  getContractAddresses,
-  isCorrectNetwork,
-  CONTRACT_METHODS,
   CONTRACT_EVENTS,
-} from "@runrealm/shared-core/config/contracts";
+  CONTRACT_METHODS,
+  getContractAddresses,
+  getContractConfig,
+  getCurrentNetworkConfig,
+  isCorrectNetwork,
+} from '@runrealm/shared-core/config/contracts';
+import { BaseService } from '@runrealm/shared-core/core/base-service';
+import { UserContextService } from '@runrealm/shared-core/services/user-context-service';
+import { Web3Service } from '@runrealm/shared-core/services/web3-service';
 
 export interface TerritoryClaimData {
   geohash: string;
@@ -66,14 +66,14 @@ export class ContractService extends BaseService {
   protected async onInitialize(): Promise<void> {
     // Wait for Web3Service to be ready
     if (!this.web3Service.isConnected()) {
-      console.log("ContractService: Waiting for wallet connection...");
+      console.log('ContractService: Waiting for wallet connection...');
       return;
     }
 
     await this.initializeContracts();
     this.setupEventListeners();
-    this.safeEmit("service:initialized", {
-      service: "ContractService",
+    this.safeEmit('service:initialized', {
+      service: 'ContractService',
       success: true,
     });
   }
@@ -83,19 +83,17 @@ export class ContractService extends BaseService {
       // Get current wallet info
       const wallet = this.web3Service.getCurrentWallet();
       if (!wallet) {
-        throw new Error("No wallet connected");
+        throw new Error('No wallet connected');
       }
 
       // Check if we're on the correct network
       if (!isCorrectNetwork(wallet.chainId)) {
-        throw new Error(
-          `Wrong network. Please switch to ${getCurrentNetworkConfig().name}`
-        );
+        throw new Error(`Wrong network. Please switch to ${getCurrentNetworkConfig().name}`);
       }
 
       // Get contract configurations from centralized config
-      const universalConfig = getContractConfig("universal");
-      const realmTokenConfig = getContractConfig("realmToken");
+      const universalConfig = getContractConfig('universal');
+      const realmTokenConfig = getContractConfig('realmToken');
 
       // Initialize Universal Contract
       this.universalContract = this.web3Service.getContract(
@@ -109,46 +107,38 @@ export class ContractService extends BaseService {
         realmTokenConfig.abi
       );
 
-      console.log("ContractService: Contracts initialized successfully");
-      console.log("Universal Contract:", universalConfig.address);
-      console.log("REALM Token:", realmTokenConfig.address);
+      console.log('ContractService: Contracts initialized successfully');
+      console.log('Universal Contract:', universalConfig.address);
+      console.log('REALM Token:', realmTokenConfig.address);
     } catch (error) {
-      console.error("ContractService: Failed to initialize contracts:", error);
+      console.error('ContractService: Failed to initialize contracts:', error);
       throw error;
     }
   }
 
   private setupEventListeners(): void {
     // Re-initialize contracts when wallet connects
-    this.subscribe("web3:walletConnected", async () => {
+    this.subscribe('web3:walletConnected', async () => {
       try {
         await this.initializeContracts();
       } catch (error) {
-        console.error(
-          "Failed to reinitialize contracts after wallet connection:",
-          error
-        );
+        console.error('Failed to reinitialize contracts after wallet connection:', error);
       }
     });
 
     // Handle network changes
-    this.subscribe("web3:networkChanged", async (data) => {
+    this.subscribe('web3:networkChanged', async (data) => {
       if (isCorrectNetwork(data.chainId)) {
         try {
           await this.initializeContracts();
         } catch (error) {
-          console.error(
-            "Failed to reinitialize contracts after network change:",
-            error
-          );
+          console.error('Failed to reinitialize contracts after network change:', error);
         }
       } else {
         this.universalContract = null;
         this.realmTokenContract = null;
         console.warn(
-          `Wrong network: ${data.chainId}. Expected: ${
-            getCurrentNetworkConfig().chainId
-          }`
+          `Wrong network: ${data.chainId}. Expected: ${getCurrentNetworkConfig().chainId}`
         );
       }
     });
@@ -158,38 +148,33 @@ export class ContractService extends BaseService {
    * Mint/claim a territory on the blockchain
    * ENHANCEMENT: Uses actual deployed contract method
    */
-  public async mintTerritory(
-    territoryData: TerritoryClaimData
-  ): Promise<string> {
+  public async mintTerritory(territoryData: TerritoryClaimData): Promise<string> {
     // Track territory claim attempt
     this.userContextService.trackUserAction('territory_claim_attempted', {
       geohash: territoryData.geohash,
-      difficulty: territoryData.difficulty
+      difficulty: territoryData.difficulty,
     });
 
     if (!this.universalContract) {
       throw new Error(
-        "Universal contract not initialized. Please connect wallet and switch to ZetaChain."
+        'Universal contract not initialized. Please connect wallet and switch to ZetaChain.'
       );
     }
 
     if (!this.web3Service.isConnected()) {
-      throw new Error("Wallet not connected");
+      throw new Error('Wallet not connected');
     }
 
     try {
-      console.log(
-        "ContractService: Minting territory on blockchain...",
-        territoryData
-      );
+      console.log('ContractService: Minting territory on blockchain...', territoryData);
 
       // Check if geohash is already claimed
-      const isClaimed = await this.universalContract[
-        CONTRACT_METHODS.universal.isGeohashClaimed
-      ](territoryData.geohash);
+      const isClaimed = await this.universalContract[CONTRACT_METHODS.universal.isGeohashClaimed](
+        territoryData.geohash
+      );
 
       if (isClaimed) {
-        throw new Error("Territory already claimed by another player");
+        throw new Error('Territory already claimed by another player');
       }
 
       // Estimate gas for the transaction
@@ -206,9 +191,7 @@ export class ContractService extends BaseService {
       const gasLimit = Math.ceil(Number(gasEstimate) * 1.2);
 
       // Execute the transaction
-      const tx = await this.universalContract[
-        CONTRACT_METHODS.universal.mintTerritory
-      ](
+      const tx = await this.universalContract[CONTRACT_METHODS.universal.mintTerritory](
         territoryData.geohash,
         territoryData.difficulty,
         territoryData.distance,
@@ -216,15 +199,12 @@ export class ContractService extends BaseService {
         { gasLimit }
       );
 
-      console.log(
-        "ContractService: Territory mint transaction submitted:",
-        tx.hash
-      );
+      console.log('ContractService: Territory mint transaction submitted:', tx.hash);
 
       // Emit transaction submitted event
-      this.safeEmit("web3:transactionSubmitted", {
+      this.safeEmit('web3:transactionSubmitted', {
         hash: tx.hash,
-        type: "territory_mint",
+        type: 'territory_mint',
       });
 
       // Wait for confirmation
@@ -245,46 +225,44 @@ export class ContractService extends BaseService {
           });
 
           if (territoryCreatedEvent) {
-            const parsed = this.universalContract.interface.parseLog(
-              territoryCreatedEvent
-            );
+            const parsed = this.universalContract.interface.parseLog(territoryCreatedEvent);
             tokenId = parsed.args.tokenId.toString();
           }
         } catch (error) {
-          console.warn("Could not extract tokenId from events:", error);
+          console.warn('Could not extract tokenId from events:', error);
         }
 
         // Emit success events
-        this.safeEmit("web3:transactionConfirmed", {
+        this.safeEmit('web3:transactionConfirmed', {
           hash: tx.hash,
           blockNumber: receipt.blockNumber,
         });
 
-        this.safeEmit("web3:territoryClaimed", {
-          tokenId: tokenId || "unknown",
+        this.safeEmit('web3:territoryClaimed', {
+          tokenId: tokenId || 'unknown',
           geohash: territoryData.geohash,
           metadata: territoryData,
         });
 
         // Track successful territory claim
         this.userContextService.trackUserAction('territory_claim_success', {
-          tokenId: tokenId || "unknown",
+          tokenId: tokenId || 'unknown',
           geohash: territoryData.geohash,
-          difficulty: territoryData.difficulty
+          difficulty: territoryData.difficulty,
         });
 
-        console.log("ContractService: Territory minted successfully!", {
+        console.log('ContractService: Territory minted successfully!', {
           tokenId,
           hash: tx.hash,
         });
         return tx.hash;
       } else {
-        throw new Error("Transaction failed");
+        throw new Error('Transaction failed');
       }
     } catch (error) {
-      console.error("ContractService: Territory mint failed:", error);
+      console.error('ContractService: Territory mint failed:', error);
 
-      this.safeEmit("web3:transactionFailed", {
+      this.safeEmit('web3:transactionFailed', {
         error: error instanceof Error ? error.message : String(error),
       });
 
@@ -300,66 +278,58 @@ export class ContractService extends BaseService {
     crossChainData: CrossChainTerritoryData
   ): Promise<void> {
     if (!this.universalContract) {
-      throw new Error("Universal contract not initialized");
+      throw new Error('Universal contract not initialized');
     }
 
     try {
-      console.log(
-        "ContractService: Handling cross-chain territory claim...",
-        crossChainData
-      );
+      console.log('ContractService: Handling cross-chain territory claim...', crossChainData);
 
       // Check if geohash is already claimed
-      const isClaimed = await this.universalContract[
-        CONTRACT_METHODS.universal.isGeohashClaimed
-      ](crossChainData.geohash);
+      const isClaimed = await this.universalContract[CONTRACT_METHODS.universal.isGeohashClaimed](
+        crossChainData.geohash
+      );
 
       if (isClaimed) {
-        throw new Error("Territory already claimed by another player");
+        throw new Error('Territory already claimed by another player');
       }
 
       // In a real implementation, this would be called via ZetaChain's onCall method
       // For now, we'll simulate the process by directly calling mintTerritory
-      const tx = await this.universalContract[
-        CONTRACT_METHODS.universal.mintTerritory
-      ](
+      const tx = await this.universalContract[CONTRACT_METHODS.universal.mintTerritory](
         crossChainData.geohash,
         crossChainData.difficulty,
         crossChainData.distance,
         crossChainData.landmarks
       );
 
-      console.log(
-        "ContractService: Cross-chain territory claim transaction submitted:",
-        tx.hash
-      );
+      console.log('ContractService: Cross-chain territory claim transaction submitted:', tx.hash);
 
       // Wait for confirmation
       const receipt = await tx.wait();
 
       if (receipt.status === 1) {
-        console.log("ContractService: Cross-chain territory claimed successfully!", {
+        console.log('ContractService: Cross-chain territory claimed successfully!', {
           hash: tx.hash,
         });
-        
+
         // Emit success event
-        this.safeEmit("web3:crossChainTerritoryClaimed", {
+        this.safeEmit('web3:crossChainTerritoryClaimed', {
           hash: tx.hash,
           geohash: crossChainData.geohash,
-          originChainId: crossChainData.originChainId
+          originChainId: crossChainData.originChainId,
         });
       } else {
-        throw new Error("Cross-chain territory claim transaction failed");
+        throw new Error('Cross-chain territory claim transaction failed');
       }
     } catch (error) {
-      console.error("ContractService: Cross-chain territory claim failed:", error);
-      
+      console.error('ContractService: Cross-chain territory claim failed:', error);
+
       // Emit failure event
-      this.safeEmit("web3:crossChainTerritoryClaimFailed", {
+      this.safeEmit('web3:crossChainTerritoryClaimFailed', {
         error: error instanceof Error ? error.message : String(error),
-        geohash: crossChainData.geohash
+        geohash: crossChainData.geohash,
       });
-      
+
       throw error;
     }
   }
@@ -376,31 +346,36 @@ export class ContractService extends BaseService {
     message: string
   ): Promise<void> {
     try {
-      console.log("ContractService: Processing cross-chain message", { context, zrc20, amount, message });
-      
+      console.log('ContractService: Processing cross-chain message', {
+        context,
+        zrc20,
+        amount,
+        message,
+      });
+
       // Decode the message
       const decoded = JSON.parse(message);
-      
+
       // Handle different message types
       switch (decoded.type) {
-        case "territoryClaim":
+        case 'territoryClaim':
           await this.handleCrossChainTerritoryClaim(decoded.data);
           break;
-        case "statsUpdate":
+        case 'statsUpdate':
           // Handle stats update
-          console.log("Processing stats update from cross-chain message");
+          console.log('Processing stats update from cross-chain message');
           break;
-        case "rewardClaim":
+        case 'rewardClaim':
           // Handle reward claim
-          console.log("Processing reward claim from cross-chain message");
+          console.log('Processing reward claim from cross-chain message');
           break;
         default:
-          console.warn("Unknown cross-chain message type:", decoded.type);
+          console.warn('Unknown cross-chain message type:', decoded.type);
       }
-      
-      console.log("ContractService: Cross-chain message processed successfully");
+
+      console.log('ContractService: Cross-chain message processed successfully');
     } catch (error) {
-      console.error("ContractService: Failed to process cross-chain message:", error);
+      console.error('ContractService: Failed to process cross-chain message:', error);
       throw error;
     }
   }
@@ -410,15 +385,13 @@ export class ContractService extends BaseService {
    */
   public async isGeohashClaimed(geohash: string): Promise<boolean> {
     if (!this.universalContract) {
-      throw new Error("Universal contract not initialized");
+      throw new Error('Universal contract not initialized');
     }
 
     try {
-      return await this.universalContract[
-        CONTRACT_METHODS.universal.isGeohashClaimed
-      ](geohash);
+      return await this.universalContract[CONTRACT_METHODS.universal.isGeohashClaimed](geohash);
     } catch (error) {
-      console.error("ContractService: Failed to check geohash:", error);
+      console.error('ContractService: Failed to check geohash:', error);
       return false; // Assume not claimed if we can't check
     }
   }
@@ -428,22 +401,22 @@ export class ContractService extends BaseService {
    */
   public async getPlayerTerritories(address?: string): Promise<number[]> {
     if (!this.universalContract) {
-      throw new Error("Universal contract not initialized");
+      throw new Error('Universal contract not initialized');
     }
 
-    const targetAddress =
-      address || this.web3Service.getCurrentWallet()?.address;
+    const targetAddress = address || this.web3Service.getCurrentWallet()?.address;
     if (!targetAddress) {
-      throw new Error("No address provided and no wallet connected");
+      throw new Error('No address provided and no wallet connected');
     }
 
     try {
-      const tokenIds = await this.universalContract[
-        CONTRACT_METHODS.universal.getPlayerTerritories
-      ](targetAddress);
+      const tokenIds =
+        await this.universalContract[CONTRACT_METHODS.universal.getPlayerTerritories](
+          targetAddress
+        );
       return tokenIds.map((id: any) => Number(id));
     } catch (error) {
-      console.error("ContractService: Failed to get territories:", error);
+      console.error('ContractService: Failed to get territories:', error);
       return [];
     }
   }
@@ -451,17 +424,14 @@ export class ContractService extends BaseService {
   /**
    * Get territory metadata by token ID
    */
-  public async getTerritoryInfo(
-    tokenId: number
-  ): Promise<TerritoryMetadata | null> {
+  public async getTerritoryInfo(tokenId: number): Promise<TerritoryMetadata | null> {
     if (!this.universalContract) {
-      throw new Error("Universal contract not initialized");
+      throw new Error('Universal contract not initialized');
     }
 
     try {
-      const info = await this.universalContract[
-        CONTRACT_METHODS.universal.getTerritoryInfo
-      ](tokenId);
+      const info =
+        await this.universalContract[CONTRACT_METHODS.universal.getTerritoryInfo](tokenId);
 
       return {
         geohash: info.geohash,
@@ -475,10 +445,10 @@ export class ContractService extends BaseService {
         isActive: info.isActive,
         tokenId,
         // Note: crossChainHistory is not stored on-chain, it's tracked client-side
-        crossChainHistory: []
+        crossChainHistory: [],
       };
     } catch (error) {
-      console.error("ContractService: Failed to get territory info:", error);
+      console.error('ContractService: Failed to get territory info:', error);
       return null;
     }
   }
@@ -488,19 +458,17 @@ export class ContractService extends BaseService {
    */
   public async getPlayerStats(address?: string): Promise<PlayerStats | null> {
     if (!this.universalContract) {
-      throw new Error("Universal contract not initialized");
+      throw new Error('Universal contract not initialized');
     }
 
-    const targetAddress =
-      address || this.web3Service.getCurrentWallet()?.address;
+    const targetAddress = address || this.web3Service.getCurrentWallet()?.address;
     if (!targetAddress) {
-      throw new Error("No address provided and no wallet connected");
+      throw new Error('No address provided and no wallet connected');
     }
 
     try {
-      const stats = await this.universalContract[
-        CONTRACT_METHODS.universal.getPlayerStats
-      ](targetAddress);
+      const stats =
+        await this.universalContract[CONTRACT_METHODS.universal.getPlayerStats](targetAddress);
 
       return {
         totalDistance: Number(stats.totalDistance),
@@ -510,7 +478,7 @@ export class ContractService extends BaseService {
         lastActivity: Number(stats.lastActivity),
       };
     } catch (error) {
-      console.error("ContractService: Failed to get player stats:", error);
+      console.error('ContractService: Failed to get player stats:', error);
       return null;
     }
   }
@@ -518,12 +486,9 @@ export class ContractService extends BaseService {
   /**
    * Calculate territory reward (preview)
    */
-  public async calculateTerritoryReward(
-    difficulty: number,
-    distance: number
-  ): Promise<string> {
+  public async calculateTerritoryReward(difficulty: number, distance: number): Promise<string> {
     if (!this.universalContract) {
-      throw new Error("Universal contract not initialized");
+      throw new Error('Universal contract not initialized');
     }
 
     try {
@@ -532,11 +497,11 @@ export class ContractService extends BaseService {
       ](difficulty, distance);
 
       // Convert from wei to REALM tokens
-      const ethers = await import("ethers");
+      const ethers = await import('ethers');
       return ethers.formatEther(reward);
     } catch (error) {
-      console.error("ContractService: Failed to calculate reward:", error);
-      return "0";
+      console.error('ContractService: Failed to calculate reward:', error);
+      return '0';
     }
   }
 
@@ -545,26 +510,24 @@ export class ContractService extends BaseService {
    */
   public async getRealmTokenBalance(address?: string): Promise<string> {
     if (!this.realmTokenContract) {
-      throw new Error("Realm token contract not initialized");
+      throw new Error('Realm token contract not initialized');
     }
 
-    const targetAddress =
-      address || this.web3Service.getCurrentWallet()?.address;
+    const targetAddress = address || this.web3Service.getCurrentWallet()?.address;
     if (!targetAddress) {
-      throw new Error("No address provided and no wallet connected");
+      throw new Error('No address provided and no wallet connected');
     }
 
     try {
-      const balance = await this.realmTokenContract[
-        CONTRACT_METHODS.realmToken.balanceOf
-      ](targetAddress);
+      const balance =
+        await this.realmTokenContract[CONTRACT_METHODS.realmToken.balanceOf](targetAddress);
 
       // Convert from wei to human readable format
-      const ethers = await import("ethers");
+      const ethers = await import('ethers');
       return ethers.formatEther(balance); // REALM token has 18 decimals like ETH
     } catch (error) {
-      console.error("ContractService: Failed to get REALM balance:", error);
-      return "0";
+      console.error('ContractService: Failed to get REALM balance:', error);
+      return '0';
     }
   }
 
@@ -573,16 +536,14 @@ export class ContractService extends BaseService {
    */
   public async getTotalTerritories(): Promise<number> {
     if (!this.universalContract) {
-      throw new Error("Universal contract not initialized");
+      throw new Error('Universal contract not initialized');
     }
 
     try {
-      const total = await this.universalContract[
-        CONTRACT_METHODS.universal.getTotalTerritories
-      ]();
+      const total = await this.universalContract[CONTRACT_METHODS.universal.getTotalTerritories]();
       return Number(total);
     } catch (error) {
-      console.error("ContractService: Failed to get total territories:", error);
+      console.error('ContractService: Failed to get total territories:', error);
       return 0;
     }
   }

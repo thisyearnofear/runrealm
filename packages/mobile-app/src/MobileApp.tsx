@@ -2,27 +2,28 @@
  * MobileApp - Minimal version with navigation
  * Services will be added incrementally
  */
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { NavigationContainer } from '@react-navigation/native';
+import {
+  Achievement,
+  AchievementService,
+} from '@runrealm/shared-core/services/achievement-service';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 // Service 1: AchievementService (simplest, no browser dependencies)
-let AchievementService: any = null;
-let Achievement: any = null;
+let AchievementServiceClass: typeof AchievementService | null = null;
 
 // Dynamic import for optional dependency
 (async () => {
   try {
-    const achievementModule = await import(
-      "@runrealm/shared-core/services/achievement-service"
-    );
+    const achievementModule = await import('@runrealm/shared-core/services/achievement-service');
     if (achievementModule?.AchievementService) {
-      AchievementService = achievementModule.AchievementService;
-      Achievement = achievementModule.Achievement;
+      AchievementServiceClass = achievementModule.AchievementService;
     }
   } catch (error) {
-    console.warn("AchievementService not available:", error);
+    console.warn('AchievementService not available:', error);
   }
 })();
 
@@ -30,20 +31,20 @@ const Tab = createBottomTabNavigator();
 
 // Minimal screen components - will be enhanced later
 function DashboardScreen() {
-  const [achievements, setAchievements] = useState<any[]>([]);
-  const [achievementService, setAchievementService] = useState<any>(null);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [achievementService, setAchievementService] = useState<AchievementService | null>(null);
 
   useEffect(() => {
-    if (AchievementService) {
-      const service = new AchievementService();
+    if (AchievementServiceClass) {
+      const service = new AchievementServiceClass();
       service
         .initialize()
         .then(() => {
           setAchievementService(service);
           setAchievements(service.getAchievements());
         })
-        .catch((err: any) => {
-          console.warn("Failed to initialize AchievementService:", err);
+        .catch((err: unknown) => {
+          console.warn('Failed to initialize AchievementService:', err);
         });
     }
   }, []);
@@ -53,9 +54,7 @@ function DashboardScreen() {
       <Text style={styles.title}>Dashboard</Text>
       {achievementService ? (
         <>
-          <Text style={styles.subtitle}>
-            {achievements.length} achievements available
-          </Text>
+          <Text style={styles.subtitle}>{achievements.length} achievements available</Text>
           <Text style={styles.info}>
             {achievements.filter((a) => a.unlockedAt).length} unlocked
           </Text>
@@ -89,9 +88,7 @@ function ProfileScreen() {
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>Profile</Text>
-      <Text style={styles.subtitle}>
-        User profile and settings will go here
-      </Text>
+      <Text style={styles.subtitle}>User profile and settings will go here</Text>
     </View>
   );
 }
@@ -111,42 +108,26 @@ export default function MobileApp() {
       <Tab.Navigator
         screenOptions={{
           headerStyle: {
-            backgroundColor: "#1a1a1a",
+            backgroundColor: '#1a1a1a',
           },
-          headerTintColor: "#fff",
+          headerTintColor: '#fff',
           tabBarStyle: {
-            backgroundColor: "#1a1a1a",
+            backgroundColor: '#1a1a1a',
           },
-          tabBarActiveTintColor: "#00ff88",
-          tabBarInactiveTintColor: "#666",
+          tabBarActiveTintColor: '#00ff88',
+          tabBarInactiveTintColor: '#666',
         }}
       >
-        <Tab.Screen
-          name="Dashboard"
-          component={DashboardScreen}
-          options={{ title: "Dashboard" }}
-        />
+        <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Dashboard' }} />
         <Tab.Screen
           name="Map"
           component={MapScreen}
-          options={{ title: "Map" }}
+          options={{ title: 'Map' }}
           // Using simple MapScreen from this file, not src/screens/MapScreen.tsx
         />
-        <Tab.Screen
-          name="History"
-          component={HistoryScreen}
-          options={{ title: "History" }}
-        />
-        <Tab.Screen
-          name="Profile"
-          component={ProfileScreen}
-          options={{ title: "Profile" }}
-        />
-        <Tab.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{ title: "Settings" }}
-        />
+        <Tab.Screen name="History" component={HistoryScreen} options={{ title: 'History' }} />
+        <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
+        <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       </Tab.Navigator>
     </NavigationContainer>
   );
@@ -155,27 +136,27 @@ export default function MobileApp() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#1a1a1a",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
     padding: 20,
   },
   title: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
+    fontWeight: 'bold',
+    color: '#fff',
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: "#999",
-    textAlign: "center",
+    color: '#999',
+    textAlign: 'center',
     marginTop: 10,
   },
   info: {
     fontSize: 14,
-    color: "#666",
-    textAlign: "center",
+    color: '#666',
+    textAlign: 'center',
     marginTop: 5,
   },
 });

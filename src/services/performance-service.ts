@@ -22,10 +22,10 @@ export class PerformanceService {
   private initializePerformanceMonitoring(): void {
     // Monitor Core Web Vitals
     this.observeWebVitals();
-    
+
     // Monitor custom metrics
     this.observeCustomMetrics();
-    
+
     // Setup memory monitoring
     this.setupMemoryMonitoring();
   }
@@ -64,7 +64,6 @@ export class PerformanceService {
       });
       clsObserver.observe({ entryTypes: ['layout-shift'] });
       this.observers.set('cls', clsObserver);
-
     } catch (error) {
       console.warn('Performance monitoring not supported:', error);
     }
@@ -73,14 +72,14 @@ export class PerformanceService {
   private observeCustomMetrics(): void {
     // Time to Interactive
     this.measureTimeToInteractive();
-    
+
     // Bundle size metrics
     this.measureBundleMetrics();
   }
 
   private measureTimeToInteractive(): void {
     const startTime = performance.now();
-    
+
     // Measure when the app becomes interactive
     const checkInteractive = () => {
       if (document.readyState === 'complete') {
@@ -90,7 +89,7 @@ export class PerformanceService {
         requestAnimationFrame(checkInteractive);
       }
     };
-    
+
     checkInteractive();
   }
 
@@ -98,15 +97,15 @@ export class PerformanceService {
     // Measure resource loading times
     window.addEventListener('load', () => {
       const resources = performance.getEntriesByType('resource');
-      
+
       let totalSize = 0;
       let jsSize = 0;
       let cssSize = 0;
-      
+
       resources.forEach((resource: any) => {
         if (resource.transferSize) {
           totalSize += resource.transferSize;
-          
+
           if (resource.name.endsWith('.js')) {
             jsSize += resource.transferSize;
           } else if (resource.name.endsWith('.css')) {
@@ -114,7 +113,7 @@ export class PerformanceService {
           }
         }
       });
-      
+
       this.metrics.set('totalBundleSize', totalSize);
       this.metrics.set('jsBundleSize', jsSize);
       this.metrics.set('cssBundleSize', cssSize);
@@ -138,7 +137,7 @@ export class PerformanceService {
     wait: number
   ): (...args: Parameters<T>) => void {
     let timeout: NodeJS.Timeout;
-    
+
     return (...args: Parameters<T>) => {
       clearTimeout(timeout);
       timeout = setTimeout(() => func.apply(this, args), wait);
@@ -151,21 +150,20 @@ export class PerformanceService {
     limit: number
   ): (...args: Parameters<T>) => void {
     let inThrottle: boolean;
-    
+
     return (...args: Parameters<T>) => {
       if (!inThrottle) {
         func.apply(this, args);
         inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
+        setTimeout(() => {
+          inThrottle = false;
+        }, limit);
       }
     };
   }
 
   // Lazy loading utility
-  lazyLoad<T>(
-    loader: () => Promise<T>,
-    condition: () => boolean = () => true
-  ): Promise<T> {
+  lazyLoad<T>(loader: () => Promise<T>, condition: () => boolean = () => true): Promise<T> {
     return new Promise((resolve, reject) => {
       if (condition()) {
         loader().then(resolve).catch(reject);
@@ -188,7 +186,7 @@ export class PerformanceService {
     const link = document.createElement('link');
     link.rel = 'preload';
     link.href = url;
-    
+
     switch (type) {
       case 'script':
         link.as = 'script';
@@ -200,7 +198,7 @@ export class PerformanceService {
         link.as = 'image';
         break;
     }
-    
+
     document.head.appendChild(link);
   }
 
@@ -228,12 +226,12 @@ export class PerformanceService {
 
   reportMetrics(): void {
     const metrics = this.getMetrics();
-    
+
     // Log metrics in development
     if (process.env.NODE_ENV === 'development') {
       console.table(metrics);
     }
-    
+
     // Send to analytics in production
     if (process.env.NODE_ENV === 'production') {
       this.sendToAnalytics(metrics);
@@ -249,7 +247,7 @@ export class PerformanceService {
         Object.entries(metrics).forEach(([name, value]) => {
           gtag('event', 'performance_metric', {
             metric_name: name,
-            metric_value: value
+            metric_value: value,
           });
         });
       }
@@ -260,7 +258,9 @@ export class PerformanceService {
 
   // Memory cleanup
   cleanup(): void {
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => {
+      observer.disconnect();
+    });
     this.observers.clear();
     this.metrics.clear();
   }
@@ -276,11 +276,11 @@ export class PerformanceService {
     // Define performance budgets
     const budgets = {
       LCP: 2500, // 2.5 seconds
-      FID: 100,  // 100ms
-      CLS: 0.1,  // 0.1
+      FID: 100, // 100ms
+      CLS: 0.1, // 0.1
       TTI: 3500, // 3.5 seconds
       jsBundleSize: 500000, // 500KB
-      totalBundleSize: 1000000 // 1MB
+      totalBundleSize: 1000000, // 1MB
     };
 
     Object.entries(budgets).forEach(([metric, budget]) => {
@@ -292,7 +292,7 @@ export class PerformanceService {
 
     return {
       passed: violations.length === 0,
-      violations
+      violations,
     };
   }
 }

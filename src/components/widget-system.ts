@@ -4,13 +4,13 @@
  */
 
 import { BaseService } from '../core/base-service';
+import { AnimationService } from '../services/animation-service';
 import { DOMService } from '../services/dom-service';
 import { DragService } from './drag-service';
-import { AnimationService } from '../services/animation-service';
-import { WidgetStateService, WidgetState } from './widget-state-service';
-import { VisibilityService } from './visibility-service';
 import { MobileWidgetService } from './mobile-widget-service';
 import { TouchGestureService } from './touch-gesture-service';
+import { VisibilityService } from './visibility-service';
+import { WidgetState, WidgetStateService } from './widget-state-service';
 
 export interface Widget {
   id: string;
@@ -34,7 +34,7 @@ export class WidgetSystem extends BaseService {
   private widgetContainer: HTMLElement | null = null;
 
   constructor(
-    domService: DOMService, 
+    domService: DOMService,
     dragService: DragService,
     animationService: AnimationService,
     widgetStateService: WidgetStateService
@@ -60,9 +60,9 @@ export class WidgetSystem extends BaseService {
         // Update widget state based on visibility changes
         this.widgetStateService.setWidgetState(widgetId, {
           ...this.widgetStateService.getWidgetState(widgetId),
-          visible: data.visible
+          visible: data.visible,
         });
-        
+
         // Update widget display
         const element = this.getWidgetElement(widgetId);
         if (element) {
@@ -89,7 +89,7 @@ export class WidgetSystem extends BaseService {
     this.createWidgetContainer();
     this.setupEventHandlers();
     this.setupDragAndDrop();
-    
+
     // Subscribe to widget state changes
     this.subscribe('widget:stateChanged', (data: { widgetId: string; state: WidgetState }) => {
       const widget = this.widgets.get(data.widgetId);
@@ -110,7 +110,7 @@ export class WidgetSystem extends BaseService {
     this.subscribe('widget:updateContent' as any, (data: any) => {
       this.updateWidget(data.widgetId, data.content, {
         loading: data.loading,
-        success: data.success
+        success: data.success,
       });
     });
 
@@ -123,7 +123,7 @@ export class WidgetSystem extends BaseService {
    */
   public registerWidget(widget: Widget): void {
     this.widgets.set(widget.id, widget);
-    
+
     // Initialize widget state
     const existingState = this.widgetStateService.getWidgetState(widget.id);
     if (existingState) {
@@ -137,10 +137,10 @@ export class WidgetSystem extends BaseService {
         position: widget.position,
         minimized: widget.minimized,
         visible: true,
-        priority: widget.priority
+        priority: widget.priority,
       });
     }
-    
+
     this.renderWidget(widget);
     // Don't call arrangeWidgets() immediately - it destroys and recreates elements
     // this.arrangeWidgets();
@@ -164,7 +164,7 @@ export class WidgetSystem extends BaseService {
     if (element.classList.contains('widget-animating')) return;
 
     const isMobile = window.innerWidth <= 768;
-    
+
     // If expanding this widget
     if (widget.minimized) {
       // On mobile: minimize ALL other widgets for maximum map visibility
@@ -186,7 +186,11 @@ export class WidgetSystem extends BaseService {
   /**
    * Update widget content with improved event handling
    */
-  public updateWidget(widgetId: string, content: string, options?: { loading?: boolean; success?: boolean }): void {
+  public updateWidget(
+    widgetId: string,
+    content: string,
+    options?: { loading?: boolean; success?: boolean }
+  ): void {
     const widget = this.widgets.get(widgetId);
     if (!widget) return;
 
@@ -209,19 +213,19 @@ export class WidgetSystem extends BaseService {
 
     // Update content while preserving event delegation
     widget.content = content;
-    
+
     // Use a more reliable content update that preserves widget structure
     const contentElement = element.querySelector('.widget-content');
     if (contentElement) {
       // Preserve scroll position
       const scrollTop = contentElement.scrollTop;
-      
+
       // Update content
       contentElement.innerHTML = content;
-      
+
       // Restore scroll position
       contentElement.scrollTop = scrollTop;
-      
+
       // Emit event for components that need to reattach specific handlers
       this.safeEmit('widget:contentUpdated' as any, { widgetId, element });
     }
@@ -254,7 +258,7 @@ export class WidgetSystem extends BaseService {
         <div class="widget-zone bottom-left" data-position="bottom-left"></div>
         <div class="widget-zone bottom-right" data-position="bottom-right"></div>
       `,
-      parent: document.body
+      parent: document.body,
     });
 
     // Force immediate DOM insertion and styling
@@ -288,24 +292,24 @@ export class WidgetSystem extends BaseService {
       id: `widget-${widget.id}`,
       className: `widget ${widget.minimized ? 'minimized' : 'expanded'}`,
       innerHTML: this.getWidgetHTML(widget),
-      parent: undefined // We'll append manually
+      parent: undefined, // We'll append manually
     });
 
     // Apply mobile optimizations using existing service
     if (this.mobileWidgetService) {
       this.mobileWidgetService.applyMobileStyling(widgetElement);
       this.mobileWidgetService.optimizeLayout(widgetElement);
-      
+
       // Apply mobile-specific content optimizations
       this.applyMobileContentOptimizations(widgetElement);
     }
-    
+
     // Ensure mobile responsiveness
     const isMobile = window.innerWidth <= 768;
     if (isMobile) {
       this.applyMobileWidgetBehavior(widgetElement, widget);
     }
-    
+
     // Make widget header draggable using DragService
     const header = widgetElement.querySelector('.widget-header') as HTMLElement;
     if (header) {
@@ -324,10 +328,10 @@ export class WidgetSystem extends BaseService {
           const rect = widgetElement.getBoundingClientRect();
           const centerX = rect.left + rect.width / 2;
           const centerY = rect.top + rect.height / 2;
-          
+
           const newPosition = this.getClosestZone(centerX, centerY);
           const widgetId = widgetElement.id.replace('widget-', '');
-          
+
           // Update widget position
           this.moveWidgetToPosition(widgetId, newPosition);
         },
@@ -336,7 +340,7 @@ export class WidgetSystem extends BaseService {
           if (widget.minimized) {
             this.toggleWidget(widget.id);
           }
-        }
+        },
       });
     }
 
@@ -371,17 +375,17 @@ export class WidgetSystem extends BaseService {
 
     // Mark as animating to prevent rapid clicks
     element.classList.add('widget-animating');
-    
+
     // Update toggle button immediately for better feedback
     this.updateWidgetToggle(element, widget);
-    
+
     // Apply state changes
     this.updateWidgetClasses(element, widget);
     this.updateWidgetContent(element, widget);
-    
+
     // Force a reflow to ensure styles are applied
     element.offsetHeight;
-    
+
     // Remove animating class after animation completes
     setTimeout(() => {
       element.classList.remove('widget-animating');
@@ -401,15 +405,15 @@ export class WidgetSystem extends BaseService {
   private updateWidgetClasses(element: HTMLElement, widget: Widget): void {
     // Clear all state classes first
     element.classList.remove('minimized', 'expanded', 'active');
-    
+
     // Remove active class from all widgets in same position
     const zone = this.getWidgetZone(widget.position);
     if (zone) {
-      zone.querySelectorAll('.widget').forEach(el => {
+      zone.querySelectorAll('.widget').forEach((el) => {
         el.classList.remove('active');
       });
     }
-    
+
     // Apply new state
     if (widget.minimized) {
       element.classList.add('minimized');
@@ -434,11 +438,11 @@ export class WidgetSystem extends BaseService {
   private updateWidgetToggle(element: HTMLElement, widget: Widget): void {
     const toggle = element.querySelector('.widget-toggle');
     const header = element.querySelector('.widget-header');
-    
+
     if (toggle) {
       toggle.textContent = widget.minimized ? '⬆️' : '⬇️';
     }
-    
+
     if (header) {
       header.setAttribute('aria-expanded', (!widget.minimized).toString());
     }
@@ -449,8 +453,8 @@ export class WidgetSystem extends BaseService {
    */
   private minimizeWidgetsInPosition(position: string, exceptId: string): void {
     const widgetsToMinimize = this.getWidgetsToMinimize(position, exceptId);
-    
-    widgetsToMinimize.forEach(widget => {
+
+    widgetsToMinimize.forEach((widget) => {
       widget.minimized = true;
       this.updateWidgetDisplay(widget);
     });
@@ -472,12 +476,9 @@ export class WidgetSystem extends BaseService {
    * Get widgets that should be minimized
    */
   private getWidgetsToMinimize(position: string, exceptId: string): Widget[] {
-    return Array.from(this.widgets.values())
-      .filter(widget => 
-        widget.position === position && 
-        widget.id !== exceptId && 
-        !widget.minimized
-      );
+    return Array.from(this.widgets.values()).filter(
+      (widget) => widget.position === position && widget.id !== exceptId && !widget.minimized
+    );
   }
 
   /**
@@ -485,8 +486,8 @@ export class WidgetSystem extends BaseService {
    */
   private arrangeWidgets(): void {
     const positions = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-    
-    positions.forEach(position => {
+
+    positions.forEach((position) => {
       const zone = this.getWidgetZone(position);
       if (!zone) return;
 
@@ -510,7 +511,7 @@ export class WidgetSystem extends BaseService {
    * Append widgets to a zone in order
    */
   private appendWidgetsToZone(zone: Element, widgets: Widget[]): void {
-    widgets.forEach(widget => {
+    widgets.forEach((widget) => {
       const element = this.getWidgetElement(widget.id);
       if (element) {
         zone.appendChild(element);
@@ -526,10 +527,12 @@ export class WidgetSystem extends BaseService {
     this.domService.delegate(document.body, '.widget-toggle', 'click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      
+
       const target = event.target as HTMLElement;
-      const widgetId = target.dataset.widgetId || target.closest('[data-widget-id]')?.getAttribute('data-widget-id');
-      
+      const widgetId =
+        target.dataset.widgetId ||
+        target.closest('[data-widget-id]')?.getAttribute('data-widget-id');
+
       if (widgetId) {
         // Prevent rapid clicking during animation
         const widget = this.getWidgetElement(widgetId);
@@ -542,17 +545,19 @@ export class WidgetSystem extends BaseService {
     // Enhanced widget header clicks with better delegation
     this.domService.delegate(document.body, '.widget-header', 'click', (event) => {
       const target = event.target as HTMLElement;
-      
+
       // Don't trigger on toggle button clicks
       if (target.classList.contains('widget-toggle') || target.closest('.widget-toggle')) {
         return;
       }
-      
+
       event.preventDefault();
       event.stopPropagation();
-      
-      const widgetId = target.dataset.widgetId || target.closest('[data-widget-id]')?.getAttribute('data-widget-id');
-      
+
+      const widgetId =
+        target.dataset.widgetId ||
+        target.closest('[data-widget-id]')?.getAttribute('data-widget-id');
+
       if (widgetId) {
         // Prevent rapid clicking during animation
         const widget = this.getWidgetElement(widgetId);
@@ -568,7 +573,7 @@ export class WidgetSystem extends BaseService {
       if (document.body.classList.contains('modal-open')) {
         return;
       }
-      
+
       const target = event.target as HTMLElement;
       if (!target.closest('.widget') && this.activeWidget) {
         const activeWidget = this.widgets.get(this.activeWidget);
@@ -584,19 +589,19 @@ export class WidgetSystem extends BaseService {
       if (document.body.classList.contains('modal-open')) {
         return;
       }
-      
+
       // Escape key to close expanded widget
       if (event.key === 'Escape' && this.activeWidget) {
         this.toggleWidget(this.activeWidget);
         return;
       }
-      
+
       // Tab navigation between widgets
       if (event.key === 'Tab') {
         this.handleTabNavigation(event);
         return;
       }
-      
+
       // Enter to toggle focused widget
       if (event.key === 'Enter') {
         const focused = document.activeElement;
@@ -618,11 +623,9 @@ export class WidgetSystem extends BaseService {
     const widgets = Array.from(document.querySelectorAll('.widget-header'));
     if (widgets.length === 0) return;
 
-    const currentIndex = widgets.findIndex(widget => 
-      widget === document.activeElement
-    );
+    const currentIndex = widgets.findIndex((widget) => widget === document.activeElement);
 
-    let nextIndex;
+    let nextIndex: number;
     if (event.shiftKey) {
       // Shift + Tab: go to previous widget
       nextIndex = currentIndex <= 0 ? widgets.length - 1 : currentIndex - 1;
@@ -651,7 +654,7 @@ export class WidgetSystem extends BaseService {
       element.remove();
     }
     this.widgets.delete(widgetId);
-    
+
     if (this.activeWidget === widgetId) {
       this.activeWidget = null;
     }
@@ -675,14 +678,18 @@ export class WidgetSystem extends BaseService {
    */
   public getWidgetsByPosition(position: string): Widget[] {
     return Array.from(this.widgets.values())
-      .filter(w => w.position === position)
+      .filter((w) => w.position === position)
       .sort((a, b) => b.priority - a.priority);
   }
 
   /**
    * Add visual feedback for user actions
    */
-  public showWidgetNotification(widgetId: string, message: string, type: 'info' | 'success' | 'warning' = 'info'): void {
+  public showWidgetNotification(
+    widgetId: string,
+    message: string,
+    type: 'info' | 'success' | 'warning' = 'info'
+  ): void {
     const element = this.getWidgetElement(widgetId);
     if (!element) return;
 
@@ -752,13 +759,13 @@ export class WidgetSystem extends BaseService {
    */
   private forceRender(): void {
     if (!this.widgetContainer) return;
-    
+
     // Trigger reflow to ensure DOM changes are applied
     this.widgetContainer.offsetHeight;
-    
+
     // Ensure all widget zones are visible
     const zones = this.widgetContainer.querySelectorAll('.widget-zone');
-    zones.forEach(zone => {
+    zones.forEach((zone) => {
       (zone as HTMLElement).offsetHeight; // Trigger reflow for each zone
     });
   }
@@ -776,8 +783,8 @@ export class WidgetSystem extends BaseService {
         position: widget.position,
         minimized: widget.minimized,
         elementExists: !!this.getWidgetElement(id),
-        elementVisible: this.isWidgetVisible(id)
-      }))
+        elementVisible: this.isWidgetVisible(id),
+      })),
     };
   }
 
@@ -792,7 +799,10 @@ export class WidgetSystem extends BaseService {
   /**
    * Get the closest zone based on coordinates
    */
-  private getClosestZone(x: number, y: number): 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' {
+  private getClosestZone(
+    x: number,
+    y: number
+  ): 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' {
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
 
@@ -860,10 +870,10 @@ export class WidgetSystem extends BaseService {
   private applyMobileContentOptimizations(widgetElement: HTMLElement): void {
     // Remove excessive spacing
     this.reduceSpacing(widgetElement);
-    
+
     // Compact button groups
     this.compactButtonGroups(widgetElement);
-    
+
     // Optimize text content
     this.optimizeTextContent(widgetElement);
   }
@@ -874,14 +884,14 @@ export class WidgetSystem extends BaseService {
   private applyMobileWidgetBehavior(widgetElement: HTMLElement, widget: Widget): void {
     // Add mobile-specific classes
     widgetElement.classList.add('mobile-optimized');
-    
+
     // Ensure proper touch handling
     const header = widgetElement.querySelector('.widget-header') as HTMLElement;
     if (header) {
       header.style.touchAction = 'manipulation';
       header.style.userSelect = 'none';
     }
-    
+
     // Auto-apply compact mode for small screens
     if (window.innerWidth < 400) {
       widgetElement.classList.add('ultra-compact');
@@ -894,10 +904,10 @@ export class WidgetSystem extends BaseService {
   private reduceSpacing(widgetElement: HTMLElement): void {
     // Reduce margins and padding on all child elements
     const allElements = widgetElement.querySelectorAll('*');
-    allElements.forEach(el => {
+    allElements.forEach((el) => {
       const element = el as HTMLElement;
       const tagName = element.tagName.toLowerCase();
-      
+
       // Apply compact spacing to common elements
       if (['div', 'p', 'span', 'section'].includes(tagName)) {
         element.style.margin = '1px 0';
@@ -913,20 +923,20 @@ export class WidgetSystem extends BaseService {
    */
   private compactButtonGroups(widgetElement: HTMLElement): void {
     const buttonGroups = widgetElement.querySelectorAll('.widget-buttons, .button-group');
-    buttonGroups.forEach(group => {
+    buttonGroups.forEach((group) => {
       const groupEl = group as HTMLElement;
       groupEl.style.display = 'flex';
       groupEl.style.flexWrap = 'wrap';
       groupEl.style.gap = '2px';
       groupEl.style.justifyContent = 'space-between';
-      
+
       // Make buttons fill available space efficiently
       const buttons = group.querySelectorAll('button');
       if (buttons.length > 0) {
         const buttonsPerRow = Math.min(3, buttons.length);
         const buttonWidth = `calc(${100 / buttonsPerRow}% - 2px)`;
-        
-        buttons.forEach(btn => {
+
+        buttons.forEach((btn) => {
           const button = btn as HTMLElement;
           button.style.flex = '1';
           button.style.minWidth = '32px';
@@ -942,7 +952,7 @@ export class WidgetSystem extends BaseService {
   private optimizeTextContent(widgetElement: HTMLElement): void {
     // Shorten common labels for mobile
     const labels = widgetElement.querySelectorAll('.widget-stat-label, .label, .form-label');
-    labels.forEach(label => {
+    labels.forEach((label) => {
       const labelEl = label as HTMLElement;
       if (labelEl.textContent) {
         labelEl.textContent = labelEl.textContent
@@ -955,10 +965,10 @@ export class WidgetSystem extends BaseService {
           .replace('Territory Claimed', 'Territory');
       }
     });
-    
+
     // Compact descriptions and help text
     const descriptions = widgetElement.querySelectorAll('.description, .help-text');
-    descriptions.forEach(desc => {
+    descriptions.forEach((desc) => {
       const descEl = desc as HTMLElement;
       if (descEl.textContent && descEl.textContent.length > 50) {
         // Truncate long descriptions on mobile
@@ -966,7 +976,10 @@ export class WidgetSystem extends BaseService {
       }
     });
   }
-  private moveWidgetToPosition(widgetId: string, newPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'): void {
+  private moveWidgetToPosition(
+    widgetId: string,
+    newPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+  ): void {
     const widget = this.widgets.get(widgetId);
     if (!widget) return;
 
@@ -982,29 +995,33 @@ export class WidgetSystem extends BaseService {
     // Update widget position data
     const oldPosition = widget.position;
     widget.position = newPosition;
-    
+
     // Update widget state
     this.widgetStateService.setWidgetState(widgetId, {
       position: newPosition,
       minimized: widget.minimized,
       visible: true,
-      priority: widget.priority
+      priority: widget.priority,
     });
 
     // Move the element to the new zone while preserving its dragged position
     // This allows the widget to maintain its exact position but be logically in the new zone
     const newZone = this.getWidgetZone(newPosition);
     const oldZone = this.getWidgetZone(oldPosition);
-    
+
     if (newZone && oldZone && currentElement.parentElement === oldZone) {
       // Move element to new zone
       newZone.appendChild(currentElement);
-      
+
       // The element should maintain its fixed positioning from the drag operation
       // This ensures it stays exactly where the user dropped it
-      console.log(`Widget ${widgetId} moved from ${oldPosition} to ${newPosition} zone (position preserved)`);
+      console.log(
+        `Widget ${widgetId} moved from ${oldPosition} to ${newPosition} zone (position preserved)`
+      );
     } else {
-      console.log(`Widget ${widgetId} position updated to ${newPosition} (element already positioned correctly)`);
+      console.log(
+        `Widget ${widgetId} position updated to ${newPosition} (element already positioned correctly)`
+      );
     }
   }
 }

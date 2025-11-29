@@ -1,5 +1,5 @@
-import { DOMService } from "../services/dom-service";
-import { EventBus } from "../core/event-bus";
+import { EventBus } from '../core/event-bus';
+import { DOMService } from '../services/dom-service';
 
 export class RouteInfoPanel {
   private static instance: RouteInfoPanel;
@@ -60,8 +60,8 @@ export class RouteInfoPanel {
         display: 'none',
         flexDirection: 'column',
         overflow: 'hidden',
-        fontFamily: 'sans-serif'
-      }
+        fontFamily: 'sans-serif',
+      },
     });
 
     // Add close button
@@ -80,8 +80,8 @@ export class RouteInfoPanel {
         height: '30px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
-      }
+        justifyContent: 'center',
+      },
     });
 
     closeBtn.addEventListener('click', () => {
@@ -95,8 +95,8 @@ export class RouteInfoPanel {
       id: 'route-info-content',
       style: {
         overflowY: 'auto',
-        paddingRight: '10px'
-      }
+        paddingRight: '10px',
+      },
     });
 
     this.panelElement.appendChild(contentContainer);
@@ -119,8 +119,8 @@ export class RouteInfoPanel {
         margin: '0 0 15px 0',
         color: '#333',
         fontSize: '20px',
-        fontWeight: 'bold'
-      }
+        fontWeight: 'bold',
+      },
     });
     contentContainer.appendChild(title);
 
@@ -130,8 +130,8 @@ export class RouteInfoPanel {
         display: 'flex',
         justifyContent: 'space-between',
         marginBottom: '20px',
-        gap: '10px'
-      }
+        gap: '10px',
+      },
     });
 
     const distanceBox = this.domService.createElement('div', {
@@ -146,8 +146,8 @@ export class RouteInfoPanel {
         padding: '10px',
         backgroundColor: '#f5f5f5',
         borderRadius: '8px',
-        flex: '1'
-      }
+        flex: '1',
+      },
     });
 
     const difficultyBox = this.domService.createElement('div', {
@@ -162,8 +162,8 @@ export class RouteInfoPanel {
         padding: '10px',
         backgroundColor: '#f5f5f5',
         borderRadius: '8px',
-        flex: '1'
-      }
+        flex: '1',
+      },
     });
 
     summary.appendChild(distanceBox);
@@ -177,8 +177,8 @@ export class RouteInfoPanel {
         style: {
           margin: '0 0 10px 0',
           color: '#333',
-          fontSize: '16px'
-        }
+          fontSize: '16px',
+        },
       });
 
       const reasoningContent = this.domService.createElement('p', {
@@ -187,8 +187,8 @@ export class RouteInfoPanel {
           margin: '0 0 20px 0',
           color: '#666',
           fontSize: '14px',
-          lineHeight: '1.5'
-        }
+          lineHeight: '1.5',
+        },
       });
 
       contentContainer.appendChild(reasoningTitle);
@@ -202,16 +202,16 @@ export class RouteInfoPanel {
         style: {
           margin: '0 0 10px 0',
           color: '#333',
-          fontSize: '16px'
-        }
+          fontSize: '16px',
+        },
       });
 
       const waypointsList = this.domService.createElement('ul', {
         style: {
           margin: '0 0 20px 0',
           padding: '0',
-          listStyle: 'none'
-        }
+          listStyle: 'none',
+        },
       });
 
       data.waypoints.forEach((wp: any) => {
@@ -219,10 +219,15 @@ export class RouteInfoPanel {
           innerHTML: `
             <div style="display: flex; align-items: center; margin-bottom: 10px;">
               <div style="width: 20px; height: 20px; border-radius: 50%; background-color: ${
-                wp.type === 'territory_claim' ? '#ff0000' :
-                wp.type === 'rest_stop' ? '#0000ff' :
-                wp.type === 'landmark' ? '#ffff00' :
-                wp.type === 'strategic' ? '#ff00ff' : '#00ffff'
+                wp.type === 'territory_claim'
+                  ? '#ff0000'
+                  : wp.type === 'rest_stop'
+                    ? '#0000ff'
+                    : wp.type === 'landmark'
+                      ? '#ffff00'
+                      : wp.type === 'strategic'
+                        ? '#ff00ff'
+                        : '#00ffff'
               }; margin-right: 10px;"></div>
               <div>
                 <div style="font-weight: bold; color: #333;">${wp.name}</div>
@@ -230,7 +235,7 @@ export class RouteInfoPanel {
               </div>
             </div>
             ${wp.description ? `<div style="font-size: 13px; color: #666; margin-left: 30px; margin-bottom: 10px;">${wp.description}</div>` : ''}
-          `
+          `,
         });
         waypointsList.appendChild(waypointItem);
       });
@@ -244,8 +249,8 @@ export class RouteInfoPanel {
       style: {
         display: 'flex',
         gap: '10px',
-        marginTop: 'auto'
-      }
+        marginTop: 'auto',
+      },
     });
 
     const startBtn = this.domService.createElement('button', {
@@ -259,8 +264,8 @@ export class RouteInfoPanel {
         borderRadius: '8px',
         cursor: 'pointer',
         fontWeight: 'bold',
-        fontSize: '14px'
-      }
+        fontSize: '14px',
+      },
     });
 
     startBtn.addEventListener('click', () => {
@@ -279,8 +284,8 @@ export class RouteInfoPanel {
         borderRadius: '8px',
         cursor: 'pointer',
         fontWeight: 'bold',
-        fontSize: '14px'
-      }
+        fontSize: '14px',
+      },
     });
 
     actions.appendChild(startBtn);
@@ -307,8 +312,8 @@ export class RouteInfoPanel {
         margin: '0 0 15px 0',
         color: '#ff0000',
         fontSize: '20px',
-        fontWeight: 'bold'
-      }
+        fontWeight: 'bold',
+      },
     });
 
     const errorMessage = this.domService.createElement('p', {
@@ -317,8 +322,8 @@ export class RouteInfoPanel {
         margin: '0 0 20px 0',
         color: '#666',
         fontSize: '14px',
-        lineHeight: '1.5'
-      }
+        lineHeight: '1.5',
+      },
     });
 
     const retryBtn = this.domService.createElement('button', {
@@ -332,8 +337,8 @@ export class RouteInfoPanel {
         cursor: 'pointer',
         fontWeight: 'bold',
         fontSize: '14px',
-        width: '100%'
-      }
+        width: '100%',
+      },
     });
 
     retryBtn.addEventListener('click', () => {

@@ -19,12 +19,14 @@ export class WidgetTest {
 
     const widgets = widgetSystem.querySelectorAll('.widget');
     console.log(`✅ Widget system found with ${widgets.length} widgets`);
-    
+
     widgets.forEach((widget, index) => {
       const rect = widget.getBoundingClientRect();
       const isVisible = rect.width > 0 && rect.height > 0;
       const id = widget.id;
-      console.log(`Widget ${index + 1} (${id}): ${isVisible ? '✅ Visible' : '❌ Hidden'} - ${rect.width}x${rect.height}`);
+      console.log(
+        `Widget ${index + 1} (${id}): ${isVisible ? '✅ Visible' : '❌ Hidden'} - ${rect.width}x${rect.height}`
+      );
     });
 
     return widgets.length > 0;
@@ -32,14 +34,14 @@ export class WidgetTest {
 
   static testLocationSearch(): void {
     console.log('🧪 Testing location search...');
-    
+
     // Simulate location change event
     const mockLocation = {
       lat: -1.2921,
       lng: 36.8219,
       address: 'Nairobi, Kenya',
       source: 'search',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     // Check if event bus is available
@@ -54,13 +56,13 @@ export class WidgetTest {
 
   static runAllTests(): void {
     console.log('🧪 Running widget system tests...');
-    
+
     setTimeout(() => {
-      this.testWidgetVisibility();
+      WidgetTest.testWidgetVisibility();
     }, 1000);
 
     setTimeout(() => {
-      this.testLocationSearch();
+      WidgetTest.testLocationSearch();
     }, 2000);
   }
 }

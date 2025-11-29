@@ -3,9 +3,9 @@
  * Provides immersive gaming interface elements for territory claiming and competition
  */
 
-import { DOMService } from '../services/dom-service';
-import { EventBus } from '../core/event-bus';
 import { BaseService } from '../core/base-service';
+import { EventBus } from '../core/event-bus';
+import { DOMService } from '../services/dom-service';
 
 export interface PlayerStats {
   level: number;
@@ -71,7 +71,10 @@ export class GameFiUI extends BaseService {
     // Territory preview interactions
     this.subscribe('run:pointAdded', (data) => {
       // Emit event for MainUI to update territory widget content
-      this.safeEmit('ui:territoryPreview', { point: data.point, totalDistance: data.totalDistance });
+      this.safeEmit('ui:territoryPreview', {
+        point: data.point,
+        totalDistance: data.totalDistance,
+      });
       this.updateRewardEstimate(data.totalDistance);
     });
 
@@ -83,7 +86,8 @@ export class GameFiUI extends BaseService {
 
     this.subscribe('territory:claimed', (data) => {
       // Access reward from territory metadata if available
-      const reward = data.territory?.metadata?.estimatedReward || data.territory?.estimatedReward || 25;
+      const reward =
+        data.territory?.metadata?.estimatedReward || data.territory?.estimatedReward || 25;
       this.showRewardNotification(`🎉 Territory Claimed! +${reward} $REALM`);
       this.updatePlayerStats({ territoriesOwned: 1 } as any);
     });
@@ -96,16 +100,22 @@ export class GameFiUI extends BaseService {
    * Enable GameFi mode UI
    */
   // DEPRECATED: MainUI controls GameFi mode and widget rendering
-  public enableGameFiMode(): void { /* no-op */ }
+  public enableGameFiMode(): void {
+    /* no-op */
+  }
 
   /**
    * Disable GameFi mode UI
    */
   // DEPRECATED: MainUI controls GameFi mode and widget rendering
-  public disableGameFiMode(): void { /* no-op */ }
+  public disableGameFiMode(): void {
+    /* no-op */
+  }
 
   // DEPRECATED: HUD visibility controlled by widgets and body class in MainUI
-  private hideGameFiHUD(): void { /* no-op */ }
+  private hideGameFiHUD(): void {
+    /* no-op */
+  }
 
   /**
    * Update player statistics display
@@ -117,7 +127,7 @@ export class GameFiUI extends BaseService {
         totalDistance: 0,
         territoriesOwned: 0,
         realmBalance: 0,
-        rank: 0
+        rank: 0,
       };
     }
 
@@ -139,7 +149,10 @@ export class GameFiUI extends BaseService {
   /**
    * Show reward notification
    */
-  public showRewardNotification(message: string, type: 'success' | 'warning' | 'info' = 'success'): void {
+  public showRewardNotification(
+    message: string,
+    type: 'success' | 'warning' | 'info' = 'success'
+  ): void {
     const container = this.dom.getElement('reward-notifications');
     if (!container) return;
 
@@ -153,18 +166,21 @@ export class GameFiUI extends BaseService {
       `,
       style: {
         position: 'relative',
-        background: type === 'success' ? 'linear-gradient(45deg, #00bd00, #00ff88)' :
-                   type === 'warning' ? 'linear-gradient(45deg, #ff6b00, #ff8533)' :
-                   'linear-gradient(45deg, #0064ff, #0080ff)',
+        background:
+          type === 'success'
+            ? 'linear-gradient(45deg, #00bd00, #00ff88)'
+            : type === 'warning'
+              ? 'linear-gradient(45deg, #ff6b00, #ff8533)'
+              : 'linear-gradient(45deg, #0064ff, #0080ff)',
         color: 'white',
         padding: '12px 16px',
         borderRadius: '8px',
         marginBottom: '8px',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
         animation: 'slideInRight 0.3s ease-out',
-        overflow: 'hidden'
+        overflow: 'hidden',
       },
-      parent: container
+      parent: container,
     });
 
     // Auto-remove after 4 seconds
@@ -211,7 +227,7 @@ export class GameFiUI extends BaseService {
     // Calculate estimated $REALM reward based on distance and difficulty
     const baseReward = distance * 0.01; // 0.01 REALM per meter
     const estimatedReward = Math.floor(baseReward + Math.random() * 20);
-    
+
     const rewardAmount = this.hudElements.get('territoryPreview')?.querySelector('.reward-amount');
     if (rewardAmount) {
       rewardAmount.textContent = `+${estimatedReward} $REALM`;
@@ -227,10 +243,10 @@ export class GameFiUI extends BaseService {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
     }
-    
+
     this.hudElements.clear();
     document.body.classList.remove('gamefi-mode');
-    
+
     super.cleanup();
   }
 }

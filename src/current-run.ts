@@ -1,9 +1,9 @@
-import { LngLat, Marker } from 'mapbox-gl';
 import { LineString } from 'geojson';
+import { LngLat, Marker } from 'mapbox-gl';
 
 export class RunStart {
   public marker?: Marker;
-  
+
   constructor(public position: LngLat) {}
 
   setMarker(marker: Marker): void {
@@ -52,6 +52,6 @@ export class CurrentRun {
   }
 
   getPoints(): LngLat[] {
-    return [this.start.position, ...this.segments.map(s => s.position)];
+    return [this.start.position, ...this.segments.map((s) => s.position)];
   }
 }

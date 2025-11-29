@@ -1,4 +1,9 @@
-import { parsePace, paceToSpeed, etaFromDistance, formatDuration } from '@runrealm/shared-core/utils/time-utils';
+import {
+  etaFromDistance,
+  formatDuration,
+  paceToSpeed,
+  parsePace,
+} from '@runrealm/shared-core/utils/time-utils';
 
 describe('time-utils', () => {
   it('parses mm:ss pace', () => {

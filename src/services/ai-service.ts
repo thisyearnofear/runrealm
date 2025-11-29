@@ -93,7 +93,7 @@ export class AIService extends BaseService {
     console.log('AIService: Web3 config loaded:', {
       enabled: web3Config?.enabled,
       aiEnabled: web3Config?.ai?.enabled,
-      hasApiKey: !!web3Config?.ai?.geminiApiKey
+      hasApiKey: !!web3Config?.ai?.geminiApiKey,
     });
 
     // Check if AI features are enabled
@@ -104,22 +104,23 @@ export class AIService extends BaseService {
       this.safeEmit('service:error', {
         service: 'AIService',
         context: 'initialization',
-        error: 'AI features disabled in configuration. Set ENABLE_AI_FEATURES=true in .env'
+        error: 'AI features disabled in configuration. Set ENABLE_AI_FEATURES=true in .env',
       });
       return;
     }
 
     // Get API key with improved fallback logic
-    let apiKey = this.getApiKey(web3Config);
+    const apiKey = this.getApiKey(web3Config);
 
     if (!apiKey) {
-      const errorMsg = 'No valid Gemini API key found. Check your .env file or /api/tokens endpoint';
+      const errorMsg =
+        'No valid Gemini API key found. Check your .env file or /api/tokens endpoint';
       console.error('AIService:', errorMsg);
       this.isEnabled = false;
       this.safeEmit('service:error', {
         service: 'AIService',
         context: 'initialization',
-        error: errorMsg
+        error: errorMsg,
       });
       return;
     }
@@ -132,7 +133,7 @@ export class AIService extends BaseService {
       this.safeEmit('service:error', {
         service: 'AIService',
         context: 'initialization',
-        error: errorMsg
+        error: errorMsg,
       });
       return;
     }
@@ -175,7 +176,6 @@ export class AIService extends BaseService {
       this.setupEventListeners();
 
       this.safeEmit('service:initialized', { service: 'AIService', success: true });
-
     } catch (error) {
       const errorMsg = `Failed to initialize Google Generative AI: ${error instanceof Error ? error.message : String(error)}`;
       console.error('AIService:', errorMsg, error);
@@ -184,7 +184,7 @@ export class AIService extends BaseService {
       this.safeEmit('service:error', {
         service: 'AIService',
         context: 'initialization',
-        error: errorMsg
+        error: errorMsg,
       });
     }
   }
@@ -197,234 +197,262 @@ export class AIService extends BaseService {
 
     // Wire EventBus listeners for AI triggers
     // Listen for route requests
-    this.subscribe('ai:routeRequested', async (data: { requestId?: string; distance?: number; difficulty?: number; goals?: string[]; quickPromptType?: string; contextPrompt?: string;[key: string]: any }) => {
-      console.log('AIService: Received ai:routeRequested event:', data);
-      try {
-        // Note: Dynamic event emission is not supported
-        // if (data.requestId) {
-        //   this.safeEmit(`${data.requestId}:progress`, { progress: 10 });
-        // }
+    this.subscribe(
+      'ai:routeRequested',
+      async (data: {
+        requestId?: string;
+        distance?: number;
+        difficulty?: number;
+        goals?: string[];
+        quickPromptType?: string;
+        contextPrompt?: string;
+        [key: string]: any;
+      }) => {
+        console.log('AIService: Received ai:routeRequested event:', data);
+        try {
+          // Note: Dynamic event emission is not supported
+          // if (data.requestId) {
+          //   this.safeEmit(`${data.requestId}:progress`, { progress: 10 });
+          // }
 
-        // Initialize if needed
-        if (!this.isInitialized) {
-          await this.init();
-        }
-
-        // Note: Dynamic event emission is not supported
-        // if (data.requestId) {
-        //   this.safeEmit(`${data.requestId}:progress`, { progress: 20 });
-        // }
-
-        const goals: AIGoals = {};
-        if (Array.isArray(data?.goals) && data.goals.length) {
-          // If goals provided as strings, map a couple of simple flags
-          goals.exploration = data.goals.includes('exploration');
-          goals.training = data.goals.includes('training');
-        }
-        if (typeof data?.distance === 'number') goals.distance = data.distance;
-        if (typeof data?.difficulty === 'number') goals.difficulty = data.difficulty;
-
-        // Add quick prompt context if available
-        if (data?.quickPromptType && data?.contextPrompt) {
-          goals.quickPromptType = data.quickPromptType;
-          goals.contextPrompt = data.contextPrompt;
-          goals.timeOfDay = data.timeOfDay;
-          goals.timeConstraint = data.timeConstraint;
-          goals.focus = data.focus;
-          goals.priority = data.priority;
-        }
-
-        // Get current location from multiple sources
-        let currentLocation = { lat: 40.7128, lng: -74.0060 }; // Default to NYC
-
-        // Try to get from window.RunRealm first
-        if ((window as any)?.RunRealm?.currentLocation) {
-          currentLocation = (window as any).RunRealm.currentLocation;
-        }
-        // Try to get from LocationService
-        else if ((window as any)?.RunRealm?.locationService?.getCurrentLocation) {
-          try {
-            const locationInfo = await (window as any).RunRealm.locationService.getCurrentLocation();
-            if (locationInfo && locationInfo.lat && locationInfo.lng) {
-              currentLocation = { lat: locationInfo.lat, lng: locationInfo.lng };
-            }
-          } catch (error) {
-            console.warn('AIService: Failed to get current location, using default');
+          // Initialize if needed
+          if (!this.isInitialized) {
+            await this.init();
           }
-        }
-        // Try to get from map center as fallback
-        else if ((window as any)?.RunRealm?.map?.getCenter) {
-          try {
-            const center = (window as any).RunRealm.map.getCenter();
-            if (center && center.lat && center.lng) {
-              currentLocation = { lat: center.lat, lng: center.lng };
-            }
-          } catch (error) {
-            console.warn('AIService: Failed to get map center, using default');
+
+          // Note: Dynamic event emission is not supported
+          // if (data.requestId) {
+          //   this.safeEmit(`${data.requestId}:progress`, { progress: 20 });
+          // }
+
+          const goals: AIGoals = {};
+          if (Array.isArray(data?.goals) && data.goals.length) {
+            // If goals provided as strings, map a couple of simple flags
+            goals.exploration = data.goals.includes('exploration');
+            goals.training = data.goals.includes('training');
           }
-        }
+          if (typeof data?.distance === 'number') goals.distance = data.distance;
+          if (typeof data?.difficulty === 'number') goals.difficulty = data.difficulty;
 
-        console.log('AIService: Using location for route generation:', currentLocation);
+          // Add quick prompt context if available
+          if (data?.quickPromptType && data?.contextPrompt) {
+            goals.quickPromptType = data.quickPromptType;
+            goals.contextPrompt = data.contextPrompt;
+            goals.timeOfDay = data.timeOfDay;
+            goals.timeConstraint = data.timeConstraint;
+            goals.focus = data.focus;
+            goals.priority = data.priority;
+          }
 
-        // Note: Dynamic event emission is not supported
-        // if (data.requestId) {
-        //   this.safeEmit(`${data.requestId}:progress`, { progress: 40 });
-        // }
+          // Get current location from multiple sources
+          let currentLocation = { lat: 40.7128, lng: -74.006 }; // Default to NYC
 
-        // If AI disabled or init failed, synthesize a fallback route and emit failure for UI
-        if (!this.isAIEnabled()) {
-          const fallback = await this.parseRouteOptimization(JSON.stringify({}), currentLocation, goals);
-          const waypoints = fallback.suggestedRoute.coordinates.map(([lng, lat]) => ({ lat, lng }));
-          if (waypoints.length < 2) {
-            this.safeEmit('ai:routeFailed', { message: 'AI is disabled and no fallback route available.' });
+          // Try to get from window.RunRealm first
+          if ((window as any)?.RunRealm?.currentLocation) {
+            currentLocation = (window as any).RunRealm.currentLocation;
+          }
+          // Try to get from LocationService
+          else if ((window as any)?.RunRealm?.locationService?.getCurrentLocation) {
+            try {
+              const locationInfo = await (
+                window as any
+              ).RunRealm.locationService.getCurrentLocation();
+              if (locationInfo && locationInfo.lat && locationInfo.lng) {
+                currentLocation = { lat: locationInfo.lat, lng: locationInfo.lng };
+              }
+            } catch (error) {
+              console.warn('AIService: Failed to get current location, using default');
+            }
+          }
+          // Try to get from map center as fallback
+          else if ((window as any)?.RunRealm?.map?.getCenter) {
+            try {
+              const center = (window as any).RunRealm.map.getCenter();
+              if (center && center.lat && center.lng) {
+                currentLocation = { lat: center.lat, lng: center.lng };
+              }
+            } catch (error) {
+              console.warn('AIService: Failed to get map center, using default');
+            }
+          }
+
+          console.log('AIService: Using location for route generation:', currentLocation);
+
+          // Note: Dynamic event emission is not supported
+          // if (data.requestId) {
+          //   this.safeEmit(`${data.requestId}:progress`, { progress: 40 });
+          // }
+
+          // If AI disabled or init failed, synthesize a fallback route and emit failure for UI
+          if (!this.isAIEnabled()) {
+            const fallback = await this.parseRouteOptimization(
+              JSON.stringify({}),
+              currentLocation,
+              goals
+            );
+            const waypoints = fallback.suggestedRoute.coordinates.map(([lng, lat]) => ({
+              lat,
+              lng,
+            }));
+            if (waypoints.length < 2) {
+              this.safeEmit('ai:routeFailed', {
+                message: 'AI is disabled and no fallback route available.',
+              });
+              return;
+            }
+            this.safeEmit('ai:routeReady', {
+              route: fallback.suggestedRoute.coordinates || [],
+              distance: fallback.suggestedRoute.distance,
+              duration: Math.round((fallback.suggestedRoute.distance || 0) * 5),
+              waypoints,
+              totalDistance: fallback.suggestedRoute.distance,
+              difficulty: fallback.suggestedRoute.difficulty,
+              estimatedTime: Math.round((fallback.suggestedRoute.distance || 0) * 5), // naive 5s/m
+            });
             return;
           }
-          this.safeEmit('ai:routeReady', {
-            route: fallback.suggestedRoute.coordinates || [],
-            distance: fallback.suggestedRoute.distance,
-            duration: Math.round((fallback.suggestedRoute.distance || 0) * 5),
-            waypoints,
-            totalDistance: fallback.suggestedRoute.distance,
-            difficulty: fallback.suggestedRoute.difficulty,
-            estimatedTime: Math.round((fallback.suggestedRoute.distance || 0) * 5) // naive 5s/m
-          });
-          return;
-        }
 
-        // Note: Dynamic event emission is not supported
-        // if (data.requestId) {
-        //   this.safeEmit(`${data.requestId}:progress`, { progress: 50 });
-        // }
+          // Note: Dynamic event emission is not supported
+          // if (data.requestId) {
+          //   this.safeEmit(`${data.requestId}:progress`, { progress: 50 });
+          // }
 
-        const optimization = await this.suggestRoute(currentLocation, goals, []);
+          const optimization = await this.suggestRoute(currentLocation, goals, []);
 
-        // Note: Dynamic event emission is not supported
-        // if (data.requestId) {
-        //   this.safeEmit(`${data.requestId}:progress`, { progress: 80 });
-        // }
+          // Note: Dynamic event emission is not supported
+          // if (data.requestId) {
+          //   this.safeEmit(`${data.requestId}:progress`, { progress: 80 });
+          // }
 
-        const coords = optimization.suggestedRoute.coordinates || [];
-        const waypoints = coords.map(([lng, lat]) => ({ lat, lng }));
+          const coords = optimization.suggestedRoute.coordinates || [];
+          const waypoints = coords.map(([lng, lat]) => ({ lat, lng }));
 
-        if (waypoints.length < 2) {
-          this.safeEmit('ai:routeFailed', { message: 'Not enough route data returned by AI.' });
-          return;
-        }
-
-        // Fix coordinate format: AI returns [lat, lng] but Mapbox needs [lng, lat]
-        const mapboxCoordinates = optimization.suggestedRoute.coordinates.map(coord => {
-          if (Array.isArray(coord) && coord.length === 2) {
-            // Swap from [lat, lng] to [lng, lat]
-            return [coord[1], coord[0]];
+          if (waypoints.length < 2) {
+            this.safeEmit('ai:routeFailed', { message: 'Not enough route data returned by AI.' });
+            return;
           }
-          return coord;
-        });
 
-        // Emit route visualization event for map integration
-        this.safeEmit('ai:routeVisualize', {
-          coordinates: mapboxCoordinates,
-          type: 'ai-suggested',
-          style: {
-            color: '#00ff88',
-            width: 4,
-            opacity: 0.8,
-            dashArray: [5, 5]
-          },
-          metadata: {
-            distance: optimization.suggestedRoute.distance,
-            difficulty: optimization.suggestedRoute.difficulty,
-            confidence: optimization.confidence
-          }
-        });
-
-        // Emit waypoint visualization event if waypoints exist
-        if ((optimization.suggestedRoute as any).waypoints && (optimization.suggestedRoute as any).waypoints.length > 0) {
-          // Clean waypoint data to avoid circular references and fix coordinates
-          const cleanWaypoints = (optimization.suggestedRoute as any).waypoints.map((wp: any) => {
-            // Fix coordinate format for waypoints too
-            let coordinates = wp.coordinates;
-            if (Array.isArray(coordinates) && coordinates.length === 2) {
+          // Fix coordinate format: AI returns [lat, lng] but Mapbox needs [lng, lat]
+          const mapboxCoordinates = optimization.suggestedRoute.coordinates.map((coord) => {
+            if (Array.isArray(coord) && coord.length === 2) {
               // Swap from [lat, lng] to [lng, lat]
-              coordinates = [coordinates[1], coordinates[0]];
+              return [coord[1], coord[0]];
             }
-
-            return {
-              coordinates: coordinates,
-              type: wp.type,
-              name: wp.name,
-              description: wp.description,
-              territoryValue: wp.territoryValue,
-              estimatedReward: wp.estimatedReward,
-              claimPriority: wp.claimPriority
-            }
+            return coord;
           });
 
-          this.safeEmit('ai:waypointsVisualize', {
-            waypoints: cleanWaypoints,
-            routeMetadata: {
+          // Emit route visualization event for map integration
+          this.safeEmit('ai:routeVisualize', {
+            coordinates: mapboxCoordinates,
+            type: 'ai-suggested',
+            style: {
+              color: '#00ff88',
+              width: 4,
+              opacity: 0.8,
+              dashArray: [5, 5],
+            },
+            metadata: {
               distance: optimization.suggestedRoute.distance,
               difficulty: optimization.suggestedRoute.difficulty,
-              totalEstimatedRewards: optimization.territories.claimable + optimization.territories.strategic
-            }
+              confidence: optimization.confidence,
+            },
+          });
+
+          // Emit waypoint visualization event if waypoints exist
+          if (
+            (optimization.suggestedRoute as any).waypoints &&
+            (optimization.suggestedRoute as any).waypoints.length > 0
+          ) {
+            // Clean waypoint data to avoid circular references and fix coordinates
+            const cleanWaypoints = (optimization.suggestedRoute as any).waypoints.map((wp: any) => {
+              // Fix coordinate format for waypoints too
+              let coordinates = wp.coordinates;
+              if (Array.isArray(coordinates) && coordinates.length === 2) {
+                // Swap from [lat, lng] to [lng, lat]
+                coordinates = [coordinates[1], coordinates[0]];
+              }
+
+              return {
+                coordinates: coordinates,
+                type: wp.type,
+                name: wp.name,
+                description: wp.description,
+                territoryValue: wp.territoryValue,
+                estimatedReward: wp.estimatedReward,
+                claimPriority: wp.claimPriority,
+              };
+            });
+
+            this.safeEmit('ai:waypointsVisualize', {
+              waypoints: cleanWaypoints,
+              routeMetadata: {
+                distance: optimization.suggestedRoute.distance,
+                difficulty: optimization.suggestedRoute.difficulty,
+                totalEstimatedRewards:
+                  optimization.territories.claimable + optimization.territories.strategic,
+              },
+            });
+          }
+
+          // Note: Dynamic event emission is not supported
+          // if (data.requestId) {
+          //   this.safeEmit(`${data.requestId}:progress`, { progress: 100 });
+          //   this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
+          // }
+        } catch (err) {
+          console.error('AI route request failed', err);
+          this.safeEmit('ai:routeFailed', {
+            message: 'Failed to generate route. Please try again.',
           });
         }
-
-        // Note: Dynamic event emission is not supported
-        // if (data.requestId) {
-        //   this.safeEmit(`${data.requestId}:progress`, { progress: 100 });
-        //   this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
-        // }
-      } catch (err) {
-        console.error('AI route request failed', err);
-        this.safeEmit('ai:routeFailed', {
-          message: 'Failed to generate route. Please try again.'
-        });
       }
-    });
+    );
 
     // Listen for ghost runner requests
-    this.subscribe('ai:ghostRunnerRequested' as any, async (data: { requestId?: string; difficulty?: number }) => {
-      console.log('AIService: Received ai:ghostRunnerRequested event:', data);
-      try {
-        console.log('AIService: Ghost runner request received:', data);
+    this.subscribe(
+      'ai:ghostRunnerRequested' as any,
+      async (data: { requestId?: string; difficulty?: number }) => {
+        console.log('AIService: Received ai:ghostRunnerRequested event:', data);
+        try {
+          console.log('AIService: Ghost runner request received:', data);
 
-        if (!this.isInitialized) {
-          console.log('AIService: Initializing for ghost runner request...');
-          await this.init();
+          if (!this.isInitialized) {
+            console.log('AIService: Initializing for ghost runner request...');
+            await this.init();
+          }
+
+          const difficulty = typeof data?.difficulty === 'number' ? data.difficulty : 50;
+          console.log('AIService: Generating ghost runner with difficulty:', difficulty);
+
+          const ghost = await this.generateGhostRunner(difficulty);
+          console.log('AIService: Ghost runner generated successfully:', ghost.name);
+
+          this.safeEmit('ai:ghostRunnerGenerated', {
+            runner: ghost,
+            difficulty: ghost.difficulty,
+            success: true,
+          });
+
+          // Note: Dynamic event emission is not supported
+          // if (data.requestId) {
+          //   this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
+          // }
+        } catch (err) {
+          const errorMsg = `Ghost runner generation failed: ${err instanceof Error ? err.message : String(err)}`;
+          console.error('AIService:', errorMsg, err);
+
+          // Emit both specific error and general service error
+          this.safeEmit('ai:ghostRunnerFailed', {
+            message: errorMsg,
+          });
+          this.safeEmit('service:error', {
+            service: 'AIService',
+            context: 'ghostRunner',
+            error: errorMsg,
+          });
         }
-
-        const difficulty = typeof data?.difficulty === 'number' ? data.difficulty : 50;
-        console.log('AIService: Generating ghost runner with difficulty:', difficulty);
-
-        const ghost = await this.generateGhostRunner(difficulty);
-        console.log('AIService: Ghost runner generated successfully:', ghost.name);
-
-        this.safeEmit('ai:ghostRunnerGenerated', {
-          runner: ghost,
-          difficulty: ghost.difficulty,
-          success: true
-        });
-
-        // Note: Dynamic event emission is not supported
-        // if (data.requestId) {
-        //   this.safeEmit(`${data.requestId}:success`, { requestId: data.requestId });
-        // }
-
-      } catch (err) {
-        const errorMsg = `Ghost runner generation failed: ${err instanceof Error ? err.message : String(err)}`;
-        console.error('AIService:', errorMsg, err);
-
-        // Emit both specific error and general service error
-        this.safeEmit('ai:ghostRunnerFailed', {
-          message: errorMsg
-        });
-        this.safeEmit('service:error', {
-          service: 'AIService',
-          context: 'ghostRunner',
-          error: errorMsg
-        });
       }
-    });
+    );
   }
 
   protected async onInitialize(): Promise<void> {
@@ -485,7 +513,9 @@ export class AIService extends BaseService {
       console.log('AIService: Connection test successful, response length:', text.length);
     } catch (error) {
       console.error('AIService: Connection test failed:', error);
-      throw new Error(`API connection test failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `API connection test failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -525,28 +555,32 @@ export class AIService extends BaseService {
     console.log('AIService: Route prompt prepared');
 
     try {
-      const optimization = await this.retry(async () => {
-        console.log('AIService: Sending request to Gemini for route suggestion...');
-        const result = await this.model!.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-        console.log('AIService: Received response from Gemini:', text.substring(0, 100) + '...');
+      const optimization = await this.retry(
+        async () => {
+          console.log('AIService: Sending request to Gemini for route suggestion...');
+          const result = await this.model!.generateContent(prompt);
+          const response = await result.response;
+          const text = response.text();
+          console.log('AIService: Received response from Gemini:', text.substring(0, 100) + '...');
 
-        const optimization = await this.parseRouteOptimization(text, currentLocation, goals);
-        console.log('AIService: Route optimization parsed successfully');
+          const optimization = await this.parseRouteOptimization(text, currentLocation, goals);
+          console.log('AIService: Route optimization parsed successfully');
 
-        return optimization;
-      }, 3, 1000, 'route suggestion');
+          return optimization;
+        },
+        3,
+        1000,
+        'route suggestion'
+      );
 
       this.safeEmit('ai:routeSuggested', {
         route: optimization.suggestedRoute,
         confidence: optimization.confidence,
-        reasoning: optimization.suggestedRoute.reasoning
+        reasoning: optimization.suggestedRoute.reasoning,
       });
 
       console.log('AIService: Route suggestion completed successfully');
       return optimization;
-
     } catch (error) {
       const errorMsg = `Route suggestion failed: ${error instanceof Error ? error.message : String(error)}`;
       console.error('AIService:', errorMsg, error);
@@ -579,27 +613,31 @@ export class AIService extends BaseService {
     console.log('AIService: Ghost runner prompt prepared');
 
     try {
-      const ghostRunner = await this.retry(async () => {
-        console.log('AIService: Sending request to Gemini for ghost runner...');
-        const result = await this.model!.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-        console.log('AIService: Received response from Gemini:', text.substring(0, 100) + '...');
+      const ghostRunner = await this.retry(
+        async () => {
+          console.log('AIService: Sending request to Gemini for ghost runner...');
+          const result = await this.model!.generateContent(prompt);
+          const response = await result.response;
+          const text = response.text();
+          console.log('AIService: Received response from Gemini:', text.substring(0, 100) + '...');
 
-        const ghostRunner = this.parseGhostRunner(text, difficulty);
-        console.log('AIService: Ghost runner parsed successfully:', ghostRunner.name);
+          const ghostRunner = this.parseGhostRunner(text, difficulty);
+          console.log('AIService: Ghost runner parsed successfully:', ghostRunner.name);
 
-        return ghostRunner;
-      }, 3, 1000, 'ghost runner generation');
+          return ghostRunner;
+        },
+        3,
+        1000,
+        'ghost runner generation'
+      );
 
       this.safeEmit('ai:ghostRunnerGenerated', {
         runner: ghostRunner,
-        difficulty
+        difficulty,
       });
 
       console.log('AIService: Ghost runner generation completed successfully');
       return ghostRunner;
-
     } catch (error) {
       console.error('AIService: Ghost runner generation failed, using fallback:', error);
       const fallbackRunner = this.createFallbackGhostRunner(difficulty);
@@ -607,7 +645,7 @@ export class AIService extends BaseService {
       this.safeEmit('ai:ghostRunnerGenerated', {
         runner: fallbackRunner,
         difficulty,
-        fallback: true
+        fallback: true,
       });
 
       return fallbackRunner;
@@ -624,7 +662,9 @@ export class AIService extends BaseService {
   }> {
     try {
       const web3Service = (await import('../services/web3-service')).Web3Service.getInstance();
-      const territoryDashboard = (await import('../components/territory-dashboard')).default.getInstance();
+      const territoryDashboard = (
+        await import('../components/territory-dashboard')
+      ).default.getInstance();
 
       const currentWallet = web3Service.getCurrentWallet();
       const territories = territoryDashboard.getTerritories();
@@ -635,20 +675,20 @@ export class AIService extends BaseService {
         chainId: currentWallet?.chainId,
         networkName: currentWallet?.networkName,
         balance: currentWallet?.balance,
-        connectedAt: new Date().toISOString()
+        connectedAt: new Date().toISOString(),
       };
 
       return {
         walletHistory,
         territories,
-        playerStats
+        playerStats,
       };
     } catch (error) {
       console.warn('Failed to get user context:', error);
       return {
         walletHistory: null,
         territories: [],
-        playerStats: null
+        playerStats: null,
       };
     }
   }
@@ -680,21 +720,26 @@ export class AIService extends BaseService {
     const userContext = await this.getUserContext();
     const prompt = this.buildTerritoryAnalysisPrompt(territoryData, contextData, userContext);
 
-    return this.retry(async () => {
-      const result = await this.model!.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+    return this.retry(
+      async () => {
+        const result = await this.model!.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
 
-      const analysis = this.parseTerritoryAnalysis(text, territoryData);
+        const analysis = this.parseTerritoryAnalysis(text, territoryData);
 
-      this.safeEmit('ai:territoryAnalyzed', {
-        tokenId: geohash,
-        analysis,
-        recommendations: analysis.recommendations
-      });
+        this.safeEmit('ai:territoryAnalyzed', {
+          tokenId: geohash,
+          analysis,
+          recommendations: analysis.recommendations,
+        });
 
-      return analysis;
-    }, 3, 1000, 'territory analysis');
+        return analysis;
+      },
+      3,
+      1000,
+      'territory analysis'
+    );
   }
 
   /**
@@ -718,13 +763,18 @@ export class AIService extends BaseService {
 
     const prompt = this.buildCoachingPrompt(currentRun, userGoals, weatherConditions);
 
-    return this.retry(async () => {
-      const result = await this.model!.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+    return this.retry(
+      async () => {
+        const result = await this.model!.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
 
-      return this.parseCoachingAdvice(text, currentRun);
-    }, 3, 1000, 'coaching advice');
+        return this.parseCoachingAdvice(text, currentRun);
+      },
+      3,
+      1000,
+      'coaching advice'
+    );
   }
 
   // Prompt builders
@@ -864,7 +914,8 @@ Make this character memorable and fun to compete against!
     contextData?: any,
     userContext?: any
   ): string {
-    const userContextStr = userContext ? `
+    const userContextStr = userContext
+      ? `
 User Context:
 - Wallet: ${userContext.walletHistory?.address ? `${userContext.walletHistory.address.substring(0, 8)}...` : 'Not connected'}
 - Network: ${userContext.walletHistory?.networkName || 'Unknown'}
@@ -872,7 +923,8 @@ User Context:
 - Player Level: ${userContext.playerStats?.level || 1}
 - Total Distance: ${userContext.playerStats?.totalDistance || 0}m
 - REALM Balance: ${userContext.playerStats?.realmBalance || 0}
-- Cross-Chain Activity: ${userContext.territories?.filter((t: any) => t.crossChainHistory?.length > 0).length || 0} territories with cross-chain history` : '';
+- Cross-Chain Activity: ${userContext.territories?.filter((t: any) => t.crossChainHistory?.length > 0).length || 0} territories with cross-chain history`
+      : '';
 
     return `
 Analyze this territory for strategic value in RunRealm GameFi app.
@@ -902,11 +954,7 @@ Provide GameFi-focused analysis that helps players make strategic decisions base
     `.trim();
   }
 
-  private buildCoachingPrompt(
-    currentRun: CurrentRun,
-    goals: AIGoals,
-    weather?: string
-  ): string {
+  private buildCoachingPrompt(currentRun: CurrentRun, goals: AIGoals, weather?: string): string {
     return `
 Provide motivational running coaching for RunRealm GameFi app.
 Current run: ${currentRun.distance}m distance
@@ -932,7 +980,11 @@ Make this feel like a personal AI running coach in a game world!
   }
 
   // Response parsers
-  private async parseRouteOptimization(text: string, location: any, goals: AIGoals): Promise<RouteOptimization> {
+  private async parseRouteOptimization(
+    text: string,
+    location: any,
+    goals: AIGoals
+  ): Promise<RouteOptimization> {
     try {
       // Try to extract JSON from the response
       let jsonText = text.trim();
@@ -957,21 +1009,29 @@ Make this feel like a personal AI running coach in a game world!
       }
 
       // Ensure coordinates are valid
-      if (!Array.isArray(parsed.suggestedRoute.coordinates) || parsed.suggestedRoute.coordinates.length < 2) {
+      if (
+        !Array.isArray(parsed.suggestedRoute.coordinates) ||
+        parsed.suggestedRoute.coordinates.length < 2
+      ) {
         console.warn('AIService: Invalid coordinates in response, generating fallback');
-        parsed.suggestedRoute.coordinates = await this.generateFallbackRoute(location, goals.distance || 2000);
+        parsed.suggestedRoute.coordinates = await this.generateFallbackRoute(
+          location,
+          goals.distance || 2000
+        );
       }
 
       console.log('AIService: Successfully parsed route optimization:', {
         coordinateCount: parsed.suggestedRoute.coordinates.length,
         distance: parsed.suggestedRoute.distance,
-        confidence: parsed.confidence
+        confidence: parsed.confidence,
       });
 
       return parsed;
-
     } catch (error) {
-      console.warn('AIService: Failed to parse route optimization, using fallback:', error instanceof Error ? error.message : String(error));
+      console.warn(
+        'AIService: Failed to parse route optimization, using fallback:',
+        error instanceof Error ? error.message : String(error)
+      );
 
       // Fallback if JSON parsing fails
       return {
@@ -979,13 +1039,13 @@ Make this feel like a personal AI running coach in a game world!
           coordinates: await this.generateFallbackRoute(location, goals.distance || 2000),
           distance: goals.distance || 2000,
           difficulty: goals.difficulty || 50,
-          reasoning: 'AI-generated fallback route optimized for territory claiming'
+          reasoning: 'AI-generated fallback route optimized for territory claiming',
         },
         territories: {
           claimable: Math.floor(Math.random() * 3) + 1,
-          strategic: Math.floor(Math.random() * 50) + 25
+          strategic: Math.floor(Math.random() * 50) + 25,
         },
-        confidence: 65 // Lower confidence for fallback
+        confidence: 65, // Lower confidence for fallback
       };
     }
   }
@@ -1022,14 +1082,16 @@ Make this feel like a personal AI running coach in a game world!
         avatar: parsed.avatar || 'Athletic runner with standard gear',
         pace: parsed.pace || this.calculatePaceFromDifficulty(difficulty),
         specialAbility: parsed.specialAbility || 'Steady Pace',
-        backstory: parsed.backstory || 'A determined runner ready for competition.'
+        backstory: parsed.backstory || 'A determined runner ready for competition.',
       };
 
       console.log('AIService: Successfully parsed ghost runner:', ghostRunner.name);
       return ghostRunner;
-
     } catch (error) {
-      console.warn('AIService: Failed to parse ghost runner, using fallback:', error instanceof Error ? error.message : String(error));
+      console.warn(
+        'AIService: Failed to parse ghost runner, using fallback:',
+        error instanceof Error ? error.message : String(error)
+      );
       return this.createFallbackGhostRunner(difficulty);
     }
   }
@@ -1053,10 +1115,26 @@ Make this feel like a personal AI running coach in a game world!
   // Fallback creators
   private createFallbackGhostRunner(difficulty: number): GhostRunner {
     const runners = [
-      { name: 'Lightning Bolt', ability: 'Speed Surge', story: 'Former track star turned digital competitor.' },
-      { name: 'Mountain Echo', ability: 'Endurance Boost', story: 'Trail runner who conquered the highest peaks.' },
-      { name: 'City Phantom', ability: 'Urban Navigation', story: 'Street runner who knows every shortcut in town.' },
-      { name: 'Dawn Chaser', ability: 'Early Bird', story: 'Morning runner who catches the sunrise every day.' }
+      {
+        name: 'Lightning Bolt',
+        ability: 'Speed Surge',
+        story: 'Former track star turned digital competitor.',
+      },
+      {
+        name: 'Mountain Echo',
+        ability: 'Endurance Boost',
+        story: 'Trail runner who conquered the highest peaks.',
+      },
+      {
+        name: 'City Phantom',
+        ability: 'Urban Navigation',
+        story: 'Street runner who knows every shortcut in town.',
+      },
+      {
+        name: 'Dawn Chaser',
+        ability: 'Early Bird',
+        story: 'Morning runner who catches the sunrise every day.',
+      },
     ];
 
     const runner = runners[Math.floor(Math.random() * runners.length)];
@@ -1068,7 +1146,7 @@ Make this feel like a personal AI running coach in a game world!
       avatar: `Athletic runner with ${difficulty < 30 ? 'beginner' : difficulty < 70 ? 'intermediate' : 'professional'} gear`,
       pace: this.calculatePaceFromDifficulty(difficulty),
       specialAbility: runner.ability,
-      backstory: runner.story
+      backstory: runner.story,
     };
   }
 
@@ -1082,16 +1160,10 @@ Make this feel like a personal AI running coach in a game world!
       recommendations: [
         'Consider claiming during off-peak hours',
         'Stack territories for district bonuses',
-        'Monitor nearby competition levels'
+        'Monitor nearby competition levels',
       ],
-      threats: [
-        'High competition area',
-        'Weather-dependent accessibility'
-      ],
-      opportunities: [
-        'Strategic location for expansion',
-        'Potential for high rewards'
-      ]
+      threats: ['High competition area', 'Weather-dependent accessibility'],
+      opportunities: ['Strategic location for expansion', 'Potential for high rewards'],
     };
   }
 
@@ -1101,10 +1173,10 @@ Make this feel like a personal AI running coach in a game world!
       tips: [
         'Maintain steady breathing',
         'Keep your territory claiming pace',
-        'Stay hydrated for optimal performance'
+        'Stay hydrated for optimal performance',
       ],
       warnings: currentRun.distance > 5000 ? ['Consider a rest break'] : [],
-      paceRecommendation: 4.5 // 4.5 seconds per meter (moderate pace)
+      paceRecommendation: 4.5, // 4.5 seconds per meter (moderate pace)
     };
   }
 
@@ -1138,7 +1210,10 @@ Make this feel like a personal AI running coach in a game world!
     return points;
   }
 
-  private generateCircularWaypoints(center: { lat: number; lng: number }, distance: number): [number, number][] {
+  private generateCircularWaypoints(
+    center: { lat: number; lng: number },
+    distance: number
+  ): [number, number][] {
     const radius = distance / (2 * Math.PI * 111000);
     const waypoints: [number, number][] = [];
 
@@ -1204,7 +1279,7 @@ Make this feel like a personal AI running coach in a game world!
     return {
       enabled: this.isEnabled,
       initialized: this.isInitialized,
-      modelReady: this.model !== null
+      modelReady: this.model !== null,
     };
   }
 

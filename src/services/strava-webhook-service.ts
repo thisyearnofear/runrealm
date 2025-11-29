@@ -1,9 +1,9 @@
-import { BaseService } from "../core/base-service";
+import { BaseService } from '../core/base-service';
 
 export interface StravaWebhookEvent {
-  object_type: "activity" | "athlete";
+  object_type: 'activity' | 'athlete';
   object_id: number;
-  aspect_type: "create" | "update" | "delete";
+  aspect_type: 'create' | 'update' | 'delete';
   updates?: Record<string, any>;
   owner_id: number;
   subscription_id: number;
@@ -21,7 +21,8 @@ export class StravaWebhookService extends BaseService {
     this.clientId = process.env.STRAVA_CLIENT_ID || '';
     this.clientSecret = process.env.STRAVA_CLIENT_SECRET || '';
     this.verifyToken = process.env.STRAVA_VERIFY_TOKEN || 'runrealm_webhook_verify';
-    this.callbackUrl = process.env.STRAVA_WEBHOOK_CALLBACK_URL || 'http://localhost:3000/api/strava/webhook';
+    this.callbackUrl =
+      process.env.STRAVA_WEBHOOK_CALLBACK_URL || 'http://localhost:3000/api/strava/webhook';
   }
 
   /**
@@ -36,15 +37,16 @@ export class StravaWebhookService extends BaseService {
     try {
       // Check for existing subscription
       const existingSubscriptions = await this.getExistingSubscriptions();
-      
+
       if (existingSubscriptions.length > 0) {
-        console.log(`Strava webhook: Found existing subscription id=${existingSubscriptions[0].id}`);
+        console.log(
+          `Strava webhook: Found existing subscription id=${existingSubscriptions[0].id}`
+        );
         return;
       }
 
       // Create new subscription
       await this.createSubscription();
-      
     } catch (error) {
       console.error('Strava webhook: Failed to ensure subscription:', error);
       throw error;
@@ -74,7 +76,7 @@ export class StravaWebhookService extends BaseService {
       client_id: this.clientId,
       client_secret: this.clientSecret,
       callback_url: this.callbackUrl,
-      verify_token: this.verifyToken
+      verify_token: this.verifyToken,
     });
 
     const response = await fetch('https://www.strava.com/api/v3/push_subscriptions', {
@@ -82,7 +84,7 @@ export class StravaWebhookService extends BaseService {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: formData
+      body: formData,
     });
 
     if (!response.ok) {
@@ -102,7 +104,7 @@ export class StravaWebhookService extends BaseService {
       console.log('Strava webhook: Validation successful');
       return { 'hub.challenge': hubChallenge };
     }
-    
+
     console.warn('Strava webhook: Validation failed', { hubMode, hubVerifyToken });
     return null;
   }
@@ -115,7 +117,7 @@ export class StravaWebhookService extends BaseService {
       type: event.object_type,
       aspect: event.aspect_type,
       id: event.object_id,
-      owner: event.owner_id
+      owner: event.owner_id,
     });
 
     try {
@@ -147,7 +149,7 @@ export class StravaWebhookService extends BaseService {
     this.safeEmit('strava:activity:created', {
       activityId: event.object_id,
       ownerId: event.owner_id,
-      eventTime: event.event_time
+      eventTime: event.event_time,
     });
   }
 
@@ -162,7 +164,7 @@ export class StravaWebhookService extends BaseService {
       this.safeEmit('strava:activity:privacy_changed', {
         activityId: event.object_id,
         ownerId: event.owner_id,
-        isPrivate: event.updates.private === 'true'
+        isPrivate: event.updates.private === 'true',
       });
     }
 
@@ -171,7 +173,7 @@ export class StravaWebhookService extends BaseService {
       activityId: event.object_id,
       ownerId: event.owner_id,
       updates: event.updates,
-      eventTime: event.event_time
+      eventTime: event.event_time,
     });
   }
 
@@ -184,7 +186,7 @@ export class StravaWebhookService extends BaseService {
     this.safeEmit('strava:activity:deleted', {
       activityId: event.object_id,
       ownerId: event.owner_id,
-      eventTime: event.event_time
+      eventTime: event.event_time,
     });
   }
 
@@ -195,10 +197,10 @@ export class StravaWebhookService extends BaseService {
     if (event.object_type !== 'athlete') return;
 
     console.log(`Athlete ${event.owner_id} deauthorized the app`);
-    
+
     this.safeEmit('strava:athlete:deauthorized', {
       athleteId: event.owner_id,
-      eventTime: event.event_time
+      eventTime: event.event_time,
     });
   }
 

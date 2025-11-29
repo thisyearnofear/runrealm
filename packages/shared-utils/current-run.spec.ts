@@ -1,6 +1,6 @@
-import { CurrentRun, RunStart } from './current-run';
-import { LngLat, Marker } from 'mapbox-gl';
 import { LineString } from 'geojson';
+import { LngLat, Marker } from 'mapbox-gl';
+import { CurrentRun, RunStart } from './current-run';
 
 describe('CurrentRun class', () => {
   it('should initialize with a run start', () => {
@@ -29,12 +29,15 @@ describe('CurrentRun class', () => {
       position: {} as LngLat,
       distance: initialExpectedDistance,
       lineString: {} as LineString,
-      followsRoads: false
+      followsRoads: false,
     };
     const marker = getMockMarker();
     currentRun.addSegment(firstSegment, marker);
 
-    expect(currentRun.distance).toBe(initialExpectedDistance, 'Distance was not set correctly from the distance response.');
+    expect(currentRun.distance).toBe(
+      initialExpectedDistance,
+      'Distance was not set correctly from the distance response.'
+    );
     expect(firstSegment.followsRoads).toBe(false);
 
     const secondDistance = 1337;
@@ -43,13 +46,16 @@ describe('CurrentRun class', () => {
       position: {} as LngLat,
       distance: secondDistance,
       lineString: {} as LineString,
-      followsRoads: true
+      followsRoads: true,
     };
     currentRun.addSegment(secondSegment, getMockMarker());
-    expect(currentRun.distance).toBe(initialExpectedDistance + secondDistance, 'Distance did not correctly add the incoming distance response value.');
+    expect(currentRun.distance).toBe(
+      initialExpectedDistance + secondDistance,
+      'Distance did not correctly add the incoming distance response value.'
+    );
   });
 
-  it('gets the start\'s LngLat', () => {
+  it("gets the start's LngLat", () => {
     const expectedLngLat = { lng: 101, lat: 202 } as LngLat;
     const runStart = new RunStart(expectedLngLat);
     const currentRun = new CurrentRun(runStart);
@@ -69,12 +75,15 @@ describe('CurrentRun class', () => {
       position: expectedLngLat,
       distance: expectedDistance,
       lineString: {} as LineString,
-      followsRoads: false
+      followsRoads: false,
     };
     const marker = getMockMarker();
     spyOn(marker, 'remove').and.stub();
     currentRun.addSegment(segment, marker);
-    expect(currentRun.distance).toBe(expectedDistance, 'The run distance was not incremented by the segment length');
+    expect(currentRun.distance).toBe(
+      expectedDistance,
+      'The run distance was not incremented by the segment length'
+    );
 
     const retrieved = currentRun.getLastPosition();
     expect(retrieved).toEqual(expectedLngLat, 'Segment LngLat was not correctly removed.');
@@ -85,18 +94,22 @@ describe('CurrentRun class', () => {
     expect(marker.remove).toHaveBeenCalled();
 
     const notRemoved = currentRun.removeLastSegment();
-    expect(notRemoved).toBeFalsy('Attempting to remove when there are no other segments present should return undefined.');
+    expect(notRemoved).toBeFalsy(
+      'Attempting to remove when there are no other segments present should return undefined.'
+    );
   });
 
   it('does not remove the run start', () => {
     const currentRun = new CurrentRun(new RunStart({} as LngLat));
     const removed = currentRun.removeLastSegment();
-    expect(removed).toBeUndefined('Removing the last point should return undefined (no segments to remove).');
+    expect(removed).toBeUndefined(
+      'Removing the last point should return undefined (no segments to remove).'
+    );
   });
 
   function getMockMarker(): Marker {
     return {
-      remove: () => { }
+      remove: () => {},
     } as Marker;
   }
 });

@@ -4,9 +4,9 @@
  */
 
 import { BaseService } from '../core/base-service';
+import { AnimationService } from '../services/animation-service';
 import { DOMService } from '../services/dom-service';
 import { UIService } from '../services/ui-service';
-import { AnimationService } from '../services/animation-service';
 import { Web3Service } from '../services/web3-service';
 
 export interface RewardData {
@@ -40,7 +40,7 @@ export class RewardSystemUI extends BaseService {
     stakedAmount: 0,
     stakingRewards: 0,
     territoryRewards: 0,
-    runningRewards: 0
+    runningRewards: 0,
   };
   private stakingInfo: StakingInfo | null = null;
 
@@ -122,35 +122,56 @@ export class RewardSystemUI extends BaseService {
             <span class="reward-label">Available:</span>
             <span class="reward-value highlight">${this.formatTokenAmount(availableToClaim)} REALM</span>
           </div>
-          ${totalEarned > 0 ? `
+          ${
+            totalEarned > 0
+              ? `
             <div class="reward-item">
               <span class="reward-label">Total Earned:</span>
               <span class="reward-value">${this.formatTokenAmount(totalEarned)} REALM</span>
             </div>
-          ` : ''}
-          ${stakedAmount > 0 ? `
+          `
+              : ''
+          }
+          ${
+            stakedAmount > 0
+              ? `
             <div class="reward-item">
               <span class="reward-label">Staked:</span>
               <span class="reward-value">${this.formatTokenAmount(stakedAmount)} REALM</span>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
         </div>
-        ${availableToClaim > 0 ? `
+        ${
+          availableToClaim > 0
+            ? `
           <button id="claim-rewards-btn" class="wallet-reward-btn" data-action="claim-rewards">
             💎 Claim ${this.formatTokenAmount(availableToClaim)} REALM
           </button>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
   }
 
   private setupEventListeners(): void {
     // Listen for reward-related events
-    this.subscribe('territory:claimed', (data: { territory: any; transactionHash: string; isCrossChain?: boolean; sourceChainId?: number; source?: string }) => {
-      // Calculate reward based on territory data
-      const reward = 50; // Default territory reward
-      this.addTerritoryReward(reward);
-    });
+    this.subscribe(
+      'territory:claimed',
+      (data: {
+        territory: any;
+        transactionHash: string;
+        isCrossChain?: boolean;
+        sourceChainId?: number;
+        source?: string;
+      }) => {
+        // Calculate reward based on territory data
+        const reward = 50; // Default territory reward
+        this.addTerritoryReward(reward);
+      }
+    );
 
     this.subscribe('run:completed', (data) => {
       const reward = this.calculateRunReward(data.distance, data.duration);
@@ -210,12 +231,19 @@ export class RewardSystemUI extends BaseService {
       id: 'reward-system-widget',
       className: 'reward-widget collapsed',
       innerHTML: this.renderRewardWidget(),
-      parent: document.body
+      parent: document.body,
     });
   }
 
   private renderRewardWidget(): string {
-    const { totalEarned, availableToClaim, stakedAmount, stakingRewards, territoryRewards, runningRewards } = this.rewardData;
+    const {
+      totalEarned,
+      availableToClaim,
+      stakedAmount,
+      stakingRewards,
+      territoryRewards,
+      runningRewards,
+    } = this.rewardData;
     const isConnected = this.web3Service.isWalletConnected();
 
     return `
@@ -229,12 +257,15 @@ export class RewardSystemUI extends BaseService {
       </div>
       
       <div class="reward-widget-content">
-        ${!isConnected ? `
+        ${
+          !isConnected
+            ? `
           <div class="reward-connect-prompt">
             <p>Connect your wallet to view and claim rewards</p>
             <p class="connect-hint">Use the wallet widget in the top-right corner</p>
           </div>
-        ` : `
+        `
+            : `
           <div class="reward-stats">
             <div class="stat-row">
               <span class="stat-label">Total Earned:</span>
@@ -277,7 +308,9 @@ export class RewardSystemUI extends BaseService {
             
             <div class="staking-section">
               <div class="staking-info">
-                ${this.stakingInfo ? `
+                ${
+                  this.stakingInfo
+                    ? `
                   <div class="staking-active">
                     <span class="staking-label">Staked: ${this.formatTokenAmount(this.stakingInfo.amount)} REALM</span>
                     <span class="staking-apy">APY: ${this.stakingInfo.apy}%</span>
@@ -285,18 +318,21 @@ export class RewardSystemUI extends BaseService {
                   <button id="unstake-tokens-btn" class="reward-btn secondary">
                     Unstake Tokens
                   </button>
-                ` : `
+                `
+                    : `
                   <button id="stake-tokens-btn" class="reward-btn secondary">
                     <span class="btn-icon">📈</span>
                     <span class="btn-text">Stake REALM</span>
                   </button>
-                `}
+                `
+                }
               </div>
             </div>
           </div>
           
           ${this.renderRewardHistory()}
-        `}
+        `
+        }
       </div>
     `;
   }
@@ -379,7 +415,7 @@ export class RewardSystemUI extends BaseService {
       // Emit transaction started event
       this.safeEmit('web3:transactionSubmitted', {
         hash: 'claim_' + Date.now(),
-        type: 'reward_claim'
+        type: 'reward_claim',
       });
 
       // Simulate transaction delay
@@ -391,18 +427,20 @@ export class RewardSystemUI extends BaseService {
         // Emit success
         this.safeEmit('web3:transactionConfirmed', {
           hash: 'claim_' + Date.now(),
-          blockNumber: 12345
+          blockNumber: 12345,
         });
 
         this.updateRewardDisplay();
         this.saveRewardData();
 
-        this.uiService.showToast(`🎉 Successfully claimed ${this.formatTokenAmount(claimAmount)} REALM!`, {
-          type: 'success',
-          duration: 5000
-        });
+        this.uiService.showToast(
+          `🎉 Successfully claimed ${this.formatTokenAmount(claimAmount)} REALM!`,
+          {
+            type: 'success',
+            duration: 5000,
+          }
+        );
       }, 2000);
-
     } catch (error) {
       console.error('Failed to claim rewards:', error);
       this.uiService.showToast('Failed to claim rewards', { type: 'error' });
@@ -467,7 +505,7 @@ export class RewardSystemUI extends BaseService {
           </div>
         </div>
       `,
-      parent: document.body
+      parent: document.body,
     });
 
     // Add input event listener for preview calculation
@@ -481,7 +519,8 @@ export class RewardSystemUI extends BaseService {
       const monthlyReward = dailyReward * 30;
 
       if (dailyPreview) dailyPreview.textContent = `${this.formatTokenAmount(dailyReward)} REALM`;
-      if (monthlyPreview) monthlyPreview.textContent = `${this.formatTokenAmount(monthlyReward)} REALM`;
+      if (monthlyPreview)
+        monthlyPreview.textContent = `${this.formatTokenAmount(monthlyReward)} REALM`;
     });
 
     this.animationService.fadeIn(modal, { duration: 200 });
@@ -509,12 +548,14 @@ export class RewardSystemUI extends BaseService {
         this.updateRewardDisplay();
         this.saveRewardData();
 
-        this.uiService.showToast(`🎉 Unstaked ${this.formatTokenAmount(unstakedAmount)} REALM + ${this.formatTokenAmount(pendingReward)} rewards!`, {
-          type: 'success',
-          duration: 5000
-        });
+        this.uiService.showToast(
+          `🎉 Unstaked ${this.formatTokenAmount(unstakedAmount)} REALM + ${this.formatTokenAmount(pendingReward)} rewards!`,
+          {
+            type: 'success',
+            duration: 5000,
+          }
+        );
       }, 2000);
-
     } catch (error) {
       console.error('Failed to unstake tokens:', error);
       this.uiService.showToast('Failed to unstake tokens', { type: 'error' });
@@ -554,7 +595,7 @@ export class RewardSystemUI extends BaseService {
   private showRewardNotification(title: string, amount: number): void {
     this.uiService.showToast(`${title}: +${this.formatTokenAmount(amount)} REALM`, {
       type: 'success',
-      duration: 4000
+      duration: 4000,
     });
 
     // Add visual effect to widget
@@ -623,7 +664,7 @@ export class RewardSystemUI extends BaseService {
     const baseReward = (distance / 100) * 0.01;
 
     // Bonus for longer runs
-    const distanceBonus = distance > 5000 ? (distance - 5000) / 1000 * 0.5 : 0;
+    const distanceBonus = distance > 5000 ? ((distance - 5000) / 1000) * 0.5 : 0;
 
     // Bonus for sustained pace (duration vs distance)
     const pace = duration / distance; // ms per meter
@@ -675,7 +716,7 @@ export class RewardSystemUI extends BaseService {
       stakedAmount: 0,
       stakingRewards: 0,
       territoryRewards: 0,
-      runningRewards: 0
+      runningRewards: 0,
     };
     this.stakingInfo = null;
     this.updateRewardDisplay();
@@ -1229,7 +1270,7 @@ export class RewardSystemUI extends BaseService {
           }
         }
       `,
-      parent: document.head
+      parent: document.head,
     });
   }
 

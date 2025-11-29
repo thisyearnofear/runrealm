@@ -7,7 +7,11 @@
 
 import { MapService } from '@runrealm/shared-core/services/map-service';
 import { RunPoint } from '@runrealm/shared-core/services/run-tracking-service';
-import { TerritoryPreview, TerritoryIntent } from '@runrealm/shared-core/services/territory-service';
+import {
+  TerritoryIntent,
+  TerritoryMetadata,
+  TerritoryPreview,
+} from '@runrealm/shared-core/services/territory-service';
 
 export interface MobileMapState {
   runTrail: Array<{ latitude: number; longitude: number }>;
@@ -16,21 +20,21 @@ export interface MobileMapState {
     coordinates: Array<{ latitude: number; longitude: number }>;
     fillColor: string;
     strokeColor: string;
-    metadata: any;
+    metadata: TerritoryMetadata;
   }>;
   territoryPreviews: Array<{
     id: string;
     coordinates: Array<{ latitude: number; longitude: number }>;
     fillColor: string;
     strokeColor: string;
-    metadata: any;
+    metadata: TerritoryMetadata;
   }>;
   territoryIntents: Array<{
     id: string;
     coordinates: Array<{ latitude: number; longitude: number }>;
     fillColor: string;
     strokeColor: string;
-    metadata: any;
+    metadata: TerritoryMetadata;
   }>;
   selectedTerritoryId: string | null;
   suggestedRoute: Array<{ latitude: number; longitude: number }>;
@@ -92,14 +96,16 @@ export class MobileMapAdapter {
    * Notify all listeners of state change
    */
   private notifyListeners(): void {
-    this.listeners.forEach(listener => listener(this.state));
+    this.listeners.forEach((listener) => {
+      listener(this.state);
+    });
   }
 
   /**
    * Convert RunPoints to React Native Maps coordinates
    */
   private convertRunPoints(points: RunPoint[]): Array<{ latitude: number; longitude: number }> {
-    return points.map(p => ({
+    return points.map((p) => ({
       latitude: p.lat,
       longitude: p.lng,
     }));
@@ -136,7 +142,7 @@ export class MobileMapAdapter {
   public drawRunTrail(points: RunPoint[]): void {
     // Update MapService (maintains business logic)
     this.mapService.drawRunTrail(points);
-    
+
     // Update mobile state for rendering
     this.state.runTrail = this.convertRunPoints(points);
     this.notifyListeners();
@@ -148,21 +154,23 @@ export class MobileMapAdapter {
   public drawTerritory(points: RunPoint[]): void {
     // Update MapService
     this.mapService.drawTerritory(points);
-    
+
     // Update mobile state
     const coordinates = this.convertRunPoints(points);
     // Close the polygon
     if (coordinates.length > 0) {
       coordinates.push(coordinates[0]);
     }
-    
-    this.state.territories = [{
-      id: 'current-territory',
-      coordinates,
-      fillColor: 'rgba(0, 255, 136, 0.3)',
-      strokeColor: '#00ff88',
-      metadata: {},
-    }];
+
+    this.state.territories = [
+      {
+        id: 'current-territory',
+        coordinates,
+        fillColor: 'rgba(0, 255, 136, 0.3)',
+        strokeColor: '#00ff88',
+        metadata: {},
+      },
+    ];
     this.notifyListeners();
   }
 
@@ -172,7 +180,7 @@ export class MobileMapAdapter {
   public addTerritoryPreview(preview: TerritoryPreview): void {
     // Update MapService
     this.mapService.addTerritoryPreview(preview);
-    
+
     // Update mobile state
     const colors = this.getRarityColor(preview.metadata.rarity);
     this.state.territoryPreviews.push({
@@ -191,11 +199,9 @@ export class MobileMapAdapter {
   public removeTerritoryPreview(previewId: string): void {
     // Update MapService
     this.mapService.removeTerritoryPreview(previewId);
-    
+
     // Update mobile state
-    this.state.territoryPreviews = this.state.territoryPreviews.filter(
-      p => p.id !== previewId
-    );
+    this.state.territoryPreviews = this.state.territoryPreviews.filter((p) => p.id !== previewId);
     this.notifyListeners();
   }
 
@@ -205,7 +211,7 @@ export class MobileMapAdapter {
   public addTerritoryIntent(intent: TerritoryIntent): void {
     // Update MapService
     this.mapService.addTerritoryIntent(intent);
-    
+
     // Update mobile state
     this.state.territoryIntents.push({
       id: intent.id,
@@ -227,11 +233,9 @@ export class MobileMapAdapter {
   public removeTerritoryIntent(intentId: string): void {
     // Update MapService
     this.mapService.removeTerritoryIntent(intentId);
-    
+
     // Update mobile state
-    this.state.territoryIntents = this.state.territoryIntents.filter(
-      i => i.id !== intentId
-    );
+    this.state.territoryIntents = this.state.territoryIntents.filter((i) => i.id !== intentId);
     this.notifyListeners();
   }
 
@@ -241,7 +245,7 @@ export class MobileMapAdapter {
   public selectTerritory(territoryId: string): void {
     // Update MapService
     this.mapService.selectTerritory(territoryId);
-    
+
     // Update mobile state
     this.state.selectedTerritoryId = territoryId;
     this.notifyListeners();
@@ -253,7 +257,7 @@ export class MobileMapAdapter {
   public clearTerritorySelection(): void {
     // Update MapService
     this.mapService.clearTerritorySelection();
-    
+
     // Update mobile state
     this.state.selectedTerritoryId = null;
     this.notifyListeners();
@@ -265,7 +269,7 @@ export class MobileMapAdapter {
   public highlightActivity(points: RunPoint[]): void {
     // Update MapService
     this.mapService.highlightActivity(points);
-    
+
     // Update mobile state
     this.state.activityHighlight = this.convertRunPoints(points);
     this.notifyListeners();
@@ -277,7 +281,7 @@ export class MobileMapAdapter {
   public clearActivityHighlight(): void {
     // Update MapService
     this.mapService.clearActivityHighlight();
-    
+
     // Update mobile state
     this.state.activityHighlight = [];
     this.notifyListeners();
@@ -289,9 +293,9 @@ export class MobileMapAdapter {
   public drawSuggestedRoute(points: any[]): void {
     // Update MapService
     this.mapService.drawSuggestedRoute(points);
-    
+
     // Update mobile state
-    this.state.suggestedRoute = points.map(p => ({
+    this.state.suggestedRoute = points.map((p) => ({
       latitude: p.lat,
       longitude: p.lng,
     }));
@@ -304,7 +308,7 @@ export class MobileMapAdapter {
   public clearRun(): void {
     // Update MapService
     this.mapService.clearRun();
-    
+
     // Reset mobile state
     this.state = this.getInitialState();
     this.notifyListeners();
@@ -316,7 +320,7 @@ export class MobileMapAdapter {
   public clearAllTerritoryPreviews(): void {
     // Update MapService
     this.mapService.clearAllTerritoryPreviews();
-    
+
     // Update mobile state
     this.state.territoryPreviews = [];
     this.state.territoryIntents = [];

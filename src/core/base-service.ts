@@ -3,8 +3,8 @@
  * Provides consistent lifecycle management and common functionality for all services
  */
 
-import { EventBus } from './event-bus';
 import { ConfigService } from './app-config';
+import { EventBus } from './event-bus';
 
 export abstract class BaseService {
   protected eventBus: EventBus;
@@ -103,7 +103,7 @@ export abstract class BaseService {
     this.safeEmit('service:error' as any, {
       service: this.constructor.name,
       context,
-      error: errorMessage
+      error: errorMessage,
     });
   }
 
@@ -139,7 +139,7 @@ export abstract class BaseService {
         return await operation();
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
+
         if (attempt === maxRetries) {
           this.handleError(lastError, `${context} (final attempt)`);
           throw lastError;
@@ -151,7 +151,7 @@ export abstract class BaseService {
         );
 
         // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, attempt - 1)));
+        await new Promise((resolve) => setTimeout(resolve, delay * 2 ** (attempt - 1)));
       }
     }
 
@@ -189,7 +189,9 @@ export abstract class BaseService {
       if (!inThrottle) {
         func(...args);
         inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
+        setTimeout(() => {
+          inThrottle = false;
+        }, limit);
       }
     };
   }
@@ -200,7 +202,7 @@ export abstract class BaseService {
   public cleanup(): void {
     try {
       // Run all registered cleanup functions
-      this.cleanupFunctions.forEach(cleanup => {
+      this.cleanupFunctions.forEach((cleanup) => {
         try {
           cleanup();
         } catch (error) {

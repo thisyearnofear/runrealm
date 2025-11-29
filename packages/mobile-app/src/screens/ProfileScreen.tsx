@@ -1,13 +1,10 @@
-import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
-import { AchievementService, Achievement } from '@runrealm/shared-core/services/achievement-service';
-import { TerritoryService, Territory } from '@runrealm/shared-core/services/territory-service';
+  Achievement,
+  AchievementService,
+} from '@runrealm/shared-core/services/achievement-service';
+import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export const ProfileScreen: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -22,20 +19,16 @@ export const ProfileScreen: React.FC = () => {
   const [achievementService] = useState(() => new AchievementService());
   const [territoryService] = useState(() => new TerritoryService());
 
-  useEffect(() => {
-    loadProfileData();
-  }, []);
-
-  const loadProfileData = async () => {
+  const loadProfileData = useCallback(async () => {
     try {
       // Load achievements
       const userAchievements = achievementService.getAchievements();
       setAchievements(userAchievements);
-      
+
       // Load territories
       const claimedTerritories = territoryService.getClaimedTerritories();
       setTerritories(claimedTerritories);
-      
+
       // Calculate stats (would need actual data from services)
       setStats({
         totalRuns: 12,
@@ -46,7 +39,11 @@ export const ProfileScreen: React.FC = () => {
     } catch (error) {
       console.error('Failed to load profile data:', error);
     }
-  };
+  }, [achievementService, territoryService]);
+
+  useEffect(() => {
+    loadProfileData();
+  }, [loadProfileData]);
 
   const formatDuration = (milliseconds: number): string => {
     const totalSeconds = Math.floor(milliseconds / 1000);
@@ -59,12 +56,12 @@ export const ProfileScreen: React.FC = () => {
     return `${minutes}m`;
   };
 
-  const unlockedAchievements = achievements.filter(a => a.unlockedAt);
+  const unlockedAchievements = achievements.filter((a) => a.unlockedAt);
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>👤 Your Profile</Text>
-      
+
       {/* Stats Overview */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
@@ -84,7 +81,7 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.statLabel}>Territories</Text>
         </View>
       </View>
-      
+
       {/* Achievements */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -109,7 +106,7 @@ export const ProfileScreen: React.FC = () => {
           </View>
         )}
       </View>
-      
+
       {/* Territories */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>

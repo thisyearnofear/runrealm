@@ -13,7 +13,9 @@ console.log('==============================');
 console.log('\n1️⃣ Checking build artifacts...');
 const publicDir = path.join(__dirname, '..', 'public');
 const indexHtml = path.join(publicDir, 'index.html');
-const mainJs = fs.readdirSync(publicDir).find(file => file.startsWith('app.') && file.endsWith('.js'));
+const mainJs = fs
+  .readdirSync(publicDir)
+  .find((file) => file.startsWith('app.') && file.endsWith('.js'));
 
 if (!fs.existsSync(indexHtml)) {
   console.error('❌ index.html not found - run npm run build first');
@@ -37,10 +39,10 @@ const criticalFiles = [
   'src/services/dom-service.ts',
   'src/services/location-service.ts',
   'src/services/run-tracking-service.ts',
-  'src/config/contracts.ts'
+  'src/config/contracts.ts',
 ];
 
-let missingFiles = [];
+const missingFiles = [];
 for (const file of criticalFiles) {
   const filePath = path.join(__dirname, '..', file);
   if (!fs.existsSync(filePath)) {
@@ -50,7 +52,9 @@ for (const file of criticalFiles) {
 
 if (missingFiles.length > 0) {
   console.error('❌ Missing critical files:');
-  missingFiles.forEach(file => console.error(`   - ${file}`));
+  missingFiles.forEach((file) => {
+    console.error(`   - ${file}`);
+  });
   process.exit(1);
 }
 
@@ -66,7 +70,7 @@ try {
   const expectedAddresses = [
     '0x18082d110113B40A24A41dF10b4b249Ee461D3eb', // REALM Token
     '0x7A52d845Dc37aC5213a546a59A43148308A88983', // Universal Contract
-    '0x0590F45F223B87e51180f6B7546Cc25955984726'  // GameLogic Library
+    '0x0590F45F223B87e51180f6B7546Cc25955984726', // GameLogic Library
   ];
 
   let foundAddresses = 0;
@@ -131,7 +135,9 @@ if (!sourceMapExists) {
 
 if (potentialIssues.length > 0) {
   console.warn('⚠️  Potential runtime issues detected:');
-  potentialIssues.forEach(issue => console.warn(`   - ${issue}`));
+  potentialIssues.forEach((issue) => {
+    console.warn(`   - ${issue}`);
+  });
 } else {
   console.log('✅ No obvious runtime issues detected');
 }

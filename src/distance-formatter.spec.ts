@@ -1,4 +1,4 @@
-import { getFormattedDistance, DistanceResult } from './utils/distance-formatter';
+import { DistanceResult, getFormattedDistance } from './utils/distance-formatter';
 
 describe('Distance formatter', () => {
   it('formats under 1km correctly in metric', () => {

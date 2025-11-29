@@ -6,9 +6,9 @@
 /* ===== RESPONSIVE BREAKPOINTS ===== */
 :root {
   /* Breakpoint System */
-  --breakpoint-xs: 320px;  /* Small phones */
-  --breakpoint-sm: 480px;  /* Large phones */
-  --breakpoint-md: 768px;  /* Tablets */
+  --breakpoint-xs: 320px; /* Small phones */
+  --breakpoint-sm: 480px; /* Large phones */
+  --breakpoint-md: 768px; /* Tablets */
   --breakpoint-lg: 1024px; /* Small laptops */
   --breakpoint-xl: 1200px; /* Large laptops */
   --breakpoint-xxl: 1440px; /* Desktops */
@@ -472,9 +472,15 @@
   }
 
   @keyframes focusPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.02);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 }
 
@@ -535,42 +541,80 @@
 /* ===== RESPONSIVE UTILITY CLASSES ===== */
 
 /* Show/hide utilities for different screen sizes */
-.show-mobile { display: none; }
-.show-tablet { display: none; }
-.show-desktop { display: none; }
+.show-mobile {
+  display: none;
+}
+.show-tablet {
+  display: none;
+}
+.show-desktop {
+  display: none;
+}
 
 @media (max-width: 767px) {
-  .hide-mobile { display: none !important; }
-  .show-mobile { display: block; }
+  .hide-mobile {
+    display: none !important;
+  }
+  .show-mobile {
+    display: block;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .hide-tablet { display: none !important; }
-  .show-tablet { display: block; }
+  .hide-tablet {
+    display: none !important;
+  }
+  .show-tablet {
+    display: block;
+  }
 }
 
 @media (min-width: 1024px) {
-  .hide-desktop { display: none !important; }
-  .show-desktop { display: block; }
+  .hide-desktop {
+    display: none !important;
+  }
+  .show-desktop {
+    display: block;
+  }
 }
 
 /* Responsive spacing utilities */
 @media (max-width: 767px) {
-  .p-mobile-sm { padding: var(--space-mobile-sm); }
-  .p-mobile-md { padding: var(--space-mobile-md); }
-  .p-mobile-lg { padding: var(--space-mobile-lg); }
-  
-  .m-mobile-sm { margin: var(--space-mobile-sm); }
-  .m-mobile-md { margin: var(--space-mobile-md); }
-  .m-mobile-lg { margin: var(--space-mobile-lg); }
+  .p-mobile-sm {
+    padding: var(--space-mobile-sm);
+  }
+  .p-mobile-md {
+    padding: var(--space-mobile-md);
+  }
+  .p-mobile-lg {
+    padding: var(--space-mobile-lg);
+  }
+
+  .m-mobile-sm {
+    margin: var(--space-mobile-sm);
+  }
+  .m-mobile-md {
+    margin: var(--space-mobile-md);
+  }
+  .m-mobile-lg {
+    margin: var(--space-mobile-lg);
+  }
 }
 
 /* Responsive text utilities */
 @media (max-width: 767px) {
-  .text-mobile-xs { font-size: var(--font-mobile-xs); }
-  .text-mobile-sm { font-size: var(--font-mobile-sm); }
-  .text-mobile-md { font-size: var(--font-mobile-md); }
-  .text-mobile-lg { font-size: var(--font-mobile-lg); }
+  .text-mobile-xs {
+    font-size: var(--font-mobile-xs);
+  }
+  .text-mobile-sm {
+    font-size: var(--font-mobile-sm);
+  }
+  .text-mobile-md {
+    font-size: var(--font-mobile-md);
+  }
+  .text-mobile-lg {
+    font-size: var(--font-mobile-lg);
+  }
 }
 
 /* ===== PERFORMANCE MONITORING HELPERS ===== */

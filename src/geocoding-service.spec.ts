@@ -27,11 +27,15 @@ describe('GeocodingService', () => {
       expect(url).toContain('access_token=test-token');
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({
-          features: [
-            { place_name: 'Seattle, Washington, United States', center: [-122.335167, 47.608013] }
-          ]
-        })
+        json: () =>
+          Promise.resolve({
+            features: [
+              {
+                place_name: 'Seattle, Washington, United States',
+                center: [-122.335167, 47.608013],
+              },
+            ],
+          }),
       });
     };
 

@@ -28,10 +28,10 @@ const contractsDirs = [
   'contracts/interfaces',
   'contracts/libraries',
   'test/contracts',
-  'scripts/deploy'
+  'scripts/deploy',
 ];
 
-contractsDirs.forEach(dir => {
+contractsDirs.forEach((dir) => {
   const dirPath = path.join(__dirname, '..', dir);
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
@@ -41,21 +41,21 @@ contractsDirs.forEach(dir => {
 
 // Create TypeScript configuration for contracts
 const tsConfigContracts = {
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "lib": ["ES2020"],
-    "outDir": "./dist",
-    "rootDir": "./",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "typeRoots": ["./node_modules/@types", "./types"]
+  compilerOptions: {
+    target: 'ES2020',
+    module: 'commonjs',
+    lib: ['ES2020'],
+    outDir: './dist',
+    rootDir: './',
+    strict: true,
+    esModuleInterop: true,
+    skipLibCheck: true,
+    forceConsistentCasingInFileNames: true,
+    resolveJsonModule: true,
+    typeRoots: ['./node_modules/@types', './types'],
   },
-  "include": ["contracts/**/*", "test/contracts/**/*", "scripts/**/*"],
-  "exclude": ["node_modules", "dist", "cache", "artifacts"]
+  include: ['contracts/**/*', 'test/contracts/**/*', 'scripts/**/*'],
+  exclude: ['node_modules', 'dist', 'cache', 'artifacts'],
 };
 
 const tsConfigPath = path.join(__dirname, '..', 'tsconfig.contracts.json');
@@ -102,38 +102,32 @@ if (!fs.existsSync(interfacesPath)) {
 // Check for required environment variables
 console.log('\n🔍 Checking environment configuration...');
 
-const requiredEnvVars = [
-  'MAPBOX_ACCESS_TOKEN',
-  'GOOGLE_GEMINI_API_KEY'
-];
+const requiredEnvVars = ['MAPBOX_ACCESS_TOKEN', 'GOOGLE_GEMINI_API_KEY'];
 
-const optionalEnvVars = [
-  'PRIVATE_KEY',
-  'ZETACHAIN_RPC_URL'
-];
+const optionalEnvVars = ['PRIVATE_KEY', 'ZETACHAIN_RPC_URL'];
 
-let missingRequired = [];
-let missingOptional = [];
+const missingRequired = [];
+const missingOptional = [];
 
 // Load .env file
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
   const envVars = {};
-  
-  envContent.split('\n').forEach(line => {
+
+  envContent.split('\n').forEach((line) => {
     if (line.trim() && !line.startsWith('#') && line.includes('=')) {
       const [key, value] = line.split('=');
       envVars[key.trim()] = value.trim();
     }
   });
 
-  requiredEnvVars.forEach(varName => {
+  requiredEnvVars.forEach((varName) => {
     if (!envVars[varName] || envVars[varName].includes('your_') || envVars[varName] === '') {
       missingRequired.push(varName);
     }
   });
 
-  optionalEnvVars.forEach(varName => {
+  optionalEnvVars.forEach((varName) => {
     if (!envVars[varName] || envVars[varName].includes('your_') || envVars[varName] === '') {
       missingOptional.push(varName);
     }
@@ -142,7 +136,7 @@ if (fs.existsSync(envPath)) {
 
 if (missingRequired.length > 0) {
   console.log('❌ Missing required environment variables:');
-  missingRequired.forEach(varName => {
+  missingRequired.forEach((varName) => {
     console.log(`   - ${varName}`);
   });
   console.log('\nPlease configure these in your .env file before running the app.');
@@ -150,7 +144,7 @@ if (missingRequired.length > 0) {
 
 if (missingOptional.length > 0) {
   console.log('⚠️  Optional environment variables not configured:');
-  missingOptional.forEach(varName => {
+  missingOptional.forEach((varName) => {
     console.log(`   - ${varName} (needed for Web3 features)`);
   });
 }

@@ -3,15 +3,15 @@
  * Aggregates data from various services into a unified interface
  */
 
-import { BaseService } from "../core/base-service";
-import { EventBus } from "../core/event-bus";
-import { ProgressionService, PlayerStats } from "./progression-service";
-import { RunTrackingService, RunSession } from "./run-tracking-service";
-import { Web3Service, WalletInfo } from "./web3-service";
-import { TerritoryService, Territory } from "./territory-service";
-import { AIService } from "./ai-service";
-import { WidgetStateService } from "../components/widget-state-service";
-import { GhostRunnerService, GhostRunnerNFT } from "./ghost-runner-service";
+import { WidgetStateService } from '../components/widget-state-service';
+import { BaseService } from '../core/base-service';
+import { EventBus } from '../core/event-bus';
+import { AIService } from './ai-service';
+import { GhostRunnerNFT, GhostRunnerService } from './ghost-runner-service';
+import { PlayerStats, ProgressionService } from './progression-service';
+import { RunSession, RunTrackingService } from './run-tracking-service';
+import { Territory, TerritoryService } from './territory-service';
+import { WalletInfo, Web3Service } from './web3-service';
 
 export interface DashboardState {
   isVisible: boolean;
@@ -117,11 +117,14 @@ export class UserDashboardService extends BaseService {
         func.apply(this, args);
         lastExecTime = now;
       } else if (!timeout) {
-        timeout = setTimeout(() => {
-          func.apply(this, args);
-          lastExecTime = Date.now();
-          timeout = null;
-        }, wait - (now - lastExecTime));
+        timeout = setTimeout(
+          () => {
+            func.apply(this, args);
+            lastExecTime = Date.now();
+            timeout = null;
+          },
+          wait - (now - lastExecTime)
+        );
       }
     };
   }
@@ -148,33 +151,32 @@ export class UserDashboardService extends BaseService {
       await this.updateDashboardData();
     }
 
-    this.safeEmit("service:initialized", {
-      service: "UserDashboardService",
+    this.safeEmit('service:initialized', {
+      service: 'UserDashboardService',
       success: true,
     });
   }
 
   private loadWidgetState(): void {
     try {
-      const widgetState =
-        this.widgetStateService.getWidgetState("user-dashboard");
+      const widgetState = this.widgetStateService.getWidgetState('user-dashboard');
       if (widgetState) {
         this.dashboardState.isVisible = widgetState.visible ?? false;
         this.dashboardState.isMinimized = widgetState.minimized ?? true;
       }
     } catch (error) {
-      console.warn("Failed to load widget state for user dashboard:", error);
+      console.warn('Failed to load widget state for user dashboard:', error);
     }
   }
 
   private saveWidgetState(): void {
     try {
-      this.widgetStateService.setWidgetState("user-dashboard", {
+      this.widgetStateService.setWidgetState('user-dashboard', {
         visible: this.dashboardState.isVisible,
         minimized: this.dashboardState.isMinimized,
       });
     } catch (error) {
-      console.warn("Failed to save widget state for user dashboard:", error);
+      console.warn('Failed to save widget state for user dashboard:', error);
     }
   }
 
@@ -196,8 +198,7 @@ export class UserDashboardService extends BaseService {
       };
 
       // Update territories from territory service
-      this.dashboardData.territories =
-        this.territoryService.getClaimedTerritories();
+      this.dashboardData.territories = this.territoryService.getClaimedTerritories();
 
       // Update ghosts from ghost runner service
       this.dashboardData.ghosts = this.ghostRunnerService.getGhosts();
@@ -207,12 +208,12 @@ export class UserDashboardService extends BaseService {
       this.isDataLoaded = true;
 
       // Emit update event
-      this.safeEmit("dashboard:dataUpdated", {
+      this.safeEmit('dashboard:dataUpdated', {
         data: this.dashboardData,
         state: this.dashboardState,
       });
     } catch (error) {
-      this.handleError(error, "updateDashboardData");
+      this.handleError(error, 'updateDashboardData');
     }
   }
 
@@ -225,36 +226,36 @@ export class UserDashboardService extends BaseService {
       this.dashboardState.lastUpdated = Date.now();
 
       // Emit lightweight update event for real-time data only
-      this.safeEmit("dashboard:realTimeDataUpdated", {
+      this.safeEmit('dashboard:realTimeDataUpdated', {
         currentRun: this.dashboardData.currentRun,
         lastUpdated: this.dashboardState.lastUpdated,
       });
     } catch (error) {
-      this.handleError(error, "updateRealTimeData");
+      this.handleError(error, 'updateRealTimeData');
     }
   }
 
   private setupEventListeners(): void {
     // Listen for player stats updates (debounced)
-    this.subscribe("game:statsUpdated", (data: any) => {
+    this.subscribe('game:statsUpdated', (data: any) => {
       this.dashboardData.userStats = data.stats;
       this.debouncedUpdate?.();
     });
 
     // Listen for run events (throttled for real-time updates, debounced for full updates)
-    this.subscribe("run:started", () => {
+    this.subscribe('run:started', () => {
       // Immediate update for run start
       this.updateDashboardData();
       // Start real-time updates
       this.startRealTimeUpdates();
     });
 
-    this.subscribe("run:pointAdded", () => {
+    this.subscribe('run:pointAdded', () => {
       // Throttled real-time update for ongoing runs
       this.throttledRealTimeUpdate?.();
     });
 
-    this.subscribe("run:cleared", (data: any) => {
+    this.subscribe('run:cleared', (data: any) => {
       this.dashboardData.recentActivity.lastRun = {
         id: data.runId,
         startTime: Date.now(),
@@ -265,7 +266,7 @@ export class UserDashboardService extends BaseService {
         totalDuration: 0,
         averageSpeed: 0,
         maxSpeed: 0,
-        status: "completed",
+        status: 'completed',
         territoryEligible: false,
       } as RunSession;
       // Stop real-time updates
@@ -275,24 +276,22 @@ export class UserDashboardService extends BaseService {
     });
 
     // Listen for territory events
-    this.subscribe("territory:claimed", (data: any) => {
+    this.subscribe('territory:claimed', (data: any) => {
       this.dashboardData.notifications.territoryClaimed = true;
       this.dashboardData.notifications.territoryEligible = false;
       this.debouncedUpdate?.();
     });
 
-    this.subscribe("territory:eligible", (data: any) => {
+    this.subscribe('territory:eligible', (data: any) => {
       this.dashboardData.notifications.territoryEligible = true;
       this.debouncedUpdate?.();
     });
 
     // Listen for achievement events
-    this.subscribe("game:achievementUnlocked", (data: any) => {
+    this.subscribe('game:achievementUnlocked', (data: any) => {
       this.dashboardData.notifications.achievementUnlocked = data.achievementId;
       if (this.dashboardData.recentActivity.recentAchievements) {
-        this.dashboardData.recentActivity.recentAchievements.push(
-          data.achievementId
-        );
+        this.dashboardData.recentActivity.recentAchievements.push(data.achievementId);
         // Keep only the last 5 achievements
         if (this.dashboardData.recentActivity.recentAchievements.length > 5) {
           this.dashboardData.recentActivity.recentAchievements.shift();
@@ -302,42 +301,42 @@ export class UserDashboardService extends BaseService {
     });
 
     // Listen for level up events
-    this.subscribe("game:levelUp", (data: any) => {
+    this.subscribe('game:levelUp', (data: any) => {
       this.dashboardData.notifications.levelUp = data.newLevel;
       this.debouncedUpdate?.();
     });
 
     // Listen for wallet events
-    this.subscribe("web3:walletConnected", (data: any) => {
+    this.subscribe('web3:walletConnected', (data: any) => {
       this.dashboardData.walletInfo = {
         address: data.address,
         chainId: data.chainId,
-        networkName: "", // Will be updated in updateDashboardData
-        balance: "0",
+        networkName: '', // Will be updated in updateDashboardData
+        balance: '0',
       };
       this.debouncedUpdate?.();
     });
 
-    this.subscribe("web3:walletDisconnected", () => {
+    this.subscribe('web3:walletDisconnected', () => {
       this.dashboardData.walletInfo = null;
       this.debouncedUpdate?.();
     });
 
     // Listen for AI events
-    this.subscribe("ai:routeReady", (data: any) => {
+    this.subscribe('ai:routeReady', (data: any) => {
       this.dashboardData.aiInsights.suggestedRoute = data;
       this.debouncedUpdate?.();
     });
 
-    this.subscribe("ai:territoryAnalyzed", (data: any) => {
+    this.subscribe('ai:territoryAnalyzed', (data: any) => {
       this.dashboardData.aiInsights.territoryAnalysis = data;
       this.debouncedUpdate?.();
     });
 
     // Listen for ghost events
-    this.subscribe("ghost:unlocked", () => this.debouncedUpdate?.());
-    this.subscribe("ghost:upgraded", () => this.debouncedUpdate?.());
-    this.subscribe("ghost:deployed", () => this.debouncedUpdate?.());
+    this.subscribe('ghost:unlocked', () => this.debouncedUpdate?.());
+    this.subscribe('ghost:upgraded', () => this.debouncedUpdate?.());
+    this.subscribe('ghost:deployed', () => this.debouncedUpdate?.());
   }
 
   private startRealTimeUpdates(): void {
@@ -374,7 +373,7 @@ export class UserDashboardService extends BaseService {
     this.lazyLoadDashboardData();
 
     this.saveWidgetState();
-    this.safeEmit("dashboard:visibilityChanged", {
+    this.safeEmit('dashboard:visibilityChanged', {
       visible: true,
       minimized: false,
     });
@@ -392,31 +391,31 @@ export class UserDashboardService extends BaseService {
   public subscribeToDataUpdates(
     callback: (data: { data: DashboardData; state: DashboardState }) => void
   ): void {
-    this.subscribe("dashboard:dataUpdated", callback);
+    this.subscribe('dashboard:dataUpdated', callback);
   }
 
   public unsubscribeFromDataUpdates(
     callback: (data: { data: DashboardData; state: DashboardState }) => void
   ): void {
-    this.eventBus.off("dashboard:dataUpdated", callback);
+    this.eventBus.off('dashboard:dataUpdated', callback);
   }
 
   public subscribeToVisibilityChanges(
     callback: (state: { visible: boolean; minimized: boolean }) => void
   ): void {
-    this.subscribe("dashboard:visibilityChanged", callback);
+    this.subscribe('dashboard:visibilityChanged', callback);
   }
 
   public unsubscribeFromVisibilityChanges(
     callback: (state: { visible: boolean; minimized: boolean }) => void
   ): void {
-    this.eventBus.off("dashboard:visibilityChanged", callback);
+    this.eventBus.off('dashboard:visibilityChanged', callback);
   }
 
   public hide(): void {
     this.dashboardState.isVisible = false;
     this.saveWidgetState();
-    this.safeEmit("dashboard:visibilityChanged", {
+    this.safeEmit('dashboard:visibilityChanged', {
       visible: false,
       minimized: this.dashboardState.isMinimized,
     });
@@ -433,7 +432,7 @@ export class UserDashboardService extends BaseService {
   public minimize(): void {
     this.dashboardState.isMinimized = true;
     this.saveWidgetState();
-    this.safeEmit("dashboard:visibilityChanged", {
+    this.safeEmit('dashboard:visibilityChanged', {
       visible: this.dashboardState.isVisible,
       minimized: true,
     });
@@ -442,7 +441,7 @@ export class UserDashboardService extends BaseService {
   public expand(): void {
     this.dashboardState.isMinimized = false;
     this.saveWidgetState();
-    this.safeEmit("dashboard:visibilityChanged", {
+    this.safeEmit('dashboard:visibilityChanged', {
       visible: this.dashboardState.isVisible,
       minimized: false,
     });

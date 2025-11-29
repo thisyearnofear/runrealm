@@ -5,14 +5,17 @@ export class RunProgressFeedback extends BaseService {
 
   constructor() {
     super();
-    this.subscribe('run:statsUpdated', (data: { distance: number; duration: number; speed: number }) => {
-      this.checkMilestones(data);
-    });
+    this.subscribe(
+      'run:statsUpdated',
+      (data: { distance: number; duration: number; speed: number }) => {
+        this.checkMilestones(data);
+      }
+    );
   }
 
   private checkMilestones(stats: { distance: number; speed: number }): void {
     const km = Math.floor(stats.distance / 1000);
-    
+
     if (km > this.lastMilestone) {
       this.lastMilestone = km;
       this.showMilestone(km, stats.speed);
@@ -25,21 +28,21 @@ export class RunProgressFeedback extends BaseService {
   }
 
   private showMilestone(km: number, speed: number): void {
-    const pace = speed > 0 ? (1000 / speed) / 60 : 0;
+    const pace = speed > 0 ? 1000 / speed / 60 : 0;
     const encouragement = this.getEncouragement(km, pace);
-    
+
     // Show toast notification
     this.safeEmit('ui:toast', {
       message: `🎉 ${km}km completed! ${encouragement}`,
       type: 'success',
-      duration: 3000
+      duration: 3000,
     });
   }
 
   private getEncouragement(km: number, pace: number): string {
-    if (pace < 5) return "Lightning fast! ⚡";
-    if (pace < 7) return "Great pace! 🏃‍♂️";
-    return "Keep it up! 💪";
+    if (pace < 5) return 'Lightning fast! ⚡';
+    if (pace < 7) return 'Great pace! 🏃‍♂️';
+    return 'Keep it up! 💪';
   }
 
   private checkTerritoryProximity(): void {

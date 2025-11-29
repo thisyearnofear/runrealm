@@ -4,36 +4,32 @@
  * This is now a simplified orchestrator that delegates to specialized modules
  */
 
-import { BaseService } from "@runrealm/shared-core/core/base-service";
-import { DOMService } from "@runrealm/shared-core/services/dom-service";
-import { LocationService } from "@runrealm/shared-core/services/location-service";
-import { UIService } from "@runrealm/shared-core/services/ui-service";
-import { GameFiUI } from "@runrealm/shared-core/components/gamefi-ui";
-import {
-  WidgetSystem,
-  Widget,
-} from "@runrealm/shared-core/components/widget-system";
-import { DragService } from "@runrealm/shared-core/components/drag-service";
-import { VisibilityService } from "@runrealm/shared-core/components/visibility-service";
-import { AnimationService } from "@runrealm/shared-core/services/animation-service";
-import { WidgetStateService } from "@runrealm/shared-core/components/widget-state-service";
-import { TouchGestureService } from "@runrealm/shared-core/components/touch-gesture-service";
-import { MobileWidgetService } from "@runrealm/shared-core/components/mobile-widget-service";
-import { WalletWidget } from "./wallet-widget";
-import { TransactionStatus } from "@runrealm/shared-core/components/transaction-status";
-import { RewardSystemUI } from "@runrealm/shared-core/components/reward-system-ui";
-import { Web3Service } from "@runrealm/shared-core/services/web3-service";
-import { ConfigService } from "@runrealm/shared-core/core/app-config";
-import { ContractService } from "@runrealm/shared-blockchain/services/contract-service";
-import { RouteStateService } from "@runrealm/shared-core/services/route-state-service";
-import { EventBus } from "@runrealm/shared-core/core/event-bus";
-
+import { ContractService } from '@runrealm/shared-blockchain/services/contract-service';
+import { DragService } from '@runrealm/shared-core/components/drag-service';
+import { GameFiUI } from '@runrealm/shared-core/components/gamefi-ui';
+import { MobileWidgetService } from '@runrealm/shared-core/components/mobile-widget-service';
+import { RewardSystemUI } from '@runrealm/shared-core/components/reward-system-ui';
+import { TouchGestureService } from '@runrealm/shared-core/components/touch-gesture-service';
+import { TransactionStatus } from '@runrealm/shared-core/components/transaction-status';
+import { VisibilityService } from '@runrealm/shared-core/components/visibility-service';
+import { WidgetStateService } from '@runrealm/shared-core/components/widget-state-service';
+import { Widget, WidgetSystem } from '@runrealm/shared-core/components/widget-system';
+import { ConfigService } from '@runrealm/shared-core/core/app-config';
+import { BaseService } from '@runrealm/shared-core/core/base-service';
+import { EventBus } from '@runrealm/shared-core/core/event-bus';
+import { AnimationService } from '@runrealm/shared-core/services/animation-service';
+import { DOMService } from '@runrealm/shared-core/services/dom-service';
+import { LocationService } from '@runrealm/shared-core/services/location-service';
+import { RouteStateService } from '@runrealm/shared-core/services/route-state-service';
+import { UIService } from '@runrealm/shared-core/services/ui-service';
+import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
+import { Web3Service } from '@runrealm/shared-core/services/web3-service';
+import { EventHandler } from './main-ui/event-handlers/ui-event-handler';
+import { StatusManager } from './main-ui/status-managers/location-status-manager';
+import { UIEffectsManager } from './main-ui/ui-effects/ui-effects-manager';
 // Import modular components
-import { WidgetCreator } from "./main-ui/widget-managers/widget-creator";
-import { UserDashboardService } from "@runrealm/shared-core/services/user-dashboard-service";
-import { EventHandler } from "./main-ui/event-handlers/ui-event-handler";
-import { StatusManager } from "./main-ui/status-managers/location-status-manager";
-import { UIEffectsManager } from "./main-ui/ui-effects/ui-effects-manager";
+import { WidgetCreator } from './main-ui/widget-managers/widget-creator';
+import { WalletWidget } from './wallet-widget';
 
 export class MainUI extends BaseService {
   private domService: DOMService;
@@ -86,9 +82,7 @@ export class MainUI extends BaseService {
     this.animationService = new AnimationService();
     this.widgetStateService = new WidgetStateService();
     this.touchGestureService = new TouchGestureService();
-    this.mobileWidgetService = new MobileWidgetService(
-      this.touchGestureService
-    );
+    this.mobileWidgetService = new MobileWidgetService(this.touchGestureService);
     this.widgetSystem = new WidgetSystem(
       domService,
       this.dragService,
@@ -99,26 +93,26 @@ export class MainUI extends BaseService {
   }
 
   protected async onInitialize(): Promise<void> {
-    console.log("MainUI: Starting initialization...");
+    console.log('MainUI: Starting initialization...');
 
     // Initialize core services in order
     await this.dragService.initialize();
-    console.log("MainUI: Drag service initialized");
+    console.log('MainUI: Drag service initialized');
 
     await this.visibilityService.initialize();
-    console.log("MainUI: Visibility service initialized");
+    console.log('MainUI: Visibility service initialized');
 
     await this.animationService.initialize();
-    console.log("MainUI: Animation service initialized");
+    console.log('MainUI: Animation service initialized');
 
     await this.widgetStateService.initialize();
-    console.log("MainUI: Widget state service initialized");
+    console.log('MainUI: Widget state service initialized');
 
     await this.touchGestureService.initialize();
-    console.log("MainUI: Touch gesture service initialized");
+    console.log('MainUI: Touch gesture service initialized');
 
     await this.mobileWidgetService.initialize();
-    console.log("MainUI: Mobile widget service initialized");
+    console.log('MainUI: Mobile widget service initialized');
 
     // Initialize modular components
     this.eventHandler = new EventHandler(
@@ -161,11 +155,11 @@ export class MainUI extends BaseService {
 
     // Initialize UI effects components
     await this.uiEffectsManager.initialize();
-    console.log("MainUI: UI Effects manager initialized");
+    console.log('MainUI: UI Effects manager initialized');
 
     // Initialize wallet widget (already injected via constructor)
     await this.walletWidget.initialize();
-    console.log("MainUI: Wallet widget initialized");
+    console.log('MainUI: Wallet widget initialized');
 
     // Initialize transaction status tracker
     this.transactionStatus = new TransactionStatus(
@@ -181,7 +175,7 @@ export class MainUI extends BaseService {
       }
     );
     await this.transactionStatus.initialize();
-    console.log("MainUI: Transaction status tracker initialized");
+    console.log('MainUI: Transaction status tracker initialized');
 
     // Initialize reward system UI
     this.rewardSystemUI = new RewardSystemUI(
@@ -191,81 +185,79 @@ export class MainUI extends BaseService {
       this.web3Service
     );
     await this.rewardSystemUI.initialize();
-    console.log("MainUI: Reward system UI initialized");
+    console.log('MainUI: Reward system UI initialized');
 
     // Connect rewards to wallet widget
     this.walletWidget.setRewardSystemUI(this.rewardSystemUI);
-    console.log("MainUI: Rewards integrated into wallet widget");
+    console.log('MainUI: Rewards integrated into wallet widget');
 
     // Initialize contract service
     this.contractService = new ContractService(this.web3Service);
     await this.contractService.initialize();
-    console.log("MainUI: Contract service initialized");
+    console.log('MainUI: Contract service initialized');
 
     await this.widgetSystem.initialize();
-    console.log("MainUI: Widget system initialized");
+    console.log('MainUI: Widget system initialized');
 
     // Connect mobile widget service to widget system for mobile optimizations
     this.widgetSystem.setMobileWidgetService(this.mobileWidgetService);
-    console.log("MainUI: Mobile widget service connected to widget system");
+    console.log('MainUI: Mobile widget service connected to widget system');
 
     // Connect visibility service to widget system
     this.widgetSystem.setVisibilityService(this.visibilityService);
-    console.log("MainUI: Visibility service connected to widget system");
+    console.log('MainUI: Visibility service connected to widget system');
 
     // Setup main UI components using modular approach
     this.createMainInterface();
-    console.log("MainUI: Main interface created");
+    console.log('MainUI: Main interface created');
 
     this.widgetCreator.createWidgets();
-    console.log("MainUI: Core widgets created");
+    console.log('MainUI: Core widgets created');
 
     this.eventHandler.setupEventHandlers();
-    console.log("MainUI: Event handlers set up");
+    console.log('MainUI: Event handlers set up');
 
     this.eventHandler.setupRouteStateListeners();
-    console.log("MainUI: Route state listeners set up");
+    console.log('MainUI: Route state listeners set up');
 
     // Create Settings widget (top-right)
     this.widgetCreator.createSettingsWidget();
-    console.log("MainUI: Settings widget created");
+    console.log('MainUI: Settings widget created');
 
     // Create Dashboard toggle widget (top-right)
     this.widgetCreator.createDashboardToggleWidget();
-    console.log("MainUI: Dashboard toggle widget created");
+    console.log('MainUI: Dashboard toggle widget created');
 
     // Setup settings widget event handlers
     this.eventHandler.setupSettingsEventHandlers();
-    console.log("MainUI: Settings event handlers set up");
+    console.log('MainUI: Settings event handlers set up');
 
     // Listen for GameFi toggle events
-    EventBus.getInstance().on("gamefi:toggled", (data: { enabled: boolean }) => {
-      console.log("MainUI: GameFi toggled to:", data.enabled);
+    EventBus.getInstance().on('gamefi:toggled', (data: { enabled: boolean }) => {
+      console.log('MainUI: GameFi toggled to:', data.enabled);
       this.isGameFiMode = data.enabled;
-      
+
       if (data.enabled) {
-        document.body.classList.add("gamefi-mode");
+        document.body.classList.add('gamefi-mode');
         this.widgetCreator.createGameFiWidgets();
       } else {
-        document.body.classList.remove("gamefi-mode");
+        document.body.classList.remove('gamefi-mode');
         this.widgetCreator.removeGameFiWidgets();
       }
-      
+
       // Update settings widget to reflect new state
-      this.widgetSystem.updateWidget("settings", this.widgetCreator.getSettingsContent(
-        data.enabled,
-        true,
-        true,
-        true
-      ));
+      this.widgetSystem.updateWidget(
+        'settings',
+        this.widgetCreator.getSettingsContent(data.enabled, true, true, true)
+      );
     });
-    console.log("MainUI: GameFi event listener registered");
+    console.log('MainUI: GameFi event listener registered');
 
     // URL param onboarding=reset support for QA/support
     const params = new URLSearchParams(window.location.search);
-    if (params.get("onboarding") === "reset") {
-      localStorage.removeItem("runrealm_onboarding_complete");
-      localStorage.removeItem("runrealm_welcomed");
+    if (params.get('onboarding') === 'reset') {
+      localStorage.removeItem('runrealm_onboarding_complete');
+      localStorage.removeItem('runrealm_welcomed');
     }
 
     // Initialize run tracker widget now that widget system is ready
@@ -273,18 +265,15 @@ export class MainUI extends BaseService {
     setTimeout(() => this.initializeRunTrackerWidget(), 100);
 
     // Force widget system debug info
-    console.log(
-      "MainUI: Widget system debug info:",
-      this.widgetSystem.getDebugInfo()
-    );
+    console.log('MainUI: Widget system debug info:', this.widgetSystem.getDebugInfo());
 
     // Initial GPS and network status check
     this.statusManager.initializeStatusChecks();
 
     this.uiEffectsManager.showWelcomeExperience();
 
-    this.safeEmit("service:initialized", { service: "MainUI", success: true });
-    console.log("MainUI: Initialization complete");
+    this.safeEmit('service:initialized', { service: 'MainUI', success: true });
+    console.log('MainUI: Initialization complete');
   }
 
   /**
@@ -302,8 +291,8 @@ export class MainUI extends BaseService {
    */
   private cleanupOldUI(): void {
     // Remove old game-ui and controls from template
-    const oldGameUI = document.querySelector(".game-ui");
-    const oldControls = document.querySelector(".controls");
+    const oldGameUI = document.querySelector('.game-ui');
+    const oldControls = document.querySelector('.controls');
 
     if (oldGameUI) oldGameUI.remove();
     if (oldControls) oldControls.remove();
@@ -324,7 +313,7 @@ export class MainUI extends BaseService {
       if (app && app.enhancedRunControls) {
         app.enhancedRunControls.initializeWidget();
       } else {
-        console.error("MainUI: Could not find EnhancedRunControls service");
+        console.error('MainUI: Could not find EnhancedRunControls service');
       }
     }
   }
@@ -342,9 +331,9 @@ export class MainUI extends BaseService {
   }
 
   private updateGameFiToggle(enabled: boolean): void {
-    const toggle = document.getElementById("gamefi-toggle");
+    const toggle = document.getElementById('gamefi-toggle');
     if (toggle) {
-      toggle.classList.toggle("active", enabled);
+      toggle.classList.toggle('active', enabled);
     }
   }
 

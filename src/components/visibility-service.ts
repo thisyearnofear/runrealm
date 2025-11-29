@@ -22,19 +22,19 @@ export class VisibilityService extends BaseService {
    */
   public setVisibility(componentId: string, visible: boolean): void {
     this.visibilityState[componentId] = visible;
-    
+
     // Update DOM element if it exists
     const element = document.getElementById(componentId);
     if (element) {
       this.updateElementVisibility(element, visible);
     }
-    
+
     // Call any registered callbacks
     const callback = this.visibilityCallbacks.get(componentId);
     if (callback) {
       callback(visible);
     }
-    
+
     // Emit event for other services to react
     this.safeEmit('visibility:changed', { elementId: componentId, visible });
   }
@@ -93,7 +93,7 @@ export class VisibilityService extends BaseService {
    * Hide all components except specified ones
    */
   public hideAllExcept(exceptions: string[]): void {
-    Object.keys(this.visibilityState).forEach(componentId => {
+    Object.keys(this.visibilityState).forEach((componentId) => {
       if (!exceptions.includes(componentId)) {
         this.setVisibility(componentId, false);
       }
@@ -104,7 +104,7 @@ export class VisibilityService extends BaseService {
    * Show all components
    */
   public showAll(): void {
-    Object.keys(this.visibilityState).forEach(componentId => {
+    Object.keys(this.visibilityState).forEach((componentId) => {
       this.setVisibility(componentId, true);
     });
   }

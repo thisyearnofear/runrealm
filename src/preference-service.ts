@@ -19,7 +19,7 @@ export class PreferenceService {
       initialPosition = {
         lng: -79.93775232392454,
         lat: 32.78183341484467,
-        zoom: 14
+        zoom: 14,
       };
     }
     return initialPosition;
@@ -29,7 +29,7 @@ export class PreferenceService {
     const currentFocus = {
       lng: position.coords.longitude,
       lat: position.coords.latitude,
-      zoom: zoom
+      zoom: zoom,
     } as MapFocus;
     this.saveJsonPreference(this.LAST_FOCUS_KEY, currentFocus);
   }
@@ -65,11 +65,11 @@ export class PreferenceService {
   public saveMapStyle(value: string) {
     this.saveStringPreference(this.MAP_STYLE_KEY, value);
   }
-  
+
   public getLastRun(): string {
-    return this.loadStringPreference(this.LAST_RUN_KEY, "{}");
+    return this.loadStringPreference(this.LAST_RUN_KEY, '{}');
   }
-  
+
   public saveLastRun(value: string) {
     this.saveStringPreference(this.LAST_RUN_KEY, value);
   }

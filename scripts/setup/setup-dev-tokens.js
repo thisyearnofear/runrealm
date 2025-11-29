@@ -2,10 +2,10 @@
 
 /**
  * 🔒 Development Token Setup Script
- * 
+ *
  * This script helps developers set up API tokens for local development
  * without exposing them in the codebase.
- * 
+ *
  * Usage: node setup-dev-tokens.js
  */
 
@@ -13,7 +13,7 @@ const readline = require('readline');
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 console.log('🔒 RunRealm Development Token Setup');
@@ -35,29 +35,31 @@ async function setupTokens() {
   try {
     console.log('📍 Mapbox Access Token');
     console.log('Get your token from: https://account.mapbox.com/access-tokens/');
-    const mapboxToken = await askQuestion('Enter your Mapbox access token (or press Enter to skip): ');
-    
+    const mapboxToken = await askQuestion(
+      'Enter your Mapbox access token (or press Enter to skip): '
+    );
+
     console.log('');
     console.log('🤖 Google Gemini API Key');
     console.log('Get your key from: https://makersuite.google.com/app/apikey');
     const geminiKey = await askQuestion('Enter your Gemini API key (or press Enter to skip): ');
-    
+
     console.log('');
     console.log('💾 Setting up localStorage commands...');
     console.log('');
-    
+
     if (mapboxToken && mapboxToken.trim()) {
       console.log('Run this in your browser console:');
       console.log(`localStorage.setItem('runrealm_dev_mapbox_token', '${mapboxToken.trim()}');`);
       console.log('');
     }
-    
+
     if (geminiKey && geminiKey.trim()) {
       console.log('Run this in your browser console:');
       console.log(`localStorage.setItem('runrealm_dev_gemini_key', '${geminiKey.trim()}');`);
       console.log('');
     }
-    
+
     console.log('✅ Setup complete!');
     console.log('');
     console.log('🔒 Security Notes:');
@@ -65,7 +67,6 @@ async function setupTokens() {
     console.log('- They are NOT included in production builds');
     console.log('- Clear them with: localStorage.clear() if needed');
     console.log('');
-    
   } catch (error) {
     console.error('Error setting up tokens:', error);
   } finally {

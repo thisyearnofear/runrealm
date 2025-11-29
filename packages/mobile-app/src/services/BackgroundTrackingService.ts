@@ -1,5 +1,5 @@
 // Lazy load TaskManager to avoid initialization errors
-let TaskManager: any = null;
+let TaskManager: typeof import('expo-task-manager') | null = null;
 try {
   TaskManager = require('expo-task-manager');
 } catch (error) {
@@ -7,7 +7,6 @@ try {
 }
 
 import * as Location from 'expo-location';
-import { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
 
 // Define background task (only if TaskManager is available)
 // This will be called when needed, not at module load time
@@ -16,19 +15,19 @@ const defineBackgroundTask = () => {
     console.warn('TaskManager not available, background tracking disabled');
     return;
   }
-  
+
   try {
-    TaskManager.defineTask('BACKGROUND_LOCATION_TASK', async ({ data, error }: any) => {
+    TaskManager.defineTask('BACKGROUND_LOCATION_TASK', async ({ data, error }) => {
       if (error) {
         console.error('Background location task error:', error);
         return;
       }
-      
+
       if (data) {
-        const { locations } = data as any;
+        const { locations } = data;
         // Process location updates
         console.log('Background location update:', locations[0]);
-        
+
         // Update the shared run tracking service
         // This would require some mechanism to access the service instance
         // Could use a global event bus or store reference
@@ -55,7 +54,7 @@ export class BackgroundTrackingService {
   async startBackgroundTracking(): Promise<void> {
     // Define the task first (if not already defined)
     defineBackgroundTask();
-    
+
     if (!TaskManager) {
       console.warn('TaskManager not available, background tracking disabled');
       return;

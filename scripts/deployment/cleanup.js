@@ -21,7 +21,7 @@ const cleanupPaths = [
   'public/*.css.map',
   'dist',
   'build',
-  
+
   // Temporary files
   'stats.json',
   'nohup.out',
@@ -29,16 +29,16 @@ const cleanupPaths = [
   'cross-env',
   'npm',
   'runrealm@*',
-  
+
   // Cache directories
   '.tmp',
   'tmp',
   'temp',
-  
+
   // Test artifacts
   '.nyc_output',
   'coverage',
-  
+
   // Smart contract artifacts (optional - comment if needed)
   // 'artifacts',
   // 'cache',
@@ -82,7 +82,7 @@ function removeFile(filePath) {
 }
 
 // Clean up paths
-cleanupPaths.forEach(pattern => {
+cleanupPaths.forEach((pattern) => {
   if (pattern.includes('*')) {
     removeGlob(pattern);
     console.log(`✅ Cleaned pattern: ${pattern}`);
@@ -100,7 +100,7 @@ cleanupPaths.forEach(pattern => {
 if (keepTemplate) {
   const publicIndexPath = 'public/index.html';
   const templatePath = path.join(__dirname, '../public/index.html');
-  
+
   try {
     if (fs.existsSync(publicIndexPath)) {
       const content = fs.readFileSync(publicIndexPath, 'utf8');
@@ -108,7 +108,7 @@ if (keepTemplate) {
       if (content.includes('<script defer="defer" src="') || content.includes('.js">')) {
         fs.unlinkSync(publicIndexPath);
         console.log('✅ Removed generated index.html (keeping template)');
-        
+
         // Recreate the template
         const templateContent = `<!DOCTYPE html>
 <html lang="en">
@@ -231,7 +231,7 @@ if (keepTemplate) {
     <div id="territory-dashboard-root"></div>
 </body>
 </html>`;
-        
+
         fs.writeFileSync(publicIndexPath, templateContent);
         console.log('✅ Recreated clean HTML template');
       }

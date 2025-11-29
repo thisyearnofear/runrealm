@@ -1,6 +1,5 @@
-
-import { ChainHelper } from "../utils/chain-helper";
-import { EventBus } from "../core/event-bus";
+import { EventBus } from '../core/event-bus';
+import { ChainHelper } from '../utils/chain-helper';
 
 /**
  * CrossChainWidget - UI component for cross-chain messaging and interactions
@@ -30,10 +29,10 @@ export class CrossChainWidget {
     }
   }
 
-  public async initialize(containerId: string = "cross-chain-widget"): Promise<void> {
+  public async initialize(containerId: string = 'cross-chain-widget'): Promise<void> {
     this.container = document.getElementById(containerId);
     if (!this.container) {
-      console.warn("CrossChainWidget: Container not found");
+      console.warn('CrossChainWidget: Container not found');
       return;
     }
 
@@ -105,26 +104,26 @@ export class CrossChainWidget {
 
   private setupEventListeners(): void {
     // Refresh button
-    const refreshBtn = document.getElementById("cross-chain-refresh");
+    const refreshBtn = document.getElementById('cross-chain-refresh');
     if (refreshBtn) {
-      refreshBtn.addEventListener("click", () => {
+      refreshBtn.addEventListener('click', () => {
         this.updateChainInfo();
         this.updateSupportedChains();
       });
     }
 
     // Claim cross-chain territory button
-    const claimBtn = document.getElementById("claim-cross-chain-territory");
+    const claimBtn = document.getElementById('claim-cross-chain-territory');
     if (claimBtn) {
-      claimBtn.addEventListener("click", () => {
+      claimBtn.addEventListener('click', () => {
         this.handleClaimCrossChainTerritory();
       });
     }
 
     // View cross-chain history button
-    const historyBtn = document.getElementById("view-cross-chain-history");
+    const historyBtn = document.getElementById('view-cross-chain-history');
     if (historyBtn) {
-      historyBtn.addEventListener("click", () => {
+      historyBtn.addEventListener('click', () => {
         this.handleViewCrossChainHistory();
       });
     }
@@ -134,71 +133,71 @@ export class CrossChainWidget {
     if (!this.eventBus) return;
 
     // Listen for wallet connection events
-    this.eventBus.on("web3:walletConnected", () => {
+    this.eventBus.on('web3:walletConnected', () => {
       this.updateChainInfo();
       this.updateSupportedChains();
       this.enableActions();
     });
 
     // Listen for cross-chain events
-    this.eventBus.on("crosschain:messageSent", (data: any) => {
-      this.showStatus("Message sent to cross-chain network", "success");
+    this.eventBus.on('crosschain:messageSent', (data: any) => {
+      this.showStatus('Message sent to cross-chain network', 'success');
       this.logActivity({
-        type: "messageSent",
+        type: 'messageSent',
         timestamp: Date.now(),
-        data
+        data,
       });
     });
 
-    this.eventBus.on("crosschain:territoryClaimInitiated", (data: any) => {
-      this.showStatus("Cross-chain territory claim initiated", "processing");
+    this.eventBus.on('crosschain:territoryClaimInitiated', (data: any) => {
+      this.showStatus('Cross-chain territory claim initiated', 'processing');
       this.logActivity({
-        type: "claimInitiated",
+        type: 'claimInitiated',
         timestamp: Date.now(),
-        data
+        data,
       });
     });
 
-    this.eventBus.on("crosschain:territoryClaimFailed", (data: any) => {
-      this.showStatus("Cross-chain territory claim failed: " + data.error, "error");
+    this.eventBus.on('crosschain:territoryClaimFailed', (data: any) => {
+      this.showStatus('Cross-chain territory claim failed: ' + data.error, 'error');
       this.logActivity({
-        type: "claimFailed",
+        type: 'claimFailed',
         timestamp: Date.now(),
-        data
+        data,
       });
     });
 
-    this.eventBus.on("web3:crossChainTerritoryClaimed", (data: any) => {
-      this.showStatus("Territory claimed successfully on ZetaChain!", "success");
+    this.eventBus.on('web3:crossChainTerritoryClaimed', (data: any) => {
+      this.showStatus('Territory claimed successfully on ZetaChain!', 'success');
       this.logActivity({
-        type: "claimSuccess",
+        type: 'claimSuccess',
         timestamp: Date.now(),
-        data
+        data,
       });
     });
 
-    this.eventBus.on("web3:crossChainTerritoryClaimFailed", (data: any) => {
-      this.showStatus("Territory claim failed: " + data.error, "error");
+    this.eventBus.on('web3:crossChainTerritoryClaimFailed', (data: any) => {
+      this.showStatus('Territory claim failed: ' + data.error, 'error');
       this.logActivity({
-        type: "claimFailed",
+        type: 'claimFailed',
         timestamp: Date.now(),
-        data
+        data,
       });
     });
 
-    this.eventBus.on("crosschain:messageReceived", (data: any) => {
+    this.eventBus.on('crosschain:messageReceived', (data: any) => {
       this.logActivity({
-        type: "messageReceived",
+        type: 'messageReceived',
         timestamp: Date.now(),
-        data
+        data,
       });
     });
 
-    this.eventBus.on("crosschain:territoryUpdated", (data: any) => {
+    this.eventBus.on('crosschain:territoryUpdated', (data: any) => {
       this.logActivity({
-        type: "territoryUpdated",
+        type: 'territoryUpdated',
         timestamp: Date.now(),
-        data
+        data,
       });
     });
   }
@@ -206,19 +205,19 @@ export class CrossChainWidget {
   private logActivity(activity: any): void {
     // Add to activity log
     this.activityLog.unshift(activity);
-    
+
     // Keep only the last 10 activities
     if (this.activityLog.length > 10) {
       this.activityLog.pop();
     }
-    
+
     // Update UI
     this.updateActivityList();
     this.updateActivityCount();
   }
 
   private updateActivityList(): void {
-    const activityListEl = document.getElementById("activity-list");
+    const activityListEl = document.getElementById('activity-list');
     if (!activityListEl) return;
 
     if (this.activityLog.length === 0) {
@@ -228,38 +227,38 @@ export class CrossChainWidget {
 
     const activityHtml = this.activityLog
       .slice(0, 5) // Show only the last 5 activities
-      .map(activity => {
+      .map((activity) => {
         const time = new Date(activity.timestamp).toLocaleTimeString();
-        let icon = "ℹ️";
-        let text = "Unknown activity";
-        
+        let icon = 'ℹ️';
+        let text = 'Unknown activity';
+
         switch (activity.type) {
-          case "messageSent":
-            icon = "📤";
+          case 'messageSent':
+            icon = '📤';
             text = `Message sent to chain ${activity.data.targetChainId}`;
             break;
-          case "claimInitiated":
-            icon = "🚀";
+          case 'claimInitiated':
+            icon = '🚀';
             text = `Territory claim initiated`;
             break;
-          case "claimSuccess":
-            icon = "✅";
+          case 'claimSuccess':
+            icon = '✅';
             text = `Territory claimed successfully`;
             break;
-          case "claimFailed":
-            icon = "❌";
+          case 'claimFailed':
+            icon = '❌';
             text = `Territory claim failed`;
             break;
-          case "messageReceived":
-            icon = "📥";
+          case 'messageReceived':
+            icon = '📥';
             text = `Message received from chain ${activity.data.message.sourceChainId}`;
             break;
-          case "territoryUpdated":
-            icon = "🔄";
+          case 'territoryUpdated':
+            icon = '🔄';
             text = `Territory updated from chain ${activity.data.sourceChainId}`;
             break;
         }
-        
+
         return `
           <div class="activity-item">
             <span class="activity-icon">${icon}</span>
@@ -268,39 +267,40 @@ export class CrossChainWidget {
           </div>
         `;
       })
-      .join("");
+      .join('');
 
     activityListEl.innerHTML = activityHtml;
   }
 
   private updateActivityCount(): void {
-    const countEl = document.getElementById("activity-count");
+    const countEl = document.getElementById('activity-count');
     if (countEl) {
       countEl.textContent = this.activityLog.length.toString();
     }
   }
 
   private updateChainInfo(): void {
-    const chainNameEl = document.getElementById("current-chain-name");
+    const chainNameEl = document.getElementById('current-chain-name');
     if (!chainNameEl) return;
 
     if (this.web3Service && this.web3Service.isConnected()) {
       const wallet = this.web3Service.getCurrentWallet();
       if (wallet) {
-        const chainName = this.getCrossChainService()?.getChainName(wallet.chainId) || 
-                         `Unknown Chain (${wallet.chainId})`;
+        const chainName =
+          this.getCrossChainService()?.getChainName(wallet.chainId) ||
+          `Unknown Chain (${wallet.chainId})`;
         chainNameEl.textContent = chainName;
-        chainNameEl.className = "value chain-" + wallet.chainId;
+        chainNameEl.className = 'value chain-' + wallet.chainId;
       } else {
-        chainNameEl.textContent = "Not connected";
+        chainNameEl.textContent = 'Not connected';
       }
     } else {
-      chainNameEl.textContent = "Not connected";
+      chainNameEl.textContent = 'Not connected';
     }
   }
 
   private updateSupportedChains(): void {
-    const chainsListEl = document.getElementById("supported-chains-list");
+    const chainsListEl = document.getElementById('supported-chains-list');
     if (!chainsListEl) return;
 
     const crossChainService = this.getCrossChainService();
@@ -319,21 +319,21 @@ export class CrossChainWidget {
           ${chainName} ${recommended ? '⭐' : ''}
         </span>`;
       })
-      .join(" ");
+      .join(' ');
   }
 
   private enableActions(): void {
-    const claimBtn = document.getElementById("claim-cross-chain-territory") as HTMLButtonElement;
-    const historyBtn = document.getElementById("view-cross-chain-history") as HTMLButtonElement;
-    
+    const claimBtn = document.getElementById('claim-cross-chain-territory') as HTMLButtonElement;
+    const historyBtn = document.getElementById('view-cross-chain-history') as HTMLButtonElement;
+
     if (claimBtn) claimBtn.disabled = false;
     if (historyBtn) historyBtn.disabled = false;
   }
 
   private disableActions(): void {
-    const claimBtn = document.getElementById("claim-cross-chain-territory") as HTMLButtonElement;
-    const historyBtn = document.getElementById("view-cross-chain-history") as HTMLButtonElement;
-    
+    const claimBtn = document.getElementById('claim-cross-chain-territory') as HTMLButtonElement;
+    const historyBtn = document.getElementById('view-cross-chain-history') as HTMLButtonElement;
+
     if (claimBtn) claimBtn.disabled = true;
     if (historyBtn) historyBtn.disabled = true;
   }
@@ -343,43 +343,43 @@ export class CrossChainWidget {
       // Check if we have a territory to claim
       const territoryService = (window as any).RunRealm?.services?.territory;
       if (!territoryService) {
-        throw new Error("Territory service not available");
+        throw new Error('Territory service not available');
       }
 
       // Get the current run/territory to claim
       // In a real implementation, this would get the actual territory data
       const mockTerritoryData = {
-        geohash: "u4pruydqqvj",
+        geohash: 'u4pruydqqvj',
         difficulty: 75,
         distance: 5000,
-        landmarks: ["Central Park", "Fountain"],
+        landmarks: ['Central Park', 'Fountain'],
         originChainId: this.web3Service?.getCurrentWallet()?.chainId || 1,
-        originAddress: this.web3Service?.getCurrentWallet()?.address || ""
+        originAddress: this.web3Service?.getCurrentWallet()?.address || '',
       };
 
       // Request cross-chain territory claim
-      this.eventBus?.emit("crosschain:territoryClaimRequested", {
+      this.eventBus?.emit('crosschain:territoryClaimRequested', {
         territoryData: mockTerritoryData,
-        targetChainId: 7001 // ZetaChain testnet
+        targetChainId: 7001, // ZetaChain testnet
       });
 
-      this.showStatus("Initiating cross-chain territory claim...", "processing");
+      this.showStatus('Initiating cross-chain territory claim...', 'processing');
     } catch (error) {
-      console.error("CrossChainWidget: Failed to claim territory:", error);
-      this.showStatus("Failed to initiate cross-chain claim: " + (error as Error).message, "error");
+      console.error('CrossChainWidget: Failed to claim territory:', error);
+      this.showStatus('Failed to initiate cross-chain claim: ' + (error as Error).message, 'error');
     }
   }
 
   private handleViewCrossChainHistory(): void {
     // In a real implementation, this would show the cross-chain history
-    alert("Cross-chain history view would open here");
+    alert('Cross-chain history view would open here');
   }
 
-  private showStatus(message: string, type: "success" | "error" | "processing" | "info"): void {
-    const statusEl = document.getElementById("cross-chain-status");
-    const statusIconEl = document.getElementById("status-icon");
-    const statusTextEl = document.getElementById("status-text");
-    const progressFillEl = document.getElementById("progress-fill");
+  private showStatus(message: string, type: 'success' | 'error' | 'processing' | 'info'): void {
+    const statusEl = document.getElementById('cross-chain-status');
+    const statusIconEl = document.getElementById('status-icon');
+    const statusTextEl = document.getElementById('status-text');
+    const progressFillEl = document.getElementById('progress-fill');
 
     if (!statusEl || !statusIconEl || !statusTextEl || !progressFillEl) return;
 
@@ -388,38 +388,38 @@ export class CrossChainWidget {
 
     // Set status icon and progress based on type
     switch (type) {
-      case "success":
-        statusIconEl.textContent = "✅";
-        statusEl.className = "cross-chain-status success";
-        progressFillEl.style.width = "100%";
-        progressFillEl.className = "progress-fill success";
+      case 'success':
+        statusIconEl.textContent = '✅';
+        statusEl.className = 'cross-chain-status success';
+        progressFillEl.style.width = '100%';
+        progressFillEl.className = 'progress-fill success';
         break;
-      case "error":
-        statusIconEl.textContent = "❌";
-        statusEl.className = "cross-chain-status error";
-        progressFillEl.style.width = "100%";
-        progressFillEl.className = "progress-fill error";
+      case 'error':
+        statusIconEl.textContent = '❌';
+        statusEl.className = 'cross-chain-status error';
+        progressFillEl.style.width = '100%';
+        progressFillEl.className = 'progress-fill error';
         break;
-      case "processing":
-        statusIconEl.textContent = "🟡";
-        statusEl.className = "cross-chain-status processing";
-        progressFillEl.style.width = "50%";
-        progressFillEl.className = "progress-fill processing";
+      case 'processing':
+        statusIconEl.textContent = '🟡';
+        statusEl.className = 'cross-chain-status processing';
+        progressFillEl.style.width = '50%';
+        progressFillEl.className = 'progress-fill processing';
         break;
       default:
-        statusIconEl.textContent = "ℹ️";
-        statusEl.className = "cross-chain-status info";
-        progressFillEl.style.width = "100%";
-        progressFillEl.className = "progress-fill info";
+        statusIconEl.textContent = 'ℹ️';
+        statusEl.className = 'cross-chain-status info';
+        progressFillEl.style.width = '100%';
+        progressFillEl.className = 'progress-fill info';
     }
 
     // Show status
-    statusEl.style.display = "block";
+    statusEl.style.display = 'block';
 
     // Hide status after delay for success/error messages
-    if (type === "success" || type === "error") {
+    if (type === 'success' || type === 'error') {
       setTimeout(() => {
-        statusEl.style.display = "none";
+        statusEl.style.display = 'none';
       }, 5000);
     }
   }
@@ -429,26 +429,26 @@ export class CrossChainWidget {
     if (this.crossChainService) {
       return this.crossChainService;
     }
-    
+
     // Fallback to global registry
     return (window as any).RunRealm?.services?.crossChain;
   }
 
   public cleanup(): void {
     // Clean up event listeners
-    const refreshBtn = document.getElementById("cross-chain-refresh");
+    const refreshBtn = document.getElementById('cross-chain-refresh');
     if (refreshBtn) {
-      refreshBtn.removeEventListener("click", () => {});
+      refreshBtn.removeEventListener('click', () => {});
     }
 
-    const claimBtn = document.getElementById("claim-cross-chain-territory");
+    const claimBtn = document.getElementById('claim-cross-chain-territory');
     if (claimBtn) {
-      claimBtn.removeEventListener("click", () => {});
+      claimBtn.removeEventListener('click', () => {});
     }
 
-    const historyBtn = document.getElementById("view-cross-chain-history");
+    const historyBtn = document.getElementById('view-cross-chain-history');
     if (historyBtn) {
-      historyBtn.removeEventListener("click", () => {});
+      historyBtn.removeEventListener('click', () => {});
     }
 
     // Cleanup event listeners
