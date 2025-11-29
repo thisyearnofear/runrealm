@@ -65,7 +65,7 @@ jobs:
         run: npm ci
 
       - name: Lint code
-        run: npm run lint
+        run: npm run lint:check
 
   # TODO: temporarily disable security check
   # security:
