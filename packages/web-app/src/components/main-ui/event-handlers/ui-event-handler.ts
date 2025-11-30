@@ -6,6 +6,7 @@ import { RouteStateService } from '@runrealm/shared-core/services/route-state-se
 import { UIService } from '@runrealm/shared-core/services/ui-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
 import { WalletWidget } from '../../wallet-widget';
+import { GPSPermissionModal } from '../modals/gps-permission-modal';
 import { WidgetCreator } from '../widget-managers/widget-creator';
 
 /**
@@ -104,7 +105,7 @@ export class EventHandler {
     });
 
     this.domService.delegate(document.body, '#set-location-btn', 'click', () => {
-      this.locationService.getCurrentLocation();
+      this.showGPSPermissionModal();
     });
 
     this.domService.delegate(document.body, '#search-location-btn', 'click', () => {
@@ -682,6 +683,19 @@ export class EventHandler {
 
   private triggerHapticFeedback(type: 'light' | 'medium' | 'heavy' = 'light'): void {
     // This will be handled by the UI effects module
+  }
+
+  private showGPSPermissionModal(): void {
+    const modal = new GPSPermissionModal();
+    modal.show(
+      () => {
+        this.locationService.getCurrentLocation();
+        this.trackUserAction('gps_enabled');
+      },
+      () => {
+        this.trackUserAction('gps_dismissed');
+      }
+    );
   }
 
   private showExternalFitnessIntegration(): void {

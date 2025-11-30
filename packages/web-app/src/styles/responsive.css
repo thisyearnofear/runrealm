@@ -6,12 +6,18 @@
 /* ===== RESPONSIVE BREAKPOINTS ===== */
 :root {
   /* Breakpoint System */
-  --breakpoint-xs: 320px; /* Small phones */
-  --breakpoint-sm: 480px; /* Large phones */
-  --breakpoint-md: 768px; /* Tablets */
-  --breakpoint-lg: 1024px; /* Small laptops */
-  --breakpoint-xl: 1200px; /* Large laptops */
-  --breakpoint-xxl: 1440px; /* Desktops */
+  --breakpoint-xs: 320px;
+  /* Small phones */
+  --breakpoint-sm: 480px;
+  /* Large phones */
+  --breakpoint-md: 768px;
+  /* Tablets */
+  --breakpoint-lg: 1024px;
+  /* Small laptops */
+  --breakpoint-xl: 1200px;
+  /* Large laptops */
+  --breakpoint-xxl: 1440px;
+  /* Desktops */
 
   /* Responsive Spacing */
   --space-mobile-xs: 2px;
@@ -87,6 +93,7 @@
 /* ===== TABLET OPTIMIZATIONS (768px and up) ===== */
 
 @media (min-width: 768px) {
+
   /* Restore desktop spacing */
   .widget-zone {
     gap: var(--space-sm);
@@ -154,6 +161,7 @@
 /* ===== DESKTOP OPTIMIZATIONS (1024px and up) ===== */
 
 @media (min-width: 1024px) {
+
   /* Full desktop experience */
   .widget-zone {
     max-width: 320px;
@@ -195,6 +203,7 @@
 /* ===== LARGE DESKTOP OPTIMIZATIONS (1200px and up) ===== */
 
 @media (min-width: 1200px) {
+
   /* Wider layouts for large screens */
   .widget-zone {
     max-width: 360px;
@@ -230,16 +239,20 @@
 
 /* Touch-optimized interactions */
 @media (hover: none) and (pointer: coarse) {
+
   /* Mobile touch optimizations */
   .widget-header {
-    padding: 14px 16px; /* Larger touch targets */
+    padding: 14px 16px;
+    /* Larger touch targets */
     min-height: 48px;
   }
 
   .widget-button {
-    min-height: 44px; /* iOS recommended minimum */
+    min-height: 44px;
+    /* iOS recommended minimum */
     min-width: 44px;
-    touch-action: manipulation; /* Prevent double-tap zoom */
+    touch-action: manipulation;
+    /* Prevent double-tap zoom */
   }
 
   .widget-toggle {
@@ -274,7 +287,8 @@
 
   /* Mobile-specific drag behavior */
   .widget.dragging {
-    transform: scale(1.02); /* Subtle scale instead of complex transforms */
+    transform: scale(1.02);
+    /* Subtle scale instead of complex transforms */
     opacity: 0.9;
   }
 
@@ -294,6 +308,7 @@
 /* ===== LANDSCAPE MOBILE OPTIMIZATIONS ===== */
 
 @media (max-width: 768px) and (orientation: landscape) {
+
   /* Compact layout for landscape mobile */
   .widget-zone {
     gap: 4px;
@@ -322,7 +337,8 @@
   }
 
   .widget.expanded {
-    max-height: 50vh; /* Prevent viewport domination */
+    max-height: 50vh;
+    /* Prevent viewport domination */
   }
 
   /* Compact header for landscape */
@@ -343,6 +359,7 @@
 /* ===== ULTRA-WIDE DISPLAY OPTIMIZATIONS (1440px and up) ===== */
 
 @media (min-width: 1440px) {
+
   /* Ultra-wide specific optimizations */
   .widget-zone {
     max-width: 400px;
@@ -378,6 +395,7 @@
 
 /* Reduce animations on low-end devices */
 @media (prefers-reduced-motion: reduce) {
+
   .widget,
   .widget-button,
   .widget-header,
@@ -432,6 +450,7 @@
 /* ===== PRINT OPTIMIZATIONS ===== */
 
 @media print {
+
   /* Hide interactive elements when printing */
   .widget-system,
   .gamefi-hud,
@@ -459,6 +478,7 @@
 
 /* Large text support */
 @media (min-resolution: 2dppx) {
+
   .widget-title,
   .widget-content {
     font-weight: var(--font-weight-medium);
@@ -475,9 +495,11 @@
     0% {
       transform: scale(1);
     }
+
     50% {
       transform: scale(1.02);
     }
+
     100% {
       transform: scale(1);
     }
@@ -517,6 +539,7 @@
 
 /* Optimize for slow connections */
 @media (prefers-reduced-data: reduce) {
+
   /* Reduce animation complexity */
   .widget {
     backdrop-filter: none;
@@ -544,9 +567,11 @@
 .show-mobile {
   display: none;
 }
+
 .show-tablet {
   display: none;
 }
+
 .show-desktop {
   display: none;
 }
@@ -555,6 +580,7 @@
   .hide-mobile {
     display: none !important;
   }
+
   .show-mobile {
     display: block;
   }
@@ -564,6 +590,7 @@
   .hide-tablet {
     display: none !important;
   }
+
   .show-tablet {
     display: block;
   }
@@ -573,6 +600,7 @@
   .hide-desktop {
     display: none !important;
   }
+
   .show-desktop {
     display: block;
   }
@@ -583,9 +611,11 @@
   .p-mobile-sm {
     padding: var(--space-mobile-sm);
   }
+
   .p-mobile-md {
     padding: var(--space-mobile-md);
   }
+
   .p-mobile-lg {
     padding: var(--space-mobile-lg);
   }
@@ -593,9 +623,11 @@
   .m-mobile-sm {
     margin: var(--space-mobile-sm);
   }
+
   .m-mobile-md {
     margin: var(--space-mobile-md);
   }
+
   .m-mobile-lg {
     margin: var(--space-mobile-lg);
   }
@@ -604,6 +636,7 @@
 /* ===== MOBILE-OPTIMIZED WIDGETS (max 480px) ===== */
 
 @media (max-width: 480px) {
+
   /* Condense widgets to icon-only on small screens */
   .widget-header {
     padding: 12px 10px !important;
@@ -785,12 +818,15 @@
   .text-mobile-xs {
     font-size: var(--font-mobile-xs);
   }
+
   .text-mobile-sm {
     font-size: var(--font-mobile-sm);
   }
+
   .text-mobile-md {
     font-size: var(--font-mobile-md);
   }
+
   .text-mobile-lg {
     font-size: var(--font-mobile-lg);
   }
@@ -815,4 +851,254 @@
 /* Reset will-change after animations */
 .widget:not(.expanded):not(.dragging) {
   will-change: auto;
+}
+
+/* ===== GPS PERMISSION MODAL ===== */
+
+.gps-permission-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.gps-permission-modal.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.gps-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.gps-modal-content {
+  position: relative;
+  background: var(--widget-bg, #1a1a2e);
+  border-radius: 24px;
+  padding: 24px;
+  max-width: 90vw;
+  width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  transform: scale(0.9) translateY(20px);
+  transition: transform 0.3s ease;
+}
+
+.gps-permission-modal.visible .gps-modal-content {
+  transform: scale(1) translateY(0);
+}
+
+.gps-modal-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.gps-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #888);
+  font-size: 32px;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.gps-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #fff);
+}
+
+.gps-modal-body {
+  text-align: center;
+}
+
+.gps-modal-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  line-height: 1;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.gps-modal-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  margin: 0 0 12px 0;
+}
+
+.gps-modal-description {
+  font-size: 16px;
+  color: var(--text-secondary, #aaa);
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.gps-modal-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.benefit-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.benefit-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.benefit-text {
+  font-size: 14px;
+  color: var(--text-primary, #fff);
+  font-weight: 500;
+}
+
+.gps-modal-note {
+  font-size: 12px;
+  color: var(--text-tertiary, #666);
+  font-style: italic;
+  margin: 0 0 24px 0;
+}
+
+.gps-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gps-btn-enable,
+.gps-btn-later {
+  width: 100%;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  /* Large touch target for mobile */
+  min-height: 56px;
+}
+
+.gps-btn-enable {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.gps-btn-enable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+.gps-btn-enable:active {
+  transform: translateY(0);
+}
+
+.gps-btn-later {
+  background: transparent;
+  color: var(--text-secondary, #aaa);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.gps-btn-later:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary, #fff);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .gps-modal-content {
+    max-width: 95vw;
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .gps-modal-icon {
+    font-size: 56px;
+  }
+
+  .gps-modal-title {
+    font-size: 24px;
+  }
+
+  .gps-modal-description {
+    font-size: 15px;
+  }
+
+  .gps-btn-enable,
+  .gps-btn-later {
+    /* Extra large touch targets on mobile */
+    min-height: 64px;
+    font-size: 17px;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+  .gps-permission-modal,
+  .gps-modal-content,
+  .benefit-item,
+  .gps-btn-enable,
+  .gps-btn-later {
+    transition: none;
+  }
+
+  .gps-modal-icon {
+    animation: none;
+  }
 }
