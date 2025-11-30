@@ -1,17 +1,35 @@
-import { DragService } from '@runrealm/shared-core/components/drag-service';
-import { MobileWidgetService } from '@runrealm/shared-core/components/mobile-widget-service';
-import { TouchGestureService } from '@runrealm/shared-core/components/touch-gesture-service';
 import { VisibilityService } from '@runrealm/shared-core/components/visibility-service';
-import { WidgetStateService } from '@runrealm/shared-core/components/widget-state-service';
 import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
 import { ConfigService } from '@runrealm/shared-core/core/app-config';
-import { AnimationService } from '@runrealm/shared-core/services/animation-service';
-import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { LocationService } from '@runrealm/shared-core/services/location-service';
-import { UIService } from '@runrealm/shared-core/services/ui-service';
 import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
-import { Web3Service } from '@runrealm/shared-core/services/web3-service';
 import { WalletWidget } from '../../wallet-widget';
+
+export interface TerritoryData {
+  point?: { lat: number; lng: number };
+  totalDistance?: number;
+  difficulty?: number;
+  estimatedReward?: number;
+  rarity?: string;
+  landmarks?: string[];
+}
+
+export interface GPSStatus {
+  available: boolean;
+  accuracy?: number;
+  signal?: 'excellent' | 'good' | 'fair' | 'poor';
+}
+
+export interface NetworkStatus {
+  online: boolean;
+  type?: string;
+}
+
+export interface LocationInfo {
+  lat: number;
+  lng: number;
+  address?: string;
+}
 
 /**
  * WidgetCreator - Handles creation and management of all UI widgets
@@ -21,7 +39,6 @@ export class WidgetCreator {
   private walletWidget: WalletWidget;
   private widgetSystem: WidgetSystem;
   private visibilityService: VisibilityService;
-  private configService: ConfigService;
 
   constructor(
     locationService: LocationService,
@@ -29,21 +46,18 @@ export class WidgetCreator {
     private userDashboardService: UserDashboardService,
     widgetSystem: WidgetSystem,
     visibilityService: VisibilityService,
-    configService: ConfigService
+    _configService: ConfigService
   ) {
     this.locationService = locationService;
     this.walletWidget = walletWidget;
     this.widgetSystem = widgetSystem;
     this.visibilityService = visibilityService;
-    this.configService = configService;
   }
 
   /**
    * Create all core widgets
    */
   createWidgets(): void {
-    const isMobile = this.configService.getConfig().ui.isMobile;
-
     // Location Widget (top-left) - minimized on mobile for map visibility
     this.widgetSystem.registerWidget({
       id: 'location-info',
@@ -116,8 +130,6 @@ export class WidgetCreator {
    * Create GameFi widgets when GameFi mode is enabled
    */
   createGameFiWidgets(): void {
-    const isMobile = this.configService.getConfig().ui.isMobile;
-
     // Player Stats Widget (top-left, highest priority) - always minimized on mobile
     this.widgetSystem.registerWidget({
       id: 'player-stats',
@@ -175,28 +187,34 @@ export class WidgetCreator {
   /**
    * Get content for location widget with GPS and network status
    */
-  getLocationContent(gpsStatus?: any, networkStatus?: any, currentLocation?: any): string {
-    // Provide default values if not passed
-    gpsStatus = gpsStatus || { available: false };
-    networkStatus = networkStatus || { online: navigator.onLine };
-    currentLocation = currentLocation || this.locationService.getCurrentLocationInfo();
+  getLocationContent(
+    gpsStatus?: GPSStatus,
+    networkStatus?: NetworkStatus,
+    currentLocation?: LocationInfo
+  ): string {
+    const resolvedGpsStatus: GPSStatus = gpsStatus || { available: false };
+    const resolvedNetworkStatus: NetworkStatus = networkStatus || { online: navigator.onLine };
+    const resolvedLocation: LocationInfo | undefined =
+      currentLocation || (this.locationService.getCurrentLocationInfo() as LocationInfo);
     const displayText =
-      currentLocation?.address ||
-      (currentLocation
-        ? `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}`
+      resolvedLocation?.address ||
+      (resolvedLocation
+        ? `${resolvedLocation.lat.toFixed(4)}, ${resolvedLocation.lng.toFixed(4)}`
         : 'Default (NYC)');
 
     // GPS status
-    const gpsIcon = this.getGPSIcon(gpsStatus);
-    const gpsText = gpsStatus.available
-      ? gpsStatus.accuracy
-        ? `${Math.round(gpsStatus.accuracy)}m`
+    const gpsIcon = this.getGPSIcon(resolvedGpsStatus);
+    const gpsText = resolvedGpsStatus.available
+      ? resolvedGpsStatus.accuracy
+        ? `${Math.round(resolvedGpsStatus.accuracy)}m`
         : 'Active'
       : 'Unavailable';
 
     // Network status
-    const networkIcon = this.getNetworkIcon(networkStatus);
-    const networkText = networkStatus.online ? networkStatus.type || 'Connected' : 'Offline';
+    const networkIcon = this.getNetworkIcon(resolvedNetworkStatus);
+    const networkText = resolvedNetworkStatus.online
+      ? resolvedNetworkStatus.type || 'Connected'
+      : 'Offline';
 
     return `
       <div class="widget-stat">
@@ -206,12 +224,12 @@ export class WidgetCreator {
 
       <div class="location-status">
         <div class="status-row">
-          <div class="status-item gps-status ${gpsStatus.available ? 'active' : 'inactive'}">
+          <div class="status-item gps-status ${resolvedGpsStatus.available ? 'active' : 'inactive'}">
             <span class="status-icon">${gpsIcon}</span>
             <span class="status-label">GPS</span>
             <span class="status-detail">${gpsText}</span>
           </div>
-          <div class="status-item network-status ${networkStatus.online ? 'active' : 'inactive'}">
+          <div class="status-item network-status ${resolvedNetworkStatus.online ? 'active' : 'inactive'}">
             <span class="status-icon">${networkIcon}</span>
             <span class="status-label">Network</span>
             <span class="status-detail">${networkText}</span>
@@ -239,7 +257,7 @@ export class WidgetCreator {
   /**
    * Helper to get GPS icon based on signal quality
    */
-  private getGPSIcon(gpsStatus: { available: boolean; signal?: string }): string {
+  private getGPSIcon(gpsStatus: GPSStatus): string {
     if (!gpsStatus.available) return '📍❌';
 
     switch (gpsStatus.signal) {
@@ -259,7 +277,7 @@ export class WidgetCreator {
   /**
    * Helper to get network status icon
    */
-  private getNetworkIcon(networkStatus: { online: boolean; type?: string }): string {
+  private getNetworkIcon(networkStatus: NetworkStatus): string {
     if (!networkStatus.online) return '📶❌';
 
     // Basic network status - can be enhanced with speed detection later
@@ -471,10 +489,8 @@ export class WidgetCreator {
   /**
    * Update territory-info widget based on preview data
    */
-  updateTerritoryWidget(data: any): number {
-    // This function has complex logic that we'll need to implement
+  updateTerritoryWidget(data?: TerritoryData): number {
     const {
-      point,
       totalDistance,
       difficulty = 50,
       estimatedReward = Math.floor((totalDistance || 0) * 0.01 + Math.random() * 20),

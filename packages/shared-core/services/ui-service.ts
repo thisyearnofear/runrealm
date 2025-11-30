@@ -1,4 +1,3 @@
-import { AnimationService } from './animation-service';
 import { DOMService } from './dom-service';
 
 export interface ToastOptions {
@@ -15,10 +14,17 @@ export interface ToastOptions {
   };
 }
 
+export interface SuccessMessageData {
+  territoryName?: string;
+  distance?: string;
+  time?: string;
+  context?: string;
+  walletType?: string;
+}
+
 export class UIService {
   private static instance: UIService;
   private domService: DOMService;
-  private animationService: AnimationService;
   private toastContainer: HTMLElement | null = null;
   private celebrationEffects: HTMLElement[] = [];
   private contextualMessages = {
@@ -50,7 +56,6 @@ export class UIService {
 
   constructor() {
     this.domService = DOMService.getInstance();
-    this.animationService = AnimationService.getInstance();
     this.createToastContainer();
   }
 
@@ -349,7 +354,7 @@ export class UIService {
   /**
    * Enhanced success message with celebration
    */
-  public showContextualSuccess(context: string, data?: any): void {
+  public showContextualSuccess(context: string, data?: SuccessMessageData): void {
     const message = this.getSuccessMessage(context, data);
     this.showToast(message, {
       type: 'success',
@@ -388,7 +393,7 @@ export class UIService {
     return messages[Math.floor(Math.random() * messages.length)];
   }
 
-  private getSuccessMessage(context: string, data?: any): string {
+  private getSuccessMessage(context: string, data?: SuccessMessageData): string {
     const successMessages = {
       territoryClaimedFirst: "🎉 First Territory Claimed! You're now a true RunRealm explorer!",
       territoryClaimed: `🏆 Territory Claimed! ${
@@ -452,7 +457,12 @@ export class UIService {
 
   private playContextualSound(type: string): void {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const WindowWithWebKit = window as typeof window & {
+        webkitAudioContext?: typeof AudioContext;
+      };
+      const AudioContextClass = window.AudioContext || WindowWithWebKit.webkitAudioContext;
+      if (!AudioContextClass) return;
+      const audioContext = new AudioContextClass();
       const sounds = {
         success: { frequency: 800, duration: 200 },
         error: { frequency: 300, duration: 400 },
@@ -521,7 +531,7 @@ export class UIService {
   }
 
   public cleanup(): void {
-    if (this.toastContainer && this.toastContainer.parentElement) {
+    if (this.toastContainer?.parentElement) {
       this.toastContainer.parentElement.removeChild(this.toastContainer);
     }
 
