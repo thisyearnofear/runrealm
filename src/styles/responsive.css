@@ -300,40 +300,40 @@
      Widget headers become visual indicators (44px minimum touch target)
   */
   .widget {
-    min-width: 44px;
-    width: auto;
-    max-width: 100px;
+    min-width: 44px !important;
+    width: auto !important;
+    max-width: 100px !important;
   }
 
   /* When minimized on mobile, show only icon */
   .widget.minimized {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    overflow: hidden;
+    width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Hide title on mobile minimized widgets */
   .widget.minimized .widget-title {
-    display: none;
+    display: none !important;
   }
 
   /* Keep icon visible and centered */
   .widget.minimized .widget-header {
-    padding: 8px;
-    border: none;
-    background: var(--widget-bg);
-    justify-content: center;
+    padding: 8px !important;
+    border: none !important;
+    background: var(--widget-bg) !important;
+    justify-content: center !important;
   }
 
   /* Hide widget content on minimized mobile widgets */
   .widget.minimized .widget-content {
-    display: none;
+    display: none !important;
   }
 
   /* Hide toggle button on minimized mobile widgets */
   .widget.minimized .widget-toggle {
-    display: none;
+    display: none !important;
   }
 
   /* Ensure expanded widgets still work on desktop-size tablets (768px) */
@@ -356,8 +356,8 @@
 
   /* Better spacing for icon in minimized state */
   .widget.minimized .widget-icon {
-    margin: 0;
-    font-size: 24px;
+    margin: 0 !important;
+    font-size: 24px !important;
   }
 }
 
