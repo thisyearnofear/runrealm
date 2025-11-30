@@ -143,6 +143,28 @@ export class EnhancedRunControls extends BaseService {
       }
     });
 
+    this.subscribe('territory:readyToClaim' as any, async (data: any) => {
+      // Check wallet connection and trigger claiming
+      const web3Service = (window as any).RunRealm?.services?.web3;
+      if (!web3Service?.isConnected()) {
+        this.showFeedback('Connect your wallet to claim this territory', 'warning');
+        // Trigger wallet connection modal
+        this.safeEmit('web3:connectionRequested', {});
+        return;
+      }
+
+      // Proceed with claiming
+      const territoryService = (window as any).RunRealm?.services?.territory;
+      if (territoryService) {
+        const result = await territoryService.claimPreparedTerritory(data.territory);
+        if (result.success) {
+          this.showFeedback('Territory claimed!', 'success');
+        } else {
+          this.showFeedback(`Claim failed: ${result.error}`, 'error');
+        }
+      }
+    });
+
     // Setup mobile-specific interactions
     this.setupMobileInteractions();
   }
