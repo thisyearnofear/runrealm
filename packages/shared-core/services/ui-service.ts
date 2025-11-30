@@ -66,11 +66,11 @@ export class UIService {
       id: 'toast-container',
       style: {
         position: 'fixed',
-        top: '20px',
+        bottom: '20px',
         right: '20px',
         zIndex: '10000',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column-reverse',
         gap: '10px',
       },
     });
@@ -131,9 +131,9 @@ export class UIService {
         fontWeight: '500',
         color: this.getEnhancedTextColor(type),
         background: this.getEnhancedBackground(type),
-        border: `1px solid ${this.getToastBorderColor(type)}`,
+        border: `2px solid ${this.getToastBorderColor(type)}`,
         borderLeft: `4px solid ${this.getToastBorderColor(type)}`,
-        backdropFilter: 'blur(10px)',
+        backdropFilter: 'blur(16px)',
       },
     });
 
@@ -248,15 +248,15 @@ export class UIService {
   private getEnhancedBackground(type: string): string {
     switch (type) {
       case 'success':
-        return 'linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(32, 201, 151, 0.05))';
+        return 'linear-gradient(135deg, rgba(40, 167, 69, 0.85), rgba(32, 201, 151, 0.75))';
       case 'warning':
-        return 'linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(253, 126, 20, 0.05))';
+        return 'linear-gradient(135deg, rgba(255, 193, 7, 0.85), rgba(253, 126, 20, 0.75))';
       case 'error':
-        return 'linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(231, 76, 60, 0.05))';
+        return 'linear-gradient(135deg, rgba(220, 53, 69, 0.85), rgba(231, 76, 60, 0.75))';
       case 'loading':
-        return 'linear-gradient(135deg, rgba(0, 123, 255, 0.1), rgba(13, 202, 240, 0.05))';
+        return 'linear-gradient(135deg, rgba(0, 123, 255, 0.85), rgba(13, 202, 240, 0.75))';
       default:
-        return 'linear-gradient(135deg, rgba(23, 162, 184, 0.1), rgba(13, 202, 240, 0.05))';
+        return 'linear-gradient(135deg, rgba(23, 162, 184, 0.85), rgba(13, 202, 240, 0.75))';
     }
   }
 

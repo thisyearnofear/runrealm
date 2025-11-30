@@ -93,7 +93,8 @@ export class WidgetCreator {
       content: `
         <div class="widget-buttons">
           <button class="widget-button" id="toggle-dashboard-btn">
-            📊 Toggle Dashboard
+            <span class="btn-icon">📊</span>
+            <span class="btn-text">Toggle Dashboard</span>
           </button>
         </div>
       `,
@@ -217,16 +218,19 @@ export class WidgetCreator {
           </div>
         </div>
         <button class="status-refresh-btn" id="refresh-status-btn" title="Refresh GPS status">
-          🔄 Check GPS
+          <span class="btn-icon">🔄</span>
+          <span class="btn-text">Check GPS</span>
         </button>
       </div>
 
       <div class="widget-buttons">
         <button class="widget-button" id="set-location-btn">
-          🛰️ Use GPS
+          <span class="btn-icon">🛰️</span>
+          <span class="btn-text">Use GPS</span>
         </button>
         <button class="widget-button secondary" id="search-location-btn">
-          🔍 Search
+          <span class="btn-icon">🔍</span>
+          <span class="btn-text">Search</span>
         </button>
       </div>
     `;
@@ -331,7 +335,10 @@ export class WidgetCreator {
 
       <div class="widget-section centered">
         <div class="widget-buttons">
-          <button class="widget-button secondary" id="restart-onboarding-widget">🔁 Restart Tutorial</button>
+          <button class="widget-button secondary" id="restart-onboarding-widget">
+            <span class="btn-icon">🔁</span>
+            <span class="btn-text">Restart Tutorial</span>
+          </button>
         </div>
       </div>
     `;
@@ -369,10 +376,12 @@ export class WidgetCreator {
       </div>
       <div class="widget-buttons">
         <button class="widget-button secondary" id="analyze-btn">
-          🤖 AI Analysis
+          <span class="btn-icon">🤖</span>
+          <span class="btn-text">AI Analysis</span>
         </button>
         <button class="widget-button secondary" data-action="territory.toggle">
-          👁️ Toggle View
+          <span class="btn-icon">👁️</span>
+          <span class="btn-text">Toggle View</span>
         </button>
         <button class="widget-button tertiary import-activities-btn">
           <span class="btn-icon">🌟</span>
@@ -389,7 +398,8 @@ export class WidgetCreator {
       </div>
       <div class="widget-buttons">
         <button class="widget-button secondary" id="find-challenges-btn">
-          🔍 Find Challenges
+          <span class="btn-icon">🔍</span>
+          <span class="btn-text">Find Challenges</span>
         </button>
       </div>
     `;
@@ -412,13 +422,16 @@ export class WidgetCreator {
           <div class="prompt-title">🏃‍♂️ Quick Routes</div>
           <div class="widget-buttons compact">
             <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"smart_morning","adaptive":true}'>
-              🌅 Smart Morning
+              <span class="btn-icon">🌅</span>
+              <span class="btn-text">Smart Morning</span>
             </button>
             <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"smart_territory","adaptive":true}'>
-              🏆 Best Territory
+              <span class="btn-icon">🏆</span>
+              <span class="btn-text">Best Territory</span>
             </button>
             <button class="widget-button quick-prompt" data-action="ai.quickPrompt" data-payload='{"type":"smart_training","adaptive":true}'>
-              💪 Optimal Training
+              <span class="btn-icon">💪</span>
+              <span class="btn-text">Optimal Training</span>
             </button>
           </div>
         </div>
@@ -427,13 +440,16 @@ export class WidgetCreator {
           <div class="prompt-title">⏱️ Time-Based</div>
           <div class="widget-buttons compact">
             <button class="widget-button quick-prompt secondary" data-action="ai.quickPrompt" data-payload='{"type":"quick_15min","distance":1500,"goals":["exploration"],"difficulty":40}'>
-              15min Quick
+              <span class="btn-icon">⏱️</span>
+              <span class="btn-text">15min Quick</span>
             </button>
             <button class="widget-button quick-prompt secondary" data-action="ai.quickPrompt" data-payload='{"type":"lunch_break","distance":2500,"goals":["exploration"],"difficulty":45}'>
-              30min Lunch
+              <span class="btn-icon">🥗</span>
+              <span class="btn-text">30min Lunch</span>
             </button>
             <button class="widget-button quick-prompt secondary" data-action="ai.quickPrompt" data-payload='{"type":"evening_adventure","distance":5000,"goals":["exploration","territory"],"difficulty":60}'>
-              1hr Adventure
+              <span class="btn-icon">🌙</span>
+              <span class="btn-text">1hr Adventure</span>
             </button>
           </div>
         </div>
@@ -441,10 +457,12 @@ export class WidgetCreator {
 
       <div class="widget-buttons">
         <button class="widget-button" data-action="ai.requestRoute" data-payload='{"goals":["exploration"]}'>
-          📍 Custom Route
+          <span class="btn-icon">📍</span>
+          <span class="btn-text">Custom Route</span>
         </button>
         <button class="widget-button secondary" data-action="ai.requestGhostRunner" data-payload='{"difficulty":50}'>
-          👻 Ghost Runner
+          <span class="btn-icon">👻</span>
+          <span class="btn-text">Ghost Runner</span>
         </button>
       </div>
     `;

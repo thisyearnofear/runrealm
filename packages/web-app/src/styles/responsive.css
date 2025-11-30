@@ -601,6 +601,185 @@
   }
 }
 
+/* ===== MOBILE-OPTIMIZED WIDGETS (max 480px) ===== */
+
+@media (max-width: 480px) {
+  /* Condense widgets to icon-only on small screens */
+  .widget-header {
+    padding: 12px 10px !important;
+    min-height: 40px !important;
+    gap: 4px;
+  }
+
+  .widget-title {
+    display: none;
+  }
+
+  .widget-icon {
+    margin-right: 0;
+    font-size: 20px;
+  }
+
+  .widget-toggle {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 4px;
+  }
+
+  .widget {
+    min-width: 56px;
+    max-width: 56px;
+  }
+
+  .widget.expanded {
+    min-width: 90vw;
+    max-width: 90vw;
+    max-height: 70vh;
+  }
+
+  .widget-content {
+    padding: 8px 10px;
+    font-size: 12px;
+    max-height: 200px;
+  }
+
+  .widget-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 11px;
+    gap: 8px;
+  }
+
+  .widget-stat-label {
+    display: none;
+  }
+
+  .widget-stat-value {
+    flex: 1;
+    text-align: right;
+    font-weight: 600;
+  }
+
+  .widget-section {
+    padding: 8px 0;
+    margin-bottom: 8px;
+  }
+
+  .widget-section-title {
+    display: none;
+  }
+
+  .widget-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .widget-buttons.compact {
+    gap: 4px;
+  }
+
+  .widget-button {
+    padding: 8px 12px;
+    min-height: 36px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 2px;
+  }
+
+  .widget-button .btn-text {
+    display: none;
+  }
+
+  .widget-button .btn-icon {
+    font-size: 16px;
+  }
+
+  .widget-toggle-label {
+    display: none;
+  }
+
+  .toggle-label {
+    display: none;
+  }
+
+  /* Hide labels and text-heavy content on mobile */
+  .status-label,
+  .widget-list-title,
+  .widget-tip,
+  .widget-info,
+  .prompt-title {
+    display: none;
+  }
+
+  .status-detail {
+    display: none;
+  }
+
+  .status-item {
+    padding: 4px;
+  }
+
+  /* Notifications on mobile - adjust for better mobile positioning */
+  #toast-container {
+    bottom: 16px !important;
+    right: 12px !important;
+    left: auto !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  .toast {
+    max-width: 100% !important;
+    padding: 12px 14px !important;
+    font-size: 13px !important;
+    gap: 10px !important;
+  }
+
+  .toast .toast-icon {
+    font-size: 18px;
+  }
+
+  /* Compact widget zones on mobile */
+  .widget-zone {
+    gap: 6px;
+  }
+
+  .widget-zone.top-left,
+  .widget-zone.top-right {
+    top: 12px;
+  }
+
+  .widget-zone.bottom-left,
+  .widget-zone.bottom-right {
+    bottom: 70px;
+  }
+
+  .widget-zone.top-left,
+  .widget-zone.bottom-left {
+    left: 12px;
+  }
+
+  .widget-zone.top-right,
+  .widget-zone.bottom-right {
+    right: 12px;
+  }
+
+  /* Wallet widget optimizations */
+  .wallet-status {
+    gap: 8px;
+  }
+
+  .wallet-action-btn {
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 14px;
+  }
+}
+
 /* Responsive text utilities */
 @media (max-width: 767px) {
   .text-mobile-xs {
