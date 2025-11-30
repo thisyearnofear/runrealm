@@ -73,6 +73,19 @@ export class UserDashboard {
       this.dashboardService.unsubscribeFromVisibilityChanges(visibilityChangeCallback);
     };
 
+    // MOBILE UX: Listen for dashboard:open event from MainUI widget handler
+    // This allows widgets to redirect to dashboard with auto-selected tab
+    this.eventBus.on('dashboard:open', (data: any) => {
+      console.log('UserDashboard: Opening dashboard from widget redirect', data);
+      if (data.targetTab && data.targetTab !== this.activeTab) {
+        this.activeTab = data.targetTab as 'overview' | 'territories' | 'ghosts' | 'challenges';
+        console.log(`UserDashboard: Auto-selecting tab: ${this.activeTab}`);
+      }
+      this.dashboardService.show();
+      // Ensure content is rendered after tab selection
+      setTimeout(() => this.render(), 100);
+    });
+
     console.log('UserDashboard: Subscriptions complete');
   }
 

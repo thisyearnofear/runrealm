@@ -298,6 +298,14 @@ export class MainUI extends BaseService {
    * Setup event handlers for the main UI
    */
   private setupEventHandlers(): void {
+    // Mobile: Listen for dashboard requests from widgets
+    this.subscribe(
+      'dashboard:requestOpen',
+      (data: { sourceWidget: string; widgetTitle?: string }) => {
+        this.handleDashboardRequest(data.sourceWidget, data.widgetTitle);
+      }
+    );
+
     // Header buttons
     this.domService.delegate(document.body, '#location-btn', 'click', () => {
       this.locationService.showLocationModal();
@@ -1891,5 +1899,42 @@ export class MainUI extends BaseService {
   private toggleWidgetVisibility(widgetId: string, visible: boolean): void {
     console.log(`Toggling widget ${widgetId} visibility to ${visible}`);
     this.visibilityService.setVisibility(`widget-${widgetId}`, visible);
+  }
+
+  /**
+   * Handle dashboard open request from mobile widgets
+   * Emits an event that the dashboard component can listen for
+   */
+  private handleDashboardRequest(widgetId: string, widgetTitle?: string): void {
+    console.log(`MainUI: Opening dashboard for widget "${widgetId}" (${widgetTitle})`);
+
+    // Determine which tab to open based on the source widget
+    const tabMap: Record<string, 'overview' | 'territories' | 'ghosts' | 'challenges'> = {
+      'territory-info': 'territories',
+      challenges: 'challenges',
+      'ai-coach': 'overview',
+      'player-stats': 'overview',
+      'location-info': 'overview',
+      'wallet-info': 'overview',
+      'run-tracker': 'overview',
+    };
+
+    const targetTab = tabMap[widgetId] || 'overview';
+
+    // Emit event to open dashboard with the appropriate tab
+    this.safeEmit('dashboard:open', {
+      visible: true,
+      minimized: false,
+      targetTab,
+      sourceWidget: widgetId,
+    });
+
+    // Also show a toast notification on mobile to indicate the action
+    if (window.innerWidth <= 768) {
+      this.uiService.showToast(`📊 Opening ${widgetTitle || 'Dashboard'}...`, {
+        type: 'info',
+        duration: 1000,
+      });
+    }
   }
 }

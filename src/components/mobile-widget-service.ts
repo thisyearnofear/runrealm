@@ -515,4 +515,26 @@ export class MobileWidgetService extends BaseService {
   public getCurrentOrientation(): 'portrait' | 'landscape' {
     return this.orientation;
   }
+
+  /**
+   * Map widget ID to dashboard tab
+   * Helps auto-select the right dashboard tab when opening from a widget
+   */
+  public mapWidgetToDashboardTab(
+    widgetId: string
+  ): 'overview' | 'territories' | 'ghosts' | 'challenges' {
+    switch (widgetId) {
+      case 'territory-info':
+        return 'territories';
+      case 'challenges':
+        return 'challenges';
+      case 'ai-coach':
+      case 'player-stats':
+      case 'location-info':
+      case 'wallet-info':
+        return 'overview';
+      default:
+        return 'overview';
+    }
+  }
 }

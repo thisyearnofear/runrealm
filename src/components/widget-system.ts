@@ -152,6 +152,7 @@ export class WidgetSystem extends BaseService {
 
   /**
    * Toggle widget between minimized and expanded
+   * On mobile, redirect to dashboard instead of expanding inline
    */
   public toggleWidget(widgetId: string): void {
     const widget = this.widgets.get(widgetId);
@@ -165,15 +166,22 @@ export class WidgetSystem extends BaseService {
 
     const isMobile = window.innerWidth <= 768;
 
+    // MOBILE UX: On mobile, open dashboard instead of expanding inline
+    // This keeps the map visible and provides full-featured UI
+    if (isMobile && widget.minimized) {
+      // User is trying to expand a widget on mobile - show dashboard instead
+      this.safeEmit('dashboard:requestOpen', {
+        sourceWidget: widgetId,
+        widgetTitle: widget.title,
+      });
+      return;
+    }
+
+    // Desktop behavior: expand/collapse widget inline
     // If expanding this widget
     if (widget.minimized) {
-      // On mobile: minimize ALL other widgets for maximum map visibility
-      // On desktop: minimize only widgets in same position
-      if (isMobile) {
-        this.minimizeAllOtherWidgets(widgetId);
-      } else {
-        this.minimizeWidgetsInPosition(widget.position, widgetId);
-      }
+      // On large screens: minimize only widgets in same position
+      this.minimizeWidgetsInPosition(widget.position, widgetId);
       this.activeWidget = widgetId;
     } else {
       this.activeWidget = null;

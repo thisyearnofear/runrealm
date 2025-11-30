@@ -40,6 +40,7 @@ npm run test     # Run tests
 - [Architecture](docs/architecture.md) - System architecture, platform design, and smart contracts.
 - [Features](docs/features.md) - Detailed look at key features like Ghost Runners and the User Dashboard.
 - [Guides](docs/guides.md) - Implementation guides, mobile development, and testing strategies.
+- [Mobile UX](MOBILE_UX.md) - Mobile experience enhancement (widget redirect to dashboard, responsive layouts).
 
 ## 🏗️ Architecture
 
