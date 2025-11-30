@@ -146,13 +146,17 @@ export class ContractService extends BaseService {
 
   /**
    * Mint/claim a territory on the blockchain
-   * ENHANCEMENT: Uses actual deployed contract method
+   * ENHANCEMENT: Supports chain selection via ZetaChain Gateway
    */
-  public async mintTerritory(territoryData: TerritoryClaimData): Promise<string> {
+  public async mintTerritory(
+    territoryData: TerritoryClaimData,
+    targetChainId?: number
+  ): Promise<string> {
     // Track territory claim attempt
     this.userContextService.trackUserAction('territory_claim_attempted', {
       geohash: territoryData.geohash,
       difficulty: territoryData.difficulty,
+      chainId: targetChainId || 7001,
     });
 
     if (!this.universalContract) {
@@ -165,8 +169,11 @@ export class ContractService extends BaseService {
       throw new Error('Wallet not connected');
     }
 
+    const wallet = this.web3Service.getCurrentWallet();
+    const resolvedChainId = targetChainId || wallet?.chainId || 7001;
+
     try {
-      console.log('ContractService: Minting territory on blockchain...', territoryData);
+      console.log('ContractService: Minting territory on chain:', resolvedChainId, territoryData);
 
       // Check if geohash is already claimed
       const isClaimed = await this.universalContract[CONTRACT_METHODS.universal.isGeohashClaimed](
@@ -177,6 +184,12 @@ export class ContractService extends BaseService {
         throw new Error('Territory already claimed by another player');
       }
 
+      // If claiming on a different chain, use cross-chain mechanism
+      if (resolvedChainId !== 7001 && wallet?.chainId !== 7001) {
+        return await this.mintTerritoryViaGateway(territoryData, resolvedChainId);
+      }
+
+      // Direct claim on ZetaChain
       // Estimate gas for the transaction
       const gasEstimate = await this.universalContract[
         CONTRACT_METHODS.universal.mintTerritory
@@ -205,6 +218,7 @@ export class ContractService extends BaseService {
       this.safeEmit('web3:transactionSubmitted', {
         hash: tx.hash,
         type: 'territory_mint',
+        chainId: resolvedChainId,
       });
 
       // Wait for confirmation
@@ -242,6 +256,7 @@ export class ContractService extends BaseService {
           tokenId: tokenId || 'unknown',
           geohash: territoryData.geohash,
           metadata: territoryData,
+          chainId: resolvedChainId,
         });
 
         // Track successful territory claim
@@ -249,11 +264,13 @@ export class ContractService extends BaseService {
           tokenId: tokenId || 'unknown',
           geohash: territoryData.geohash,
           difficulty: territoryData.difficulty,
+          chainId: resolvedChainId,
         });
 
         console.log('ContractService: Territory minted successfully!', {
           tokenId,
           hash: tx.hash,
+          chainId: resolvedChainId,
         });
         return tx.hash;
       } else {
@@ -264,10 +281,64 @@ export class ContractService extends BaseService {
 
       this.safeEmit('web3:transactionFailed', {
         error: error instanceof Error ? error.message : String(error),
+        chainId: resolvedChainId,
       });
 
       throw error;
     }
+  }
+
+  /**
+   * Mint territory via ZetaChain Gateway for cross-chain claiming
+   * Initiates a cross-chain transaction through ZetaChain's unified interface
+   */
+  private async mintTerritoryViaGateway(
+    territoryData: TerritoryClaimData,
+    targetChainId: number
+  ): Promise<string> {
+    console.log('ContractService: Initiating cross-chain territory claim via Gateway', {
+      territoryData,
+      targetChainId,
+    });
+
+    const wallet = this.web3Service.getCurrentWallet();
+    if (!wallet) {
+      throw new Error('Wallet not connected');
+    }
+
+    // Emit event for cross-chain gateway interaction
+    this.safeEmit('web3:crossChainGatewayRequested', {
+      territoryData,
+      sourceChainId: wallet.chainId,
+      targetChainId: targetChainId,
+      type: 'territory_mint',
+    });
+
+    // In production, this would call ZetaChain's Gateway contract
+    // For now, we emit the event and let the CrossChainService handle it
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Cross-chain transaction timeout'));
+      }, 60000); // 60 second timeout
+
+      const handleSuccess = (data: any) => {
+        clearTimeout(timeout);
+        if (data.territoryData?.geohash === territoryData.geohash) {
+          resolve(data.transactionHash);
+        }
+      };
+
+      const handleFailure = (data: any) => {
+        clearTimeout(timeout);
+        if (data.territoryData?.geohash === territoryData.geohash) {
+          reject(new Error(data.error || 'Cross-chain claim failed'));
+        }
+      };
+
+      // Subscribe to success/failure events
+      this.subscribe('web3:crossChainTerritoryClaimed', handleSuccess);
+      this.subscribe('web3:crossChainTerritoryClaimFailed', handleFailure);
+    });
   }
 
   /**

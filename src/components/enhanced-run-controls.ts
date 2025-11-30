@@ -34,6 +34,10 @@ export class EnhancedRunControls extends BaseService {
   private widgetInitialized = false;
   private standaloneActive = false;
 
+  // Territory preview state
+  private lastCompletedRun: RunSession | null = null;
+  private showingPreview = false;
+
   constructor() {
     super();
     this.boundClickHandler = this.handleRunTrackerClick.bind(this);
@@ -604,13 +608,16 @@ export class EnhancedRunControls extends BaseService {
     const distance = this.formatDistance(data.run.totalDistance);
     const duration = this.formatDuration(data.run.totalDuration);
 
+    this.showFeedback(`✅ Run completed! ${distance} in ${duration}.`, 'success');
+
+    // Store completed run for preview
+    this.lastCompletedRun = data.run;
+
+    // Show territory preview if eligible (BEFORE asking for connection)
     if (data.territoryEligible) {
-      this.showFeedback(
-        `🏆 Run completed! ${distance} in ${duration}. Territory eligible!`,
-        'success'
-      );
-    } else {
-      this.showFeedback(`✅ Run completed! ${distance} in ${duration}.`, 'success');
+      setTimeout(() => {
+        this.showTerritoryPreview(data.run);
+      }, 1500); // After celebration completes
     }
 
     const splitsContainer = document.getElementById('run-splits-container');
@@ -709,6 +716,494 @@ export class EnhancedRunControls extends BaseService {
 
     // Add haptic feedback for territory eligibility
     this.hapticFeedback('heavy');
+  }
+
+  /**
+   * Show territory preview modal before asking for wallet connection
+   * Improves conversion by letting users see what they're about to claim
+   */
+  private async showTerritoryPreview(run: RunSession): Promise<void> {
+    if (this.showingPreview) return;
+    this.showingPreview = true;
+
+    try {
+      const territoryService = (window as any).RunRealm?.services?.territory;
+      if (!territoryService) {
+        console.warn('Territory service not available for preview');
+        this.showingPreview = false;
+        return;
+      }
+
+      // Get territory bounds from run
+      const bounds = this.calculateTerritoryBounds(run.points);
+
+      // Get preview with all supported chains
+      const preview = await territoryService.getTerritoryPreview(bounds);
+
+      // Create and show the preview modal
+      this.renderTerritoryPreviewModal(preview, run);
+    } catch (error) {
+      console.error('Failed to generate territory preview:', error);
+      this.showingPreview = false;
+    }
+  }
+
+  /**
+   * Calculate bounds from run points
+   */
+  private calculateTerritoryBounds(points: any[]): any {
+    if (!points || points.length === 0) {
+      return { north: 0, south: 0, east: 0, west: 0, center: { lat: 0, lng: 0 } };
+    }
+
+    const lats = points.map((p) => p.lat);
+    const lngs = points.map((p) => p.lng);
+
+    const north = Math.max(...lats);
+    const south = Math.min(...lats);
+    const east = Math.max(...lngs);
+    const west = Math.min(...lngs);
+
+    return {
+      north,
+      south,
+      east,
+      west,
+      center: {
+        lat: (north + south) / 2,
+        lng: (east + west) / 2,
+      },
+    };
+  }
+
+  /**
+   * Render the territory preview modal (ENHANCEMENT: integrated into run controls)
+   */
+  private renderTerritoryPreviewModal(preview: any, run: RunSession): void {
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'territory-preview-overlay';
+    overlay.className = 'territory-preview-overlay';
+    overlay.innerHTML = `
+      <div class="territory-preview-modal">
+        <button class="close-preview-btn" aria-label="Close preview">&times;</button>
+        
+        <div class="preview-header">
+          <h2>🏰 Territory Preview</h2>
+          <p class="subtitle">Your territory awaits!</p>
+        </div>
+
+        <div class="preview-content">
+          <div class="preview-section">
+            <h3>${preview.metadata.name}</h3>
+            <p class="description">${preview.metadata.description}</p>
+          </div>
+
+          <div class="preview-stats">
+            <div class="stat-card">
+              <span class="stat-label">Difficulty</span>
+              <div class="stat-bar">
+                <div class="stat-fill" style="width: ${preview.metadata.difficulty}%"></div>
+              </div>
+              <span class="stat-value">${preview.metadata.difficulty}/100</span>
+            </div>
+
+            <div class="stat-card">
+              <span class="stat-label">Rarity</span>
+              <span class="rarity-badge ${preview.metadata.rarity}">${preview.metadata.rarity}</span>
+            </div>
+
+            <div class="stat-card">
+              <span class="stat-label">Est. Reward</span>
+              <span class="reward-value">💎 ${preview.metadata.estimatedReward} REALM</span>
+            </div>
+
+            <div class="stat-card">
+              <span class="stat-label">Run Distance</span>
+              <span class="stat-value">${(run.totalDistance / 1000).toFixed(2)} km</span>
+            </div>
+          </div>
+
+          <div class="chain-selector">
+            <label for="chain-select">Claim on Chain:</label>
+            <select id="chain-select" class="chain-dropdown">
+              ${preview.supportedChains
+                ?.map(
+                  (chain: any) =>
+                    `<option value="${chain.chainId}" ${!chain.available ? 'disabled' : ''}>
+                      ${chain.name}${
+                        !chain.available && chain.comingSoon
+                          ? ' (Coming Soon)'
+                          : chain.available &&
+                              preview.estimatedGasCost &&
+                              chain.chainId === preview.selectedChainId
+                            ? ` (~$${preview.estimatedGasCost.toFixed(2)} gas)`
+                            : ''
+                      }
+                    </option>`
+                )
+                .join('')}
+            </select>
+            ${
+              preview.supportedChains?.some((c: any) => !c.available)
+                ? `
+              <p class="chain-note">🚀 Additional chains coming soon after mainnet launch</p>
+            `
+                : ''
+            }
+          </div>
+
+          <div class="preview-notice">
+            <span class="notice-icon">ℹ️</span>
+            <p>You'll be prompted to connect your wallet and confirm the transaction after preview.</p>
+          </div>
+        </div>
+
+        <div class="preview-actions">
+          <button class="btn-cancel" id="decline-preview">Cancel</button>
+          <button class="btn-claim" id="proceed-claim">View & Claim</button>
+        </div>
+      </div>
+    `;
+
+    // Add styles
+    this.injectPreviewStyles();
+
+    // Add to DOM
+    document.body.appendChild(overlay);
+
+    // Attach handlers
+    const closeBtn = overlay.querySelector('.close-preview-btn') as HTMLElement;
+    const declineBtn = overlay.querySelector('#decline-preview') as HTMLElement;
+    const proceedBtn = overlay.querySelector('#proceed-claim') as HTMLElement;
+    const chainSelect = overlay.querySelector('#chain-select') as HTMLSelectElement;
+
+    const cleanup = () => {
+      overlay.remove();
+      this.showingPreview = false;
+    };
+
+    closeBtn?.addEventListener('click', cleanup);
+    declineBtn?.addEventListener('click', cleanup);
+
+    proceedBtn?.addEventListener('click', async () => {
+      const selectedChainId = parseInt(chainSelect?.value || '7001');
+      cleanup();
+
+      // Prepare territory with selected chain and emit claim request
+      const territoryService = (window as any).RunRealm?.services?.territory;
+      if (territoryService && this.lastCompletedRun) {
+        const territory = await territoryService.createTerritoryFromRun(this.lastCompletedRun);
+        await territoryService.prepareTerritoryForClaim(territory, selectedChainId);
+
+        // Emit event to trigger wallet connection check + claim flow
+        this.safeEmit('territory:readyToClaim', {
+          territory,
+          chainId: selectedChainId,
+          run: this.lastCompletedRun,
+        });
+      }
+    });
+
+    // Haptic feedback
+    this.hapticFeedback('light');
+  }
+
+  /**
+   * Inject preview modal styles (ENHANCEMENT: consolidated styling)
+   */
+  private injectPreviewStyles(): void {
+    if (document.querySelector('#territory-preview-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'territory-preview-styles';
+    style.textContent = `
+      .territory-preview-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: flex-end;
+        z-index: 10000;
+        animation: slideUp 0.3s ease;
+      }
+
+      .territory-preview-modal {
+        background: white;
+        border-radius: 20px 20px 0 0;
+        padding: 24px;
+        width: 100%;
+        max-height: 85vh;
+        overflow-y: auto;
+        position: relative;
+        animation: slideUp 0.3s ease;
+      }
+
+      @keyframes slideUp {
+        from {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .close-preview-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: none;
+        border: none;
+        font-size: 28px;
+        cursor: pointer;
+        color: #999;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .close-preview-btn:hover {
+        color: #333;
+      }
+
+      .preview-header {
+        margin-bottom: 24px;
+        text-align: center;
+      }
+
+      .preview-header h2 {
+        font-size: 24px;
+        font-weight: 700;
+        color: #333;
+        margin: 0 0 8px 0;
+      }
+
+      .preview-header .subtitle {
+        color: #999;
+        font-size: 14px;
+        margin: 0;
+      }
+
+      .preview-content {
+        margin-bottom: 24px;
+      }
+
+      .preview-section {
+        margin-bottom: 20px;
+        padding: 16px;
+        background: #f9f9f9;
+        border-radius: 12px;
+      }
+
+      .preview-section h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+        margin: 0 0 8px 0;
+      }
+
+      .preview-section .description {
+        font-size: 14px;
+        color: #666;
+        line-height: 1.5;
+        margin: 0;
+      }
+
+      .preview-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        padding: 12px;
+        background: #f5f5f5;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #999;
+        text-transform: uppercase;
+        font-weight: 600;
+      }
+
+      .stat-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .stat-bar {
+        height: 6px;
+        background: #e0e0e0;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+
+      .stat-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #FF9800, #FF6B6B);
+        transition: width 0.3s ease;
+      }
+
+      .rarity-badge {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .rarity-badge.common {
+        background: #E8F5E9;
+        color: #2E7D32;
+      }
+
+      .rarity-badge.rare {
+        background: #E3F2FD;
+        color: #1565C0;
+      }
+
+      .rarity-badge.epic {
+        background: #F3E5F5;
+        color: #6A1B9A;
+      }
+
+      .rarity-badge.legendary {
+        background: #FFF3E0;
+        color: #E65100;
+      }
+
+      .reward-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #4CAF50;
+      }
+
+      .chain-selector {
+        margin-bottom: 20px;
+        padding: 14px;
+        background: #f9f9f9;
+        border-radius: 8px;
+      }
+
+      .chain-selector label {
+        display: block;
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+
+      .chain-dropdown {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+      }
+
+      .chain-dropdown:focus {
+        outline: none;
+        border-color: #4CAF50;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+      }
+
+      .chain-dropdown option:disabled {
+        background: #f5f5f5;
+        color: #999;
+        cursor: not-allowed;
+      }
+
+      .chain-note {
+        font-size: 12px;
+        color: #FF9800;
+        margin: 6px 0 0 0;
+        font-weight: 500;
+      }
+
+      .preview-notice {
+        display: flex;
+        gap: 10px;
+        padding: 12px;
+        background: #E8F5E9;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      .notice-icon {
+        font-size: 16px;
+        flex-shrink: 0;
+      }
+
+      .preview-notice p {
+        font-size: 13px;
+        color: #2E7D32;
+        margin: 0;
+        line-height: 1.4;
+      }
+
+      .preview-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .btn-cancel,
+      .btn-claim {
+        flex: 1;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+      }
+
+      .btn-cancel {
+        background: #f0f0f0;
+        color: #333;
+      }
+
+      .btn-cancel:active {
+        background: #e0e0e0;
+      }
+
+      .btn-claim {
+        background: #4CAF50;
+        color: white;
+      }
+
+      .btn-claim:active {
+        background: #45a049;
+      }
+
+      @media (max-width: 480px) {
+        .territory-preview-modal {
+          max-height: 90vh;
+        }
+
+        .preview-stats {
+          grid-template-columns: 1fr;
+        }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   private showFeedback(message: string, type: 'info' | 'success' | 'warning' | 'error'): void {

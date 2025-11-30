@@ -86,6 +86,21 @@ export interface TerritoryPreview {
   isAvailable: boolean;
   conflictingTerritories?: Territory[];
   estimatedClaimability: number; // 0-100 percentage
+  estimatedGasCost?: number; // in USD equivalent
+  // All chains (available and coming soon) for UI display
+  supportedChains?: Array<{
+    chainId: number;
+    name: string;
+    available: boolean;
+    comingSoon?: boolean;
+  }>;
+  selectedChainId?: number;
+}
+
+export interface ChainSelection {
+  chainId: number;
+  chainName: string;
+  isNative: boolean; // true if user is already on this chain
 }
 
 /**
@@ -202,9 +217,12 @@ export class TerritoryService extends BaseService {
   }
 
   /**
-   * Get territory preview for a given area
+   * Get territory preview for a given area with chain selection
    */
-  public async getTerritoryPreview(bounds: TerritoryBounds): Promise<TerritoryPreview> {
+  public async getTerritoryPreview(
+    bounds: TerritoryBounds,
+    selectedChainId?: number
+  ): Promise<TerritoryPreview> {
     const geohash = this.generateGeohash(bounds);
     const isAvailable = await this.checkTerritoryAvailability(geohash);
 
@@ -241,6 +259,10 @@ export class TerritoryService extends BaseService {
           ? Math.max(0, 100 - conflictingTerritories.length * 25)
           : 0;
 
+    // Get all chains (for showing "coming soon") and available chains
+    const allChains = this.getSupportedChains();
+    const estimatedGasCost = await this.estimateGasCost(selectedChainId || 7001, metadata);
+
     return {
       bounds,
       geohash,
@@ -248,6 +270,9 @@ export class TerritoryService extends BaseService {
       isAvailable,
       conflictingTerritories,
       estimatedClaimability,
+      estimatedGasCost,
+      supportedChains: allChains,
+      selectedChainId: selectedChainId || 7001,
     };
   }
 
@@ -792,9 +817,12 @@ export class TerritoryService extends BaseService {
   }
 
   /**
-   * Claim territory on blockchain
+   * Claim territory on blockchain with optional chain selection
    */
-  private async claimTerritory(territory: Territory): Promise<TerritoryClaimResult> {
+  private async claimTerritory(
+    territory: Territory,
+    targetChainId?: number
+  ): Promise<TerritoryClaimResult> {
     try {
       // Get Web3, Contract, and CrossChain services
       const web3Service = this.getService('Web3Service');
@@ -814,12 +842,18 @@ export class TerritoryService extends BaseService {
         throw new Error('Wallet not connected');
       }
 
+      // Resolve target chain - use provided chainId or current wallet chain
+      const resolvedChainId = targetChainId || territory.chainId || wallet.chainId;
+
       // Check if this is a cross-chain claim
-      const isCrossChainClaim = wallet.chainId !== 7001; // Not on ZetaChain testnet
+      const isCrossChainClaim = resolvedChainId !== wallet.chainId;
 
       if (isCrossChainClaim && crossChainService) {
-        // Handle cross-chain territory claim
-        console.log('TerritoryService: Initiating cross-chain territory claim');
+        // Handle cross-chain territory claim via Gateway
+        console.log(
+          'TerritoryService: Initiating cross-chain territory claim to chain:',
+          resolvedChainId
+        );
 
         // Prepare cross-chain territory data
         const crossChainData = {
@@ -831,16 +865,22 @@ export class TerritoryService extends BaseService {
           originAddress: wallet.address,
         };
 
-        // Request cross-chain claim through CrossChainService
-        this.safeEmit('crosschain:territoryClaimRequested', {
-          territoryData: crossChainData,
-          targetChainId: 7001, // ZetaChain testnet
-        });
+        // Request cross-chain claim through ContractService (which uses Gateway)
+        const transactionHash = await contractService.mintTerritory(
+          {
+            geohash: territory.geohash,
+            difficulty: territory.metadata.difficulty,
+            distance: territory.runData.distance,
+            landmarks: territory.metadata.landmarks,
+          },
+          resolvedChainId
+        );
 
         // Mark territory as cross-chain claim in progress
         territory.status = 'claimable';
         territory.isCrossChain = true;
         territory.sourceChainId = wallet.chainId;
+        territory.chainId = resolvedChainId;
 
         // Initialize cross-chain history if not exists
         if (!territory.crossChainHistory) {
@@ -849,7 +889,7 @@ export class TerritoryService extends BaseService {
 
         // Add to cross-chain history
         territory.crossChainHistory.push({
-          chainId: wallet.chainId,
+          chainId: resolvedChainId,
           timestamp: Date.now(),
         });
 
@@ -860,11 +900,14 @@ export class TerritoryService extends BaseService {
         return {
           success: true,
           territory,
-          transactionHash: 'cross-chain-pending',
+          transactionHash,
         };
       } else {
-        // Handle direct territory claim on ZetaChain
-        console.log('TerritoryService: Initiating direct territory claim');
+        // Handle direct territory claim
+        console.log(
+          'TerritoryService: Initiating direct territory claim on chain:',
+          resolvedChainId
+        );
 
         // Prepare territory data for blockchain
         const territoryData = {
@@ -875,14 +918,14 @@ export class TerritoryService extends BaseService {
         };
 
         // Submit to blockchain using ContractService
-        const transactionHash = await contractService.mintTerritory(territoryData);
+        const transactionHash = await contractService.mintTerritory(territoryData, resolvedChainId);
 
         // Update territory status
         territory.status = 'claimed';
         territory.owner = wallet.address;
         territory.claimedAt = Date.now();
         territory.transactionHash = transactionHash;
-        territory.chainId = wallet.chainId;
+        territory.chainId = resolvedChainId;
 
         // Store locally
         this.claimedTerritories.set(territory.id, territory);
@@ -1044,6 +1087,128 @@ export class TerritoryService extends BaseService {
    */
   private generateTerritoryId(): string {
     return `territory_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Get supported chains for territory claiming
+   * DEVELOPMENT: Only testnet is available during development
+   * Production chains marked as "coming soon"
+   */
+  private getSupportedChains(): Array<{
+    chainId: number;
+    name: string;
+    available: boolean;
+    comingSoon?: boolean;
+  }> {
+    return [
+      // Currently available
+      { chainId: 7001, name: 'ZetaChain Testnet', available: true },
+
+      // Coming soon - contracts not yet deployed
+      { chainId: 1, name: 'Ethereum', available: false, comingSoon: true },
+      { chainId: 42161, name: 'Arbitrum', available: false, comingSoon: true },
+      { chainId: 137, name: 'Polygon', available: false, comingSoon: true },
+      { chainId: 10, name: 'Optimism', available: false, comingSoon: true },
+      { chainId: 43114, name: 'Avalanche', available: false, comingSoon: true },
+      { chainId: 56, name: 'BSC', available: false, comingSoon: true },
+    ];
+  }
+
+  /**
+   * Get only available chains for claiming
+   */
+  private getAvailableChains(): Array<{ chainId: number; name: string }> {
+    return this.getSupportedChains()
+      .filter((chain) => chain.available)
+      .map((chain) => ({ chainId: chain.chainId, name: chain.name }));
+  }
+
+  /**
+   * Estimate gas cost for territory claim on target chain
+   */
+  private async estimateGasCost(chainId: number, metadata: TerritoryMetadata): Promise<number> {
+    try {
+      const contractService = this.getService('ContractService');
+      if (!contractService) {
+        return 0;
+      }
+
+      // Estimate based on difficulty and distance
+      const baseGasCost = 50000; // Base cost in gas units
+      const difficultyMultiplier = 1 + metadata.difficulty / 100;
+      const estimatedGasUnits = baseGasCost * difficultyMultiplier;
+
+      // Convert to approximate USD (rough estimation)
+      // This would be more accurate with real gas prices
+      const gasPrice = this.getEstimatedGasPrice(chainId);
+      const costInEth = estimatedGasUnits * gasPrice;
+      const ethToUsd = 2500; // Approximate ETH price
+
+      return costInEth * ethToUsd;
+    } catch (error) {
+      console.warn('Failed to estimate gas cost:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get estimated gas price for a chain (in ETH)
+   */
+  private getEstimatedGasPrice(chainId: number): number {
+    const gasPrices: { [key: number]: number } = {
+      7001: 0.00001, // ZetaChain testnet
+      1: 0.00005, // Ethereum
+      42161: 0.0000001, // Arbitrum (very cheap)
+      137: 0.000000001, // Polygon (very cheap)
+      10: 0.000001, // Optimism
+      43114: 0.000001, // Avalanche
+      56: 0.000001, // BSC
+    };
+    return gasPrices[chainId] || 0.00001;
+  }
+
+  /**
+   * Update territory with selected chain and prepare for claiming
+   */
+  public async prepareTerritoryForClaim(
+    territory: Territory,
+    selectedChainId: number
+  ): Promise<Territory> {
+    territory.chainId = selectedChainId;
+    territory.status = 'claimable';
+
+    // Emit event for UI to prepare for chain-specific claiming
+    this.safeEmit('territory:preparedForClaim', {
+      territory,
+      chainId: selectedChainId,
+    });
+
+    return territory;
+  }
+
+  /**
+   * Claim a prepared territory (public interface for UI)
+   */
+  public async claimPreparedTerritory(territory: Territory): Promise<TerritoryClaimResult> {
+    if (!territory.chainId) {
+      return {
+        success: false,
+        error: 'Territory chain not selected',
+      };
+    }
+
+    // Validate that selected chain is available
+    const availableChains = this.getAvailableChains();
+    const isChainAvailable = availableChains.some((c) => c.chainId === territory.chainId);
+
+    if (!isChainAvailable) {
+      return {
+        success: false,
+        error: `Chain ${territory.chainId} is not yet available for claiming. Please check back after mainnet launch.`,
+      };
+    }
+
+    return this.claimTerritory(territory, territory.chainId);
   }
 
   /**
