@@ -452,17 +452,17 @@
   .widget-button,
   .widget-header,
   .widget-icon {
-    transition: none !important;
-    animation: none !important;
+    transition: none;
+    animation: none;
   }
 
   .widget:hover,
   .widget-button:hover {
-    transform: none !important;
+    transform: none;
   }
 
   .widget-header:hover .widget-icon {
-    transform: none !important;
+    transform: none;
   }
 }
 
@@ -508,20 +508,20 @@
   .main-header,
   .floating-action-btn,
   .notifications-container {
-    display: none !important;
+    display: none;
   }
 
   /* Optimize map for printing */
   #mapbox-container {
-    position: static !important;
-    height: 400px !important;
-    width: 100% !important;
+    position: static;
+    height: 400px;
+    width: 100%;
   }
 
   /* Print-friendly colors */
   body {
-    background: white !important;
-    color: black !important;
+    background: white;
+    color: black;
   }
 }
 
@@ -613,27 +613,27 @@
 /* Ultra-small phones: Full-screen dashboard */
 @media (max-width: 479px) {
   .user-dashboard {
-    width: 100% !important;
-    height: 100vh !important;
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    top: 0 !important;
-    left: 0 !important;
-    transform: none !important;
-    border-radius: 0 !important;
-    overflow-y: auto !important;
+    width: 100%;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    top: 0;
+    left: 0;
+    transform: none;
+    border-radius: 0;
+    overflow-y: auto;
   }
 
   .user-dashboard.minimized {
-    width: 100% !important;
-    height: auto !important;
-    top: auto !important;
-    left: auto !important;
-    transform: none !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
-    max-height: 50vh !important;
+    width: 100%;
+    height: auto;
+    top: auto;
+    left: auto;
+    transform: none;
+    position: fixed;
+    bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 50vh;
   }
 
   /* Optimize dashboard tabs for small screens */
@@ -657,25 +657,25 @@
   .dashboard-content {
     max-height: calc(100vh - 120px);
     overflow-y: auto;
-    padding: var(--space-md) !important;
+    padding: var(--space-md);
   }
 
   .dashboard-section {
-    margin-bottom: var(--space-md) !important;
-    padding: var(--space-md) !important;
+    margin-bottom: var(--space-md);
+    padding: var(--space-md);
   }
 
   .dashboard-section h3 {
-    font-size: var(--font-mobile-md) !important;
+    font-size: var(--font-mobile-md);
   }
 
   /* Stats grid: single column on very small screens */
   .stats-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 
   .run-stats {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 
   /* Territory list compact */
@@ -699,14 +699,14 @@
 /* Tablets and larger phones: Centered modal */
 @media (min-width: 480px) and (max-width: 1023px) {
   .user-dashboard {
-    width: 90% !important;
-    max-width: 600px !important;
-    max-height: 85vh !important;
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh;
   }
 
   .user-dashboard.minimized {
-    width: 400px !important;
-    max-height: 50vh !important;
+    width: 400px;
+    max-height: 50vh;
   }
 
   /* Optimize dashboard tabs */
@@ -719,34 +719,34 @@
 
   /* Stats grid: 2 columns on tablets */
   .stats-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .run-stats {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 /* Desktop: Wide centered modal */
 @media (min-width: 1024px) {
   .user-dashboard {
-    width: 90% !important;
-    max-width: 800px !important;
-    max-height: 85vh !important;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
   }
 
   .user-dashboard.minimized {
-    width: 500px !important;
-    max-height: 60vh !important;
+    width: 500px;
+    max-height: 60vh;
   }
 
   /* Stats grid: 4 columns on desktop */
   .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 
   .run-stats {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -765,7 +765,7 @@
 
 @media (max-width: 767px) {
   .hide-mobile {
-    display: none !important;
+    display: none;
   }
   .show-mobile {
     display: block;
@@ -774,7 +774,7 @@
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .hide-tablet {
-    display: none !important;
+    display: none;
   }
   .show-tablet {
     display: block;
@@ -783,7 +783,7 @@
 
 @media (min-width: 1024px) {
   .hide-desktop {
-    display: none !important;
+    display: none;
   }
   .show-desktop {
     display: block;
