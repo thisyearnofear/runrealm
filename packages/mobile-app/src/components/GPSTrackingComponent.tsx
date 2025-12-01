@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Button,
   PermissionsAndroid,
   Platform,
   StyleSheet,
@@ -20,13 +19,14 @@ import {
 
 // Lazy load TaskManager to avoid initialization errors
 // Don't import at module level - load it when needed
+// biome-ignore lint/suspicious/noExplicitAny: Lazy loaded module
 const TaskManager: any = null;
-const taskDefined = false;
+const _taskDefined = false;
 
 // Define background location task (only if TaskManager is available)
 // DISABLED: TaskManager causes initialization errors with LegacyEventEmitter
 // TODO: Fix TaskManager integration when background tracking is needed
-const defineLocationTask = () => {
+const _defineLocationTask = () => {
   // Temporarily disabled to avoid TaskManager initialization errors
   // The require() call was causing Metro to try to load TaskManager at bundle time
   console.warn('Background location tracking disabled - TaskManager integration pending');
@@ -77,6 +77,7 @@ import MobileRunTrackingService from '../services/MobileRunTrackingService';
 
 interface GPSTrackingProps {
   onRunStart?: () => void;
+  // biome-ignore lint/suspicious/noExplicitAny: Run data structure is complex
   onRunStop?: (runData: any) => void;
 }
 
@@ -155,6 +156,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
     pulseAnim.setValue(1);
   };
 
+  // biome-ignore lint/suspicious/noExplicitAny: Stats structure is complex
   const checkTerritoryEligibility = (stats: any) => {
     // Simple eligibility check - can be enhanced with real logic
     const eligible = stats && stats.distance > 500; // Basic distance check
@@ -220,7 +222,8 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
     // defineLocationTask();
   }, [requestLocationPermission]);
 
-  const updateRunStats = (stats: any) => {
+  // biome-ignore lint/suspicious/noExplicitAny: Stats structure is complex
+  const _updateRunStats = (stats: any) => {
     if (stats) {
       setDistance(stats.distance || 0);
       setDuration(stats.duration || 0);
@@ -245,7 +248,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
       startPulseAnimation();
 
       console.log('Run started with ID:', runId);
-      onRunStart && onRunStart();
+      onRunStart?.();
     } catch (error) {
       console.error('Failed to start run:', error);
       Alert.alert('Error', 'Failed to start run. Please check location permissions.');
@@ -310,7 +313,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
       }
 
       console.log('Run stopped:', runData);
-      onRunStop && onRunStop(runData);
+      onRunStop?.(runData);
     } catch (error) {
       console.error('Failed to stop run:', error);
       Alert.alert('Error', 'Failed to stop run.');

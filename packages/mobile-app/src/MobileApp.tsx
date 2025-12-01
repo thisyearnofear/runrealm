@@ -9,7 +9,7 @@ import {
   Achievement,
   AchievementService,
 } from '@runrealm/shared-core/services/achievement-service';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 // Service 1: AchievementService (simplest, no browser dependencies)

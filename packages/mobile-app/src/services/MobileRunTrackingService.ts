@@ -12,7 +12,6 @@ import { BackgroundTrackingService } from './BackgroundTrackingService';
 class MobileRunTrackingService {
   private runTrackingService: RunTrackingService;
   private backgroundTrackingService: BackgroundTrackingService;
-  private locationTrackingEnabled: boolean = false;
 
   constructor() {
     // Initialize with the shared core service
@@ -47,7 +46,6 @@ class MobileRunTrackingService {
       // Set the location service on the shared RunTrackingService
       this.runTrackingService.setLocationService(mobileLocationService);
 
-      this.locationTrackingEnabled = true;
       console.log('Mobile location tracking enabled');
     } catch (error) {
       console.error('Failed to initialize location tracking:', error);

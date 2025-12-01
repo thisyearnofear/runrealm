@@ -28,6 +28,7 @@ export interface MobileWalletState {
  */
 export class MobileWeb3Adapter extends BaseService {
   private web3Service: Web3Service;
+  // biome-ignore lint/suspicious/noExplicitAny: WalletConnect provider is complex
   private walletConnectProvider: any = null;
   private state: MobileWalletState;
   private listeners: Set<(state: MobileWalletState) => void> = new Set();
@@ -161,6 +162,7 @@ export class MobileWeb3Adapter extends BaseService {
   /**
    * Send transaction (delegates to Web3Service)
    */
+  // biome-ignore lint/suspicious/noExplicitAny: Transaction object is complex
   public async sendTransaction(transaction: any): Promise<string> {
     return this.web3Service.sendTransaction(transaction);
   }
@@ -175,6 +177,7 @@ export class MobileWeb3Adapter extends BaseService {
   /**
    * Get contract instance (delegates to Web3Service)
    */
+  // biome-ignore lint/suspicious/noExplicitAny: ABI and Contract are complex
   public getContract(address: string, abi: any): any {
     return this.web3Service.getContract(address, abi);
   }

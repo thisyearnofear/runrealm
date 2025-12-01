@@ -6,11 +6,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
 export const DashboardScreen: React.FC = () => {
+  // biome-ignore lint/suspicious/noExplicitAny: Dashboard data structure is complex
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,6 +35,7 @@ export const DashboardScreen: React.FC = () => {
     loadDashboardData();
 
     // Set up listeners for real-time updates
+    // biome-ignore lint/suspicious/noExplicitAny: Data structure is complex
     const handleDataUpdate = (data: any) => {
       setDashboardData(data.data);
     };
@@ -209,6 +210,7 @@ export const DashboardScreen: React.FC = () => {
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryNumber}>
                     {dashboardData.territories
+                      // biome-ignore lint/suspicious/noExplicitAny: Territory structure is complex
                       .reduce((sum: number, t: any) => sum + (t.estimatedReward || 0), 0)
                       .toFixed(2)}
                   </Text>
@@ -216,6 +218,7 @@ export const DashboardScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.territoriesList}>
+                {/* biome-ignore lint/suspicious/noExplicitAny: Territory structure is complex */}
                 {dashboardData.territories.slice(0, 3).map((territory: any) => (
                   <View
                     key={territory.id}
