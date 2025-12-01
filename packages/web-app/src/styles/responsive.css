@@ -93,7 +93,6 @@
 /* ===== TABLET OPTIMIZATIONS (768px and up) ===== */
 
 @media (min-width: 768px) {
-
   /* Restore desktop spacing */
   .widget-zone {
     gap: var(--space-sm);
@@ -161,7 +160,6 @@
 /* ===== DESKTOP OPTIMIZATIONS (1024px and up) ===== */
 
 @media (min-width: 1024px) {
-
   /* Full desktop experience */
   .widget-zone {
     max-width: 320px;
@@ -203,7 +201,6 @@
 /* ===== LARGE DESKTOP OPTIMIZATIONS (1200px and up) ===== */
 
 @media (min-width: 1200px) {
-
   /* Wider layouts for large screens */
   .widget-zone {
     max-width: 360px;
@@ -239,7 +236,6 @@
 
 /* Touch-optimized interactions */
 @media (hover: none) and (pointer: coarse) {
-
   /* Mobile touch optimizations */
   .widget-header {
     padding: 14px 16px;
@@ -308,7 +304,6 @@
 /* ===== LANDSCAPE MOBILE OPTIMIZATIONS ===== */
 
 @media (max-width: 768px) and (orientation: landscape) {
-
   /* Compact layout for landscape mobile */
   .widget-zone {
     gap: 4px;
@@ -359,7 +354,6 @@
 /* ===== ULTRA-WIDE DISPLAY OPTIMIZATIONS (1440px and up) ===== */
 
 @media (min-width: 1440px) {
-
   /* Ultra-wide specific optimizations */
   .widget-zone {
     max-width: 400px;
@@ -395,7 +389,6 @@
 
 /* Reduce animations on low-end devices */
 @media (prefers-reduced-motion: reduce) {
-
   .widget,
   .widget-button,
   .widget-header,
@@ -450,7 +443,6 @@
 /* ===== PRINT OPTIMIZATIONS ===== */
 
 @media print {
-
   /* Hide interactive elements when printing */
   .widget-system,
   .gamefi-hud,
@@ -478,7 +470,6 @@
 
 /* Large text support */
 @media (min-resolution: 2dppx) {
-
   .widget-title,
   .widget-content {
     font-weight: var(--font-weight-medium);
@@ -539,7 +530,6 @@
 
 /* Optimize for slow connections */
 @media (prefers-reduced-data: reduce) {
-
   /* Reduce animation complexity */
   .widget {
     backdrop-filter: none;
@@ -636,7 +626,6 @@
 /* ===== MOBILE-OPTIMIZED WIDGETS (max 480px) ===== */
 
 @media (max-width: 480px) {
-
   /* Condense widgets to icon-only on small screens */
   .widget-header {
     padding: 12px 10px !important;
@@ -943,7 +932,6 @@
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -1089,7 +1077,6 @@
 
 /* Accessibility */
 @media (prefers-reduced-motion: reduce) {
-
   .gps-permission-modal,
   .gps-modal-content,
   .benefit-item,
