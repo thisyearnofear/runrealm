@@ -126,6 +126,8 @@ export class LocationService extends BaseService {
   public async searchLocations(query: string): Promise<LocationSearchResult[]> {
     try {
       const results = await this.geocodingService?.searchPlaces(query, 10);
+      if (!results) return [];
+
       return results.map((result) => ({
         name: result.name,
         lat: result.center[1],
@@ -158,11 +160,23 @@ export class LocationService extends BaseService {
    * Show location selection modal
    */
   public showLocationModal(): void {
+    // Ensure domService is available
+    if (!this.domService) {
+      console.error('LocationService: DOMService not available, cannot show modal');
+      return;
+    }
+
     if (!this.locationModal) {
       this.createLocationModal();
     }
 
-    this.locationModal!.style.display = 'flex';
+    // Double-check modal was created successfully
+    if (!this.locationModal) {
+      console.error('LocationService: Failed to create location modal');
+      return;
+    }
+
+    this.locationModal.style.display = 'flex';
     document.body.classList.add('modal-open');
 
     // Focus first focusable element in modal
@@ -242,15 +256,17 @@ export class LocationService extends BaseService {
     this.currentLocation = locationInfo;
 
     // Save to preferences
-    this.preferenceService.saveCurrentFocus(
-      {
-        coords: {
-          latitude: locationInfo.lat,
-          longitude: locationInfo.lng,
-        },
-      } as GeolocationPosition,
-      13 // Default zoom
-    );
+    if (this.preferenceService) {
+      this.preferenceService.saveCurrentFocus(
+        {
+          coords: {
+            latitude: locationInfo.lat,
+            longitude: locationInfo.lng,
+          },
+        } as GeolocationPosition,
+        13 // Default zoom
+      );
+    }
 
     // Update location marker on map if AnimationService is available
     try {
@@ -267,6 +283,8 @@ export class LocationService extends BaseService {
   }
 
   private async loadLastKnownLocation(): Promise<void> {
+    if (!this.preferenceService) return;
+
     const lastFocus = this.preferenceService.getLastOrDefaultFocus();
 
     this.currentLocation = {
@@ -391,7 +409,7 @@ export class LocationService extends BaseService {
         gpsBtn.textContent = '🛰️ Use GPS Location';
         gpsBtn.disabled = false;
       } catch (error) {
-        alert(`Failed to get GPS location: ${error.message}`);
+        alert(`Failed to get GPS location: ${(error as Error).message}`);
         const gpsBtn = document.getElementById('use-gps-btn') as HTMLButtonElement;
         gpsBtn.textContent = '🛰️ Use GPS Location';
         gpsBtn.disabled = false;
@@ -479,7 +497,7 @@ export class LocationService extends BaseService {
       .join('');
 
     // Add click handlers for results
-    this.domService.delegate(resultsContainer, '.search-result-item', 'click', (event) => {
+    this.domService?.delegate(resultsContainer, '.search-result-item', 'click', (event) => {
       const item = event.currentTarget as HTMLElement;
       const lat = parseFloat(item.dataset.lat!);
       const lng = parseFloat(item.dataset.lng!);
