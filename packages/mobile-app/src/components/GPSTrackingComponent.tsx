@@ -4,7 +4,7 @@
  */
 
 import * as Location from 'expo-location';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -101,27 +101,21 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
 
   const mobileTrackingService = new MobileRunTrackingService();
 
-  useEffect(() => {
-    // Initialize geolocation tracking when component mounts
-    requestLocationPermission();
-    // Define the location task when component mounts (not at module load)
-    // Only define if we're actually going to use background tracking
-    // For now, skip TaskManager to avoid initialization errors
-    // defineLocationTask();
-  }, []);
-
   // Visual feedback functions
-  const updateGPSAccuracy = (accuracy: number) => {
-    const normalizedAccuracy = Math.max(0, Math.min(100, ((20 - accuracy) / 20) * 100)); // 0-20m range
-    setGpsAccuracy(normalizedAccuracy);
+  const updateGPSAccuracy = useCallback(
+    (accuracy: number) => {
+      const normalizedAccuracy = Math.max(0, Math.min(100, ((20 - accuracy) / 20) * 100)); // 0-20m range
+      setGpsAccuracy(normalizedAccuracy);
 
-    // Animate the accuracy ring
-    Animated.timing(gpsAccuracyAnim, {
-      toValue: normalizedAccuracy / 100,
-      duration: 500,
-      useNativeDriver: false,
-    }).start();
-  };
+      // Animate the accuracy ring
+      Animated.timing(gpsAccuracyAnim, {
+        toValue: normalizedAccuracy / 100,
+        duration: 500,
+        useNativeDriver: false,
+      }).start();
+    },
+    [gpsAccuracyAnim]
+  );
 
   const animateButtonPress = () => {
     setIsButtonPressed(true);
@@ -168,7 +162,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
     return eligible;
   };
 
-  const requestLocationPermission = async () => {
+  const requestLocationPermission = useCallback(async () => {
     if (Platform.OS === 'android') {
       setIsLoadingGPS(true);
       try {
@@ -215,7 +209,16 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
       console.log('iOS - requesting location permission');
       setIsLoadingGPS(false);
     }
-  };
+  }, [updateGPSAccuracy]);
+
+  useEffect(() => {
+    // Initialize geolocation tracking when component mounts
+    requestLocationPermission();
+    // Define the location task when component mounts (not at module load)
+    // Only define if we're actually going to use background tracking
+    // For now, skip TaskManager to avoid initialization errors
+    // defineLocationTask();
+  }, [requestLocationPermission]);
 
   const updateRunStats = (stats: any) => {
     if (stats) {

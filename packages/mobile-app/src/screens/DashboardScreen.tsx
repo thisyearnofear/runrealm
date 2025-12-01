@@ -1,5 +1,5 @@
 import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -17,6 +17,20 @@ export const DashboardScreen: React.FC = () => {
 
   const [dashboardService] = useState(() => UserDashboardService.getInstance());
 
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // Get current dashboard data
+      const data = dashboardService.getData();
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [dashboardService]);
+
   useEffect(() => {
     loadDashboardData();
 
@@ -31,21 +45,7 @@ export const DashboardScreen: React.FC = () => {
     return () => {
       dashboardService.unsubscribeFromDataUpdates(handleDataUpdate);
     };
-  }, []);
-
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-
-      // Get current dashboard data
-      const data = dashboardService.getData();
-      setDashboardData(data);
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [dashboardService, loadDashboardData]);
 
   const onRefresh = async () => {
     setRefreshing(true);
