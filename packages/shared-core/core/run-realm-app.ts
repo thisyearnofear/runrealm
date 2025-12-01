@@ -24,7 +24,6 @@ import { GhostRunnerService } from '../services/ghost-runner-service';
 import { LocationService } from '../services/location-service';
 import { MapService } from '../services/map-service';
 import { NavigationService } from '../services/navigation-service';
-import { NextSegmentService } from '../services/next-segment-service';
 import { OnboardingService } from '../services/onboarding-service';
 // Import existing services
 import { PreferenceService } from '../services/preference-service';
@@ -75,38 +74,34 @@ export class RunRealmApp {
   private contractService!: ContractService;
   private territory!: TerritoryService;
   private territoryToggle!: TerritoryToggle;
-  private runProgressFeedback!: RunProgressFeedback;
   private progression!: ProgressionService;
   private runTracking!: RunTrackingService;
   private onboarding!: OnboardingService;
   private navigation!: NavigationService;
   private animation!: AnimationService;
   private sound!: SoundService;
-  private aiOrchestrator!: AIOrchestrator;
   private dom!: DOMService;
   private mapService!: MapService;
   private gamefiUI!: GameFiUI;
   private walletWidget?: WalletWidgetInterface;
-  private geocodingService!: GeocodingService;
   private mainUI?: MainUIInterface;
   private routeInfoPanel!: RouteInfoPanel;
   private enhancedRunControls!: EnhancedRunControls;
   private crossChainService!: CrossChainService;
-  private crossChainDemo!: CrossChainDemoComponent;
   private externalFitnessService!: ExternalFitnessService;
   private ghostRunnerService!: GhostRunnerService;
+  private runProgressFeedback!: RunProgressFeedback;
+  private aiOrchestrator!: AIOrchestrator;
+  private crossChainDemo!: CrossChainDemoComponent;
+  private geocodingService!: GeocodingService;
 
   // Platform-specific UI components (injected dependencies)
   private territoryDashboard?: TerritoryDashboardInterface;
   private ghostManagement?: any; // Platform-specific ghost UI (web-app/mobile-app)
   private ghostButton?: any; // Platform-specific ghost button (web-app/mobile-app)
 
-  // Lazy-loaded services (PERFORMANT: created only when needed)
-  private nextSegmentService?: NextSegmentService;
-
   // Application state
   private map!: Map;
-  private isWaiting = false;
   private useMetric!: boolean;
   private followRoads!: boolean;
   private gameMode: boolean = true;
@@ -350,7 +345,7 @@ export class RunRealmApp {
       }
     });
 
-    this.eventBus.on('territory:claimed', (data) => {
+    this.eventBus.on('territory:claimed', (_data) => {
       this.progression.addTerritory();
       // Play success sound when territory is claimed
       this.sound.playSuccessSound();
@@ -457,7 +452,7 @@ export class RunRealmApp {
           console.log('🧪 Test coordinates:', testCoordinates);
 
           // Test AnimationService route visualization
-          if (this.animation && this.animation.setAIRoute) {
+          if (this.animation?.setAIRoute) {
             console.log('🧪 Calling AnimationService.setAIRoute directly...');
             this.animation.setAIRoute(
               testCoordinates as [number, number][],
@@ -474,7 +469,7 @@ export class RunRealmApp {
           }
 
           // Test EventBus emission
-          if (this.eventBus && this.eventBus.emit) {
+          if (this.eventBus?.emit) {
             console.log('🧪 Emitting ai:routeVisualize event...');
             this.eventBus.emit('ai:routeVisualize', {
               coordinates: testCoordinates,
@@ -678,7 +673,7 @@ export class RunRealmApp {
     });
   }
 
-  private handleMapClick(e: any): void {
+  private handleMapClick(_e: any): void {
     // Map clicks now handled by RunTrackingService for active runs
     // This can be used for other map interactions like AI route planning
 
@@ -686,48 +681,11 @@ export class RunRealmApp {
     this.saveFocus();
   }
 
-  private async addSegmentFromDirections(previousLngLat: any, lngLat: any): Promise<void> {
-    // LAZY INITIALIZATION: Create service only when needed (PERFORMANT)
-    if (!this.nextSegmentService) {
-      this.nextSegmentService = new NextSegmentService(this.config.getConfig().mapbox.accessToken);
-    }
-
-    const newSegment = await this.nextSegmentService.getSegmentFromDirectionsService(
-      previousLngLat,
-      lngLat
-    );
-
-    if (this.config.getConfig().ui.enableAnimations) {
-      this.animation.animateSegment(newSegment);
-    }
-
-    const coordinates = (newSegment.geometry as any).coordinates;
-    const segmentEnd = coordinates[coordinates.length - 1];
-    // Marker creation handled by map service
-    console.log('Segment added at:', {
-      lng: segmentEnd[0],
-      lat: segmentEnd[1],
-    });
-
-    // Segment addition now handled by RunTrackingService
-  }
-
   private async handleTerritoryClaimRequest(data: any): Promise<void> {
     if (this.territory) {
       this.eventBus.emit('territory:claimRequested', data);
     } else {
       this.ui.showToast('Territory service not available', { type: 'error' });
-    }
-  }
-
-  private handleWalletConnected(data: any): void {
-    this.ui.showToast(`Wallet connected: ${data.address?.slice(0, 8)}...`, {
-      type: 'success',
-    });
-
-    // Enable additional GameFi features
-    if (this.gameMode) {
-      this.gamefiUI.updatePlayerStats({ realmBalance: data.balance || 0 });
     }
   }
 
@@ -893,7 +851,7 @@ export class RunRealmApp {
       console.log('RunRealmApp: EventBus state:', {
         exists: !!this.eventBus,
         hasOn: this.eventBus && typeof this.eventBus.on,
-        eventBusType: this.eventBus && this.eventBus.constructor.name,
+        eventBusType: this.eventBus?.constructor.name,
       });
       return;
     }

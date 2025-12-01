@@ -109,7 +109,7 @@ export class UIEffectsManager {
   /**
    * Show sequential tooltips without overlays
    */
-  private showTooltipSequence(tooltips: any[]): void {
+  private showTooltipSequence(_tooltips: any[]): void {
     // Implementation for showing sequential tooltips
     // This would create and animate tooltip elements
   }
@@ -176,7 +176,7 @@ export class UIEffectsManager {
       if ('hapticFeedback' in window) {
         (window as any).hapticFeedback(type);
       }
-    } catch (error) {
+    } catch (_error) {
       // Haptic feedback not supported, silently continue
     }
   }
@@ -184,7 +184,7 @@ export class UIEffectsManager {
   /**
    * Show loading state for AI actions
    */
-  showAILoadingState(action: string, button: HTMLElement): void {
+  showAILoadingState(action: string, _button: HTMLElement): void {
     const widget = this.widgetSystem.getWidget('ai-coach');
     if (!widget) return;
 
@@ -323,7 +323,7 @@ export class UIEffectsManager {
 
     // Remove celebration class after animation
     setTimeout(() => {
-      if (widgetElement && widgetElement.classList) {
+      if (widgetElement?.classList) {
         widgetElement.classList.remove('celebrating');
       }
     }, 1500);

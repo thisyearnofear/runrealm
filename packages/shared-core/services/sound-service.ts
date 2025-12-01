@@ -20,7 +20,7 @@ export class SoundService extends BaseService {
 
       const savedVolume = localStorage.getItem('runrealm_sound_volume');
       this.volume = savedVolume ? parseFloat(savedVolume) : 0.5;
-    } catch (e) {
+    } catch (_e) {
       // Default to enabled if there's an error
       this.isEnabled = true;
     }
@@ -178,7 +178,7 @@ export class SoundService extends BaseService {
     this.isEnabled = !this.isEnabled;
     try {
       localStorage.setItem('runrealm_sound_enabled', JSON.stringify(this.isEnabled));
-    } catch (e) {
+    } catch (_e) {
       // Ignore storage errors
     }
 
@@ -195,7 +195,7 @@ export class SoundService extends BaseService {
     this.volume = Math.max(0, Math.min(1, volume));
     try {
       localStorage.setItem('runrealm_sound_volume', this.volume.toString());
-    } catch (e) {
+    } catch (_e) {
       // Ignore storage errors
     }
   }

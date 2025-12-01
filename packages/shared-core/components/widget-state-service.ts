@@ -17,10 +17,6 @@ export interface WidgetState {
 export class WidgetStateService extends BaseService {
   private widgetStates: Map<string, WidgetState> = new Map();
 
-  constructor() {
-    super();
-  }
-
   protected async onInitialize(): Promise<void> {
     // Stub implementation - not used in mobile app
   }

@@ -93,7 +93,6 @@
 /* ===== TABLET OPTIMIZATIONS (768px and up) ===== */
 
 @media (min-width: 768px) {
-
   /* Restore desktop spacing */
   .widget-zone {
     gap: var(--space-sm);
@@ -161,7 +160,6 @@
 /* ===== DESKTOP OPTIMIZATIONS (1024px and up) ===== */
 
 @media (min-width: 1024px) {
-
   /* Full desktop experience */
   .widget-zone {
     max-width: 320px;
@@ -203,7 +201,6 @@
 /* ===== LARGE DESKTOP OPTIMIZATIONS (1200px and up) ===== */
 
 @media (min-width: 1200px) {
-
   /* Wider layouts for large screens */
   .widget-zone {
     max-width: 360px;
@@ -239,7 +236,6 @@
 
 /* Touch-optimized interactions */
 @media (hover: none) and (pointer: coarse) {
-
   /* Mobile touch optimizations */
   .widget-header {
     padding: 14px 16px;
@@ -308,7 +304,6 @@
 /* ===== LANDSCAPE MOBILE OPTIMIZATIONS ===== */
 
 @media (max-width: 768px) and (orientation: landscape) {
-
   /* Compact layout for landscape mobile */
   .widget-zone {
     gap: 4px;
@@ -359,7 +354,6 @@
 /* ===== ULTRA-WIDE DISPLAY OPTIMIZATIONS (1440px and up) ===== */
 
 @media (min-width: 1440px) {
-
   /* Ultra-wide specific optimizations */
   .widget-zone {
     max-width: 400px;
@@ -395,22 +389,21 @@
 
 /* Reduce animations on low-end devices */
 @media (prefers-reduced-motion: reduce) {
-
   .widget,
   .widget-button,
   .widget-header,
   .widget-icon {
-    transition: none !important;
-    animation: none !important;
+    transition: none;
+    animation: none;
   }
 
   .widget:hover,
   .widget-button:hover {
-    transform: none !important;
+    transform: none;
   }
 
   .widget-header:hover .widget-icon {
-    transform: none !important;
+    transform: none;
   }
 }
 
@@ -450,27 +443,26 @@
 /* ===== PRINT OPTIMIZATIONS ===== */
 
 @media print {
-
   /* Hide interactive elements when printing */
   .widget-system,
   .gamefi-hud,
   .main-header,
   .floating-action-btn,
   .notifications-container {
-    display: none !important;
+    display: none;
   }
 
   /* Optimize map for printing */
   #mapbox-container {
-    position: static !important;
-    height: 400px !important;
-    width: 100% !important;
+    position: static;
+    height: 400px;
+    width: 100%;
   }
 
   /* Print-friendly colors */
   body {
-    background: white !important;
-    color: black !important;
+    background: white;
+    color: black;
   }
 }
 
@@ -478,7 +470,6 @@
 
 /* Large text support */
 @media (min-resolution: 2dppx) {
-
   .widget-title,
   .widget-content {
     font-weight: var(--font-weight-medium);
@@ -539,7 +530,6 @@
 
 /* Optimize for slow connections */
 @media (prefers-reduced-data: reduce) {
-
   /* Reduce animation complexity */
   .widget {
     backdrop-filter: none;
@@ -578,7 +568,7 @@
 
 @media (max-width: 767px) {
   .hide-mobile {
-    display: none !important;
+    display: none;
   }
 
   .show-mobile {
@@ -588,7 +578,7 @@
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .hide-tablet {
-    display: none !important;
+    display: none;
   }
 
   .show-tablet {
@@ -598,7 +588,7 @@
 
 @media (min-width: 1024px) {
   .hide-desktop {
-    display: none !important;
+    display: none;
   }
 
   .show-desktop {
@@ -636,11 +626,10 @@
 /* ===== MOBILE-OPTIMIZED WIDGETS (max 480px) ===== */
 
 @media (max-width: 480px) {
-
   /* Condense widgets to icon-only on small screens */
   .widget-header {
-    padding: 12px 10px !important;
-    min-height: 40px !important;
+    padding: 12px 10px;
+    min-height: 40px;
     gap: 4px;
   }
 
@@ -759,17 +748,17 @@
 
   /* Notifications on mobile - adjust for better mobile positioning */
   #toast-container {
-    bottom: 16px !important;
-    right: 12px !important;
-    left: auto !important;
-    max-width: calc(100vw - 24px) !important;
+    bottom: 16px;
+    right: 12px;
+    left: auto;
+    max-width: calc(100vw - 24px);
   }
 
   .toast {
-    max-width: 100% !important;
-    padding: 12px 14px !important;
-    font-size: 13px !important;
-    gap: 10px !important;
+    max-width: 100%;
+    padding: 12px 14px;
+    font-size: 13px;
+    gap: 10px;
   }
 
   .toast .toast-icon {
@@ -943,7 +932,6 @@
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -1089,7 +1077,6 @@
 
 /* Accessibility */
 @media (prefers-reduced-motion: reduce) {
-
   .gps-permission-modal,
   .gps-modal-content,
   .benefit-item,

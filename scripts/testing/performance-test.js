@@ -1,6 +1,6 @@
 // Performance testing script
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 function checkBundleSize() {
   const publicDir = path.join(__dirname, '../public');

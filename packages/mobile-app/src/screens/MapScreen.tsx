@@ -13,13 +13,33 @@ interface MapScreenProps {
   route: RouteProp<RootStackParamList, string>;
 }
 
+// Proper prop type definitions for dynamically loaded components
+interface TerritoryMapViewProps {
+  mapAdapter: MobileMapAdapter | null;
+  showUserLocation: boolean;
+  followUser: boolean;
+  onTerritoryPress: (territoryId: string) => void;
+}
+
+interface GPSTrackingComponentProps {
+  onRunStart: () => void;
+  onRunStop: (runData: RunSession) => void;
+}
+
+interface WalletButtonProps {
+  web3Adapter: MobileWeb3Adapter | null;
+  onConnect: (address: string) => void;
+  onDisconnect: () => void;
+  onError: (error: string) => void;
+}
+
 const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _route }) => {
   const [componentsLoaded, setComponentsLoaded] = useState(false);
-  const [TerritoryMapView, setTerritoryMapView] = useState<ComponentType<unknown> | null>(null);
-  const [GPSTrackingComponent, setGPSTrackingComponent] = useState<ComponentType<unknown> | null>(
-    null
-  );
-  const [WalletButton, setWalletButton] = useState<ComponentType<unknown> | null>(null);
+  const [TerritoryMapView, setTerritoryMapView] =
+    useState<ComponentType<TerritoryMapViewProps> | null>(null);
+  const [GPSTrackingComponent, setGPSTrackingComponent] =
+    useState<ComponentType<GPSTrackingComponentProps> | null>(null);
+  const [WalletButton, setWalletButton] = useState<ComponentType<WalletButtonProps> | null>(null);
 
   // Lazy load components in useEffect to avoid import-time errors
   useEffect(() => {

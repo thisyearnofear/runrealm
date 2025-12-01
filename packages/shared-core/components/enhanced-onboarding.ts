@@ -149,6 +149,7 @@ export class EnhancedOnboarding extends BaseService {
     await this.createOverlay();
     await this.showStep(this.currentStep);
 
+    // biome-ignore lint/suspicious/noExplicitAny: Event data is flexible
     this.safeEmit('onboarding:started' as any, {});
   }
 
@@ -198,6 +199,7 @@ export class EnhancedOnboarding extends BaseService {
       this.handleStepAction(step);
     }
 
+    // biome-ignore lint/suspicious/noExplicitAny: Event data is flexible
     this.safeEmit('onboarding:stepShown' as any, { step: step.id, index: stepIndex });
   }
 
@@ -261,7 +263,7 @@ export class EnhancedOnboarding extends BaseService {
           </div>
         </div>
       `,
-      parent: this.overlay!,
+      parent: this.overlay || document.body,
     });
 
     // Position tooltip
@@ -463,6 +465,7 @@ export class EnhancedOnboarding extends BaseService {
       });
     }
 
+    // biome-ignore lint/suspicious/noExplicitAny: Event data is flexible
     this.safeEmit('onboarding:completed' as any, {
       skipped,
       completedSteps: Array.from(this.completedSteps),
@@ -495,248 +498,249 @@ export class EnhancedOnboarding extends BaseService {
     this.domService.createElement('style', {
       id: 'enhanced-onboarding-styles',
       textContent: `
-        .onboarding-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.8);
-          backdrop-filter: blur(4px);
-          z-index: 9999;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
+      .onboarding - overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop- filter: blur(4px);
+    z - index: 9999;
+    display: flex;
+    align - items: center;
+    justify - content: center;
+  }
 
         .onboarding-highlight {
-          position: relative;
-          z-index: 10000;
-          box-shadow: 0 0 0 4px rgba(0, 255, 136, 0.5), 0 0 20px rgba(0, 255, 136, 0.3) !important;
-          border-radius: 8px;
-          animation: onboardingPulse 2s infinite;
+  position: relative;
+  z - index: 10000;
+  box - shadow: 0 0 0 4px rgba(0, 255, 136, 0.5), 0 0 20px rgba(0, 255, 136, 0.3)!important;
+  border - radius: 8px;
+  animation: onboardingPulse 2s infinite;
+}
+
+        .onboarding - action - target {
+  animation: onboardingBounce 1s infinite;
+}
+
+@keyframes onboardingPulse {
+  0 %, 100 % { box- shadow: 0 0 0 4px rgba(0, 255, 136, 0.5), 0 0 20px rgba(0, 255, 136, 0.3);
+}
+50 % { box- shadow: 0 0 0 8px rgba(0, 255, 136, 0.3), 0 0 30px rgba(0, 255, 136, 0.5); }
         }
 
-        .onboarding-action-target {
-          animation: onboardingBounce 1s infinite;
-        }
+@keyframes onboardingBounce {
+  0 %, 100 % { transform: scale(1); }
+  50 % { transform: scale(1.05); }
+}
 
-        @keyframes onboardingPulse {
-          0%, 100% { box-shadow: 0 0 0 4px rgba(0, 255, 136, 0.5), 0 0 20px rgba(0, 255, 136, 0.3); }
-          50% { box-shadow: 0 0 0 8px rgba(0, 255, 136, 0.3), 0 0 30px rgba(0, 255, 136, 0.5); }
-        }
+        .onboarding - tooltip {
+  position: fixed;
+  max - width: 400px;
+  min - width: 300px;
+  background: linear - gradient(135deg, rgba(0, 0, 0, 0.95), rgba(0, 25, 50, 0.9));
+  border: 2px solid rgba(0, 255, 136, 0.3);
+  border - radius: 16px;
+  box - shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  backdrop - filter: blur(20px);
+  color: white;
+  z - index: 10001;
+}
 
-        @keyframes onboardingBounce {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
+        .tooltip - content {
+  padding: 24px;
+}
 
-        .onboarding-tooltip {
-          position: fixed;
-          max-width: 400px;
-          min-width: 300px;
-          background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(0, 25, 50, 0.9));
-          border: 2px solid rgba(0, 255, 136, 0.3);
-          border-radius: 16px;
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(20px);
-          color: white;
-          z-index: 10001;
-        }
+        .tooltip - header {
+  display: flex;
+  justify - content: space - between;
+  align - items: flex - start;
+  margin - bottom: 16px;
+}
 
-        .tooltip-content {
-          padding: 24px;
-        }
+        .tooltip - title {
+  margin: 0;
+  font - size: 20px;
+  font - weight: 700;
+  color: #00ff88;
+  line - height: 1.3;
+}
 
-        .tooltip-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 16px;
-        }
+        .tooltip - skip {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font - size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  border - radius: 4px;
+  transition: all 0.2s ease;
+}
 
-        .tooltip-title {
-          margin: 0;
-          font-size: 20px;
-          font-weight: 700;
-          color: #00ff88;
-          line-height: 1.3;
-        }
+        .tooltip - skip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
 
-        .tooltip-skip {
-          background: none;
-          border: none;
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 24px;
-          cursor: pointer;
-          padding: 4px;
-          border-radius: 4px;
-          transition: all 0.2s ease;
-        }
+        .tooltip - description {
+  margin: 0 0 20px 0;
+  font - size: 16px;
+  line - height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
 
-        .tooltip-skip:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: white;
-        }
+        .onboarding - progress {
+  margin - bottom: 20px;
+}
 
-        .tooltip-description {
-          margin: 0 0 20px 0;
-          font-size: 16px;
-          line-height: 1.5;
-          color: rgba(255, 255, 255, 0.9);
-        }
+        .progress - bar {
+  width: 100 %;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border - radius: 3px;
+  overflow: hidden;
+  margin - bottom: 8px;
+}
 
-        .onboarding-progress {
-          margin-bottom: 20px;
-        }
+        .progress - fill {
+  height: 100 %;
+  background: linear - gradient(90deg, #00ff88, #00cc6a);
+  border - radius: 3px;
+  transition: width 0.3s ease;
+}
 
-        .progress-bar {
-          width: 100%;
-          height: 6px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 3px;
-          overflow: hidden;
-          margin-bottom: 8px;
-        }
+        .progress - text {
+  font - size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text - align: center;
+  display: block;
+}
 
-        .progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #00ff88, #00cc6a);
-          border-radius: 3px;
-          transition: width 0.3s ease;
-        }
+        .tooltip - footer {
+  display: flex;
+  gap: 12px;
+  justify - content: flex - end;
+}
 
-        .progress-text {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.7);
-          text-align: center;
-          display: block;
-        }
+        .tooltip - btn {
+  padding: 12px 24px;
+  border: none;
+  border - radius: 8px;
+  font - size: 14px;
+  font - weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min - width: 100px;
+}
 
-        .tooltip-footer {
-          display: flex;
-          gap: 12px;
-          justify-content: flex-end;
-        }
+        .tooltip - btn.primary {
+  background: linear - gradient(135deg, #00ff88, #00cc6a);
+  color: #1a1a1a;
+}
 
-        .tooltip-btn {
-          padding: 12px 24px;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          min-width: 100px;
-        }
+        .tooltip - btn.primary:hover {
+  background: linear - gradient(135deg, #00ff88, #00e676);
+  transform: translateY(-1px);
+}
 
-        .tooltip-btn.primary {
-          background: linear-gradient(135deg, #00ff88, #00cc6a);
-          color: #1a1a1a;
-        }
+        .tooltip - btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
 
-        .tooltip-btn.primary:hover {
-          background: linear-gradient(135deg, #00ff88, #00e676);
-          transform: translateY(-1px);
-        }
+        .tooltip - btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
 
-        .tooltip-btn.secondary {
-          background: rgba(255, 255, 255, 0.1);
-          color: white;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-        }
+/* Mobile responsiveness */
+@media(max - width: 768px) {
+          .onboarding - tooltip {
+    max - width: calc(100vw - 40px);
+    min - width: 280px;
+    margin: 20px;
+    /* Ensure tooltip doesn't go off-screen */
+    left: 50 % !important;
+    top: 50 % !important;
+    transform: translate(-50 %, -50 %)!important;
+    position: fixed!important;
+  }
 
-        .tooltip-btn.secondary:hover {
-          background: rgba(255, 255, 255, 0.2);
-        }
+          .tooltip - content {
+    padding: 20px;
+    max - height: calc(100vh - 120px);
+    overflow - y: auto;
+  }
 
-        /* Mobile responsiveness */
-        @media (max-width: 768px) {
-          .onboarding-tooltip {
-            max-width: calc(100vw - 40px);
-            min-width: 280px;
-            margin: 20px;
-            /* Ensure tooltip doesn't go off-screen */
-            left: 50% !important;
-            top: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            position: fixed !important;
-          }
+          .tooltip - title {
+    font - size: 18px;
+    line - height: 1.3;
+  }
 
-          .tooltip-content {
-            padding: 20px;
-            max-height: calc(100vh - 120px);
-            overflow-y: auto;
-          }
+          .tooltip - description {
+    font - size: 14px;
+    line - height: 1.4;
+  }
 
-          .tooltip-title {
-            font-size: 18px;
-            line-height: 1.3;
-          }
+          .tooltip - footer {
+    flex - direction: column;
+    gap: 8px;
+    margin - top: 16px;
+  }
 
-          .tooltip-description {
-            font-size: 14px;
-            line-height: 1.4;
-          }
-
-          .tooltip-footer {
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 16px;
-          }
-
-          .tooltip-btn {
-            width: 100%;
-            min-height: 48px;
-            font-size: 16px;
-          }
+          .tooltip - btn {
+    width: 100 %;
+    min - height: 48px;
+    font - size: 16px;
+  }
 
           /* Better mobile overlay */
-          .onboarding-overlay {
-            backdrop-filter: blur(8px);
-          }
+          .onboarding - overlay {
+    backdrop - filter: blur(8px);
+  }
 
           /* Adjust highlight for mobile */
-          .onboarding-highlight {
-            box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.6), 0 0 15px rgba(0, 255, 136, 0.4) !important;
-          }
-        }
+          .onboarding - highlight {
+    box - shadow: 0 0 0 2px rgba(0, 255, 136, 0.6), 0 0 15px rgba(0, 255, 136, 0.4)!important;
+  }
+}
 
-        /* Small mobile devices */
-        @media (max-width: 480px) {
-          .onboarding-tooltip {
-            max-width: calc(100vw - 20px);
-            margin: 10px;
-          }
+/* Small mobile devices */
+@media(max - width: 480px) {
+          .onboarding - tooltip {
+    max - width: calc(100vw - 20px);
+    margin: 10px;
+  }
 
-          .tooltip-content {
-            padding: 16px;
-          }
+          .tooltip - content {
+    padding: 16px;
+  }
 
-          .tooltip-title {
-            font-size: 16px;
-          }
+          .tooltip - title {
+    font - size: 16px;
+  }
 
-          .tooltip-description {
-            font-size: 13px;
-          }
-        }
+          .tooltip - description {
+    font - size: 13px;
+  }
+}
 
-        /* Reduced motion support */
-        @media (prefers-reduced-motion: reduce) {
-          .onboarding-highlight {
-            animation: none;
-          }
+/* Reduced motion support */
+@media(prefers - reduced - motion: reduce) {
+          .onboarding - highlight {
+    animation: none;
+  }
 
-          .onboarding-action-target {
-            animation: none;
-          }
+          .onboarding - action - target {
+    animation: none;
+  }
 
-          .progress-fill {
-            transition: none;
-          }
-        }
-      `,
+          .progress - fill {
+    transition: none;
+  }
+}
+`,
       parent: document.head,
     });
   }
@@ -764,6 +768,7 @@ export class EnhancedOnboarding extends BaseService {
    * Ensure target widget is visible and expanded for onboarding
    */
   private async ensureWidgetVisible(step: OnboardingStep): Promise<void> {
+    // biome-ignore lint/suspicious/noExplicitAny: Global window object
     const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
     if (!widgetSystem) return;
 
@@ -779,7 +784,7 @@ export class EnhancedOnboarding extends BaseService {
     if (widgetId) {
       // Expand the widget if it's minimized
       const widget = widgetSystem.widgets?.get(widgetId);
-      if (widget && widget.minimized) {
+      if (widget?.minimized) {
         widgetSystem.toggleWidget(widgetId);
         // Wait a bit for the animation to complete
         await new Promise((resolve) => setTimeout(resolve, 300));

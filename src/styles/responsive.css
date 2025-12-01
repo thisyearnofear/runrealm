@@ -300,83 +300,83 @@
      Widget headers become visual indicators (44px minimum touch target)
   */
   .widget {
-    min-width: 44px !important;
-    width: auto !important;
-    max-width: 100px !important;
+    min-width: 44px;
+    width: auto;
+    max-width: 100px;
   }
 
   /* When minimized on mobile, show only icon */
   .widget.minimized {
-    width: 44px !important;
-    height: 44px !important;
-    min-height: 44px !important;
-    padding: 0 !important;
-    margin: 4px !important;
-    overflow: visible !important;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    margin: 4px;
+    overflow: visible;
   }
 
   /* Hide title on mobile minimized widgets */
   .widget.minimized .widget-title {
-    display: none !important;
+    display: none;
   }
 
   /* Keep icon visible and centered - full width/height header for proper centering */
   .widget.minimized .widget-header {
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    border-bottom: none !important;
-    background: var(--widget-bg) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-bottom: none;
+    background: var(--widget-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* Hide widget content on minimized mobile widgets */
   .widget.minimized .widget-content {
-    display: none !important;
+    display: none;
   }
 
   /* Hide toggle button on minimized mobile widgets */
   .widget.minimized .widget-toggle {
-    display: none !important;
+    display: none;
   }
 
   /* Ensure expanded widgets still work on desktop-size tablets (768px) */
   .widget.expanded {
-    width: auto !important;
-    max-width: 320px !important;
+    width: auto;
+    max-width: 320px;
   }
 
   .widget.expanded .widget-title {
-    display: inline !important;
+    display: inline;
   }
 
   .widget.expanded .widget-toggle {
-    display: block !important;
+    display: block;
   }
 
   .widget.expanded .widget-content {
-    display: block !important;
+    display: block;
   }
 
   .widget.expanded .widget-header {
-    width: auto !important;
-    height: auto !important;
-    min-width: auto !important;
-    border-bottom: 1px solid rgba(0, 255, 0, 0.2) !important;
+    width: auto;
+    height: auto;
+    min-width: auto;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.2);
   }
 
   /* Better spacing for icon in minimized state */
   .widget.minimized .widget-icon {
-    margin: 0 !important;
-    padding: 0 !important;
-    font-size: 24px !important;
-    line-height: 1 !important;
+    margin: 0;
+    padding: 0;
+    font-size: 24px;
+    line-height: 1;
   }
 }
 

@@ -1,11 +1,11 @@
 const express = require('express');
-const path = require('path');
+const path = require('node:path');
 require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
 // Import webhook service (will be loaded after app setup)
-let StravaWebhookService;
+let _StravaWebhookService;
 
 console.log('Starting server...');
 console.log('MAPBOX_ACCESS_TOKEN:', process.env.MAPBOX_ACCESS_TOKEN ? 'Set' : 'Not set');
@@ -81,7 +81,7 @@ app.get('/auth/strava/callback', async (req, res) => {
 
   if (error) {
     console.error('Strava OAuth error:', error);
-    return res.redirect('/?strava_error=' + encodeURIComponent(error));
+    return res.redirect(`/?strava_error=${encodeURIComponent(error)}`);
   }
 
   if (!code) {
@@ -222,11 +222,11 @@ app.post('/api/strava/webhook', (req, res) => {
   }
 });
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/index.html', (req, res) => {
+app.get('/index.html', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

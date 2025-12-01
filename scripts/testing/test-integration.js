@@ -16,7 +16,7 @@ const TEST_CONFIG = {
     realmToken: '0x18082d110113B40A24A41dF10b4b249Ee461D3eb',
   },
   testTerritory: {
-    geohash: 'test' + Date.now(), // Unique geohash for testing
+    geohash: `test${Date.now()}`, // Unique geohash for testing
     difficulty: 50,
     distance: 1500,
     landmarks: ['Integration Test Park', 'Test Landmark'],
@@ -59,7 +59,7 @@ class IntegrationTester {
   }
 
   printSummary() {
-    console.log('\n' + '='.repeat(60));
+    console.log(`\n${'='.repeat(60)}`);
     console.log('🧪 INTEGRATION TEST RESULTS');
     console.log('='.repeat(60));
     console.log(`✅ Passed: ${this.results.passed}`);

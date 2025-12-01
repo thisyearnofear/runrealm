@@ -28,8 +28,6 @@ export interface MobileWalletState {
  */
 export class MobileWeb3Adapter extends BaseService {
   private web3Service: Web3Service;
-  // biome-ignore lint/suspicious/noExplicitAny: WalletConnect provider is complex
-  private walletConnectProvider: any = null;
   private state: MobileWalletState;
   private listeners: Set<(state: MobileWalletState) => void> = new Set();
 

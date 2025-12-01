@@ -1,6 +1,6 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import favicons from 'favicons';
-import fs from 'fs/promises';
-import path from 'path';
 
 const source = 'assets/running-emoji.svg'; // Source image
 const dest = 'public'; // Output directory

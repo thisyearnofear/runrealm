@@ -11,15 +11,16 @@ export class DragService extends BaseService {
   }
 
   // Stub methods for compatibility
-  enableDrag(element: HTMLElement): void {
+  enableDrag(_element: HTMLElement): void {
     // No-op
   }
 
-  disableDrag(element: HTMLElement): void {
+  disableDrag(_element: HTMLElement): void {
     // No-op
   }
 
-  makeDraggable(element: HTMLElement, options?: any): void {
+  // biome-ignore lint/suspicious/noExplicitAny: Options are flexible
+  makeDraggable(_element: HTMLElement, _options?: any): void {
     // No-op - stub implementation
   }
 }

@@ -9,7 +9,7 @@
  * Usage: node setup-dev-tokens.js
  */
 
-const readline = require('readline');
+const readline = require('node:readline');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -48,13 +48,13 @@ async function setupTokens() {
     console.log('💾 Setting up localStorage commands...');
     console.log('');
 
-    if (mapboxToken && mapboxToken.trim()) {
+    if (mapboxToken?.trim()) {
       console.log('Run this in your browser console:');
       console.log(`localStorage.setItem('runrealm_dev_mapbox_token', '${mapboxToken.trim()}');`);
       console.log('');
     }
 
-    if (geminiKey && geminiKey.trim()) {
+    if (geminiKey?.trim()) {
       console.log('Run this in your browser console:');
       console.log(`localStorage.setItem('runrealm_dev_gemini_key', '${geminiKey.trim()}');`);
       console.log('');

@@ -5,9 +5,9 @@
  * Removes temporary files, build artifacts, and other generated content
  */
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const { execSync } = require('node:child_process');
 
 console.log('🧹 Cleaning up RunRealm project...');
 
@@ -54,7 +54,7 @@ function removeGlob(pattern) {
     } else {
       execSync(`rm -rf ${pattern} 2>/dev/null || true`, { stdio: 'ignore' });
     }
-  } catch (error) {
+  } catch (_error) {
     // Ignore errors - files might not exist
   }
 }
@@ -99,7 +99,7 @@ cleanupPaths.forEach((pattern) => {
 // Special handling for public/index.html
 if (keepTemplate) {
   const publicIndexPath = 'public/index.html';
-  const templatePath = path.join(__dirname, '../public/index.html');
+  const _templatePath = path.join(__dirname, '../public/index.html');
 
   try {
     if (fs.existsSync(publicIndexPath)) {

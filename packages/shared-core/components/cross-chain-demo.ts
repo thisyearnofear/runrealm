@@ -7,10 +7,6 @@ import { BaseService } from '../core/base-service';
 export class CrossChainDemoComponent extends BaseService {
   private container: HTMLElement | null = null;
 
-  constructor() {
-    super();
-  }
-
   public async initialize(containerId: string = 'cross-chain-demo'): Promise<void> {
     this.container = document.getElementById(containerId);
     if (!this.container) {
@@ -106,7 +102,7 @@ export class CrossChainDemoComponent extends BaseService {
     chainButtons?.forEach((button) => {
       button.addEventListener('click', (e) => {
         const target = e.target as HTMLButtonElement;
-        const chainId = parseInt(target.dataset.chain || '1');
+        const chainId = parseInt(target.dataset.chain || '1', 10);
         this.selectChain(chainId);
       });
     });
@@ -129,15 +125,18 @@ export class CrossChainDemoComponent extends BaseService {
 
     // Listen for cross-chain events
     if (this.eventBus) {
-      this.eventBus.on('crosschain:territoryClaimInitiated', (data: any) => {
+      // biome-ignore lint/suspicious/noExplicitAny: Event data is flexible
+      this.eventBus.on('crosschain:territoryClaimInitiated', (_data: any) => {
         this.updateDemoStatus('🟡', 'Cross-chain claim initiated...', 30);
       });
 
+      // biome-ignore lint/suspicious/noExplicitAny: Event data is flexible
       this.eventBus.on('web3:crossChainTerritoryClaimed', (data: any) => {
         this.updateDemoStatus('✅', 'Territory claimed successfully!', 100);
         this.showDemoResults(data);
       });
 
+      // biome-ignore lint/suspicious/noExplicitAny: Event data is flexible
       this.eventBus.on('crosschain:territoryClaimFailed', (data: any) => {
         this.updateDemoStatus('❌', `Claim failed: ${data.error}`, 100);
       });
@@ -150,7 +149,7 @@ export class CrossChainDemoComponent extends BaseService {
     chainButtons?.forEach((button) => {
       button.classList.remove('selected');
       const htmlButton = button as HTMLElement;
-      if (parseInt(htmlButton.dataset.chain || '1') === chainId) {
+      if (parseInt(htmlButton.dataset.chain || '1', 10) === chainId) {
         button.classList.add('selected');
       }
     });
@@ -170,9 +169,10 @@ export class CrossChainDemoComponent extends BaseService {
     this.updateDemoStatus('🟡', 'Initializing cross-chain claim...', 10);
 
     // Get services
+    // biome-ignore lint/suspicious/noExplicitAny: Global window object
     const services = (window as any).RunRealm?.services;
     const web3Service = services?.web3;
-    const crossChainService = services?.crossChain;
+    const _crossChainService = services?.crossChain;
 
     // Check if wallet is connected
     if (!web3Service?.isConnected()) {
@@ -277,6 +277,7 @@ ZetaChain Gateway API Usage Examples:
     if (progressFillEl) progressFillEl.style.width = `${progress}%`;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Result data is flexible
   private showDemoResults(data: any): void {
     const resultsEl = document.getElementById('demo-results');
     if (resultsEl) {

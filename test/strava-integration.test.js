@@ -6,7 +6,7 @@
 const { ExternalFitnessService } = require('../src/services/external-fitness-service');
 
 describe('Strava Integration', () => {
-  let fitnessService;
+  let _fitnessService;
 
   beforeEach(() => {
     // Mock localStorage
@@ -33,7 +33,7 @@ describe('Strava Integration', () => {
 
   test('should generate correct Strava OAuth URL', () => {
     // Mock config with test values
-    const mockConfig = {
+    const _mockConfig = {
       getStravaConfig: () => ({
         clientId: 'test_client_id',
         redirectUri: 'http://localhost:3000/auth/strava/callback',

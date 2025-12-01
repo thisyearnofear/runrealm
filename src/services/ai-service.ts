@@ -257,10 +257,10 @@ export class AIService extends BaseService {
               const locationInfo = await (
                 window as any
               ).RunRealm.locationService.getCurrentLocation();
-              if (locationInfo && locationInfo.lat && locationInfo.lng) {
+              if (locationInfo?.lat && locationInfo.lng) {
                 currentLocation = { lat: locationInfo.lat, lng: locationInfo.lng };
               }
-            } catch (error) {
+            } catch (_error) {
               console.warn('AIService: Failed to get current location, using default');
             }
           }
@@ -268,10 +268,10 @@ export class AIService extends BaseService {
           else if ((window as any)?.RunRealm?.map?.getCenter) {
             try {
               const center = (window as any).RunRealm.map.getCenter();
-              if (center && center.lat && center.lng) {
+              if (center?.lat && center.lng) {
                 currentLocation = { lat: center.lat, lng: center.lng };
               }
-            } catch (error) {
+            } catch (_error) {
               console.warn('AIService: Failed to get map center, using default');
             }
           }
@@ -558,10 +558,10 @@ export class AIService extends BaseService {
       const optimization = await this.retry(
         async () => {
           console.log('AIService: Sending request to Gemini for route suggestion...');
-          const result = await this.model!.generateContent(prompt);
+          const result = await this.model?.generateContent(prompt);
           const response = await result.response;
           const text = response.text();
-          console.log('AIService: Received response from Gemini:', text.substring(0, 100) + '...');
+          console.log('AIService: Received response from Gemini:', `${text.substring(0, 100)}...`);
 
           const optimization = await this.parseRouteOptimization(text, currentLocation, goals);
           console.log('AIService: Route optimization parsed successfully');
@@ -616,10 +616,10 @@ export class AIService extends BaseService {
       const ghostRunner = await this.retry(
         async () => {
           console.log('AIService: Sending request to Gemini for ghost runner...');
-          const result = await this.model!.generateContent(prompt);
+          const result = await this.model?.generateContent(prompt);
           const response = await result.response;
           const text = response.text();
-          console.log('AIService: Received response from Gemini:', text.substring(0, 100) + '...');
+          console.log('AIService: Received response from Gemini:', `${text.substring(0, 100)}...`);
 
           const ghostRunner = this.parseGhostRunner(text, difficulty);
           console.log('AIService: Ghost runner parsed successfully:', ghostRunner.name);
@@ -722,7 +722,7 @@ export class AIService extends BaseService {
 
     return this.retry(
       async () => {
-        const result = await this.model!.generateContent(prompt);
+        const result = await this.model?.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
 
@@ -765,7 +765,7 @@ export class AIService extends BaseService {
 
     return this.retry(
       async () => {
-        const result = await this.model!.generateContent(prompt);
+        const result = await this.model?.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
 
@@ -1167,7 +1167,7 @@ Make this feel like a personal AI running coach in a game world!
     };
   }
 
-  private createFallbackCoaching(currentRun: CurrentRun, goals: AIGoals): any {
+  private createFallbackCoaching(currentRun: CurrentRun, _goals: AIGoals): any {
     return {
       motivation: `Great work, Runner! You've covered ${Math.floor(currentRun.distance)}m. Every step earns you territory and $REALM tokens!`,
       tips: [
@@ -1246,7 +1246,7 @@ Make this feel like a personal AI running coach in a game world!
     }
 
     const data = await response.json();
-    if (data.routes && data.routes[0] && data.routes[0].geometry) {
+    if (data.routes?.[0]?.geometry) {
       return data.routes[0].geometry.coordinates;
     }
 

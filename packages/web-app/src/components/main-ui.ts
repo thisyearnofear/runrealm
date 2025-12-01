@@ -13,7 +13,7 @@ import { TouchGestureService } from '@runrealm/shared-core/components/touch-gest
 import { TransactionStatus } from '@runrealm/shared-core/components/transaction-status';
 import { VisibilityService } from '@runrealm/shared-core/components/visibility-service';
 import { WidgetStateService } from '@runrealm/shared-core/components/widget-state-service';
-import { Widget, WidgetSystem } from '@runrealm/shared-core/components/widget-system';
+import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
 import { ConfigService } from '@runrealm/shared-core/core/app-config';
 import { BaseService } from '@runrealm/shared-core/core/base-service';
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
@@ -35,7 +35,6 @@ export class MainUI extends BaseService {
   private domService: DOMService;
   private locationService: LocationService;
   private uiService: UIService;
-  private gamefiUI: GameFiUI;
   private widgetSystem: WidgetSystem;
   private dragService: DragService;
   private visibilityService: VisibilityService;
@@ -50,7 +49,6 @@ export class MainUI extends BaseService {
   private contractService!: ContractService;
   private web3Service: Web3Service;
   private configService: ConfigService;
-  private routeStateService: RouteStateService;
 
   // Modular components
   private widgetCreator!: WidgetCreator;
@@ -305,12 +303,12 @@ export class MainUI extends BaseService {
     // Get the enhanced run controls service from global registry
     const services = (window as any).RunRealm?.services;
 
-    if (services && services.EnhancedRunControls) {
+    if (services?.EnhancedRunControls) {
       services.EnhancedRunControls.initializeWidget();
     } else {
       // Fallback: access directly from app instance
       const app = (window as any).runRealmApp;
-      if (app && app.enhancedRunControls) {
+      if (app?.enhancedRunControls) {
         app.enhancedRunControls.initializeWidget();
       } else {
         console.error('MainUI: Could not find EnhancedRunControls service');

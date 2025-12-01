@@ -8,7 +8,6 @@ import { AnimationService } from '../services/animation-service';
 import { DOMService } from '../services/dom-service';
 import { DragService } from './drag-service';
 import { MobileWidgetService } from './mobile-widget-service';
-import { TouchGestureService } from './touch-gesture-service';
 import { VisibilityService } from './visibility-service';
 import { WidgetState, WidgetStateService } from './widget-state-service';
 
@@ -25,9 +24,7 @@ export interface Widget {
 export class WidgetSystem extends BaseService {
   private domService: DOMService;
   private dragService: DragService;
-  private animationService: AnimationService;
   private widgetStateService: WidgetStateService;
-  private visibilityService: VisibilityService | null = null;
   private mobileWidgetService: MobileWidgetService | null = null;
   private widgets: Map<string, Widget> = new Map();
   private activeWidget: string | null = null;
@@ -469,62 +466,12 @@ export class WidgetSystem extends BaseService {
   }
 
   /**
-   * Minimize all widgets except the specified one (mobile optimization)
-   */
-  private minimizeAllOtherWidgets(exceptId: string): void {
-    this.widgets.forEach((widget, widgetId) => {
-      if (widgetId !== exceptId && !widget.minimized) {
-        widget.minimized = true;
-        this.updateWidgetDisplay(widget);
-      }
-    });
-  }
-
-  /**
    * Get widgets that should be minimized
    */
   private getWidgetsToMinimize(position: string, exceptId: string): Widget[] {
     return Array.from(this.widgets.values()).filter(
       (widget) => widget.position === position && widget.id !== exceptId && !widget.minimized
     );
-  }
-
-  /**
-   * Arrange widgets by priority within each zone
-   */
-  private arrangeWidgets(): void {
-    const positions = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-
-    positions.forEach((position) => {
-      const zone = this.getWidgetZone(position);
-      if (!zone) return;
-
-      // Get widgets for this position, sorted by priority
-      const positionWidgets = this.getWidgetsByPosition(position);
-
-      // Clear and re-append in order
-      this.clearZone(zone);
-      this.appendWidgetsToZone(zone, positionWidgets);
-    });
-  }
-
-  /**
-   * Clear all widgets from a zone
-   */
-  private clearZone(zone: Element): void {
-    zone.innerHTML = '';
-  }
-
-  /**
-   * Append widgets to a zone in order
-   */
-  private appendWidgetsToZone(zone: Element, widgets: Widget[]): void {
-    widgets.forEach((widget) => {
-      const element = this.getWidgetElement(widget.id);
-      if (element) {
-        zone.appendChild(element);
-      }
-    });
   }
 
   /**
@@ -613,7 +560,7 @@ export class WidgetSystem extends BaseService {
       // Enter to toggle focused widget
       if (event.key === 'Enter') {
         const focused = document.activeElement;
-        if (focused && focused.classList.contains('widget-header')) {
+        if (focused?.classList.contains('widget-header')) {
           const widgetId = focused.getAttribute('data-widget-id');
           if (widgetId) {
             this.toggleWidget(widgetId);
@@ -631,7 +578,7 @@ export class WidgetSystem extends BaseService {
     const widgets = Array.from(document.querySelectorAll('.widget-header'));
     if (widgets.length === 0) return;
 
-    const currentIndex = widgets.findIndex((widget) => widget === document.activeElement);
+    const currentIndex = widgets.indexOf(document.activeElement);
 
     let nextIndex: number;
     if (event.shiftKey) {
@@ -672,7 +619,7 @@ export class WidgetSystem extends BaseService {
    * Minimize all widgets
    */
   public minimizeAll(): void {
-    this.widgets.forEach((widget, id) => {
+    this.widgets.forEach((widget, _id) => {
       if (!widget.minimized) {
         widget.minimized = true;
         this.updateWidgetDisplay(widget);
@@ -889,7 +836,7 @@ export class WidgetSystem extends BaseService {
   /**
    * Apply mobile widget behavior
    */
-  private applyMobileWidgetBehavior(widgetElement: HTMLElement, widget: Widget): void {
+  private applyMobileWidgetBehavior(widgetElement: HTMLElement, _widget: Widget): void {
     // Add mobile-specific classes
     widgetElement.classList.add('mobile-optimized');
 
@@ -980,7 +927,7 @@ export class WidgetSystem extends BaseService {
       const descEl = desc as HTMLElement;
       if (descEl.textContent && descEl.textContent.length > 50) {
         // Truncate long descriptions on mobile
-        descEl.textContent = descEl.textContent.substring(0, 40) + '...';
+        descEl.textContent = `${descEl.textContent.substring(0, 40)}...`;
       }
     });
   }

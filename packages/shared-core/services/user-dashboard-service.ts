@@ -5,7 +5,6 @@
 
 import { WidgetStateService } from '../components/widget-state-service';
 import { BaseService } from '../core/base-service';
-import { EventBus } from '../core/event-bus';
 import { AIService } from './ai-service';
 import { GhostRunnerNFT, GhostRunnerService } from './ghost-runner-service';
 import { PlayerStats, ProgressionService } from './progression-service';
@@ -276,13 +275,13 @@ export class UserDashboardService extends BaseService {
     });
 
     // Listen for territory events
-    this.subscribe('territory:claimed', (data: any) => {
+    this.subscribe('territory:claimed', (_data: any) => {
       this.dashboardData.notifications.territoryClaimed = true;
       this.dashboardData.notifications.territoryEligible = false;
       this.debouncedUpdate?.();
     });
 
-    this.subscribe('territory:eligible', (data: any) => {
+    this.subscribe('territory:eligible', (_data: any) => {
       this.dashboardData.notifications.territoryEligible = true;
       this.debouncedUpdate?.();
     });

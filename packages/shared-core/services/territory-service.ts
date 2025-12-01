@@ -102,10 +102,6 @@ export class TerritoryService extends BaseService {
   private territoryIntents: Map<string, TerritoryIntent> = new Map();
   private readonly INTENT_EXPIRY_HOURS = 24; // Territory intents expire after 24 hours
 
-  constructor() {
-    super();
-  }
-
   protected async onInitialize(): Promise<void> {
     this.setupEventListeners();
     await this.loadClaimedTerritories();
@@ -260,56 +256,6 @@ export class TerritoryService extends BaseService {
   }
 
   /**
-   * Check if a completed run fulfills any territory intents
-   */
-  private async checkIntentFulfillment(runSession: RunSession): Promise<void> {
-    if (!runSession.territoryEligible || !runSession.geohash) {
-      return;
-    }
-
-    // Find matching territory intent
-    for (const [intentId, intent] of this.territoryIntents) {
-      if (intent.status !== 'active') continue;
-
-      // Check if the run overlaps with the intended territory
-      if (this.runOverlapsWithIntent(runSession, intent)) {
-        // Mark intent as completed
-        intent.status = 'completed';
-        this.territoryIntents.set(intentId, intent);
-
-        // Create territory with intent reference
-        const territory = await this.createTerritoryFromRun(runSession);
-        territory.intentId = intentId;
-
-        // Claim the territory
-        const result = await this.claimTerritory(territory);
-
-        // Use existing event pattern - web3 territory claimed
-        this.safeEmit('web3:territoryClaimed', {
-          tokenId: territory.id,
-          geohash: territory.geohash,
-          metadata: territory.metadata,
-        });
-
-        this.saveTerritoryIntentsToStorage();
-        break;
-      }
-    }
-  }
-
-  /**
-   * Check if a run overlaps with a territory intent
-   */
-  private runOverlapsWithIntent(runSession: RunSession, intent: TerritoryIntent): boolean {
-    if (!runSession.points || runSession.points.length === 0) {
-      return false;
-    }
-
-    const runBounds = this.calculateTerritoryBounds(runSession.points);
-    return this.territoriesOverlap(runBounds, intent.bounds);
-  }
-
-  /**
    * Get active territory intents
    */
   public getActiveTerritoryIntents(): TerritoryIntent[] {
@@ -433,7 +379,7 @@ export class TerritoryService extends BaseService {
 
       // Find the territory that was claimed
       let targetTerritory: Territory | null = null;
-      for (const [id, territory] of this.claimedTerritories) {
+      for (const [_id, territory] of this.claimedTerritories) {
         if (territory.geohash === data.geohash && territory.isCrossChain) {
           targetTerritory = territory;
           break;
@@ -488,7 +434,7 @@ export class TerritoryService extends BaseService {
 
       // Find the territory that failed to be claimed
       let targetTerritory: Territory | null = null;
-      for (const [id, territory] of this.claimedTerritories) {
+      for (const [_id, territory] of this.claimedTerritories) {
         // Look for territories with pending cross-chain claims
         if (territory.isCrossChain && territory.status === 'claimable') {
           targetTerritory = territory;
@@ -526,35 +472,6 @@ export class TerritoryService extends BaseService {
       }
     } catch (error) {
       console.error('TerritoryService: Failed to handle cross-chain claim failure:', error);
-    }
-  }
-
-  /**
-   * Process a run that's eligible for territory claiming
-   */
-  private async processEligibleRun(run: RunSession): Promise<void> {
-    try {
-      const territory = await this.createTerritoryFromRun(run);
-
-      this.safeEmit('territory:eligible', {
-        territory,
-        run,
-        message: 'Congratulations! Your run qualifies for territory claiming.',
-      });
-
-      // Show territory preview
-      this.safeEmit('territory:preview', {
-        territory,
-        bounds: territory.bounds,
-        metadata: territory.metadata,
-      });
-    } catch (error) {
-      console.error('Failed to process eligible run:', error);
-      this.safeEmit('territory:claimFailed', {
-        error: (error as Error).message || 'Unknown error',
-        territory: {} as Territory,
-        runId: 'unknown',
-      });
     }
   }
 
@@ -674,7 +591,7 @@ export class TerritoryService extends BaseService {
   /**
    * Check if location is special (parks, landmarks, etc.)
    */
-  private isSpecialLocation(bounds: TerritoryBounds): boolean {
+  private isSpecialLocation(_bounds: TerritoryBounds): boolean {
     // This would integrate with real POI/landmark data
     // For now, return false as placeholder
     return false;
@@ -699,7 +616,7 @@ export class TerritoryService extends BaseService {
   /**
    * Identify landmarks within territory bounds
    */
-  private async identifyLandmarks(bounds: TerritoryBounds): Promise<string[]> {
+  private async identifyLandmarks(_bounds: TerritoryBounds): Promise<string[]> {
     // This would integrate with a POI service or geocoding API
     // For now, return generic landmarks
     const genericLandmarks = ['Park', 'Street', 'Neighborhood'];
@@ -740,7 +657,7 @@ export class TerritoryService extends BaseService {
     bounds: TerritoryBounds
   ): Promise<void> {
     // Check against existing territories
-    for (const [id, territory] of this.claimedTerritories) {
+    for (const [_id, territory] of this.claimedTerritories) {
       if (this.territoriesOverlap(bounds, territory.bounds)) {
         throw new Error('Territory overlaps with existing claimed territory');
       }
@@ -768,7 +685,7 @@ export class TerritoryService extends BaseService {
   /**
    * Check if territory exists on blockchain
    */
-  private async checkTerritoryExistsOnChain(geohash: string): Promise<boolean> {
+  private async checkTerritoryExistsOnChain(_geohash: string): Promise<boolean> {
     // This would make a real blockchain call
     // For now, return false
     return false;
@@ -936,7 +853,7 @@ export class TerritoryService extends BaseService {
   private updateNearbyTerritories(locationInfo: { lat: number; lng: number }): void {
     const nearby: NearbyTerritory[] = [];
 
-    for (const [id, territory] of this.claimedTerritories) {
+    for (const [_id, territory] of this.claimedTerritories) {
       const distance = this.calculateDistanceToTerritory(locationInfo, territory);
       const direction = this.calculateDirection(locationInfo, territory.bounds.center);
 
@@ -1012,7 +929,7 @@ export class TerritoryService extends BaseService {
   /**
    * Find territory by run ID
    */
-  private findTerritoryByRunId(runId: string): Territory | null {
+  private findTerritoryByRunId(_runId: string): Territory | null {
     // This would need to be implemented based on how territories are linked to runs
     // For now, return null
     return null;

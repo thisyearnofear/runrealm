@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { RunRealmApp } from '../core/run-realm-app';
-import TerritoryDashboard, { TerritoryDashboardProps } from './TerritoryDashboard';
+import TerritoryDashboard from './TerritoryDashboard';
 
 interface RunRealmIntegrationProps {
   containerId?: string;

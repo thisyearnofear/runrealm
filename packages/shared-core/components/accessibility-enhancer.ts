@@ -18,7 +18,6 @@ export class AccessibilityEnhancer extends BaseService {
   private domService: DOMService;
   private options: AccessibilityOptions;
   private focusableElements: HTMLElement[] = [];
-  private currentFocusIndex: number = -1;
   private announcer: HTMLElement | null = null;
 
   constructor(domService: DOMService, options: AccessibilityOptions = {}) {
@@ -190,8 +189,8 @@ export class AccessibilityEnhancer extends BaseService {
 
     // Sort by tab index and DOM order
     this.focusableElements.sort((a, b) => {
-      const aTabIndex = parseInt(a.getAttribute('tabindex') || '0');
-      const bTabIndex = parseInt(b.getAttribute('tabindex') || '0');
+      const aTabIndex = parseInt(a.getAttribute('tabindex') || '0', 10);
+      const bTabIndex = parseInt(b.getAttribute('tabindex') || '0', 10);
 
       if (aTabIndex !== bTabIndex) {
         return aTabIndex - bTabIndex;
