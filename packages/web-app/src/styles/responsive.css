@@ -234,6 +234,14 @@
 
 /* ===== MOBILE-SPECIFIC OPTIMIZATIONS ===== */
 
+/* Hide widget title text and button text on mobile - show icons only */
+@media (max-width: 768px) {
+  .widget-title,
+  .btn-text {
+    display: none;
+  }
+}
+
 /* Touch-optimized interactions */
 @media (hover: none) and (pointer: coarse) {
   /* Mobile touch optimizations */
