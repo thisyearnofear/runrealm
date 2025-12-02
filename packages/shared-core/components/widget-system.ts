@@ -123,6 +123,8 @@ export class WidgetSystem extends BaseService {
   public registerWidget(widget: Widget): void {
     this.widgets.set(widget.id, widget);
 
+    const isMobile = window.innerWidth <= 768;
+
     // Initialize widget state
     const existingState = this.widgetStateService.getWidgetState(widget.id);
     if (existingState) {
@@ -130,6 +132,12 @@ export class WidgetSystem extends BaseService {
       widget.minimized = existingState.minimized;
       widget.position = existingState.position;
       widget.priority = existingState.priority ?? widget.priority;
+
+      // MOBILE UX: Force all widgets to be minimized on mobile regardless of saved state
+      // This ensures maximum map visibility and prevents widgets from blocking the view
+      if (isMobile) {
+        widget.minimized = true;
+      }
     } else {
       // Set initial state
       this.widgetStateService.setWidgetState(widget.id, {

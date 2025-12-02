@@ -25,6 +25,8 @@ export class WidgetSystem extends BaseService {
   private domService: DOMService;
   private dragService: DragService;
   private widgetStateService: WidgetStateService;
+  private animationService: AnimationService;
+  private visibilityService: VisibilityService | null = null;
   private mobileWidgetService: MobileWidgetService | null = null;
   private widgets: Map<string, Widget> = new Map();
   private activeWidget: string | null = null;
@@ -121,13 +123,21 @@ export class WidgetSystem extends BaseService {
   public registerWidget(widget: Widget): void {
     this.widgets.set(widget.id, widget);
 
+    const isMobile = window.innerWidth <= 768;
+
     // Initialize widget state
     const existingState = this.widgetStateService.getWidgetState(widget.id);
     if (existingState) {
       // Restore state from previous session
       widget.minimized = existingState.minimized;
       widget.position = existingState.position;
-      widget.priority = existingState.priority;
+      widget.priority = existingState.priority ?? widget.priority;
+
+      // MOBILE UX: Force all widgets to be minimized on mobile regardless of saved state
+      // This ensures maximum map visibility and prevents widgets from blocking the view
+      if (isMobile) {
+        widget.minimized = true;
+      }
     } else {
       // Set initial state
       this.widgetStateService.setWidgetState(widget.id, {
@@ -167,7 +177,7 @@ export class WidgetSystem extends BaseService {
     // This keeps the map visible and provides full-featured UI
     if (isMobile && widget.minimized) {
       // User is trying to expand a widget on mobile - show dashboard instead
-      this.safeEmit('dashboard:requestOpen', {
+      this.safeEmit('dashboard:requestOpen' as any, {
         sourceWidget: widgetId,
         widgetTitle: widget.title,
       });
@@ -578,7 +588,7 @@ export class WidgetSystem extends BaseService {
     const widgets = Array.from(document.querySelectorAll('.widget-header'));
     if (widgets.length === 0) return;
 
-    const currentIndex = widgets.indexOf(document.activeElement);
+    const currentIndex = document.activeElement ? widgets.indexOf(document.activeElement) : -1;
 
     let nextIndex: number;
     if (event.shiftKey) {
