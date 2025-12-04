@@ -8,16 +8,15 @@ import {
 } from '@runrealm/shared-core/services/ghost-runner-service';
 import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import React from 'react';
 import { Alert } from 'react-native';
 import { GhostManagement } from '../GhostManagement';
 
 jest.mock('@runrealm/shared-core/services/ghost-runner-service');
 jest.mock('@runrealm/shared-core/services/territory-service', () => ({
-  TerritoryService: jest.fn().mockImplementation(() => ({
-    getClaimedTerritories: jest.fn(() => []),
-    getIsInitialized: jest.fn(() => true),
-    initialize: jest.fn(),
-  })),
+  TerritoryService: {
+    getInstance: jest.fn(),
+  },
 }));
 jest.mock('react-native/Libraries/Alert/Alert', () => ({
   alert: jest.fn(),
@@ -101,11 +100,8 @@ describe('GhostManagement', () => {
     (mockGhostService.initialize as jest.Mock) = jest.fn(() => Promise.resolve());
 
     (GhostRunnerService.getInstance as jest.Mock) = jest.fn(() => mockGhostService);
-    // Mock TerritoryService to return our mock
-    const TerritoryServiceModule = require('@runrealm/shared-core/services/territory-service');
-    TerritoryServiceModule.TerritoryService = jest
-      .fn()
-      .mockImplementation(() => mockTerritoryService);
+    // Mock TerritoryService.getInstance static method
+    (TerritoryService.getInstance as jest.Mock) = jest.fn(() => mockTerritoryService);
   });
 
   it('should not render when visible is false', () => {
