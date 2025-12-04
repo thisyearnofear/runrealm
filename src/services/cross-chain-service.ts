@@ -37,6 +37,11 @@ export class CrossChainService extends BaseService {
   private web3Service: Web3Service | null = null;
   private contractService: ContractService | null = null;
   private zetaConnector: any = null;
+  private zetaClient: any = null;
+
+  constructor() {
+    super();
+  }
 
   protected async onInitialize(): Promise<void> {
     // Wait for dependent services
@@ -144,6 +149,46 @@ export class CrossChainService extends BaseService {
       console.error('CrossChainService: Failed to send message:', error);
       throw error;
     }
+  }
+
+  /**
+   * Send cross-chain message using ZetaChain Gateway API (actual implementation)
+   */
+  private async sendCrossChainMessage(params: {
+    destinationChainId: number;
+    destinationAddress: string;
+    message: string;
+    gasLimit?: number;
+  }): Promise<string> {
+    // This is what the real implementation would look like:
+
+    // 1. Connect to ZetaChain Gateway
+    // const zetaClient = new ZetaChainClient({
+    //   network: 'athens', // or 'mainnet'
+    //   chainId: 7001
+    // });
+
+    // 2. Get signer from connected wallet
+    // const signer = this.web3Service.getSigner();
+
+    // 3. Send cross-chain message
+    // const tx = await zetaClient.gateway.sendMessage({
+    //   signer,
+    //   destinationChainId: params.destinationChainId,
+    //   destinationAddress: params.destinationAddress,
+    //   message: params.message,
+    //   gasLimit: params.gasLimit || 500000
+    // });
+
+    // 4. Wait for transaction confirmation
+    // const receipt = await tx.wait();
+
+    // 5. Return transaction hash
+    // return receipt.transactionHash;
+
+    // For the hackathon, we'll simulate this behavior
+    console.log('CrossChainService: Simulating cross-chain message send', params);
+    return `0x${Math.random().toString(16).substring(2, 10)}`;
   }
 
   /**

@@ -2,13 +2,18 @@ import {
   Achievement,
   AchievementService,
 } from '@runrealm/shared-core/services/achievement-service';
+import { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
 import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { GhostManagement } from '../components/GhostManagement';
 
 export const ProfileScreen: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [territories, setTerritories] = useState<Territory[]>([]);
+  const [selectedTerritory, setSelectedTerritory] = useState<Territory | null>(null);
+  const [showTerritoryDetails, setShowTerritoryDetails] = useState(false);
+  const [showGhostManagement, setShowGhostManagement] = useState(false);
   const [stats, setStats] = useState({
     totalRuns: 0,
     totalDistance: 0,
@@ -17,10 +22,19 @@ export const ProfileScreen: React.FC = () => {
   });
 
   const [achievementService] = useState(() => new AchievementService());
-  const [territoryService] = useState(() => new TerritoryService());
+  const [territoryService] = useState(() => TerritoryService.getInstance());
+  const [runTrackingService] = useState(() => new RunTrackingService());
 
   const loadProfileData = useCallback(async () => {
     try {
+      // Initialize services if needed
+      if (!achievementService.getIsInitialized()) {
+        await achievementService.initialize();
+      }
+      if (!territoryService.getIsInitialized()) {
+        await territoryService.initialize();
+      }
+
       // Load achievements
       const userAchievements = achievementService.getAchievements();
       setAchievements(userAchievements);
@@ -29,17 +43,22 @@ export const ProfileScreen: React.FC = () => {
       const claimedTerritories = territoryService.getClaimedTerritories();
       setTerritories(claimedTerritories);
 
-      // Calculate stats (would need actual data from services)
+      // Calculate stats from actual data
+      const runHistory = runTrackingService.getRunHistory();
+      const totalRuns = runHistory.length;
+      const totalDistance = runHistory.reduce((sum, run) => sum + run.distance, 0);
+      const totalTime = runHistory.reduce((sum, run) => sum + run.duration, 0);
+
       setStats({
-        totalRuns: 12,
-        totalDistance: 87.5,
-        totalTime: 28440000, // 7h 54m
+        totalRuns,
+        totalDistance: totalDistance / 1000, // Convert to km
+        totalTime,
         totalTerritories: claimedTerritories.length,
       });
     } catch (error) {
       console.error('Failed to load profile data:', error);
     }
-  }, [achievementService, territoryService]);
+  }, [achievementService, territoryService, runTrackingService]);
 
   useEffect(() => {
     loadProfileData();
@@ -115,16 +134,54 @@ export const ProfileScreen: React.FC = () => {
         </View>
         {territories.length > 0 ? (
           <View style={styles.territoriesList}>
-            {territories.slice(0, 3).map((territory) => (
-              <View key={territory.id} style={styles.territoryItem}>
-                <Text style={styles.territoryName}>{territory.metadata.name}</Text>
+            {territories.map((territory) => (
+              <TouchableOpacity
+                key={territory.id}
+                style={[styles.territoryItem, styles[territory.defenseStatus || 'moderate']]}
+                onPress={() => {
+                  setSelectedTerritory(territory);
+                  setShowTerritoryDetails(true);
+                }}
+              >
+                <View style={styles.territoryHeader}>
+                  <Text style={styles.territoryName}>
+                    {territory.metadata?.name || 'Unnamed Territory'}
+                  </Text>
+                  {territory.defenseStatus && (
+                    <View
+                      style={[
+                        styles.defenseBadge,
+                        styles[`defenseBadge${territory.defenseStatus}`],
+                      ]}
+                    >
+                      <Text style={styles.defenseBadgeText}>
+                        {getDefenseIcon(territory.defenseStatus)} {territory.defenseStatus}
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <View style={styles.territoryDetails}>
-                  <Text style={styles.territoryRarity}>{territory.metadata.rarity}</Text>
+                  <Text style={styles.territoryRarity}>
+                    {territory.metadata?.rarity || 'common'}
+                  </Text>
                   <Text style={styles.territoryReward}>
-                    +{territory.metadata.estimatedReward} REALM
+                    +{territory.metadata?.estimatedReward || 0} REALM
                   </Text>
                 </View>
-              </View>
+                {territory.activityPoints !== undefined && (
+                  <View style={styles.activityBar}>
+                    <View
+                      style={[
+                        styles.activityFill,
+                        { width: `${(territory.activityPoints / 1000) * 100}%` },
+                      ]}
+                    />
+                    <Text style={styles.activityText}>
+                      {territory.activityPoints}/1000 activity points
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             ))}
           </View>
         ) : (
@@ -134,8 +191,102 @@ export const ProfileScreen: React.FC = () => {
           </View>
         )}
       </View>
+
+      {/* Territory Details Modal */}
+      <Modal
+        visible={showTerritoryDetails}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowTerritoryDetails(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {selectedTerritory && (
+              <>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    {selectedTerritory.metadata?.name || 'Territory Details'}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowTerritoryDetails(false)}
+                    style={styles.modalCloseButton}
+                  >
+                    <Text style={styles.modalCloseText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.modalBody}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Rarity:</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedTerritory.metadata?.rarity || 'common'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Reward:</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedTerritory.metadata?.estimatedReward || 0} REALM
+                    </Text>
+                  </View>
+                  {selectedTerritory.defenseStatus && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Defense Status:</Text>
+                      <Text style={styles.detailValue}>{selectedTerritory.defenseStatus}</Text>
+                    </View>
+                  )}
+                  {selectedTerritory.activityPoints !== undefined && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Activity Points:</Text>
+                      <Text style={styles.detailValue}>
+                        {selectedTerritory.activityPoints}/1000
+                      </Text>
+                    </View>
+                  )}
+                  {selectedTerritory.claimedAt && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Claimed:</Text>
+                      <Text style={styles.detailValue}>
+                        {new Date(selectedTerritory.claimedAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={styles.ghostDeployButton}
+                    onPress={() => {
+                      setShowTerritoryDetails(false);
+                      setShowGhostManagement(true);
+                    }}
+                  >
+                    <Text style={styles.ghostDeployButtonText}>👻 Deploy Ghost</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Ghost Management Modal */}
+      <GhostManagement
+        visible={showGhostManagement}
+        onClose={() => setShowGhostManagement(false)}
+      />
     </ScrollView>
   );
+};
+
+const getDefenseIcon = (status: string): string => {
+  switch (status) {
+    case 'strong':
+      return '🛡️';
+    case 'moderate':
+      return '⚠️';
+    case 'vulnerable':
+      return '🔶';
+    case 'claimable':
+      return '🚨';
+    default:
+      return '📍';
+  }
 };
 
 const styles = StyleSheet.create({
@@ -269,5 +420,141 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: '#999',
+  },
+  territoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  defenseBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  defenseBadgestrong: {
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+  },
+  defenseBadgemoderate: {
+    backgroundColor: 'rgba(255, 152, 0, 0.2)',
+  },
+  defenseBadgevulnerable: {
+    backgroundColor: 'rgba(255, 193, 7, 0.2)',
+  },
+  defenseBadgeclaimable: {
+    backgroundColor: 'rgba(244, 67, 54, 0.2)',
+  },
+  defenseBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  activityBar: {
+    height: 20,
+    backgroundColor: '#333',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 8,
+    position: 'relative',
+  },
+  activityFill: {
+    height: '100%',
+    backgroundColor: '#9b59b6',
+    borderRadius: 10,
+  },
+  activityText: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    textAlign: 'center',
+    fontSize: 10,
+    color: '#fff',
+    lineHeight: 20,
+    fontWeight: '600',
+  },
+  strong: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#4caf50',
+  },
+  moderate: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#ff9800',
+  },
+  vulnerable: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#ffc107',
+  },
+  claimable: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#f44336',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1a',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 24,
+    color: '#999',
+  },
+  modalBody: {
+    padding: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  detailLabel: {
+    fontSize: 16,
+    color: '#999',
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  ghostDeployButton: {
+    backgroundColor: '#9b59b6',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  ghostDeployButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

@@ -19,6 +19,10 @@ export class EventHandler {
   private walletWidget: WalletWidget;
   private widgetSystem: WidgetSystem;
   private widgetCreator: WidgetCreator;
+  private web3Service: Web3Service;
+  private routeStateService: RouteStateService;
+  private eventSubscribers: Array<(event: string, data?: any) => void> = [];
+  private eventListeners: Array<() => void> = [];
   private eventCallbacks: Map<string, Array<(data?: any) => void>> = new Map();
 
   constructor(
@@ -153,12 +157,12 @@ export class EventHandler {
     });
 
     // Listen for service events
-    this.subscribe('location:changed', (_locationInfo) => {
+    this.subscribe('location:changed', (locationInfo) => {
       // This will be handled by the status manager
     });
 
     // Listen for GPS status updates from actual location usage
-    this.subscribe('location:updated' as any, (_data: any) => {
+    this.subscribe('location:updated' as any, (data: any) => {
       // This will be handled by the status manager
     });
 
@@ -190,7 +194,7 @@ export class EventHandler {
       // This will be handled by the status manager
     });
 
-    this.subscribe('web3:walletConnected', (_walletInfo) => {
+    this.subscribe('web3:walletConnected', (walletInfo) => {
       // This will be handled by the status manager
     });
 
@@ -246,7 +250,7 @@ export class EventHandler {
 
         this.widgetSystem.updateWidget('territory-info', statsHtml);
         const w = this.widgetSystem.getWidget('territory-info');
-        if (w?.minimized) this.widgetSystem.toggleWidget('territory-info');
+        if (w && w.minimized) this.widgetSystem.toggleWidget('territory-info');
       } catch (e) {
         console.error('Failed to render planned route', e);
       }
@@ -517,7 +521,7 @@ export class EventHandler {
 
           this.widgetSystem.updateWidget('territory-info', statsHtml);
           const w = this.widgetSystem.getWidget('territory-info');
-          if (w?.minimized) this.widgetSystem.toggleWidget('territory-info');
+          if (w && w.minimized) this.widgetSystem.toggleWidget('territory-info');
         }
       }
     );
@@ -661,11 +665,11 @@ export class EventHandler {
 
   // Helper methods removed - using public subscribe and protected safeEmit from above
 
-  private addButtonFeedback(_button: HTMLElement): void {
+  private addButtonFeedback(button: HTMLElement): void {
     // This will be handled by the UI effects module
   }
 
-  private showAILoadingState(_action: string, _button: HTMLElement): void {
+  private showAILoadingState(action: string, button: HTMLElement): void {
     // This will be handled by the UI effects module
   }
 
@@ -677,7 +681,7 @@ export class EventHandler {
     // This will be handled by the UI effects module
   }
 
-  private triggerHapticFeedback(_type: 'light' | 'medium' | 'heavy' = 'light'): void {
+  private triggerHapticFeedback(type: 'light' | 'medium' | 'heavy' = 'light'): void {
     // This will be handled by the UI effects module
   }
 

@@ -199,7 +199,7 @@ export class WalletWidget extends BaseService {
 
     // Listen for ActionRouter events
     this.subscribe('wallet:connect', (payload: any) => {
-      if (payload?.provider) {
+      if (payload && payload.provider) {
         this.connectWallet(payload.provider);
       } else {
         this.showWalletModal();

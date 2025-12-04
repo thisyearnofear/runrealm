@@ -1,23 +1,58 @@
+import { ProgressionService } from '@runrealm/shared-core/services/progression-service';
 import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
+import { ChallengeCard } from '../components/ChallengeCard';
+import { GhostManagement } from '../components/GhostManagement';
 
 export const DashboardScreen: React.FC = () => {
-  // biome-ignore lint/suspicious/noExplicitAny: Dashboard data structure is complex
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showGhostManagement, setShowGhostManagement] = useState(false);
 
   const [dashboardService] = useState(() => UserDashboardService.getInstance());
+  const [progressionService] = useState(() => ProgressionService.getInstance());
+  const [challenges, setChallenges] = useState<any[]>([]);
 
-  const loadDashboardData = useCallback(async () => {
+  useEffect(() => {
+    loadDashboardData();
+    loadChallenges();
+
+    // Set up listeners for real-time updates
+    const handleDataUpdate = (data: any) => {
+      setDashboardData(data.data);
+    };
+
+    dashboardService.subscribeToDataUpdates(handleDataUpdate);
+
+    // Cleanup listener on unmount
+    return () => {
+      dashboardService.unsubscribeFromDataUpdates(handleDataUpdate);
+    };
+  }, []);
+
+  const loadChallenges = async () => {
+    try {
+      if (!progressionService.getIsInitialized()) {
+        await progressionService.initialize();
+      }
+      const activeChallenges = progressionService.getActiveChallenges();
+      setChallenges(activeChallenges);
+    } catch (error) {
+      console.error('Failed to load challenges:', error);
+    }
+  };
+
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
 
@@ -29,24 +64,7 @@ export const DashboardScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [dashboardService]);
-
-  useEffect(() => {
-    loadDashboardData();
-
-    // Set up listeners for real-time updates
-    // biome-ignore lint/suspicious/noExplicitAny: Data structure is complex
-    const handleDataUpdate = (data: any) => {
-      setDashboardData(data.data);
-    };
-
-    dashboardService.subscribeToDataUpdates(handleDataUpdate);
-
-    // Cleanup listener on unmount
-    return () => {
-      dashboardService.unsubscribeFromDataUpdates(handleDataUpdate);
-    };
-  }, [dashboardService, loadDashboardData]);
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -92,7 +110,12 @@ export const DashboardScreen: React.FC = () => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00ff88" />
       }
     >
-      <Text style={styles.title}>🎮 User Dashboard</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>🎮 User Dashboard</Text>
+        <TouchableOpacity style={styles.ghostButton} onPress={() => setShowGhostManagement(true)}>
+          <Text style={styles.ghostButtonText}>👻</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Player Stats */}
       {dashboardData?.userStats && (
@@ -210,7 +233,6 @@ export const DashboardScreen: React.FC = () => {
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryNumber}>
                     {dashboardData.territories
-                      // biome-ignore lint/suspicious/noExplicitAny: Territory structure is complex
                       .reduce((sum: number, t: any) => sum + (t.estimatedReward || 0), 0)
                       .toFixed(2)}
                   </Text>
@@ -218,7 +240,6 @@ export const DashboardScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.territoriesList}>
-                {/* biome-ignore lint/suspicious/noExplicitAny: Territory structure is complex */}
                 {dashboardData.territories.slice(0, 3).map((territory: any) => (
                   <View
                     key={territory.id}
@@ -288,6 +309,23 @@ export const DashboardScreen: React.FC = () => {
         </View>
       )}
 
+      {/* Challenges */}
+      {challenges.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>🎯 Challenges</Text>
+          </View>
+          {challenges.map((challenge) => (
+            <ChallengeCard
+              key={challenge.id}
+              challenge={challenge}
+              progressionService={progressionService}
+              onClaimed={loadChallenges}
+            />
+          ))}
+        </View>
+      )}
+
       {/* AI Insights */}
       {dashboardData?.aiInsights && (
         <View style={styles.section}>
@@ -331,6 +369,12 @@ export const DashboardScreen: React.FC = () => {
           )}
         </View>
       )}
+
+      {/* Ghost Management Modal */}
+      <GhostManagement
+        visible={showGhostManagement}
+        onClose={() => setShowGhostManagement(false)}
+      />
     </ScrollView>
   );
 };
@@ -352,12 +396,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ccc',
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   title: {
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 24,
+    flex: 1,
     textAlign: 'center',
+  },
+  ghostButton: {
+    backgroundColor: 'rgba(155, 89, 182, 0.2)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#9b59b6',
+  },
+  ghostButtonText: {
+    fontSize: 24,
   },
   section: {
     backgroundColor: '#2a2a2a',

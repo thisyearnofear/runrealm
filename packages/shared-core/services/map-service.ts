@@ -1,4 +1,4 @@
-import type { Map as MapboxMap } from 'mapbox-gl';
+import type { LngLatLike, Map as MapboxMap } from 'mapbox-gl';
 import { BaseService } from '../core/base-service';
 import { RunPoint } from './run-tracking-service';
 import { TerritoryIntent, TerritoryPreview } from './territory-service';
@@ -451,7 +451,7 @@ export class MapService extends BaseService {
 
   public setTerritoriesVisible(visible: boolean): void {
     this.territoriesVisible = visible;
-    if (this.map?.getLayer(TERRITORY_LAYER_ID)) {
+    if (this.map && this.map.getLayer(TERRITORY_LAYER_ID)) {
       this.map.setLayoutProperty(TERRITORY_LAYER_ID, 'visibility', visible ? 'visible' : 'none');
     }
   }

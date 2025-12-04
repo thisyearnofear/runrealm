@@ -17,8 +17,7 @@ const defineBackgroundTask = () => {
   }
 
   try {
-    // biome-ignore lint/suspicious/noExplicitAny: TaskManager callback type
-    TaskManager.defineTask('BACKGROUND_LOCATION_TASK', async ({ data, error }: any) => {
+    TaskManager.defineTask('BACKGROUND_LOCATION_TASK', async ({ data, error }) => {
       if (error) {
         console.error('Background location task error:', error);
         return;

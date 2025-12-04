@@ -20,7 +20,7 @@ export class GeocodingService {
       const res = await fetch(url, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      const features = json?.features || [];
+      const features = (json && json.features) || [];
       return features.map((f: any) => ({
         name: f.place_name as string,
         center: f.center as [number, number],
@@ -39,7 +39,7 @@ export class GeocodingService {
       const res = await fetch(url, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      const name = json?.features?.[0]?.place_name;
+      const name = json && json.features && json.features[0] && json.features[0].place_name;
       return name || null;
     } catch (e) {
       console.warn('Reverse geocoding error', e);

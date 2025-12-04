@@ -35,6 +35,10 @@ export class LocationService extends BaseService {
   private watchId: number | null = null;
   private locationModal: HTMLElement | null = null;
 
+  public constructor() {
+    super();
+  }
+
   static getInstance(): LocationService {
     if (!LocationService.instance) {
       LocationService.instance = new LocationService();
@@ -369,7 +373,7 @@ export class LocationService extends BaseService {
           },
         });
       }
-    } catch (_error) {
+    } catch (error) {
       // Fallback to standard message if check fails
       uiService.showToast('📍 Location access needed. Enable location in your browser settings.', {
         type: 'warning',
@@ -778,14 +782,12 @@ export class LocationService extends BaseService {
       this.createLocationModal();
     }
 
-    if (this.locationModal) {
-      this.locationModal.style.display = 'flex';
-    }
+    this.locationModal!.style.display = 'flex';
     document.body.classList.add('modal-open');
 
     // Focus first focusable element in modal
     setTimeout(() => {
-      const firstFocusable = this.locationModal?.querySelector(
+      const firstFocusable = this.locationModal!.querySelector(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       ) as HTMLElement;
       if (firstFocusable) {

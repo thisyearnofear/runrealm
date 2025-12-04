@@ -35,7 +35,7 @@ export function getFormattedDistance(lengthInMeters: number, useMetric: boolean)
 
   if (useMetric) {
     if (distance < 1000) {
-      rounded = `${Math.round(distance)}`;
+      rounded = '' + Math.round(distance);
       units = 'm';
     } else {
       const km = distance / 1000;

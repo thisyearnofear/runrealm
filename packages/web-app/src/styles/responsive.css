@@ -234,14 +234,6 @@
 
 /* ===== MOBILE-SPECIFIC OPTIMIZATIONS ===== */
 
-/* Hide widget title text and button text on mobile - show icons only */
-@media (max-width: 768px) {
-  .widget-title,
-  .btn-text {
-    display: none;
-  }
-}
-
 /* Touch-optimized interactions */
 @media (hover: none) and (pointer: coarse) {
   /* Mobile touch optimizations */
@@ -401,17 +393,17 @@
   .widget-button,
   .widget-header,
   .widget-icon {
-    transition: none;
-    animation: none;
+    transition: none !important;
+    animation: none !important;
   }
 
   .widget:hover,
   .widget-button:hover {
-    transform: none;
+    transform: none !important;
   }
 
   .widget-header:hover .widget-icon {
-    transform: none;
+    transform: none !important;
   }
 }
 
@@ -457,20 +449,20 @@
   .main-header,
   .floating-action-btn,
   .notifications-container {
-    display: none;
+    display: none !important;
   }
 
   /* Optimize map for printing */
   #mapbox-container {
-    position: static;
-    height: 400px;
-    width: 100%;
+    position: static !important;
+    height: 400px !important;
+    width: 100% !important;
   }
 
   /* Print-friendly colors */
   body {
-    background: white;
-    color: black;
+    background: white !important;
+    color: black !important;
   }
 }
 
@@ -576,7 +568,7 @@
 
 @media (max-width: 767px) {
   .hide-mobile {
-    display: none;
+    display: none !important;
   }
 
   .show-mobile {
@@ -586,7 +578,7 @@
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .hide-tablet {
-    display: none;
+    display: none !important;
   }
 
   .show-tablet {
@@ -596,7 +588,7 @@
 
 @media (min-width: 1024px) {
   .hide-desktop {
-    display: none;
+    display: none !important;
   }
 
   .show-desktop {
@@ -636,8 +628,8 @@
 @media (max-width: 480px) {
   /* Condense widgets to icon-only on small screens */
   .widget-header {
-    padding: 12px 10px;
-    min-height: 40px;
+    padding: 12px 10px !important;
+    min-height: 40px !important;
     gap: 4px;
   }
 
@@ -756,17 +748,17 @@
 
   /* Notifications on mobile - adjust for better mobile positioning */
   #toast-container {
-    bottom: 16px;
-    right: 12px;
-    left: auto;
-    max-width: calc(100vw - 24px);
+    bottom: 16px !important;
+    right: 12px !important;
+    left: auto !important;
+    max-width: calc(100vw - 24px) !important;
   }
 
   .toast {
-    max-width: 100%;
-    padding: 12px 14px;
-    font-size: 13px;
-    gap: 10px;
+    max-width: 100% !important;
+    padding: 12px 14px !important;
+    font-size: 13px !important;
+    gap: 10px !important;
   }
 
   .toast .toast-icon {

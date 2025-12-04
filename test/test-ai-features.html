@@ -102,13 +102,13 @@
             }
         }
         
-        function _testGhostRunner() {
+        function testGhostRunner() {
             const result = document.getElementById('ghost-result');
             result.textContent = 'Testing ghost runner generation...\n';
             result.className = 'result';
             
             // Simulate ghost runner request
-            if (window.RunRealm?.mainUI) {
+            if (window.RunRealm && window.RunRealm.mainUI) {
                 try {
                     // Trigger ghost runner generation
                     const event = new CustomEvent('ai:ghostRunnerRequested', {
@@ -153,12 +153,12 @@
             }
         }
         
-        function _testRouteGeneration() {
+        function testRouteGeneration() {
             const result = document.getElementById('route-result');
             result.textContent = 'Testing route generation...\n';
             result.className = 'result';
             
-            if (window.RunRealm?.mainUI) {
+            if (window.RunRealm && window.RunRealm.mainUI) {
                 try {
                     const event = new CustomEvent('ai:routeRequested', {
                         detail: { 
@@ -205,7 +205,7 @@
             }
         }
         
-        function _testWidgetIntegration() {
+        function testWidgetIntegration() {
             const result = document.getElementById('widget-result');
             result.textContent = 'Testing widget integration...\n';
             result.className = 'result';

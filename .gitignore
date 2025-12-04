@@ -60,8 +60,6 @@ packages/*/*.d.ts.map
 packages/*/*.js.map
 !packages/*/*.ts
 !packages/*/*.tsx
-!packages/*/babel.config.js
-!packages/*/app.config.js
 
 # Auto-generated JS files from compilation
 **/*.js.map

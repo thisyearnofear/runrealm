@@ -1,108 +1,28 @@
 /**
- * MobileApp - Minimal version with navigation
- * Services will be added incrementally
+ * MobileApp - Main navigation component
+ * Uses actual screen components from src/screens/
  */
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
-import {
-  Achievement,
-  AchievementService,
-} from '@runrealm/shared-core/services/achievement-service';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-
-// Service 1: AchievementService (simplest, no browser dependencies)
-let AchievementServiceClass: typeof AchievementService | null = null;
-
-// Dynamic import for optional dependency
-(async () => {
-  try {
-    const achievementModule = await import('@runrealm/shared-core/services/achievement-service');
-    if (achievementModule?.AchievementService) {
-      AchievementServiceClass = achievementModule.AchievementService;
-    }
-  } catch (error) {
-    console.warn('AchievementService not available:', error);
-  }
-})();
+import MobileOnboarding from './components/MobileOnboarding';
+import { DashboardScreen } from './screens/DashboardScreen';
+import { HistoryScreen } from './screens/HistoryScreen';
+import MapScreen from './screens/MapScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
-// Minimal screen components - will be enhanced later
-function DashboardScreen() {
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [achievementService, setAchievementService] = useState<AchievementService | null>(null);
+export default function MobileApp() {
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    if (AchievementServiceClass) {
-      const service = new AchievementServiceClass();
-      service
-        .initialize()
-        .then(() => {
-          setAchievementService(service);
-          setAchievements(service.getAchievements());
-        })
-        .catch((err: unknown) => {
-          console.warn('Failed to initialize AchievementService:', err);
-        });
-    }
+    // Check if onboarding should be shown
+    // This will be handled by MobileOnboarding component itself
   }, []);
 
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Dashboard</Text>
-      {achievementService ? (
-        <>
-          <Text style={styles.subtitle}>{achievements.length} achievements available</Text>
-          <Text style={styles.info}>
-            {achievements.filter((a) => a.unlockedAt).length} unlocked
-          </Text>
-        </>
-      ) : (
-        <Text style={styles.subtitle}>AchievementService not available</Text>
-      )}
-    </View>
-  );
-}
-
-function MapScreen() {
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Map</Text>
-      <Text style={styles.subtitle}>Map view will go here</Text>
-    </View>
-  );
-}
-
-function HistoryScreen() {
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>History</Text>
-      <Text style={styles.subtitle}>Run history will go here</Text>
-    </View>
-  );
-}
-
-function ProfileScreen() {
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Profile</Text>
-      <Text style={styles.subtitle}>User profile and settings will go here</Text>
-    </View>
-  );
-}
-
-function SettingsScreen() {
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Settings</Text>
-      <Text style={styles.subtitle}>App settings will go here</Text>
-    </View>
-  );
-}
-
-export default function MobileApp() {
   return (
     <NavigationContainer>
       <Tab.Navigator
@@ -119,44 +39,15 @@ export default function MobileApp() {
         }}
       >
         <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Dashboard' }} />
-        <Tab.Screen
-          name="Map"
-          component={MapScreen}
-          options={{ title: 'Map' }}
-          // Using simple MapScreen from this file, not src/screens/MapScreen.tsx
-        />
+        <Tab.Screen name="Map" component={MapScreen} options={{ title: 'Map' }} />
         <Tab.Screen name="History" component={HistoryScreen} options={{ title: 'History' }} />
         <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
         <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       </Tab.Navigator>
+      <MobileOnboarding
+        onComplete={() => setShowOnboarding(false)}
+        onSkip={() => setShowOnboarding(false)}
+      />
     </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  info: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 5,
-  },
-});

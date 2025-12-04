@@ -179,7 +179,7 @@ export class AIOrchestrator {
     this.createRequestStatus(requestId, 'route', 'pending', 0);
 
     // Show loading toast
-    const _loadingToast = this.uiService.showToast('🤖 Generating your route...', {
+    const loadingToast = this.uiService.showToast('🤖 Generating your route...', {
       type: 'info',
       duration: 0, // Don't auto-hide
     });
@@ -402,13 +402,13 @@ export class AIOrchestrator {
       }, timeout);
 
       // Set up success listener
-      const _successListener = () => {
+      const successListener = () => {
         clearTimeout(timer);
         resolve();
       };
 
       // Set up error listener
-      const _errorListener = (errorData: any) => {
+      const errorListener = (errorData: any) => {
         clearTimeout(timer);
         reject(new Error(errorData.message || 'Request failed'));
       };

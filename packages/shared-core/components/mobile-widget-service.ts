@@ -4,7 +4,7 @@
  */
 
 import { BaseService } from '../core/base-service';
-import { TouchGestureService } from './touch-gesture-service';
+import { SwipeEvent, TouchGestureService } from './touch-gesture-service';
 
 export interface MobileWidgetOptions {
   enableEdgeSwipe?: boolean;
@@ -135,7 +135,7 @@ export class MobileWidgetService extends BaseService {
       const acceleration = e.accelerationIncludingGravity;
       if (!acceleration) return;
 
-      const currentTime = Date.now();
+      const currentTime = new Date().getTime();
       if (currentTime - lastUpdate > 100) {
         const diffTime = currentTime - lastUpdate;
         lastUpdate = currentTime;
@@ -197,8 +197,8 @@ export class MobileWidgetService extends BaseService {
     buttons.forEach((button) => {
       const btn = button as HTMLElement;
       const computedStyle = window.getComputedStyle(btn);
-      const minWidth = parseInt(computedStyle.minWidth, 10) || 0;
-      const minHeight = parseInt(computedStyle.minHeight, 10) || 0;
+      const minWidth = parseInt(computedStyle.minWidth) || 0;
+      const minHeight = parseInt(computedStyle.minHeight) || 0;
 
       if (minWidth < 44) btn.style.minWidth = '44px';
       if (minHeight < 44) btn.style.minHeight = '44px';
@@ -227,7 +227,7 @@ export class MobileWidgetService extends BaseService {
         } else {
           // Remove entirely if it's purely desktop instruction
           const parent = node.parentElement;
-          if (parent?.classList.contains('help-text')) {
+          if (parent && parent.classList.contains('help-text')) {
             parent.style.display = 'none';
           }
         }
@@ -250,7 +250,7 @@ export class MobileWidgetService extends BaseService {
 
     let node: Node | null = walker.nextNode();
     while (node !== null) {
-      if (node.textContent?.trim()) {
+      if (node.textContent && node.textContent.trim()) {
         textNodes.push(node as Text);
       }
       node = walker.nextNode();
@@ -372,7 +372,7 @@ export class MobileWidgetService extends BaseService {
 
     let combinedValue = '';
     stats.forEach((stat, index) => {
-      const _label = stat.querySelector('.widget-stat-label')?.textContent || '';
+      const label = stat.querySelector('.widget-stat-label')?.textContent || '';
       const value = stat.querySelector('.widget-stat-value')?.textContent || '';
 
       if (index > 0) combinedValue += ' • ';
@@ -468,9 +468,9 @@ export class MobileWidgetService extends BaseService {
       const textElements = widget.querySelectorAll('*');
       textElements.forEach((el) => {
         const element = el as HTMLElement;
-        const currentSize = parseInt(window.getComputedStyle(element).fontSize, 10);
+        const currentSize = parseInt(window.getComputedStyle(element).fontSize);
         if (currentSize > 10) {
-          element.style.fontSize = `${Math.max(9, currentSize - 2)}px`;
+          element.style.fontSize = Math.max(9, currentSize - 2) + 'px';
         }
       });
     }

@@ -4,9 +4,15 @@
  * ENHANCEMENT FIRST: Extends existing BaseService patterns
  */
 
+import { ConfigService } from '../core/app-config';
 import { BaseService } from '../core/base-service';
+import { Web3Service } from './web3-service';
 
 export class GameService extends BaseService {
+  constructor() {
+    super();
+  }
+
   protected async onInitialize(): Promise<void> {
     // Initialize game service
     this.safeEmit('service:initialized', {
@@ -24,11 +30,11 @@ export class GameService extends BaseService {
     // Implementation would go here
   }
 
-  public async updatePlayerStats(_stats: any): Promise<void> {
+  public async updatePlayerStats(stats: any): Promise<void> {
     // Implementation would go here
   }
 
-  public async claimReward(_reward: any): Promise<void> {
+  public async claimReward(reward: any): Promise<void> {
     // Implementation would go here
   }
 }

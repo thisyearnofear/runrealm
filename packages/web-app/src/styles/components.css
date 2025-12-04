@@ -6,30 +6,30 @@
 /* ===== WIDGET SYSTEM - ENHANCED ===== */
 
 .widget-system {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: var(--z-widgets);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  display: block;
-  visibility: visible;
-  opacity: 1;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  pointer-events: none !important;
+  z-index: var(--z-widgets) !important;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* Widget Zones */
 .widget-zone {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  pointer-events: none;
-  z-index: calc(var(--z-widgets) + 1);
-  max-width: 320px;
-  visibility: visible;
-  opacity: 1;
+  position: absolute !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--space-sm) !important;
+  pointer-events: none !important;
+  z-index: calc(var(--z-widgets) + 1) !important;
+  max-width: 320px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .widget-zone.top-left {
@@ -58,21 +58,21 @@
 
 /* Enhanced Widget Base Styles */
 .widget {
-  background: var(--widget-bg);
-  border: 2px solid var(--widget-border-color);
-  border-radius: var(--radius-lg);
-  backdrop-filter: blur(12px) saturate(1.2);
-  box-shadow: var(--widget-shadow);
-  pointer-events: auto;
-  transition: var(--widget-transition);
-  overflow: hidden;
-  max-width: 320px;
-  min-width: 200px;
-  z-index: calc(var(--z-widgets) + 2);
-  display: block;
-  visibility: visible;
-  opacity: 1;
-  position: relative;
+  background: var(--widget-bg) !important;
+  border: 2px solid var(--widget-border-color) !important;
+  border-radius: var(--radius-lg) !important;
+  backdrop-filter: blur(12px) saturate(1.2) !important;
+  box-shadow: var(--widget-shadow) !important;
+  pointer-events: auto !important;
+  transition: var(--widget-transition) !important;
+  overflow: hidden !important;
+  max-width: 320px !important;
+  min-width: 200px !important;
+  z-index: calc(var(--z-widgets) + 2) !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
 }
 
 .widget:hover {
@@ -83,27 +83,27 @@
 
 .widget.expanded {
   box-shadow: var(--widget-shadow-active);
-  z-index: calc(var(--z-widgets) + 3);
+  z-index: calc(var(--z-widgets) + 3) !important;
   filter: drop-shadow(0 0 20px rgba(0, 255, 0, 0.1));
 }
 
 /* Visibility classes */
 .widget.visible {
-  visibility: visible;
-  opacity: 1;
-  pointer-events: auto;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
   transition:
     opacity var(--animation-normal) ease,
-    visibility var(--animation-normal) ease;
+    visibility var(--animation-normal) ease !important;
 }
 
 .widget.hidden {
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
   transition:
     opacity var(--animation-normal) ease,
-    visibility var(--animation-normal) ease;
+    visibility var(--animation-normal) ease !important;
 }
 
 /* Enhanced Widget Header */
@@ -217,36 +217,36 @@
 
 /* Widget States - Enhanced */
 .widget-system .widget.minimized {
-  max-height: var(--widget-max-height-collapsed);
-  overflow: hidden;
+  max-height: var(--widget-max-height-collapsed) !important;
+  overflow: hidden !important;
 }
 
 .widget-system .widget.minimized .widget-content {
-  display: none;
-  opacity: 0;
-  transform: translateY(-10px);
-  pointer-events: none;
+  display: none !important;
+  opacity: 0 !important;
+  transform: translateY(-10px) !important;
+  pointer-events: none !important;
 }
 
 .widget-system .widget.expanded {
-  max-height: var(--widget-max-height-expanded);
-  overflow: visible;
+  max-height: var(--widget-max-height-expanded) !important;
+  overflow: visible !important;
   animation: expandIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .widget-system .widget.expanded .widget-content {
-  display: block;
-  opacity: 1;
-  transform: translateY(0);
+  display: block !important;
+  opacity: 1 !important;
+  transform: translateY(0) !important;
   transition:
     opacity 0.2s ease 0.1s,
-    transform 0.2s ease 0.1s;
-  pointer-events: auto;
+    transform 0.2s ease 0.1s !important;
+  pointer-events: auto !important;
 }
 
 .widget-system .widget.expanded .widget-header {
-  border-bottom-color: var(--widget-border-color-active);
-  background: var(--widget-header-bg-active);
+  border-bottom-color: var(--widget-border-color-active) !important;
+  background: var(--widget-header-bg-active) !important;
 }
 
 /* Enhanced Widget Animations */
@@ -592,7 +592,7 @@
 /* Enhanced Success States */
 .widget-success {
   animation: successCelebration 0.6s var(--animation-spring);
-  border-color: rgba(0, 255, 0, 0.8);
+  border-color: rgba(0, 255, 0, 0.8) !important;
   box-shadow:
     var(--elevation-3),
     0 0 20px var(--glow-success);
@@ -675,7 +675,7 @@
 @media (max-width: 768px) {
   .widget-zone {
     gap: 2px;
-    max-width: none;
+    max-width: none !important;
   }
 
   .widget-zone.top-left,
@@ -705,8 +705,8 @@
   }
 
   .widget {
-    max-width: 100%;
-    min-width: 120px;
+    max-width: 100% !important;
+    min-width: 120px !important;
     border-radius: var(--radius-md);
     backdrop-filter: blur(6px);
     transition: all 0.2s var(--animation-snappy);
@@ -717,12 +717,12 @@
   }
 
   .widget.minimized {
-    max-height: 32px;
-    min-height: 32px;
+    max-height: 32px !important;
+    min-height: 32px !important;
   }
 
   .widget.expanded {
-    max-height: 35vh;
+    max-height: 35vh !important;
     overflow-y: auto;
   }
 
@@ -799,15 +799,15 @@
 
 .widget.dragging {
   opacity: 0.9;
-  transform: scale(1.02);
+  transform: scale(1.02) !important;
   box-shadow:
     var(--elevation-5),
     0 0 40px var(--glow-primary);
-  z-index: 10000;
-  transition: none;
-  border-color: rgba(0, 255, 0, 0.6);
-  backdrop-filter: blur(15px);
-  will-change: transform;
+  z-index: 10000 !important;
+  transition: none !important;
+  border-color: rgba(0, 255, 0, 0.6) !important;
+  backdrop-filter: blur(15px) !important;
+  will-change: transform !important;
 }
 
 .widget-header {
@@ -820,14 +820,14 @@
 }
 
 .widget-header:active {
-  cursor: grabbing;
-  background: var(--widget-header-bg-active);
+  cursor: grabbing !important;
+  background: var(--widget-header-bg-active) !important;
   transform: translateY(1px);
 }
 
 .widget.dragging .widget-header {
-  cursor: grabbing;
-  background: var(--widget-header-bg-active);
+  cursor: grabbing !important;
+  background: var(--widget-header-bg-active) !important;
 }
 
 /* ===== TERRITORY VALUE DISPLAY ===== */
@@ -851,15 +851,15 @@
 
 /* ===== CHAIN TAG ENHANCEMENTS ===== */
 .chain-tag.recommended {
-  background: linear-gradient(135deg, #00ff88, #00cc6a);
-  color: #000;
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(0, 255, 136, 0.3);
+  background: linear-gradient(135deg, #00ff88, #00cc6a) !important;
+  color: #000 !important;
+  font-weight: bold !important;
+  box-shadow: 0 2px 8px rgba(0, 255, 136, 0.3) !important;
 }
 
 .chain-tag.recommended:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4) !important;
 }
 /* Territory Value Scoring */
 .territory-score {

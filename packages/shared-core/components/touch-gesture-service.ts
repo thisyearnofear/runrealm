@@ -26,6 +26,9 @@ export interface PinchEvent {
 
 export class TouchGestureService extends BaseService {
   private options: TouchGestureOptions;
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private touchStartTime = 0;
   private lastTapTime = 0;
   private lastTapX = 0;
   private lastTapY = 0;
@@ -81,7 +84,7 @@ export class TouchGestureService extends BaseService {
       // Long press detection
       if (callbacks.onLongPress) {
         longPressTimer = window.setTimeout(() => {
-          callbacks.onLongPress?.(e);
+          callbacks.onLongPress!(e);
         }, this.options.longPressThreshold);
       }
     };

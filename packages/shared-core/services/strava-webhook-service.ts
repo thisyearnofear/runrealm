@@ -191,6 +191,20 @@ export class StravaWebhookService extends BaseService {
   }
 
   /**
+   * Handle athlete deauthorization
+   */
+  private async handleDeauthorization(event: StravaWebhookEvent): Promise<void> {
+    if (event.object_type !== 'athlete') return;
+
+    console.log(`Athlete ${event.owner_id} deauthorized the app`);
+
+    this.safeEmit('strava:athlete:deauthorized', {
+      athleteId: event.owner_id,
+      eventTime: event.event_time,
+    });
+  }
+
+  /**
    * Delete webhook subscription (for cleanup)
    */
   async deleteSubscription(subscriptionId: number): Promise<void> {

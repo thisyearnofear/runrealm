@@ -82,7 +82,7 @@ if (typeof window !== 'undefined') {
         console.log('\n✅ Simulating cross-chain confirmation...');
         if (eventBus) {
           eventBus.emit('web3:crossChainTerritoryClaimed', {
-            hash: `0x${Math.random().toString(16).substr(2, 10)}`,
+            hash: '0x' + Math.random().toString(16).substr(2, 10),
             geohash: mockTerritory.geohash,
             originChainId: mockTerritory.originChainId,
           });

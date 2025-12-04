@@ -566,7 +566,7 @@ export class EnhancedRunControls extends BaseService {
     });
   }
 
-  private handleRunStarted(_data: any): void {
+  private handleRunStarted(data: any): void {
     this.isRecording = true;
     this.isPaused = false;
     this.startTime = Date.now();
@@ -585,7 +585,7 @@ export class EnhancedRunControls extends BaseService {
     }
   }
 
-  private handleRunPaused(_data: any): void {
+  private handleRunPaused(data: any): void {
     this.isRecording = false;
     this.isPaused = true;
     this.stopRealTimeUpdates();
@@ -593,7 +593,7 @@ export class EnhancedRunControls extends BaseService {
     this.showFeedback('⏸️ Run paused', 'info');
   }
 
-  private handleRunResumed(_data: any): void {
+  private handleRunResumed(data: any): void {
     this.isRecording = true;
     this.isPaused = false;
     this.startRealTimeUpdates();
@@ -634,7 +634,7 @@ export class EnhancedRunControls extends BaseService {
     }
   }
 
-  private handleRunCancelled(_data: any): void {
+  private handleRunCancelled(data: any): void {
     this.isRecording = false;
     this.isPaused = false;
     this.currentStats = null;
@@ -709,7 +709,7 @@ export class EnhancedRunControls extends BaseService {
     }
   }
 
-  private showTerritoryEligibleNotification(_data: any): void {
+  private showTerritoryEligibleNotification(data: any): void {
     this.showFeedback('🏆 Territory eligible! Complete your run to claim.', 'success');
     this.renderWidget(); // Re-render to show territory indicator
 

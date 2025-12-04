@@ -5,6 +5,7 @@
 
 // Type definitions for ethers
 import type { ethers as EthersType } from 'ethers';
+import type { Web3Config } from '../core/app-config';
 // Dynamically import ethers to reduce initial bundle size
 // import { ethers } from 'ethers';
 import { BaseService } from '../core/base-service';

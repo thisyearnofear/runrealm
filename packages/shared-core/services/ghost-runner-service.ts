@@ -1,4 +1,5 @@
 import { BaseService } from '../core/base-service';
+import { StorageAdapter } from '../utils/storage-adapter';
 import { AIService, GhostRunner } from './ai-service';
 import { RunTrackingService } from './run-tracking-service';
 
@@ -51,8 +52,8 @@ export class GhostRunnerService extends BaseService {
 
   async initialize(): Promise<void> {
     await super.initialize();
-    this.loadGhosts();
-    this.loadRealmBalance();
+    await this.loadGhosts();
+    await this.loadRealmBalance();
     this.setupEventListeners();
   }
 
@@ -61,29 +62,54 @@ export class GhostRunnerService extends BaseService {
     this.subscribe('territory:claimed', () => this.checkGhostUnlocks());
   }
 
-  private loadGhosts(): void {
-    const stored = localStorage.getItem('runrealm_ghosts');
-    if (stored) {
-      const data = JSON.parse(stored);
-      data.forEach((g: any) => {
-        g.lastRunDate = g.lastRunDate ? new Date(g.lastRunDate) : null;
-        g.cooldownUntil = g.cooldownUntil ? new Date(g.cooldownUntil) : null;
-        this.ghosts.set(g.id, g);
-      });
+  private async loadGhosts(): Promise<void> {
+    try {
+      const stored = await StorageAdapter.getItem('runrealm_ghosts');
+      if (stored) {
+        const data = JSON.parse(stored);
+        data.forEach((g: GhostRunnerNFT) => {
+          g.lastRunDate = g.lastRunDate ? new Date(g.lastRunDate) : null;
+          g.cooldownUntil = g.cooldownUntil ? new Date(g.cooldownUntil) : null;
+          this.ghosts.set(g.id, g);
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load ghosts:', error);
     }
   }
 
-  private saveGhosts(): void {
-    localStorage.setItem('runrealm_ghosts', JSON.stringify(Array.from(this.ghosts.values())));
+  private async saveGhosts(): Promise<void> {
+    try {
+      await StorageAdapter.setItem(
+        'runrealm_ghosts',
+        JSON.stringify(Array.from(this.ghosts.values()))
+      );
+    } catch (error) {
+      console.error('Failed to save ghosts:', error);
+    }
   }
 
-  private loadRealmBalance(): void {
-    const stored = localStorage.getItem('runrealm_realm_balance');
-    this.userRealmBalance = stored ? parseFloat(stored) : 0;
+  private async loadRealmBalance(): Promise<void> {
+    try {
+      const stored = await StorageAdapter.getItem('runrealm_realm_balance');
+      if (stored) {
+        const parsed = parseFloat(stored);
+        this.userRealmBalance = Number.isFinite(parsed) ? parsed : 0;
+      } else {
+        this.userRealmBalance = 0;
+      }
+    } catch (error) {
+      console.error('Failed to load realm balance:', error);
+      this.userRealmBalance = 0;
+    }
   }
 
-  private saveRealmBalance(): void {
-    localStorage.setItem('runrealm_realm_balance', this.userRealmBalance.toString());
+  private async saveRealmBalance(): Promise<void> {
+    try {
+      await StorageAdapter.setItem('runrealm_realm_balance', this.userRealmBalance.toString());
+    } catch (error) {
+      console.error('Failed to save realm balance:', error);
+    }
   }
 
   getGhosts(): GhostRunnerNFT[] {
@@ -123,7 +149,7 @@ export class GhostRunnerService extends BaseService {
     };
 
     this.ghosts.set(ghost.id, ghost);
-    this.saveGhosts();
+    await this.saveGhosts();
 
     this.safeEmit('ghost:unlocked', { ghost, reason });
     return ghost;
@@ -143,7 +169,7 @@ export class GhostRunnerService extends BaseService {
 
     // Deduct cost
     this.userRealmBalance -= ghost.deployCost;
-    this.saveRealmBalance();
+    await this.saveRealmBalance();
 
     // Simulate ghost run
     const ghostRun = await this.simulateGhostRun(ghost, territoryId);
@@ -156,7 +182,7 @@ export class GhostRunnerService extends BaseService {
     ghost.lastDeployedTerritory = territoryId;
 
     this.ghosts.set(ghostId, ghost);
-    this.saveGhosts();
+    await this.saveGhosts();
     this.ghostRuns.push(ghostRun);
 
     this.safeEmit('ghost:deployed', { ghost, territoryId });
@@ -174,13 +200,13 @@ export class GhostRunnerService extends BaseService {
     }
 
     this.userRealmBalance -= ghost.upgradeCost;
-    this.saveRealmBalance();
+    await this.saveRealmBalance();
 
     ghost.level++;
     ghost.pace *= 0.98; // 2% faster per level
 
     this.ghosts.set(ghostId, ghost);
-    this.saveGhosts();
+    await this.saveGhosts();
 
     this.safeEmit('ghost:upgraded', { ghost });
     return ghost;
@@ -240,11 +266,11 @@ export class GhostRunnerService extends BaseService {
     }
   }
 
-  private onRunCompleted(data: any): void {
+  private async onRunCompleted(data: any): Promise<void> {
     // Award REALM tokens for completing runs
     const realmEarned = Math.floor(data.distance / 50); // ~100 REALM for 5K
     this.userRealmBalance += realmEarned;
-    this.saveRealmBalance();
+    await this.saveRealmBalance();
 
     this.safeEmit('realm:earned', { amount: realmEarned, reason: 'run_completed' });
   }

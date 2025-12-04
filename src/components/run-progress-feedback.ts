@@ -39,7 +39,7 @@ export class RunProgressFeedback extends BaseService {
     });
   }
 
-  private getEncouragement(_km: number, pace: number): string {
+  private getEncouragement(km: number, pace: number): string {
     if (pace < 5) return 'Lightning fast! ⚡';
     if (pace < 7) return 'Great pace! 🏃‍♂️';
     return 'Keep it up! 💪';

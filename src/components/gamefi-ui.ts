@@ -4,6 +4,7 @@
  */
 
 import { BaseService } from '../core/base-service';
+import { EventBus } from '../core/event-bus';
 import { DOMService } from '../services/dom-service';
 
 export interface PlayerStats {
@@ -77,7 +78,7 @@ export class GameFiUI extends BaseService {
       this.updateRewardEstimate(data.totalDistance);
     });
 
-    this.subscribe('web3:walletConnected', (_data) => {
+    this.subscribe('web3:walletConnected', (data) => {
       // Let MainUI handle GameFi widgets visibility
       this.updatePlayerStats({ realmBalance: 0 } as any);
       this.safeEmit('ui:gamefiEnabled', { enabled: true });
@@ -108,6 +109,11 @@ export class GameFiUI extends BaseService {
    */
   // DEPRECATED: MainUI controls GameFi mode and widget rendering
   public disableGameFiMode(): void {
+    /* no-op */
+  }
+
+  // DEPRECATED: HUD visibility controlled by widgets and body class in MainUI
+  private hideGameFiHUD(): void {
     /* no-op */
   }
 

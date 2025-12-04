@@ -10,6 +10,7 @@ export class StatusManager {
   private locationService: LocationService;
   private widgetSystem: WidgetSystem;
   private widgetCreator: WidgetCreator;
+  private eventHandler: EventHandler;
 
   // GPS and Network status for location widget
   private gpsStatus: {
@@ -110,7 +111,7 @@ export class StatusManager {
    */
   updateLocationWidget(locationInfo?: any): void {
     // Update GPS status if location info is provided
-    if (locationInfo?.accuracy) {
+    if (locationInfo && locationInfo.accuracy) {
       this.gpsStatus = {
         available: true,
         accuracy: locationInfo.accuracy,

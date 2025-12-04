@@ -114,7 +114,6 @@ export class MobileMapAdapter {
   /**
    * Convert bounds to polygon coordinates
    */
-  // biome-ignore lint/suspicious/noExplicitAny: Bounds type is flexible
   private boundsToCoordinates(bounds: any): Array<{ latitude: number; longitude: number }> {
     return [
       { latitude: bounds.south, longitude: bounds.west },
@@ -169,8 +168,7 @@ export class MobileMapAdapter {
         coordinates,
         fillColor: 'rgba(0, 255, 136, 0.3)',
         strokeColor: '#00ff88',
-        // biome-ignore lint/suspicious/noExplicitAny: Metadata placeholder
-        metadata: {} as any,
+        metadata: {},
       },
     ];
     this.notifyListeners();
@@ -224,7 +222,7 @@ export class MobileMapAdapter {
         status: intent.status,
         expiresAt: intent.expiresAt,
         estimatedDistance: intent.estimatedDistance,
-      } as any,
+      },
     });
     this.notifyListeners();
   }
@@ -292,7 +290,6 @@ export class MobileMapAdapter {
   /**
    * Draw suggested route
    */
-  // biome-ignore lint/suspicious/noExplicitAny: Points type is flexible
   public drawSuggestedRoute(points: any[]): void {
     // Update MapService
     this.mapService.drawSuggestedRoute(points);
@@ -336,6 +333,15 @@ export class MobileMapAdapter {
    */
   public getState(): MobileMapState {
     return { ...this.state };
+  }
+
+  /**
+   * Handle territory preview event from MapService
+   */
+  private handleTerritoryPreview(data: any): void {
+    // Emit mobile-specific event or update state
+    // This allows mobile UI to react to territory selection
+    console.log('Territory preview:', data);
   }
 
   /**
