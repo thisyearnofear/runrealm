@@ -4,7 +4,7 @@
  * Simple Mapbox Token Test
  */
 
-const https = require('node:https');
+const https = require('https');
 require('dotenv').config();
 
 const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN;

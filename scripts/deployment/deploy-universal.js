@@ -1,6 +1,6 @@
 const hre = require('hardhat');
-const fs = require('node:fs');
-const path = require('node:path');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * ENHANCED DEPLOYMENT SCRIPT - ZetaChain Universal Contract
@@ -204,7 +204,7 @@ class UniversalDeployer {
       if (this.network.chainId === 7001n) {
         this.log('Testing territory minting...');
         const tx = await universal.mintTerritory(
-          `test${Date.now()}`, // unique geohash
+          'test' + Date.now(), // unique geohash
           25, // difficulty
           500, // distance
           ['Test Landmark'] // landmarks
@@ -350,7 +350,7 @@ async function main() {
 
 // CLEAN: Error handling
 main()
-  .then((_record) => {
+  .then((record) => {
     console.log('\n✨ RunRealm is ready for cross-chain territory gaming!');
     process.exit(0);
   })

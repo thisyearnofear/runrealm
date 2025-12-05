@@ -28,11 +28,11 @@ const loadAsyncStorage = (): any => {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const module = require(moduleName);
       return module?.default || module;
-    } catch (_e) {
+    } catch (e) {
       // Expected in web environments or if ignored by webpack
       return null;
     }
-  } catch (_e) {
+  } catch (e) {
     // Expected in web environments - silently fail
     return null;
   }
@@ -144,7 +144,7 @@ export const StorageAdapter = {
     if (typeof localStorage !== 'undefined') {
       try {
         return localStorage.getItem(key);
-      } catch (_e) {
+      } catch (e) {
         return null;
       }
     } else {
@@ -176,7 +176,7 @@ export const StorageAdapter = {
     if (typeof localStorage !== 'undefined') {
       try {
         localStorage.setItem(key, value);
-      } catch (_e) {
+      } catch (e) {
         // Ignore errors
       }
     } else {
@@ -206,7 +206,7 @@ export const StorageAdapter = {
     if (typeof localStorage !== 'undefined') {
       try {
         localStorage.removeItem(key);
-      } catch (_e) {
+      } catch (e) {
         // Ignore errors
       }
     } else {

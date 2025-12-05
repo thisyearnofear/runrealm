@@ -18,6 +18,7 @@ export interface ToastOptions {
 export class UIService {
   private static instance: UIService;
   private domService: DOMService;
+  private animationService: AnimationService;
   private toastContainer: HTMLElement | null = null;
   private celebrationEffects: HTMLElement[] = [];
   private contextualMessages = {
@@ -512,7 +513,7 @@ export class UIService {
   }
 
   public cleanup(): void {
-    if (this.toastContainer?.parentElement) {
+    if (this.toastContainer && this.toastContainer.parentElement) {
       this.toastContainer.parentElement.removeChild(this.toastContainer);
     }
 

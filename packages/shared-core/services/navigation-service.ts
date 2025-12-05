@@ -274,14 +274,14 @@ export class NavigationService extends BaseService {
         icon: '🏃',
         title: 'Start Run',
         action: () =>
-          this.eventBus.emit('run:startRequested', { runId: `quick-action-${Date.now()}` }),
+          this.eventBus.emit('run:startRequested', { runId: 'quick-action-' + Date.now() }),
       },
       {
         id: 'claim-territory',
         icon: '🗺️',
         title: 'Claim Territory',
         action: () =>
-          this.eventBus.emit('territory:claimRequested', { runId: `quick-action-${Date.now()}` }),
+          this.eventBus.emit('territory:claimRequested', { runId: 'quick-action-' + Date.now() }),
       },
       {
         id: 'ai-route',

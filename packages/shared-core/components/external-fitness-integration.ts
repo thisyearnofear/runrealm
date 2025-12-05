@@ -4,9 +4,9 @@ import { ExternalActivity } from '../services/run-tracking-service';
 
 export class ExternalFitnessIntegration extends BaseService {
   private container: HTMLElement;
+  private isVisible = false;
   private fitnessService: ExternalFitnessService;
   private currentPage = 1;
-  private isVisible = false;
 
   constructor(container: HTMLElement) {
     super();
@@ -90,7 +90,6 @@ export class ExternalFitnessIntegration extends BaseService {
   }
 
   public show(): void {
-    if (this.isVisible) return;
     const portal = this.container.querySelector('.fitness-portal') as HTMLElement;
     portal.style.display = 'flex';
 
@@ -103,7 +102,6 @@ export class ExternalFitnessIntegration extends BaseService {
   }
 
   public hide(): void {
-    if (!this.isVisible) return;
     const portal = this.container.querySelector('.fitness-portal') as HTMLElement;
     portal.classList.remove('portal-active');
 
@@ -148,7 +146,7 @@ export class ExternalFitnessIntegration extends BaseService {
               stravaCard.classList.remove('connecting');
             }
           }
-        } catch (_error) {
+        } catch (error) {
           // Ignore cross-origin errors
         }
       }, 1000);
@@ -377,6 +375,17 @@ export class ExternalFitnessIntegration extends BaseService {
       btnText.textContent = 'Preview Failed';
       previewBtn.classList.remove('loading');
     }
+  }
+
+  private showSuccessAnimation(button: HTMLElement): void {
+    // Create sparkle effect
+    const sparkles = document.createElement('div');
+    sparkles.className = 'success-sparkles';
+    sparkles.innerHTML = '✨✨✨';
+
+    button.parentElement?.appendChild(sparkles);
+
+    setTimeout(() => sparkles.remove(), 2000);
   }
 
   private showError(message: string): void {

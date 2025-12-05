@@ -6,6 +6,7 @@
 import type { Map as MapboxMap } from 'mapbox-gl';
 import { BaseService } from '../core/base-service';
 import { GhostRunner } from './ai-service';
+import { RunPoint } from './run-tracking-service';
 
 export interface AnimationConfig {
   duration?: number;
@@ -29,6 +30,10 @@ export class AnimationService extends BaseService {
       return 2 ** (-10 * t) * Math.sin(((t - p / 4) * (2 * Math.PI)) / p) + 1;
     },
   };
+
+  constructor() {
+    super();
+  }
 
   static getInstance(): AnimationService {
     if (!AnimationService.instance) {
@@ -404,7 +409,7 @@ export class AnimationService extends BaseService {
 
     // Create marker using Mapbox
     const mapboxgl = (window as any).mapboxgl;
-    if (mapboxgl?.Marker) {
+    if (mapboxgl && mapboxgl.Marker) {
       this.userLocationMarker = new mapboxgl.Marker({
         element: markerElement,
         anchor: 'center',
@@ -518,7 +523,7 @@ export class AnimationService extends BaseService {
         const pointsToShow = Math.floor(progress * totalPoints);
 
         // Update the source with progressively more coordinates
-        if (this.map?.getSource('ai-route-source')) {
+        if (this.map && this.map.getSource('ai-route-source')) {
           const partialCoordinates = coordinates.slice(0, Math.max(2, pointsToShow));
 
           (this.map.getSource('ai-route-source') as any).setData({
@@ -538,7 +543,7 @@ export class AnimationService extends BaseService {
           requestAnimationFrame(animate);
         } else {
           // Ensure all coordinates are shown
-          if (this.map?.getSource('ai-route-source')) {
+          if (this.map && this.map.getSource('ai-route-source')) {
             (this.map.getSource('ai-route-source') as any).setData({
               type: 'Feature',
               properties: {
@@ -583,7 +588,7 @@ export class AnimationService extends BaseService {
   /**
    * Visualize AI waypoints on the map with interactive popups
    */
-  public setAIWaypoints(waypoints: any[], _metadata: any): void {
+  public setAIWaypoints(waypoints: any[], metadata: any): void {
     if (!this.map || !waypoints || waypoints.length === 0) {
       console.warn('AnimationService: Invalid waypoints for visualization');
       return;
@@ -711,7 +716,7 @@ export class AnimationService extends BaseService {
       const pointsToShow = Math.floor(progress * totalPoints);
 
       // Update the source with progressively more coordinates
-      if (this.map?.getSource('planned-route-source')) {
+      if (this.map && this.map.getSource('planned-route-source')) {
         const partialCoordinates = coordinates.slice(0, Math.max(2, pointsToShow));
 
         (this.map.getSource('planned-route-source') as any).setData({
@@ -731,7 +736,7 @@ export class AnimationService extends BaseService {
         requestAnimationFrame(animate);
       } else {
         // Ensure all coordinates are shown
-        if (this.map?.getSource('planned-route-source')) {
+        if (this.map && this.map.getSource('planned-route-source')) {
           (this.map.getSource('planned-route-source') as any).setData({
             type: 'Feature',
             properties: {
@@ -754,7 +759,7 @@ export class AnimationService extends BaseService {
   /**
    * Add interactive popups to waypoints
    */
-  private addWaypointPopups(_waypoints: any[]): void {
+  private addWaypointPopups(waypoints: any[]): void {
     if (!this.map) return;
 
     // Create popup element
@@ -833,11 +838,11 @@ export class AnimationService extends BaseService {
   }
 
   // Placeholder methods to satisfy type checking
-  public readdRunToMap(_run: any): void {
+  public readdRunToMap(run: any): void {
     // Implementation would go here
   }
 
-  public animateSegment(_segment: any): void {
+  public animateSegment(segment: any): void {
     // Implementation would go here
   }
 

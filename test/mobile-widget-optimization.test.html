@@ -218,8 +218,8 @@
             const viewport = document.getElementById('viewport');
             const sizeIndicator = document.getElementById('sizeIndicator');
             
-            viewport.style.width = `${width}px`;
-            viewport.style.height = `${height}px`;
+            viewport.style.width = width + 'px';
+            viewport.style.height = height + 'px';
             sizeIndicator.textContent = `${width} x ${height}`;
             
             // Apply different CSS classes based on size
@@ -250,7 +250,7 @@
             }
         }
         
-        function _testAutoHide() {
+        function testAutoHide() {
             // Expand one widget, minimize others
             const widgets = document.querySelectorAll('.widget');
             widgets.forEach((widget, index) => {
@@ -266,7 +266,7 @@
             });
         }
         
-        function _testCompactMode() {
+        function testCompactMode() {
             compactMode = !compactMode;
             const widgets = document.querySelectorAll('.widget');
             

@@ -33,6 +33,10 @@ export class LocationService extends BaseService {
   private watchId: number | null = null;
   private locationModal: HTMLElement | null = null;
 
+  constructor() {
+    super();
+  }
+
   protected async onInitialize(): Promise<void> {
     // Initialize dependencies
     this.geocodingService = new (await import('../geocoding-service')).GeocodingService(
@@ -122,8 +126,6 @@ export class LocationService extends BaseService {
   public async searchLocations(query: string): Promise<LocationSearchResult[]> {
     try {
       const results = await this.geocodingService?.searchPlaces(query, 10);
-      if (!results) return [];
-
       return results.map((result) => ({
         name: result.name,
         lat: result.center[1],
@@ -156,28 +158,16 @@ export class LocationService extends BaseService {
    * Show location selection modal
    */
   public showLocationModal(): void {
-    // Ensure domService is available
-    if (!this.domService) {
-      console.error('LocationService: DOMService not available, cannot show modal');
-      return;
-    }
-
     if (!this.locationModal) {
       this.createLocationModal();
     }
 
-    // Double-check modal was created successfully
-    if (!this.locationModal) {
-      console.error('LocationService: Failed to create location modal');
-      return;
-    }
-
-    this.locationModal.style.display = 'flex';
+    this.locationModal!.style.display = 'flex';
     document.body.classList.add('modal-open');
 
     // Focus first focusable element in modal
     setTimeout(() => {
-      const firstFocusable = this.locationModal?.querySelector(
+      const firstFocusable = this.locationModal!.querySelector(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       ) as HTMLElement;
       if (firstFocusable) {
@@ -252,17 +242,15 @@ export class LocationService extends BaseService {
     this.currentLocation = locationInfo;
 
     // Save to preferences
-    if (this.preferenceService) {
-      this.preferenceService.saveCurrentFocus(
-        {
-          coords: {
-            latitude: locationInfo.lat,
-            longitude: locationInfo.lng,
-          },
-        } as GeolocationPosition,
-        13 // Default zoom
-      );
-    }
+    this.preferenceService.saveCurrentFocus(
+      {
+        coords: {
+          latitude: locationInfo.lat,
+          longitude: locationInfo.lng,
+        },
+      } as GeolocationPosition,
+      13 // Default zoom
+    );
 
     // Update location marker on map if AnimationService is available
     try {
@@ -279,8 +267,6 @@ export class LocationService extends BaseService {
   }
 
   private async loadLastKnownLocation(): Promise<void> {
-    if (!this.preferenceService) return;
-
     const lastFocus = this.preferenceService.getLastOrDefaultFocus();
 
     this.currentLocation = {
@@ -405,7 +391,7 @@ export class LocationService extends BaseService {
         gpsBtn.textContent = '🛰️ Use GPS Location';
         gpsBtn.disabled = false;
       } catch (error) {
-        alert(`Failed to get GPS location: ${(error as Error).message}`);
+        alert(`Failed to get GPS location: ${error.message}`);
         const gpsBtn = document.getElementById('use-gps-btn') as HTMLButtonElement;
         gpsBtn.textContent = '🛰️ Use GPS Location';
         gpsBtn.disabled = false;
@@ -493,7 +479,7 @@ export class LocationService extends BaseService {
       .join('');
 
     // Add click handlers for results
-    this.domService?.delegate(resultsContainer, '.search-result-item', 'click', (event) => {
+    this.domService.delegate(resultsContainer, '.search-result-item', 'click', (event) => {
       const item = event.currentTarget as HTMLElement;
       const lat = parseFloat(item.dataset.lat!);
       const lng = parseFloat(item.dataset.lng!);

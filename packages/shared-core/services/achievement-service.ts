@@ -183,7 +183,7 @@ export class AchievementService extends BaseService {
         category: 'running',
         rarity: 'rare',
         reward: { realm: 30, xp: 150 },
-        condition: (_stats, runData) => runData?.territoryEligible === true,
+        condition: (stats, runData) => runData?.territoryEligible === true,
       },
       {
         id: 'early_bird',
@@ -193,7 +193,7 @@ export class AchievementService extends BaseService {
         category: 'milestone',
         rarity: 'common',
         reward: { realm: 15, xp: 75 },
-        condition: (_stats, runData) => {
+        condition: (stats, runData) => {
           if (!runData) return false;
           const runHour = new Date(runData.startTime).getHours();
           return runHour < 7;
@@ -205,6 +205,55 @@ export class AchievementService extends BaseService {
   private setupEventListeners(): void {
     // Note: Achievement checking is handled externally by calling checkAchievements()
     // after runs and territory claims in the mobile app
+  }
+
+  private updateStatsFromRun(run: RunSession): void {
+    this.userStats.totalRuns++;
+    this.userStats.totalDistance += run.totalDistance;
+    this.userStats.totalDuration += run.totalDuration;
+
+    if (run.totalDistance > this.userStats.longestRun) {
+      this.userStats.longestRun = run.totalDistance;
+    }
+
+    if (run.averageSpeed > this.userStats.fastestPace) {
+      this.userStats.fastestPace = run.averageSpeed;
+    }
+
+    // Update streak (simplified - would need proper date tracking)
+    this.userStats.currentStreak++;
+    if (this.userStats.currentStreak > this.userStats.bestStreak) {
+      this.userStats.bestStreak = this.userStats.currentStreak;
+    }
+
+    this.saveUserStats();
+  }
+
+  private checkAchievements(runData?: RunSession): void {
+    const newlyUnlocked: Achievement[] = [];
+
+    for (const achievement of this.achievements) {
+      if (!this.unlockedAchievements.has(achievement.id)) {
+        if (achievement.condition(this.userStats, runData)) {
+          achievement.unlockedAt = Date.now();
+          this.unlockedAchievements.add(achievement.id);
+          newlyUnlocked.push(achievement);
+
+          // Award rewards
+          this.userStats.totalRealm += achievement.reward.realm;
+          this.userStats.totalXP += achievement.reward.xp;
+
+          // Level up logic (simplified)
+          this.userStats.level = Math.floor(this.userStats.totalXP / 1000) + 1;
+        }
+      }
+    }
+
+    if (newlyUnlocked.length > 0) {
+      this.saveUserProgress();
+      // Note: Achievement notifications are handled by the mobile app
+      // which polls for new achievements after runs/territory claims
+    }
   }
 
   public getAchievements(): Achievement[] {
@@ -226,16 +275,7 @@ export class AchievementService extends BaseService {
         (achievement) => achievement.progress && !this.unlockedAchievements.has(achievement.id)
       )
       .map((achievement) => {
-        const progress = achievement.progress?.(this.userStats);
-        if (!progress) {
-          // Should not happen since we filtered for achievements with progress
-          return {
-            achievementId: achievement.id,
-            current: 0,
-            target: 1,
-            percentage: 0,
-          };
-        }
+        const progress = achievement.progress!(this.userStats);
         return {
           achievementId: achievement.id,
           current: progress.current,
@@ -260,5 +300,21 @@ export class AchievementService extends BaseService {
     } catch (error) {
       console.warn('Failed to load achievement progress:', error);
     }
+  }
+
+  private saveUserProgress(): void {
+    try {
+      const data = {
+        unlocked: Array.from(this.unlockedAchievements),
+        stats: this.userStats,
+      };
+      localStorage.setItem('runrealm_achievements', JSON.stringify(data));
+    } catch (error) {
+      console.warn('Failed to save achievement progress:', error);
+    }
+  }
+
+  private saveUserStats(): void {
+    this.saveUserProgress();
   }
 }

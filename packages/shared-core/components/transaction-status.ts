@@ -102,7 +102,7 @@ export class TransactionStatus extends BaseService {
       'territory:claimStarted',
       (data: { territoryId: string; territoryName: string }) => {
         this.addTransaction({
-          hash: `pending_${Date.now()}`,
+          hash: 'pending_' + Date.now(),
           type: 'territory_claim',
           status: 'pending',
           timestamp: Date.now(),

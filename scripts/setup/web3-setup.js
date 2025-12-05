@@ -5,8 +5,8 @@
  * Initializes the RunRealm project for Web3 development
  */
 
-const fs = require('node:fs');
-const path = require('node:path');
+const fs = require('fs');
+const path = require('path');
 
 console.log('🚀 Setting up RunRealm Web3 development environment...\n');
 

@@ -22,7 +22,7 @@ window.addEventListener(
   (event) => {
     if (event.target && (event.target as any).tagName === 'SCRIPT') {
       const script = event.target as HTMLScriptElement;
-      if (script.src?.includes('.js')) {
+      if (script.src && script.src.includes('.js')) {
         console.warn('Script failed to load:', script.src);
 
         // If it's a main app script and we're in production, try cache bust
@@ -132,7 +132,7 @@ async function initializeApp(): Promise<void> {
       // Expose widget system debug utilities
       (window as any).debugWidgets = () => {
         const mainUI = (app as any).mainUI;
-        if (mainUI?.widgetSystem) {
+        if (mainUI && mainUI.widgetSystem) {
           console.log('Widget System Debug Info:', mainUI.widgetSystem.getDebugInfo());
           return mainUI.widgetSystem.getDebugInfo();
         }
@@ -250,7 +250,7 @@ async function initializeApp(): Promise<void> {
             console.log('\n✅ Simulating cross-chain confirmation...');
             if (eventBus) {
               eventBus.emit('web3:crossChainTerritoryClaimed', {
-                hash: `0x${Math.random().toString(16).substr(2, 10)}`,
+                hash: '0x' + Math.random().toString(16).substr(2, 10),
                 geohash: mockTerritory.geohash,
                 originChainId: mockTerritory.originChainId,
               });

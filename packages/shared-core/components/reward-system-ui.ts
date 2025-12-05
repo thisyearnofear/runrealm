@@ -160,7 +160,7 @@ export class RewardSystemUI extends BaseService {
     // Listen for reward-related events
     this.subscribe(
       'territory:claimed',
-      (_data: {
+      (data: {
         territory: any;
         transactionHash: string;
         isCrossChain?: boolean;
@@ -414,7 +414,7 @@ export class RewardSystemUI extends BaseService {
 
       // Emit transaction started event
       this.safeEmit('web3:transactionSubmitted', {
-        hash: `claim_${Date.now()}`,
+        hash: 'claim_' + Date.now(),
         type: 'reward_claim',
       });
 
@@ -426,7 +426,7 @@ export class RewardSystemUI extends BaseService {
 
         // Emit success
         this.safeEmit('web3:transactionConfirmed', {
-          hash: `claim_${Date.now()}`,
+          hash: 'claim_' + Date.now(),
           blockNumber: 12345,
         });
 
@@ -537,8 +537,8 @@ export class RewardSystemUI extends BaseService {
 
       // Simulate unstaking transaction
       setTimeout(() => {
-        const unstakedAmount = this.stakingInfo?.amount || 0;
-        const pendingReward = this.stakingInfo?.pendingReward || 0;
+        const unstakedAmount = this.stakingInfo!.amount;
+        const pendingReward = this.stakingInfo!.pendingReward;
 
         // Update data
         this.rewardData.stakedAmount = 0;
@@ -724,9 +724,9 @@ export class RewardSystemUI extends BaseService {
 
   private formatTokenAmount(amount: number): string {
     if (amount >= 1000000) {
-      return `${(amount / 1000000).toFixed(1)}M`;
+      return (amount / 1000000).toFixed(1) + 'M';
     } else if (amount >= 1000) {
-      return `${(amount / 1000).toFixed(1)}K`;
+      return (amount / 1000).toFixed(1) + 'K';
     } else if (amount >= 1) {
       return amount.toFixed(1);
     } else {

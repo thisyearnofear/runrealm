@@ -3,8 +3,8 @@
  * Tests critical application initialization without browser dependencies
  */
 
-const fs = require('node:fs');
-const path = require('node:path');
+const fs = require('fs');
+const path = require('path');
 
 console.log('🧪 RunRealm Runtime Validation');
 console.log('==============================');
@@ -128,7 +128,7 @@ if (mainJsContent.includes('undefined is not an object')) {
 }
 
 // Check if source maps exist for debugging
-const sourceMapExists = fs.existsSync(`${mainJsPath}.map`);
+const sourceMapExists = fs.existsSync(mainJsPath + '.map');
 if (!sourceMapExists) {
   potentialIssues.push('No source map found - debugging will be difficult');
 }

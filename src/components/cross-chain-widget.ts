@@ -159,7 +159,7 @@ export class CrossChainWidget {
     });
 
     this.eventBus.on('crosschain:territoryClaimFailed', (data: any) => {
-      this.showStatus(`Cross-chain territory claim failed: ${data.error}`, 'error');
+      this.showStatus('Cross-chain territory claim failed: ' + data.error, 'error');
       this.logActivity({
         type: 'claimFailed',
         timestamp: Date.now(),
@@ -177,7 +177,7 @@ export class CrossChainWidget {
     });
 
     this.eventBus.on('web3:crossChainTerritoryClaimFailed', (data: any) => {
-      this.showStatus(`Territory claim failed: ${data.error}`, 'error');
+      this.showStatus('Territory claim failed: ' + data.error, 'error');
       this.logActivity({
         type: 'claimFailed',
         timestamp: Date.now(),
@@ -283,14 +283,14 @@ export class CrossChainWidget {
     const chainNameEl = document.getElementById('current-chain-name');
     if (!chainNameEl) return;
 
-    if (this.web3Service?.isConnected()) {
+    if (this.web3Service && this.web3Service.isConnected()) {
       const wallet = this.web3Service.getCurrentWallet();
       if (wallet) {
         const chainName =
           this.getCrossChainService()?.getChainName(wallet.chainId) ||
           `Unknown Chain (${wallet.chainId})`;
         chainNameEl.textContent = chainName;
-        chainNameEl.className = `value chain-${wallet.chainId}`;
+        chainNameEl.className = 'value chain-' + wallet.chainId;
       } else {
         chainNameEl.textContent = 'Not connected';
       }
@@ -330,6 +330,14 @@ export class CrossChainWidget {
     if (historyBtn) historyBtn.disabled = false;
   }
 
+  private disableActions(): void {
+    const claimBtn = document.getElementById('claim-cross-chain-territory') as HTMLButtonElement;
+    const historyBtn = document.getElementById('view-cross-chain-history') as HTMLButtonElement;
+
+    if (claimBtn) claimBtn.disabled = true;
+    if (historyBtn) historyBtn.disabled = true;
+  }
+
   private async handleClaimCrossChainTerritory(): Promise<void> {
     try {
       // Check if we have a territory to claim
@@ -358,7 +366,7 @@ export class CrossChainWidget {
       this.showStatus('Initiating cross-chain territory claim...', 'processing');
     } catch (error) {
       console.error('CrossChainWidget: Failed to claim territory:', error);
-      this.showStatus(`Failed to initiate cross-chain claim: ${(error as Error).message}`, 'error');
+      this.showStatus('Failed to initiate cross-chain claim: ' + (error as Error).message, 'error');
     }
   }
 

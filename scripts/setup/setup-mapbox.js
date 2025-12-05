@@ -5,9 +5,9 @@
  * Helps users configure their Mapbox access token
  */
 
-const fs = require('node:fs');
-const path = require('node:path');
-const readline = require('node:readline');
+const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
 
 const rl = readline.createInterface({
   input: process.stdin,

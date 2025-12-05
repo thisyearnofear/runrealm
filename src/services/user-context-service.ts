@@ -1,4 +1,5 @@
 import { BaseService } from '../core/base-service';
+import { PreferenceService } from '../preference-service';
 
 export interface UserProfile {
   fitnessLevel: 'beginner' | 'intermediate' | 'advanced';
@@ -11,6 +12,7 @@ export interface UserProfile {
 
 export class UserContextService extends BaseService {
   private static instance: UserContextService;
+  private preferenceService = new PreferenceService();
 
   public static getInstance(): UserContextService {
     if (!UserContextService.instance) {

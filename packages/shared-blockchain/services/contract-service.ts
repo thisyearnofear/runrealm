@@ -54,9 +54,7 @@ export class ContractService extends BaseService {
   private web3Service: Web3Service;
   private userContextService: UserContextService;
 
-  // biome-ignore lint/suspicious/noExplicitAny: Contract instance is complex
   private universalContract: any = null;
-  // biome-ignore lint/suspicious/noExplicitAny: Contract instance is complex
   private realmTokenContract: any = null;
 
   constructor(web3Service: Web3Service) {
@@ -217,7 +215,6 @@ export class ContractService extends BaseService {
         let tokenId = null;
         try {
           // Look for TerritoryCreated event
-          // biome-ignore lint/suspicious/noExplicitAny: Log object is complex
           const territoryCreatedEvent = receipt.logs.find((log: any) => {
             try {
               const parsed = this.universalContract.interface.parseLog(log);
@@ -343,7 +340,6 @@ export class ContractService extends BaseService {
    * when a cross-chain message is received
    */
   public async processCrossChainMessage(
-    // biome-ignore lint/suspicious/noExplicitAny: Context is complex
     context: any,
     zrc20: string,
     amount: number,
@@ -418,7 +414,6 @@ export class ContractService extends BaseService {
         await this.universalContract[CONTRACT_METHODS.universal.getPlayerTerritories](
           targetAddress
         );
-      // biome-ignore lint/suspicious/noExplicitAny: ID is a BigNumber
       return tokenIds.map((id: any) => Number(id));
     } catch (error) {
       console.error('ContractService: Failed to get territories:', error);

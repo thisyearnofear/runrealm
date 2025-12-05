@@ -24,11 +24,11 @@ const TerritoryMapView: React.FC<TerritoryMapViewProps> = React.memo(
   ({ mapAdapter, onMapPress, onTerritoryPress, showUserLocation = true, followUser = false }) => {
     const mapRef = useRef<MapView>(null);
     const [mapState, setMapState] = useState<MobileMapState>(mapAdapter.getState());
+    // Default location (San Francisco) - map will show immediately
     const [userLocation, setUserLocation] = useState<{
       latitude: number;
       longitude: number;
     } | null>(null);
-    const [loading, setLoading] = useState(true);
     const [permissionDenied, setPermissionDenied] = useState(false);
 
     // Subscribe to map adapter state changes
@@ -40,19 +40,56 @@ const TerritoryMapView: React.FC<TerritoryMapViewProps> = React.memo(
       return unsubscribe;
     }, [mapAdapter]);
 
-    // Request location permissions and get initial location
+    // Request location permissions and get initial location (non-blocking)
     useEffect(() => {
       (async () => {
         try {
+          // Check existing permission first (faster)
+          const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+
+          if (existingStatus === 'granted') {
+            // Permission already granted, get location immediately
+            try {
+              const currentLocation = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+                maximumAge: 5000, // Use cached location if available (5 seconds)
+              });
+
+              const location = {
+                latitude: currentLocation.coords.latitude,
+                longitude: currentLocation.coords.longitude,
+              };
+
+              setUserLocation(location);
+
+              // Center map on user location
+              if (mapRef.current) {
+                mapRef.current.animateToRegion(
+                  {
+                    ...location,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  },
+                  1000
+                );
+              }
+            } catch (error) {
+              console.warn('Error getting location:', error);
+              // Continue without location - map still shows
+            }
+            return;
+          }
+
+          // Request permission (non-blocking - map already showing)
           const { status } = await Location.requestForegroundPermissionsAsync();
 
           if (status !== 'granted') {
             console.warn('Location permission denied');
             setPermissionDenied(true);
-            setLoading(false);
-            return;
+            return; // Don't set loading to false - map is already showing
           }
 
+          // Get location after permission granted
           const currentLocation = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Balanced,
           });
@@ -63,7 +100,6 @@ const TerritoryMapView: React.FC<TerritoryMapViewProps> = React.memo(
           };
 
           setUserLocation(location);
-          setLoading(false);
 
           // Center map on user location
           if (mapRef.current) {
@@ -78,7 +114,7 @@ const TerritoryMapView: React.FC<TerritoryMapViewProps> = React.memo(
           }
         } catch (error) {
           console.error('Error getting location:', error);
-          setLoading(false);
+          // Continue without location - map still shows
         }
       })();
     }, []);
@@ -143,27 +179,8 @@ const TerritoryMapView: React.FC<TerritoryMapViewProps> = React.memo(
       [onTerritoryPress]
     );
 
-    if (loading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4CAF50" />
-          <Text style={styles.loadingText}>Loading map...</Text>
-        </View>
-      );
-    }
-
-    if (permissionDenied) {
-      return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>📍</Text>
-          <Text style={styles.errorTitle}>Location Permission Required</Text>
-          <Text style={styles.errorText}>
-            RunRealm needs location access to show your position and track runs. Please enable
-            location permissions in Settings.
-          </Text>
-        </View>
-      );
-    }
+    // Show permission denied as overlay, not blocking the map
+    // Map will still render, just without user location
 
     const initialRegion = userLocation
       ? {
@@ -286,6 +303,14 @@ const TerritoryMapView: React.FC<TerritoryMapViewProps> = React.memo(
             </Text>
           </View>
         )}
+
+        {/* Permission denied overlay (non-blocking) */}
+        {permissionDenied && (
+          <View style={styles.permissionOverlay}>
+            <Text style={styles.permissionIcon}>📍</Text>
+            <Text style={styles.permissionText}>Location permission needed for tracking</Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -353,6 +378,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     textAlign: 'center',
+  },
+  permissionOverlay: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(255, 193, 7, 0.95)',
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  permissionIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  permissionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
   },
 });
 

@@ -382,17 +382,17 @@
   .widget-button,
   .widget-header,
   .widget-icon {
-    transition: none;
-    animation: none;
+    transition: none !important;
+    animation: none !important;
   }
 
   .widget:hover,
   .widget-button:hover {
-    transform: none;
+    transform: none !important;
   }
 
   .widget-header:hover .widget-icon {
-    transform: none;
+    transform: none !important;
   }
 }
 
@@ -438,20 +438,20 @@
   .main-header,
   .floating-action-btn,
   .notifications-container {
-    display: none;
+    display: none !important;
   }
 
   /* Optimize map for printing */
   #mapbox-container {
-    position: static;
-    height: 400px;
-    width: 100%;
+    position: static !important;
+    height: 400px !important;
+    width: 100% !important;
   }
 
   /* Print-friendly colors */
   body {
-    background: white;
-    color: black;
+    background: white !important;
+    color: black !important;
   }
 }
 
@@ -553,7 +553,7 @@
 
 @media (max-width: 767px) {
   .hide-mobile {
-    display: none;
+    display: none !important;
   }
   .show-mobile {
     display: block;
@@ -562,7 +562,7 @@
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .hide-tablet {
-    display: none;
+    display: none !important;
   }
   .show-tablet {
     display: block;
@@ -571,7 +571,7 @@
 
 @media (min-width: 1024px) {
   .hide-desktop {
-    display: none;
+    display: none !important;
   }
   .show-desktop {
     display: block;

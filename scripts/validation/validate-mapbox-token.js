@@ -5,7 +5,7 @@
  * Tests if your Mapbox token is valid and has the required scopes
  */
 
-const https = require('node:https');
+const https = require('https');
 require('dotenv').config();
 
 const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN;
@@ -54,7 +54,7 @@ function testTokenValidity() {
               }
 
               resolve(tokenInfo);
-            } catch (_error) {
+            } catch (error) {
               reject(new Error('Failed to parse token response'));
             }
           } else {

@@ -46,7 +46,7 @@ export class WidgetTest {
 
     // Check if event bus is available
     const app = (window as any).runRealmApp;
-    if (app?.eventBus) {
+    if (app && app.eventBus) {
       console.log('📡 Emitting location:changed event...');
       app.eventBus.emit('location:changed', mockLocation);
     } else {

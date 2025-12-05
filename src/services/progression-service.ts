@@ -222,7 +222,7 @@ export class ProgressionService extends BaseService {
    */
   private setupEventListeners(): void {
     // Listen for run completion
-    this.subscribe('run:cleared', (_data: { runId: string }) => {
+    this.subscribe('run:cleared', (data: { runId: string }) => {
       // Note: totalDistance and timeSpent are not in the event data
       // These would need to be calculated from the run data
       // this.addDistance(data.totalDistance || 0);
