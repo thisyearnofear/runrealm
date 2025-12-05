@@ -110,7 +110,12 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
       };
 
       // Save to history
-      await saveRunToHistory(completedRun);
+      try {
+        await saveRunToHistory(completedRun);
+      } catch (error) {
+        console.error('Failed to save run to history:', error);
+        Alert.alert('Warning', 'Run completed but failed to save to history');
+      }
 
       setCompletedRunData(completedRun);
 

@@ -50,7 +50,7 @@ export const SettingsScreen: React.FC = () => {
               });
           }
         }
-      } catch {
+      } catch (e) {
         console.error('Failed to parse deep link URL:', e);
       }
     };
