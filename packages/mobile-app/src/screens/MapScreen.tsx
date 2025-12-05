@@ -12,7 +12,6 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { RouteSuggestionCard } from '../components/RouteSuggestionCard';
 import { TerritoryClaimModal } from '../components/TerritoryClaimModal';
 import { MobileMapAdapter } from '../services/MobileMapAdapter';
-import MobileRunTrackingService from '../services/MobileRunTrackingService';
 import { MobileWeb3Adapter } from '../services/MobileWeb3Adapter';
 import { saveRunToHistory } from './HistoryScreen';
 
@@ -24,12 +23,10 @@ interface MapScreenProps {
 }
 
 const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _route }) => {
-  const [componentsLoaded, setComponentsLoaded] = useState(false);
-  const [TerritoryMapView, setTerritoryMapView] = useState<ComponentType<unknown> | null>(null);
-  const [GPSTrackingComponent, setGPSTrackingComponent] = useState<ComponentType<unknown> | null>(
-    null
-  );
-  const [WalletButton, setWalletButton] = useState<ComponentType<unknown> | null>(null);
+  const [_componentsLoaded, setComponentsLoaded] = useState(false);
+  const [TerritoryMapView, setTerritoryMapView] = useState<ComponentType<any> | null>(null);
+  const [GPSTrackingComponent, setGPSTrackingComponent] = useState<ComponentType<any> | null>(null);
+  const [WalletButton, setWalletButton] = useState<ComponentType<any> | null>(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [completedRunData, setCompletedRunData] = useState<RunSession | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
@@ -40,8 +37,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
   const mapService = useMemo(() => new MapService(), []);
   const web3Service = useMemo(() => Web3Service.getInstance(), []);
   const runTrackingService = useMemo(() => new RunTrackingService(), []);
-  const territoryService = useMemo(() => new TerritoryService(), []);
-  const mobileRunTrackingService = useMemo(() => new MobileRunTrackingService(), []);
+  const territoryService = useMemo(() => TerritoryService.getInstance(), []);
 
   const mapAdapter = useMemo(() => new MobileMapAdapter(mapService), [mapService]);
 
