@@ -6,12 +6,18 @@
 /* ===== RESPONSIVE BREAKPOINTS ===== */
 :root {
   /* Breakpoint System */
-  --breakpoint-xs: 320px; /* Small phones */
-  --breakpoint-sm: 480px; /* Large phones */
-  --breakpoint-md: 768px; /* Tablets */
-  --breakpoint-lg: 1024px; /* Small laptops */
-  --breakpoint-xl: 1200px; /* Large laptops */
-  --breakpoint-xxl: 1440px; /* Desktops */
+  --breakpoint-xs: 320px;
+  /* Small phones */
+  --breakpoint-sm: 480px;
+  /* Large phones */
+  --breakpoint-md: 768px;
+  /* Tablets */
+  --breakpoint-lg: 1024px;
+  /* Small laptops */
+  --breakpoint-xl: 1200px;
+  /* Large laptops */
+  --breakpoint-xxl: 1440px;
+  /* Desktops */
 
   /* Responsive Spacing */
   --space-mobile-xs: 2px;
@@ -87,6 +93,7 @@
 /* ===== TABLET OPTIMIZATIONS (768px and up) ===== */
 
 @media (min-width: 768px) {
+
   /* Restore desktop spacing */
   .widget-zone {
     gap: var(--space-sm);
@@ -154,6 +161,7 @@
 /* ===== DESKTOP OPTIMIZATIONS (1024px and up) ===== */
 
 @media (min-width: 1024px) {
+
   /* Full desktop experience */
   .widget-zone {
     max-width: 320px;
@@ -195,6 +203,7 @@
 /* ===== LARGE DESKTOP OPTIMIZATIONS (1200px and up) ===== */
 
 @media (min-width: 1200px) {
+
   /* Wider layouts for large screens */
   .widget-zone {
     max-width: 360px;
@@ -230,16 +239,20 @@
 
 /* Touch-optimized interactions */
 @media (hover: none) and (pointer: coarse) {
+
   /* Mobile touch optimizations */
   .widget-header {
-    padding: 14px 16px; /* Larger touch targets */
+    padding: 14px 16px;
+    /* Larger touch targets */
     min-height: 48px;
   }
 
   .widget-button {
-    min-height: 44px; /* iOS recommended minimum */
+    min-height: 44px;
+    /* iOS recommended minimum */
     min-width: 44px;
-    touch-action: manipulation; /* Prevent double-tap zoom */
+    touch-action: manipulation;
+    /* Prevent double-tap zoom */
   }
 
   .widget-toggle {
@@ -274,7 +287,8 @@
 
   /* Mobile-specific drag behavior */
   .widget.dragging {
-    transform: scale(1.02); /* Subtle scale instead of complex transforms */
+    transform: scale(1.02);
+    /* Subtle scale instead of complex transforms */
     opacity: 0.9;
   }
 
@@ -295,6 +309,7 @@
 /* Phase 4: Ultra-compact widget pills for mobile UX */
 
 @media (max-width: 768px) {
+
   /* MOBILE UX FIX: Keep widgets minimized on mobile
      They now trigger dashboard instead of expanding inline
      Widget headers become visual indicators (44px minimum touch target)
@@ -306,33 +321,40 @@
   }
 
   /* When minimized on mobile, show only icon */
-  .widget.minimized {
+  .widget-system .widget.minimized {
     width: 44px !important;
+    min-width: 44px !important;
+    /* Override persistent min-width */
+    max-width: 44px !important;
     height: 44px !important;
     padding: 0 !important;
     overflow: hidden !important;
   }
 
   /* Hide title on mobile minimized widgets */
-  .widget.minimized .widget-title {
+  .widget-system .widget.minimized .widget-title {
     display: none !important;
   }
 
   /* Keep icon visible and centered */
-  .widget.minimized .widget-header {
-    padding: 8px !important;
+  .widget-system .widget.minimized .widget-header {
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     border: none !important;
     background: var(--widget-bg) !important;
     justify-content: center !important;
+    display: flex !important;
+    align-items: center !important;
   }
 
   /* Hide widget content on minimized mobile widgets */
-  .widget.minimized .widget-content {
+  .widget-system .widget.minimized .widget-content {
     display: none !important;
   }
 
   /* Hide toggle button on minimized mobile widgets */
-  .widget.minimized .widget-toggle {
+  .widget-system .widget.minimized .widget-toggle {
     display: none !important;
   }
 
@@ -355,7 +377,8 @@
   }
 
   /* Better spacing for icon in minimized state */
-  .widget.minimized .widget-icon {
+  /* Better spacing for icon in minimized state */
+  .widget-system .widget.minimized .widget-icon {
     margin: 0 !important;
     font-size: 24px !important;
   }
@@ -364,6 +387,7 @@
 /* ===== LANDSCAPE MOBILE OPTIMIZATIONS ===== */
 
 @media (max-width: 768px) and (orientation: landscape) {
+
   /* Compact layout for landscape mobile */
   .widget-zone {
     gap: 4px;
@@ -392,7 +416,8 @@
   }
 
   .widget.expanded {
-    max-height: 50vh; /* Prevent viewport domination */
+    max-height: 50vh;
+    /* Prevent viewport domination */
   }
 
   /* Compact header for landscape */
@@ -413,6 +438,7 @@
 /* ===== ULTRA-WIDE DISPLAY OPTIMIZATIONS (1440px and up) ===== */
 
 @media (min-width: 1440px) {
+
   /* Ultra-wide specific optimizations */
   .widget-zone {
     max-width: 400px;
@@ -448,6 +474,7 @@
 
 /* Reduce animations on low-end devices */
 @media (prefers-reduced-motion: reduce) {
+
   .widget,
   .widget-button,
   .widget-header,
@@ -502,6 +529,7 @@
 /* ===== PRINT OPTIMIZATIONS ===== */
 
 @media print {
+
   /* Hide interactive elements when printing */
   .widget-system,
   .gamefi-hud,
@@ -529,6 +557,7 @@
 
 /* Large text support */
 @media (min-resolution: 2dppx) {
+
   .widget-title,
   .widget-content {
     font-weight: var(--font-weight-medium);
@@ -545,9 +574,11 @@
     0% {
       transform: scale(1);
     }
+
     50% {
       transform: scale(1.02);
     }
+
     100% {
       transform: scale(1);
     }
@@ -587,6 +618,7 @@
 
 /* Optimize for slow connections */
 @media (prefers-reduced-data: reduce) {
+
   /* Reduce animation complexity */
   .widget {
     backdrop-filter: none;
@@ -756,9 +788,11 @@
 .show-mobile {
   display: none;
 }
+
 .show-tablet {
   display: none;
 }
+
 .show-desktop {
   display: none;
 }
@@ -767,6 +801,7 @@
   .hide-mobile {
     display: none;
   }
+
   .show-mobile {
     display: block;
   }
@@ -776,6 +811,7 @@
   .hide-tablet {
     display: none;
   }
+
   .show-tablet {
     display: block;
   }
@@ -785,6 +821,7 @@
   .hide-desktop {
     display: none;
   }
+
   .show-desktop {
     display: block;
   }
@@ -795,9 +832,11 @@
   .p-mobile-sm {
     padding: var(--space-mobile-sm);
   }
+
   .p-mobile-md {
     padding: var(--space-mobile-md);
   }
+
   .p-mobile-lg {
     padding: var(--space-mobile-lg);
   }
@@ -805,9 +844,11 @@
   .m-mobile-sm {
     margin: var(--space-mobile-sm);
   }
+
   .m-mobile-md {
     margin: var(--space-mobile-md);
   }
+
   .m-mobile-lg {
     margin: var(--space-mobile-lg);
   }
@@ -818,12 +859,15 @@
   .text-mobile-xs {
     font-size: var(--font-mobile-xs);
   }
+
   .text-mobile-sm {
     font-size: var(--font-mobile-sm);
   }
+
   .text-mobile-md {
     font-size: var(--font-mobile-md);
   }
+
   .text-mobile-lg {
     font-size: var(--font-mobile-lg);
   }
