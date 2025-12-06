@@ -1090,3 +1090,102 @@
     animation: none;
   }
 }
+
+/* ===== MOBILE WIDGET OPTIMIZATIONS ===== */
+
+/* Mobile widget styling for collapsed/icon-only display */
+.mobile-widget {
+  /* Ensure widgets are compact on mobile */
+  font-size: var(--font-mobile-sm);
+}
+
+.mobile-widget.compact-mode {
+  /* Ultra-compact mode for very small screens */
+  min-width: 40px;
+}
+
+.mobile-widget .widget-header {
+  /* Minimal header padding for mobile */
+  padding: 4px 6px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-widget .widget-header.icon-only {
+  /* Icon-only header for maximum space efficiency */
+  min-width: 40px;
+  width: 40px;
+  padding: 4px;
+  margin: 0;
+}
+
+.mobile-widget .widget-icon {
+  /* Ensure icon is visible and centered */
+  font-size: 18px;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-widget .widget-title {
+  /* Hide title text on mobile to save space */
+  font-size: 0;
+  display: none;
+  visibility: hidden;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.mobile-widget .widget-content {
+  /* Minimal content padding on mobile */
+  padding: 8px;
+  font-size: var(--font-mobile-xs);
+}
+
+.mobile-widget .widget-minimize-btn,
+.mobile-widget .widget-close-btn {
+  /* Ensure buttons are easily tappable on mobile */
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px;
+}
+
+/* Landscape mode adjustments */
+.mobile-widget.landscape-layout {
+  /* Stack widgets differently in landscape */
+  min-height: 36px;
+}
+
+.mobile-widget.landscape-layout .widget-content {
+  /* Reduce content padding in landscape */
+  padding: 6px;
+}
+
+/* Tablet+ screens - restore more spacing */
+@media (min-width: 768px) {
+  .mobile-widget {
+    font-size: inherit;
+  }
+
+  .mobile-widget .widget-header {
+    padding: 8px 12px;
+  }
+
+  .mobile-widget .widget-title {
+    font-size: inherit;
+    display: inline;
+    visibility: visible;
+    width: auto;
+    height: auto;
+    margin: 0 8px 0 0;
+  }
+
+  .mobile-widget.compact-mode {
+    min-width: 100px;
+  }
+}

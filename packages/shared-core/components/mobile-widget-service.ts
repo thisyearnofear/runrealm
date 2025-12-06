@@ -189,6 +189,22 @@ export class MobileWidgetService extends BaseService {
       widgetElement.classList.add('compact-mode');
     }
 
+    // Hide widget title text on mobile, keep icon only
+    const titleElement = widgetElement.querySelector('.widget-title');
+    if (titleElement) {
+      titleElement.textContent = '';
+    }
+
+    // Adjust widget header for icon-only display
+    const headerElement = widgetElement.querySelector('.widget-header');
+    if (headerElement) {
+      headerElement.classList.add('icon-only');
+      const header = headerElement as HTMLElement;
+      header.style.minHeight = '32px';
+      header.style.maxHeight = '32px';
+      header.style.padding = '4px 8px';
+    }
+
     // Remove mobile-inappropriate content
     this.removeMobileInappropriateContent(widgetElement);
 
