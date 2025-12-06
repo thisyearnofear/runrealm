@@ -233,16 +233,15 @@ export class MainUI extends BaseService {
     console.log('MainUI: Settings event handlers set up');
 
     // Listen for GameFi toggle events
+    // GameFi widgets are now displayed in the dashboard, not on the map
     EventBus.getInstance().on('gamefi:toggled', (data: { enabled: boolean }) => {
       console.log('MainUI: GameFi toggled to:', data.enabled);
       this.isGameFiMode = data.enabled;
 
       if (data.enabled) {
         document.body.classList.add('gamefi-mode');
-        this.widgetCreator.createGameFiWidgets();
       } else {
         document.body.classList.remove('gamefi-mode');
-        this.widgetCreator.removeGameFiWidgets();
       }
 
       // Update settings widget to reflect new state

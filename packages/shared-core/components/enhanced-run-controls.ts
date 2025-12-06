@@ -150,12 +150,17 @@ export class EnhancedRunControls extends BaseService {
     const widgetSystem = this.getWidgetSystem();
 
     if (widgetSystem) {
+      const mobileWidgetService =
+        (window as any).RunRealm?.services?.mobileWidget ||
+        (window as any).runRealmApp?.mobileWidgetService;
+      const isMobile = mobileWidgetService?.isMobileDevice?.() || false;
+
       widgetSystem.registerWidget({
         id: 'run-tracker',
         title: 'Run Tracker',
         icon: '🏃‍♂️',
         position: 'bottom-left',
-        minimized: true, // Always start minimized to prevent viewport domination
+        minimized: !isMobile, // Start expanded on mobile for easy access to Start Run button
         priority: 10,
         content: this.getWidgetContent(),
       });

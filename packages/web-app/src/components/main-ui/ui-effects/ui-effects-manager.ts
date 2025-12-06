@@ -341,22 +341,17 @@ export class UIEffectsManager {
     console.log(`UIEffectsManager: Toggling GameFi mode to: ${newMode}`);
 
     if (newMode) {
-      // Enable GameFi mode with widgets
+      // Enable GameFi mode (widgets displayed in dashboard)
       document.body.classList.add('gamefi-mode');
-      widgetCreator.createGameFiWidgets();
       updateGameFiToggle(true);
       this.uiService.showToast('🎮 GameFi enabled', { type: 'success' });
-      console.log(
-        'UIEffectsManager: GameFi widgets created:'
-        // Debug for widget system
-      );
+      console.log('UIEffectsManager: GameFi mode enabled');
     } else {
-      // Disable GameFi mode and remove widgets
+      // Disable GameFi mode
       document.body.classList.remove('gamefi-mode');
-      widgetCreator.removeGameFiWidgets();
       updateGameFiToggle(false);
       this.uiService.showToast('🎮 GameFi disabled', { type: 'info' });
-      console.log('UIEffectsManager: GameFi widgets removed');
+      console.log('UIEffectsManager: GameFi mode disabled');
     }
 
     return newMode;
