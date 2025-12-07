@@ -102,7 +102,7 @@ export class PreferenceService {
   }
 
   private saveBooleanPreference(settingKey: string, value: boolean): void {
-    localStorage.setItem(settingKey, '' + value); // ugh
+    localStorage.setItem(settingKey, `${value}`); // ugh
   }
 
   private saveStringPreference(settingKey: string, value: string): void {

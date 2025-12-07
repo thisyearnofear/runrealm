@@ -1,4 +1,4 @@
-import { ConfigService, StravaConfig } from '../core/app-config';
+import { ConfigService } from '../core/app-config';
 import { BaseService } from '../core/base-service';
 import { RateLimiterFactory } from '../utils/rate-limiter';
 import { ExternalActivity } from './run-tracking-service';
@@ -31,7 +31,7 @@ export class ExternalFitnessService extends BaseService {
       this.refreshTokens.set('strava', stravaRefreshToken);
     }
     if (stravaExpiresAt) {
-      this.tokenExpirations.set('strava', parseInt(stravaExpiresAt));
+      this.tokenExpirations.set('strava', parseInt(stravaExpiresAt, 10));
     }
   }
 
@@ -158,7 +158,7 @@ export class ExternalFitnessService extends BaseService {
     }
 
     if (accessToken && refreshToken && expiresAt) {
-      this.storeTokens('strava', accessToken, refreshToken, parseInt(expiresAt));
+      this.storeTokens('strava', accessToken, refreshToken, parseInt(expiresAt, 10));
       this.safeEmit('fitness:connected', { source: 'strava' });
 
       // Clean up URL
@@ -170,7 +170,7 @@ export class ExternalFitnessService extends BaseService {
   /**
    * Exchange authorization code for access token (legacy method for manual flow)
    */
-  public async exchangeStravaCode(code: string): Promise<void> {
+  public async exchangeStravaCode(_code: string): Promise<void> {
     const stravaConfig = this.configService.getStravaConfig();
     if (!stravaConfig?.clientId) {
       throw new Error('Strava configuration not found');

@@ -2,7 +2,6 @@
  * Unit tests for MobileRunTrackingService
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RunSession } from '@runrealm/shared-core/services/run-tracking-service';
 import MobileRunTrackingService from '../MobileRunTrackingService';
 

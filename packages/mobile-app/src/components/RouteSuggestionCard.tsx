@@ -5,7 +5,7 @@
 
 import { AIService } from '@runrealm/shared-core/services/ai-service';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface RouteSuggestionCardProps {
   currentLocation: { latitude: number; longitude: number } | null;
@@ -24,12 +24,6 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const aiService = AIService.getInstance();
-
-  useEffect(() => {
-    if (currentLocation) {
-      loadRouteSuggestion();
-    }
-  }, [currentLocation]);
 
   const loadRouteSuggestion = useCallback(async () => {
     if (!currentLocation) return;
@@ -62,6 +56,12 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
       setLoading(false);
     }
   }, [currentLocation, aiService]);
+
+  useEffect(() => {
+    if (currentLocation) {
+      loadRouteSuggestion();
+    }
+  }, [currentLocation, loadRouteSuggestion]);
 
   const handleUseRoute = () => {
     if (suggestedRoute && onRouteSelected) {
@@ -115,7 +115,7 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
             <View style={styles.landmarksSection}>
               <Text style={styles.landmarksTitle}>📍 Landmarks</Text>
               {suggestedRoute.landmarks.slice(0, 3).map((landmark: string, index: number) => (
-                <Text key={index} style={styles.landmarkText}>
+                <Text key={`landmark-${index}`} style={styles.landmarkText}>
                   • {landmark}
                 </Text>
               ))}

@@ -310,47 +310,47 @@
      Widget headers become visual indicators (44px minimum touch target)
   */
   .widget {
-    min-width: 44px !important;
-    width: auto !important;
-    max-width: 100px !important;
+    min-width: 44px;
+    width: auto;
+    max-width: 100px;
   }
 
   /* When minimized on mobile, show only icon */
   .widget-system .widget.minimized {
-    width: 44px !important;
-    min-width: 44px !important;
+    width: 44px;
+    min-width: 44px;
     /* Override persistent min-width */
-    max-width: 44px !important;
-    height: 44px !important;
-    padding: 0 !important;
-    overflow: hidden !important;
+    max-width: 44px;
+    height: 44px;
+    padding: 0;
+    overflow: hidden;
   }
 
   /* Hide title on mobile minimized widgets */
   .widget-system .widget.minimized .widget-title {
-    display: none !important;
+    display: none;
   }
 
   /* Keep icon visible and centered */
   .widget-system .widget.minimized .widget-header {
-    padding: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    border: none !important;
-    background: var(--widget-bg) !important;
-    justify-content: center !important;
-    display: flex !important;
-    align-items: center !important;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: var(--widget-bg);
+    justify-content: center;
+    display: flex;
+    align-items: center;
   }
 
   /* Hide widget content on minimized mobile widgets */
   .widget-system .widget.minimized .widget-content {
-    display: none !important;
+    display: none;
   }
 
   /* Hide toggle button on minimized mobile widgets */
   .widget-system .widget.minimized .widget-toggle {
-    display: none !important;
+    display: none;
   }
 
   /* Ensure expanded widgets still work on desktop-size tablets (768px) */
@@ -374,8 +374,8 @@
   /* Better spacing for icon in minimized state */
   /* Better spacing for icon in minimized state */
   .widget-system .widget.minimized .widget-icon {
-    margin: 0 !important;
-    font-size: 24px !important;
+    margin: 0;
+    font-size: 24px;
   }
 }
 

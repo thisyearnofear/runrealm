@@ -1,6 +1,6 @@
 // Pure utility helpers for pace/time/eta computations
 
-export function parsePace(text: string, useMetric: boolean): number | null {
+export function parsePace(text: string, _useMetric: boolean): number | null {
   if (!text) return null;
   const trimmed = text.trim().toLowerCase();
 
@@ -19,7 +19,7 @@ export function parsePace(text: string, useMetric: boolean): number | null {
     const unitToken = timeUnit[4];
     const seconds = hh * 3600 + mm * 60 + ss;
     if (!unitToken) return seconds; // infer from useMetric outside
-    const isMetricUnit = /km|kilometer|kilometre/.test(unitToken);
+    const _isMetricUnit = /km|kilometer|kilometre/.test(unitToken);
     // If unit conflicts with useMetric, we still return seconds per the specified unit; caller interprets accordingly
     return seconds;
   }
@@ -39,7 +39,7 @@ export function etaFromDistance(distanceMeters: number, speedMps: number): numbe
 }
 
 export function formatDuration(totalSeconds: number): string {
-  if (!isFinite(totalSeconds) || totalSeconds <= 0) return '0:00';
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return '0:00';
   const s = Math.round(totalSeconds);
   const hours = Math.floor(s / 3600);
   const minutes = Math.floor((s % 3600) / 60);

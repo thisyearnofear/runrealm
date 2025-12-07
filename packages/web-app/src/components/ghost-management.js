@@ -252,7 +252,7 @@ export class GhostManagement extends BaseService {
 
   getCooldownText(ghost) {
     if (!ghost.cooldownUntil) return '';
-    const hours = Math.ceil((ghost.cooldownUntil - new Date()) / (1000 * 60 * 60));
+    const hours = Math.ceil((ghost.cooldownUntil - Date.now()) / (1000 * 60 * 60));
     return `Ready in ${hours}h`;
   }
 

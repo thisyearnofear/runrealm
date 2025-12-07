@@ -291,7 +291,7 @@ export class EnhancedOnboarding extends BaseService {
     }
   }
 
-  private positionTooltip(step: OnboardingStep): void {
+  private positionTooltip(_step: OnboardingStep): void {
     if (!this.tooltip) return;
 
     // User requested consistent centered positioning for all steps
@@ -813,7 +813,7 @@ export class EnhancedOnboarding extends BaseService {
     if (widgetId) {
       // Expand the widget if it's minimized
       const widget = widgetSystem.widgets?.get(widgetId);
-      if (widget && widget.minimized) {
+      if (widget?.minimized) {
         widgetSystem.toggleWidget(widgetId);
         // Wait a bit for the animation to complete
         await new Promise((resolve) => setTimeout(resolve, 300));

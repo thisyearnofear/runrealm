@@ -4,9 +4,9 @@
  * Focuses on the contract integration that we just fixed
  */
 
-const { spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
+const { spawn } = require('node:child_process');
+const _path = require('node:path');
+const fs = require('node:fs');
 
 class BuildTester {
   constructor() {
@@ -73,7 +73,7 @@ class BuildTester {
   }
 
   printSummary() {
-    console.log('\n' + '='.repeat(50));
+    console.log(`\n${'='.repeat(50)}`);
     console.log('🔨 BUILD TEST RESULTS');
     console.log('='.repeat(50));
     console.log(`✅ Passed: ${this.results.passed}`);

@@ -4,7 +4,6 @@
 
 import { Challenge, ProgressionService } from '@runrealm/shared-core/services/progression-service';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import React from 'react';
 import { Alert } from 'react-native';
 import { ChallengeCard } from '../ChallengeCard';
 

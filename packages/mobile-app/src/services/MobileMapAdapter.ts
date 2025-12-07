@@ -336,15 +336,6 @@ export class MobileMapAdapter {
   }
 
   /**
-   * Handle territory preview event from MapService
-   */
-  private handleTerritoryPreview(data: any): void {
-    // Emit mobile-specific event or update state
-    // This allows mobile UI to react to territory selection
-    console.log('Territory preview:', data);
-  }
-
-  /**
    * Get territory previews from MapService
    */
   public getTerritoryPreviews(): TerritoryPreview[] {

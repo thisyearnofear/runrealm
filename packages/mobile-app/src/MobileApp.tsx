@@ -16,7 +16,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 const Tab = createBottomTabNavigator();
 
 export default function MobileApp() {
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [_showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     // Check if onboarding should be shown

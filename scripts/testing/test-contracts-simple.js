@@ -54,7 +54,7 @@ class SimpleContractTester {
   }
 
   printSummary() {
-    console.log('\n' + '='.repeat(50));
+    console.log(`\n${'='.repeat(50)}`);
     console.log('📊 CONTRACT INTEGRATION TEST RESULTS');
     console.log('='.repeat(50));
     console.log(`✅ Passed: ${this.results.passed}`);
@@ -205,7 +205,7 @@ async function main() {
       tester.log(`Deployer stats - Territories: ${stats.territoriesOwned}`);
       tester.log(`Deployer stats - Level: ${stats.level}`);
       tester.log(`Deployer stats - Rewards: ${hre.ethers.formatEther(stats.totalRewards)} REALM`);
-    } catch (error) {
+    } catch (_error) {
       // This might fail if no stats exist yet, which is okay
       tester.log(`No player stats found (this is normal for new deployment)`, 'warning');
     }

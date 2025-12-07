@@ -8,7 +8,7 @@
 
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import MapView, { MapPressEvent, Polygon, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { MobileMapAdapter, MobileMapState } from '../services/MobileMapAdapter';
 

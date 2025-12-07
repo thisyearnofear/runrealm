@@ -1,5 +1,5 @@
 const toIco = require('to-ico');
-const fs = require('fs');
+const fs = require('node:fs');
 
 // Read the PNG files
 const png16 = fs.readFileSync('./public/favicon-16x16.png');

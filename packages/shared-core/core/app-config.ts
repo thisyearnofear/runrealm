@@ -138,7 +138,7 @@ export class ConfigService {
       }
 
       // Handle Strava configuration
-      if (runtimeTokens.strava && runtimeTokens.strava.clientId) {
+      if (runtimeTokens.strava?.clientId) {
         StorageAdapter.setItemSync('runrealm_strava_client_id', runtimeTokens.strava.clientId);
         StorageAdapter.setItemSync(
           'runrealm_strava_redirect_uri',
@@ -175,11 +175,6 @@ export class ConfigService {
       console.error('Runtime token initialization failed:', error);
       this.runtimeTokensLoaded = true; // Mark as attempted
     }
-  }
-
-  private refreshConfig(): void {
-    // Reload config with updated tokens
-    this.config = this.loadConfig();
   }
 
   private loadConfig(): AppConfig {
@@ -238,9 +233,7 @@ export class ConfigService {
   }> {
     try {
       // Use API base URL from environment or default
-      const apiUrl = `${
-        (typeof __ENV__ !== 'undefined' && __ENV__.API_BASE_URL) || 'http://localhost:3000'
-      }/api/tokens`;
+      const apiUrl = `${__ENV__?.API_BASE_URL || 'http://localhost:3000'}/api/tokens`;
 
       console.debug(`Fetching tokens from: ${apiUrl}`);
       const response = await fetch(apiUrl);
@@ -358,44 +351,8 @@ export class ConfigService {
 
     try {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    } catch (e) {
+    } catch (_e) {
       return false;
-    }
-  }
-
-  /**
-   * 🔒 PRODUCTION SECURITY: Fetch tokens from secure server endpoint
-   * This method fetches tokens from the /api/tokens endpoint implemented in server.js
-   */
-  private getTokenFromSecureEndpoint(tokenType: 'mapbox' | 'gemini'): string | null {
-    // Use the same API base URL as fetchRuntimeTokens
-    const apiUrl = `${
-      (typeof __ENV__ !== 'undefined' && __ENV__.API_BASE_URL) || 'http://localhost:3000'
-    }/api/tokens`;
-
-    // Since this is called synchronously during config loading, we need to make a synchronous check
-    // for tokens that were already fetched asynchronously during initializeRuntimeTokens
-    const storedToken =
-      StorageAdapter.getItemSync(`runrealm_${tokenType}_access_token`) ||
-      StorageAdapter.getItemSync(`runrealm_google_gemini_api_key`) ||
-      StorageAdapter.getItemSync(`runrealm_mapbox_access_token`);
-
-    if (storedToken) {
-      console.debug(`🔒 Using cached ${tokenType} token from storage`);
-      return storedToken;
-    }
-
-    // If no cached token, try to fetch synchronously (not recommended but necessary for initial config)
-    try {
-      // Note: This synchronous fetch won't work in browsers, but the async initializeRuntimeTokens
-      // should have already populated localStorage. If not, tokens won't be available.
-      console.warn(
-        `🔒 ${tokenType} token not available synchronously. Ensure initializeRuntimeTokens() completes before config loading.`
-      );
-      return null;
-    } catch (error) {
-      console.error(`🔒 Failed to fetch ${tokenType} token synchronously:`, error);
-      return null;
     }
   }
 
@@ -491,7 +448,7 @@ export class ConfigService {
       accessToken: StorageAdapter.getItemSync('runrealm_strava_access_token') || undefined,
       refreshToken: StorageAdapter.getItemSync('runrealm_strava_refresh_token') || undefined,
       expiresAt:
-        parseInt(StorageAdapter.getItemSync('runrealm_strava_expires_at') || '0') || undefined,
+        parseInt(StorageAdapter.getItemSync('runrealm_strava_expires_at') || '0', 10) || undefined,
     };
   }
 

@@ -6,30 +6,30 @@
 /* ===== WIDGET SYSTEM - ENHANCED ===== */
 
 .widget-system {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  pointer-events: none !important;
-  z-index: var(--z-widgets) !important;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif !important;
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: var(--z-widgets);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  display: block;
+  visibility: visible;
+  opacity: 1;
 }
 
 /* Widget Zones */
 .widget-zone {
-  position: absolute !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: var(--space-sm) !important;
-  pointer-events: none !important;
-  z-index: calc(var(--z-widgets) + 1) !important;
-  max-width: 320px !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  pointer-events: none;
+  z-index: calc(var(--z-widgets) + 1);
+  max-width: 320px;
+  visibility: visible;
+  opacity: 1;
 }
 
 .widget-zone.top-left {
@@ -58,21 +58,21 @@
 
 /* Enhanced Widget Base Styles */
 .widget {
-  background: var(--widget-bg) !important;
-  border: 2px solid var(--widget-border-color) !important;
-  border-radius: var(--radius-lg) !important;
-  backdrop-filter: blur(12px) saturate(1.2) !important;
-  box-shadow: var(--widget-shadow) !important;
-  pointer-events: auto !important;
-  transition: var(--widget-transition) !important;
-  overflow: hidden !important;
-  max-width: 320px !important;
-  min-width: 200px !important;
-  z-index: calc(var(--z-widgets) + 2) !important;
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: relative !important;
+  background: var(--widget-bg);
+  border: 2px solid var(--widget-border-color);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(12px) saturate(1.2);
+  box-shadow: var(--widget-shadow);
+  pointer-events: auto;
+  transition: var(--widget-transition);
+  overflow: hidden;
+  max-width: 320px;
+  min-width: 200px;
+  z-index: calc(var(--z-widgets) + 2);
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  position: relative;
 }
 
 .widget:hover {
@@ -83,27 +83,27 @@
 
 .widget.expanded {
   box-shadow: var(--widget-shadow-active);
-  z-index: calc(var(--z-widgets) + 3) !important;
+  z-index: calc(var(--z-widgets) + 3);
   filter: drop-shadow(0 0 20px rgba(0, 255, 0, 0.1));
 }
 
 /* Visibility classes */
 .widget.visible {
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
   transition:
     opacity var(--animation-normal) ease,
-    visibility var(--animation-normal) ease !important;
+    visibility var(--animation-normal) ease;
 }
 
 .widget.hidden {
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
   transition:
     opacity var(--animation-normal) ease,
-    visibility var(--animation-normal) ease !important;
+    visibility var(--animation-normal) ease;
 }
 
 /* Enhanced Widget Header */
@@ -204,44 +204,44 @@
   /* ===== USER DASHBOARD - ENHANCED ===== */
 
   .user-dashboard {
-    position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    width: 90% !important;
-    max-width: 800px !important;
-    max-height: 90vh !important;
-    background: var(--widget-bg) !important;
-    border: 2px solid var(--widget-border-color) !important;
-    border-radius: var(--radius-lg) !important;
-    backdrop-filter: blur(12px) saturate(1.2) !important;
-    box-shadow: var(--widget-shadow) !important;
-    pointer-events: auto !important;
-    transition: var(--widget-transition) !important;
-    overflow: hidden !important;
-    z-index: calc(var(--z-widgets) + 10) !important;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif !important;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    background: var(--widget-bg);
+    border: 2px solid var(--widget-border-color);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(12px) saturate(1.2);
+    box-shadow: var(--widget-shadow);
+    pointer-events: auto;
+    transition: var(--widget-transition);
+    overflow: hidden;
+    z-index: calc(var(--z-widgets) + 10);
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   }
 
   .user-dashboard.hidden {
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
     transition:
       opacity var(--animation-normal) ease,
-      visibility var(--animation-normal) ease !important;
+      visibility var(--animation-normal) ease;
   }
 
   .user-dashboard.minimized {
-    width: 320px !important;
-    height: 60px !important;
-    top: 20px !important;
-    left: 20px !important;
-    transform: none !important;
-    overflow: hidden !important;
+    width: 320px;
+    height: 60px;
+    top: 20px;
+    left: 20px;
+    transform: none;
+    overflow: hidden;
   }
 
   /* Dashboard Header */
@@ -612,8 +612,8 @@
   /* Responsive Design */
   @media (max-width: 768px) {
     .user-dashboard {
-      width: 95% !important;
-      max-width: none !important;
+      width: 95%;
+      max-width: none;
     }
 
     .stats-grid {
@@ -639,8 +639,8 @@
 
   @media (max-width: 480px) {
     .user-dashboard.minimized {
-      width: 280px !important;
-      height: 50px !important;
+      width: 280px;
+      height: 50px;
     }
 
     .dashboard-header h2 {
@@ -667,36 +667,36 @@
 
 /* Widget States - Enhanced */
 .widget-system .widget.minimized {
-  max-height: var(--widget-max-height-collapsed) !important;
-  overflow: hidden !important;
+  max-height: var(--widget-max-height-collapsed);
+  overflow: hidden;
 }
 
 .widget-system .widget.minimized .widget-content {
-  display: none !important;
-  opacity: 0 !important;
-  transform: translateY(-10px) !important;
-  pointer-events: none !important;
+  display: none;
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
 }
 
 .widget-system .widget.expanded {
-  max-height: var(--widget-max-height-expanded) !important;
-  overflow: visible !important;
+  max-height: var(--widget-max-height-expanded);
+  overflow: visible;
   animation: expandIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .widget-system .widget.expanded .widget-content {
-  display: block !important;
-  opacity: 1 !important;
-  transform: translateY(0) !important;
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
   transition:
     opacity 0.2s ease 0.1s,
-    transform 0.2s ease 0.1s !important;
-  pointer-events: auto !important;
+    transform 0.2s ease 0.1s;
+  pointer-events: auto;
 }
 
 .widget-system .widget.expanded .widget-header {
-  border-bottom-color: var(--widget-border-color-active) !important;
-  background: var(--widget-header-bg-active) !important;
+  border-bottom-color: var(--widget-border-color-active);
+  background: var(--widget-header-bg-active);
 }
 
 /* Enhanced Widget Animations */
@@ -1042,7 +1042,7 @@
 /* Enhanced Success States */
 .widget-success {
   animation: successCelebration 0.6s var(--animation-spring);
-  border-color: rgba(0, 255, 0, 0.8) !important;
+  border-color: rgba(0, 255, 0, 0.8);
   box-shadow:
     var(--elevation-3),
     0 0 20px var(--glow-success);
@@ -1125,7 +1125,7 @@
 @media (max-width: 768px) {
   .widget-zone {
     gap: 2px;
-    max-width: none !important;
+    max-width: none;
   }
 
   .widget-zone.top-left,
@@ -1155,8 +1155,8 @@
   }
 
   .widget {
-    max-width: 100% !important;
-    min-width: 120px !important;
+    max-width: 100%;
+    min-width: 120px;
     border-radius: var(--radius-md);
     backdrop-filter: blur(6px);
     transition: all 0.2s var(--animation-snappy);
@@ -1167,12 +1167,12 @@
   }
 
   .widget.minimized {
-    max-height: 32px !important;
-    min-height: 32px !important;
+    max-height: 32px;
+    min-height: 32px;
   }
 
   .widget.expanded {
-    max-height: 35vh !important;
+    max-height: 35vh;
     overflow-y: auto;
   }
 
@@ -1249,15 +1249,15 @@
 
 .widget.dragging {
   opacity: 0.9;
-  transform: scale(1.02) !important;
+  transform: scale(1.02);
   box-shadow:
     var(--elevation-5),
     0 0 40px var(--glow-primary);
-  z-index: 10000 !important;
-  transition: none !important;
-  border-color: rgba(0, 255, 0, 0.6) !important;
-  backdrop-filter: blur(15px) !important;
-  will-change: transform !important;
+  z-index: 10000;
+  transition: none;
+  border-color: rgba(0, 255, 0, 0.6);
+  backdrop-filter: blur(15px);
+  will-change: transform;
 }
 
 .widget-header {
@@ -1270,14 +1270,14 @@
 }
 
 .widget-header:active {
-  cursor: grabbing !important;
-  background: var(--widget-header-bg-active) !important;
+  cursor: grabbing;
+  background: var(--widget-header-bg-active);
   transform: translateY(1px);
 }
 
 .widget.dragging .widget-header {
-  cursor: grabbing !important;
-  background: var(--widget-header-bg-active) !important;
+  cursor: grabbing;
+  background: var(--widget-header-bg-active);
 }
 
 /* ===== TERRITORY VALUE DISPLAY ===== */
@@ -1301,15 +1301,15 @@
 
 /* ===== CHAIN TAG ENHANCEMENTS ===== */
 .chain-tag.recommended {
-  background: linear-gradient(135deg, #00ff88, #00cc6a) !important;
-  color: #000 !important;
-  font-weight: bold !important;
-  box-shadow: 0 2px 8px rgba(0, 255, 136, 0.3) !important;
+  background: linear-gradient(135deg, #00ff88, #00cc6a);
+  color: #000;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0, 255, 136, 0.3);
 }
 
 .chain-tag.recommended:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
 }
 /* Territory Value Scoring */
 .territory-score {

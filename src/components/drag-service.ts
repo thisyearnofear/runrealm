@@ -28,7 +28,6 @@ export class DragService extends BaseService {
   private startPosition = { x: 0, y: 0 };
   private currentPosition: { x: number; y: number } | null = null;
   private longPressTimer: number | null = null;
-  private isLongPress = false;
   private lastUpdateTime = 0;
   private animationFrameId: number | null = null;
   private pendingUpdate = false;
@@ -214,7 +213,7 @@ export class DragService extends BaseService {
   /**
    * Start long press timer
    */
-  private startLongPressTimer(element: HTMLElement, e: TouchEvent): void {
+  private startLongPressTimer(element: HTMLElement, _e: TouchEvent): void {
     this.cancelLongPressTimer();
 
     this.longPressTimer = window.setTimeout(() => {
@@ -532,7 +531,7 @@ export class DragService extends BaseService {
   /**
    * Animate element to final position
    */
-  private animateToPosition(x: number, y: number): void {
+  private animateToPosition(_x: number, _y: number): void {
     // Note: This method is called after endDrag, so we don't have draggedElement anymore
     // The element positioning is now handled directly in endDrag method
     // This method is kept for compatibility but doesn't need to do anything

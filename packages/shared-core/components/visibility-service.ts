@@ -6,10 +6,6 @@
 import { BaseService } from '../core/base-service';
 
 export class VisibilityService extends BaseService {
-  constructor() {
-    super();
-  }
-
   protected async onInitialize(): Promise<void> {
     // Stub implementation - not used in mobile app
   }

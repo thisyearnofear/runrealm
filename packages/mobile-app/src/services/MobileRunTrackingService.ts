@@ -12,7 +12,6 @@ import { BackgroundTrackingService } from './BackgroundTrackingService';
 class MobileRunTrackingService {
   private runTrackingService: RunTrackingService;
   private backgroundTrackingService: BackgroundTrackingService;
-  private locationTrackingEnabled: boolean = false;
 
   constructor() {
     // Initialize with the shared core service

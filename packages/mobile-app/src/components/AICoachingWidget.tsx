@@ -40,26 +40,6 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
 
   const aiService = AIService.getInstance();
 
-  useEffect(() => {
-    if (visible && currentRun) {
-      loadCoaching();
-      // Animate in
-      Animated.spring(slideAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        tension: 50,
-        friction: 7,
-      }).start();
-    } else {
-      // Animate out
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [visible, currentRun]);
-
   const loadCoaching = useCallback(async () => {
     if (!currentRun) return;
 
@@ -91,6 +71,26 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
       setLoading(false);
     }
   }, [currentRun, aiService]);
+
+  useEffect(() => {
+    if (visible && currentRun) {
+      loadCoaching();
+      // Animate in
+      Animated.spring(slideAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 7,
+      }).start();
+    } else {
+      // Animate out
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible, currentRun, loadCoaching, slideAnim]);
 
   if (!visible) return null;
 
@@ -145,7 +145,7 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
               <View style={styles.tipsSection}>
                 <Text style={styles.tipsTitle}>💡 Tips</Text>
                 {coachingData.tips.slice(0, 2).map((tip, index) => (
-                  <Text key={index} style={styles.tipText}>
+                  <Text key={`tip-${index}`} style={styles.tipText}>
                     • {tip}
                   </Text>
                 ))}
@@ -156,7 +156,7 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
               <View style={styles.warningsSection}>
                 <Text style={styles.warningsTitle}>⚠️ Warnings</Text>
                 {coachingData.warnings.map((warning, index) => (
-                  <Text key={index} style={styles.warningText}>
+                  <Text key={`warning-${index}`} style={styles.warningText}>
                     • {warning}
                   </Text>
                 ))}

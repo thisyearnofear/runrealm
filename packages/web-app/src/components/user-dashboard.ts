@@ -597,42 +597,6 @@ export class UserDashboard {
     `;
   }
 
-  private renderRecentActivity(recentActivity: any): string {
-    if (!recentActivity) return '';
-
-    const lastRun = recentActivity.lastRun;
-    const achievements = recentActivity.recentAchievements || [];
-
-    return `
-      <div class="dashboard-section">
-        <h3>Recent Activity</h3>
-        ${
-          lastRun
-            ? `
-          <div class="last-run">
-            <div class="run-distance">${(lastRun.totalDistance / 1000).toFixed(2)}km</div>
-            <div class="run-time">${Math.floor(lastRun.totalDuration / 60)}:${(lastRun.totalDuration % 60).toString().padStart(2, '0')}</div>
-          </div>
-        `
-            : ''
-        }
-        ${
-          achievements.length > 0
-            ? `
-          <div class="recent-achievements">
-            <h4>Recent Achievements</h4>
-            ${achievements
-              .slice(0, 3)
-              .map((a: string) => `<div class="achievement">${a}</div>`)
-              .join('')}
-          </div>
-        `
-            : ''
-        }
-      </div>
-    `;
-  }
-
   private renderGhostRunners(ghosts: any[]): string {
     if (!ghosts || ghosts.length === 0) {
       return `
@@ -730,49 +694,6 @@ export class UserDashboard {
             })
             .join('')}
         </div>
-      </div>
-    `;
-  }
-
-  private renderAIInsights(aiInsights: any): string {
-    if (!aiInsights) return '';
-
-    const tips = aiInsights.personalizedTips || [];
-    const suggestedRoute = aiInsights.suggestedRoute;
-
-    if (tips.length === 0 && !suggestedRoute) return '';
-
-    return `
-      <div class="dashboard-section">
-        <h3>AI Insights</h3>
-        ${
-          suggestedRoute
-            ? `
-          <div class="suggested-route">
-            <h4>Suggested Route</h4>
-            <div class="route-info">
-              <div class="route-distance">${(suggestedRoute.distance / 1000).toFixed(1)}km</div>
-              <div class="route-difficulty">Difficulty: ${suggestedRoute.difficulty}/100</div>
-            </div>
-          </div>
-        `
-            : ''
-        }
-        ${
-          tips.length > 0
-            ? `
-          <div class="ai-tips">
-            <h4>Personalized Tips</h4>
-            <ul>
-              ${tips
-                .slice(0, 3)
-                .map((tip: string) => `<li>${tip}</li>`)
-                .join('')}
-            </ul>
-          </div>
-        `
-            : ''
-        }
       </div>
     `;
   }

@@ -33,10 +33,6 @@ export class LocationService extends BaseService {
   private watchId: number | null = null;
   private locationModal: HTMLElement | null = null;
 
-  constructor() {
-    super();
-  }
-
   protected async onInitialize(): Promise<void> {
     // Initialize dependencies
     this.geocodingService = new (await import('../geocoding-service')).GeocodingService(
@@ -162,12 +158,12 @@ export class LocationService extends BaseService {
       this.createLocationModal();
     }
 
-    this.locationModal!.style.display = 'flex';
+    this.locationModal?.style.display = 'flex';
     document.body.classList.add('modal-open');
 
     // Focus first focusable element in modal
     setTimeout(() => {
-      const firstFocusable = this.locationModal!.querySelector(
+      const firstFocusable = this.locationModal?.querySelector(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       ) as HTMLElement;
       if (firstFocusable) {

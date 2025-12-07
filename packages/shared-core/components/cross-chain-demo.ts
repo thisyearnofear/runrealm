@@ -7,10 +7,6 @@ import { BaseService } from '../core/base-service';
 export class CrossChainDemoComponent extends BaseService {
   private container: HTMLElement | null = null;
 
-  constructor() {
-    super();
-  }
-
   public async initialize(containerId: string = 'cross-chain-demo'): Promise<void> {
     this.container = document.getElementById(containerId);
     if (!this.container) {
@@ -106,7 +102,7 @@ export class CrossChainDemoComponent extends BaseService {
     chainButtons?.forEach((button) => {
       button.addEventListener('click', (e) => {
         const target = e.target as HTMLButtonElement;
-        const chainId = parseInt(target.dataset.chain || '1');
+        const chainId = parseInt(target.dataset.chain || '1', 10);
         this.selectChain(chainId);
       });
     });
@@ -129,7 +125,7 @@ export class CrossChainDemoComponent extends BaseService {
 
     // Listen for cross-chain events
     if (this.eventBus) {
-      this.eventBus.on('crosschain:territoryClaimInitiated', (data: any) => {
+      this.eventBus.on('crosschain:territoryClaimInitiated', (_data: any) => {
         this.updateDemoStatus('🟡', 'Cross-chain claim initiated...', 30);
       });
 
@@ -150,7 +146,7 @@ export class CrossChainDemoComponent extends BaseService {
     chainButtons?.forEach((button) => {
       button.classList.remove('selected');
       const htmlButton = button as HTMLElement;
-      if (parseInt(htmlButton.dataset.chain || '1') === chainId) {
+      if (parseInt(htmlButton.dataset.chain || '1', 10) === chainId) {
         button.classList.add('selected');
       }
     });
@@ -172,7 +168,7 @@ export class CrossChainDemoComponent extends BaseService {
     // Get services
     const services = (window as any).RunRealm?.services;
     const web3Service = services?.web3;
-    const crossChainService = services?.crossChain;
+    const _crossChainService = services?.crossChain;
 
     // Check if wallet is connected
     if (!web3Service?.isConnected()) {

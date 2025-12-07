@@ -138,7 +138,7 @@
                     // If we get multiple script errors, force a cache-busted reload
                     if (scriptErrors >= 2) {
                         console.log('Multiple script errors detected, forcing cache-busted reload...');
-                        window.location.href = window.location.origin + '/?force_reload=' + Date.now();
+                        window.location.href = `${window.location.origin}/?force_reload=${Date.now()}`;
                     }
                 }
             }, true);

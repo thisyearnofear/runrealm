@@ -1,5 +1,4 @@
 import { LocationInfo } from '@runrealm/shared-types/location';
-import { LngLat } from 'mapbox-gl';
 import { BaseService } from '../core/base-service';
 import { calculateDistance } from '../utils/distance-formatter';
 
@@ -75,7 +74,6 @@ export interface RunTrackingConfig {
  */
 export class RunTrackingService extends BaseService {
   private currentRun: RunSession | null = null;
-  private watchId: number | null = null;
   private lastPoint: RunPoint | null = null;
   private runConfig: RunTrackingConfig;
   private updateInterval: number | null = null;

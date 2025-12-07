@@ -188,7 +188,7 @@ export class WalletWidget extends BaseService {
         const wallet = await this.web3Service.connectWallet();
         this.updateWalletState({ status: 'connected', wallet });
       }
-    } catch (error) {
+    } catch (_error) {
       console.log('No existing wallet connection found');
       this.updateWalletState({ status: 'disconnected' });
     }

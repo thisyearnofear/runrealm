@@ -1,6 +1,6 @@
 import { ProgressionService } from '@runrealm/shared-core/services/progression-service';
 import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -23,6 +23,32 @@ export const DashboardScreen: React.FC = () => {
   const [progressionService] = useState(() => ProgressionService.getInstance());
   const [challenges, setChallenges] = useState<any[]>([]);
 
+  const loadChallenges = useCallback(async () => {
+    try {
+      if (!progressionService.getIsInitialized()) {
+        await progressionService.initialize();
+      }
+      const activeChallenges = progressionService.getActiveChallenges();
+      setChallenges(activeChallenges);
+    } catch (error) {
+      console.error('Failed to load challenges:', error);
+    }
+  }, [progressionService]);
+
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // Get current dashboard data
+      const data = dashboardService.getData();
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [dashboardService]);
+
   useEffect(() => {
     loadDashboardData();
     loadChallenges();
@@ -38,33 +64,12 @@ export const DashboardScreen: React.FC = () => {
     return () => {
       dashboardService.unsubscribeFromDataUpdates(handleDataUpdate);
     };
-  }, []);
-
-  const loadChallenges = async () => {
-    try {
-      if (!progressionService.getIsInitialized()) {
-        await progressionService.initialize();
-      }
-      const activeChallenges = progressionService.getActiveChallenges();
-      setChallenges(activeChallenges);
-    } catch (error) {
-      console.error('Failed to load challenges:', error);
-    }
-  };
-
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-
-      // Get current dashboard data
-      const data = dashboardService.getData();
-      setDashboardData(data);
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [
+    dashboardService.subscribeToDataUpdates,
+    dashboardService.unsubscribeFromDataUpdates,
+    loadChallenges,
+    loadDashboardData,
+  ]);
 
   const onRefresh = async () => {
     setRefreshing(true);

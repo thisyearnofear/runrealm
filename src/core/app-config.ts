@@ -118,7 +118,7 @@ export class ConfigService {
       }
 
       // Handle Strava configuration
-      if (runtimeTokens.strava && runtimeTokens.strava.clientId) {
+      if (runtimeTokens.strava?.clientId) {
         localStorage.setItem('runrealm_strava_client_id', runtimeTokens.strava.clientId);
         localStorage.setItem('runrealm_strava_redirect_uri', runtimeTokens.strava.redirectUri);
         if (this.config.fitness?.strava) {
@@ -425,7 +425,8 @@ export class ConfigService {
       redirectUri,
       accessToken: localStorage.getItem('runrealm_strava_access_token') || undefined,
       refreshToken: localStorage.getItem('runrealm_strava_refresh_token') || undefined,
-      expiresAt: parseInt(localStorage.getItem('runrealm_strava_expires_at') || '0') || undefined,
+      expiresAt:
+        parseInt(localStorage.getItem('runrealm_strava_expires_at') || '0', 10) || undefined,
     };
   }
 

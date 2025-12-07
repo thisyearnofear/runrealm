@@ -257,7 +257,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
       }
 
       console.log('Run stopped:', runData);
-      onRunStop && onRunStop(runData);
+      onRunStop?.(runData);
     } catch (error) {
       console.error('Failed to stop run:', error);
       Alert.alert('Error', 'Failed to stop run.');

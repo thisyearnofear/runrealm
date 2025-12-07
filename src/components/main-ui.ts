@@ -24,14 +24,13 @@ import { TransactionStatus } from './transaction-status';
 import { VisibilityService } from './visibility-service';
 import { WalletWidget } from './wallet-widget';
 import { WidgetStateService } from './widget-state-service';
-import { Widget, WidgetSystem } from './widget-system';
+import { WidgetSystem } from './widget-system';
 
 export class MainUI extends BaseService {
   private domService: DOMService;
   private locationService: LocationService;
 
   private uiService: UIService;
-  private gamefiUI: GameFiUI;
   private widgetSystem: WidgetSystem;
   private dragService: DragService;
   private visibilityService: VisibilityService;
@@ -46,8 +45,6 @@ export class MainUI extends BaseService {
   private rewardSystemUI: RewardSystemUI;
   private contractService: ContractService;
   private web3Service: Web3Service;
-  private configService: ConfigService;
-  private routeStateService: RouteStateService;
   private externalFitnessIntegration: ExternalFitnessIntegration | null = null;
   private isGameFiMode: boolean = false;
 
@@ -253,7 +250,7 @@ export class MainUI extends BaseService {
     // Run Controls are now handled by EnhancedRunControls service
     // (Removed old widget-based run controls to avoid duplication)
 
-    const isMobile = this.config.getConfig().ui.isMobile;
+    const _isMobile = this.config.getConfig().ui.isMobile;
 
     // Location Widget (top-left) - minimized on mobile for map visibility
     this.widgetSystem.registerWidget({
@@ -515,7 +512,7 @@ export class MainUI extends BaseService {
 
         this.widgetSystem.updateWidget('territory-info', statsHtml);
         const w = this.widgetSystem.getWidget('territory-info');
-        if (w && w.minimized) this.widgetSystem.toggleWidget('territory-info');
+        if (w?.minimized) this.widgetSystem.toggleWidget('territory-info');
       } catch (e) {
         console.error('Failed to render planned route', e);
       }
@@ -786,7 +783,7 @@ export class MainUI extends BaseService {
 
           this.widgetSystem.updateWidget('territory-info', statsHtml);
           const w = this.widgetSystem.getWidget('territory-info');
-          if (w && w.minimized) this.widgetSystem.toggleWidget('territory-info');
+          if (w?.minimized) this.widgetSystem.toggleWidget('territory-info');
         }
       }
     );
@@ -898,7 +895,7 @@ export class MainUI extends BaseService {
     // Get actual widget visibility states from VisibilityService
     const locationVisible = this.visibilityService.isVisible('widget-location-info');
     const walletVisible = this.visibilityService.isVisible('widget-wallet-info');
-    const runControlsVisible = this.visibilityService.isVisible('widget-run-controls');
+    const _runControlsVisible = this.visibilityService.isVisible('widget-run-controls');
 
     return `
       <div class="widget-section">
@@ -1018,7 +1015,7 @@ export class MainUI extends BaseService {
 
     this.territoryPreviewDebounce = window.setTimeout(() => {
       const w = this.widgetSystem.getWidget('territory-info');
-      if (w && w.minimized) {
+      if (w?.minimized) {
         this.widgetSystem.toggleWidget('territory-info');
       }
     }, 150);
@@ -1051,31 +1048,6 @@ export class MainUI extends BaseService {
   }
 
   /**
-   * Show welcome tooltips to guide new users
-   */
-  private showWelcomeTooltips(): void {
-    const tooltips = [
-      {
-        target: '#location-btn',
-        message: 'Set your location to see nearby territories',
-        position: 'bottom',
-      },
-      {
-        target: '#gamefi-toggle',
-        message: 'Enable GameFi mode to earn rewards and claim territories',
-        position: 'bottom',
-      },
-      {
-        target: '#action-panel',
-        message: 'Use these controls to plan and track your runs',
-        position: 'left',
-      },
-    ];
-
-    this.showTooltipSequence(tooltips);
-  }
-
-  /**
    * Toggle GameFi mode
    */
   private toggleGameFiMode(): void {
@@ -1104,7 +1076,7 @@ export class MainUI extends BaseService {
    */
   private updateLocationWidget(locationInfo?: any): void {
     // Update GPS status if location info is provided
-    if (locationInfo && locationInfo.accuracy) {
+    if (locationInfo?.accuracy) {
       this.gpsStatus = {
         available: true,
         accuracy: locationInfo.accuracy,
@@ -1170,13 +1142,6 @@ export class MainUI extends BaseService {
     }
   }
 
-  private showGameFiStatus(show: boolean): void {
-    const status = document.getElementById('gamefi-status');
-    if (status) {
-      status.style.display = show ? 'flex' : 'none';
-    }
-  }
-
   private toggleActionPanel(): void {
     const panel = document.getElementById('action-panel');
     if (panel) {
@@ -1204,32 +1169,6 @@ export class MainUI extends BaseService {
         break;
     }
     this.toggleFabMenu(); // Close menu after action
-  }
-
-  private showTooltipSequence(tooltips: any[]): void {
-    // Implementation for showing sequential tooltips
-    // This would create and animate tooltip elements
-  }
-
-  // Old run flow methods removed - now handled by RunTrackingService and EnhancedRunControls
-
-  // Old computeClaimableRun method - now handled by TerritoryService
-  private computeClaimableRun(): boolean {
-    try {
-      // Minimal heuristic: distance >= 500m and end within 30m of start
-      const distanceEl = document.getElementById('current-distance');
-      const text = distanceEl?.textContent || '0';
-      const numeric = parseFloat(text);
-      const isKm = (text || '').includes('km');
-      const meters = isKm ? numeric * 1000 : numeric; // crude, adjust if needed
-
-      const meetsDistance = meters >= 500;
-      // We don’t have start/end coords readily here without tapping CurrentRun directly.
-      // As an MVP, rely on distance only; later we can add proximity check by reading CurrentRun state.
-      return meetsDistance;
-    } catch {
-      return false;
-    }
   }
 
   private showHelpModal(): void {
@@ -1428,7 +1367,7 @@ export class MainUI extends BaseService {
 
   /**\n   * Create GameFi widgets when GameFi mode is enabled\n   */
   private createGameFiWidgets(): void {
-    const isMobile = this.config.getConfig().ui.isMobile;
+    const _isMobile = this.config.getConfig().ui.isMobile;
 
     // Player Stats Widget (top-left, highest priority) - always minimized on mobile
     this.widgetSystem.registerWidget({
@@ -1491,12 +1430,12 @@ export class MainUI extends BaseService {
     // Get the enhanced run controls service from global registry
     const services = (window as any).RunRealm?.services;
 
-    if (services && services.EnhancedRunControls) {
+    if (services?.EnhancedRunControls) {
       services.EnhancedRunControls.initializeWidget();
     } else {
       // Fallback: access directly from app instance
       const app = (window as any).runRealmApp;
-      if (app && app.enhancedRunControls) {
+      if (app?.enhancedRunControls) {
         app.enhancedRunControls.initializeWidget();
       } else {
         console.error('MainUI: Could not find EnhancedRunControls service');
@@ -1597,81 +1536,15 @@ export class MainUI extends BaseService {
       if ('hapticFeedback' in window) {
         (window as any).hapticFeedback(type);
       }
-    } catch (error) {
+    } catch (_error) {
       // Haptic feedback not supported, silently continue
     }
   }
 
   /**
-   * Create a simple onboarding experience when the service isn't available
-   */
-  private createSimpleOnboarding(): void {
-    this.uiService.showToast('🎓 Starting tutorial...', { type: 'success' });
-
-    // Use a simpler approach that doesn't interfere with the widget system
-    this.showSequentialTooltips();
-  }
-
-  /**
-   * Show sequential tooltips without overlays
-   */
-  private showSequentialTooltips(): void {
-    const tooltips = [
-      {
-        message: '🏃‍♂️ Welcome to RunRealm! Transform your runs into an adventure.',
-        duration: 3000,
-      },
-      {
-        message: '📍 Set your location using the location button to see nearby territories.',
-        duration: 3000,
-      },
-      {
-        message: '🎮 Enable GameFi mode to start earning rewards and claiming territories.',
-        duration: 3000,
-      },
-      {
-        message: '🤖 Try the AI Coach for personalized route suggestions and tips.',
-        duration: 3000,
-      },
-      {
-        message: '🗺️ Click on the map to plan your perfect running route.',
-        duration: 3000,
-      },
-      {
-        message: '🎉 Tutorial complete! Start exploring and claiming territories!',
-        duration: 4000,
-      },
-    ];
-
-    let currentIndex = 0;
-
-    const showNextTooltip = () => {
-      if (currentIndex >= tooltips.length) return;
-
-      const tooltip = tooltips[currentIndex];
-      this.uiService.showToast(tooltip.message, {
-        type:
-          currentIndex === 0
-            ? 'success'
-            : currentIndex === tooltips.length - 1
-              ? 'success'
-              : 'info',
-      });
-
-      currentIndex++;
-      if (currentIndex < tooltips.length) {
-        setTimeout(showNextTooltip, tooltip.duration);
-      }
-    };
-
-    // Start the sequence
-    setTimeout(showNextTooltip, 500);
-  }
-
-  /**
    * Show loading state for AI actions
    */
-  private showAILoadingState(action: string, button: HTMLElement): void {
+  private showAILoadingState(action: string, _button: HTMLElement): void {
     const widget = this.widgetSystem.getWidget('ai-coach');
     if (!widget) return;
 
@@ -1810,7 +1683,7 @@ export class MainUI extends BaseService {
 
     // Remove celebration class after animation
     setTimeout(() => {
-      if (widgetElement && widgetElement.classList) {
+      if (widgetElement?.classList) {
         widgetElement.classList.remove('celebrating');
       }
     }, 1500);

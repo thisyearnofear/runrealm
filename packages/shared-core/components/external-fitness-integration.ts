@@ -4,7 +4,6 @@ import { ExternalActivity } from '../services/run-tracking-service';
 
 export class ExternalFitnessIntegration extends BaseService {
   private container: HTMLElement;
-  private isVisible = false;
   private fitnessService: ExternalFitnessService;
   private currentPage = 1;
 
@@ -146,7 +145,7 @@ export class ExternalFitnessIntegration extends BaseService {
               stravaCard.classList.remove('connecting');
             }
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore cross-origin errors
         }
       }, 1000);
@@ -375,17 +374,6 @@ export class ExternalFitnessIntegration extends BaseService {
       btnText.textContent = 'Preview Failed';
       previewBtn.classList.remove('loading');
     }
-  }
-
-  private showSuccessAnimation(button: HTMLElement): void {
-    // Create sparkle effect
-    const sparkles = document.createElement('div');
-    sparkles.className = 'success-sparkles';
-    sparkles.innerHTML = '✨✨✨';
-
-    button.parentElement?.appendChild(sparkles);
-
-    setTimeout(() => sparkles.remove(), 2000);
   }
 
   private showError(message: string): void {

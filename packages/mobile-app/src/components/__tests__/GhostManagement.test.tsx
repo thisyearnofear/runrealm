@@ -8,7 +8,6 @@ import {
 } from '@runrealm/shared-core/services/ghost-runner-service';
 import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import React from 'react';
 import { Alert } from 'react-native';
 import { GhostManagement } from '../GhostManagement';
 

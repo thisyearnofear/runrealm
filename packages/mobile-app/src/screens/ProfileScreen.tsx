@@ -5,7 +5,7 @@ import {
 import { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
 import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GhostManagement } from '../components/GhostManagement';
 
 export const ProfileScreen: React.FC = () => {
