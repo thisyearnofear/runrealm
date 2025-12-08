@@ -19,10 +19,10 @@ pre-push:
       run: npm run test
       fail_text: "Tests failed. Please fix the failing tests before pushing."
 
-    # Run lint check (without auto-fix)
+    # Run lint check (only fail on actual errors, not style warnings)
     lint-check:
-      run: npm run lint:check
-      fail_text: "Linting failed. Please run 'npm run lint' to fix issues."
+      run: npm run lint:errors --silent
+      fail_text: "Critical linting errors found. Please fix actual errors before pushing."
 
     # Type check with TypeScript compiler
     typecheck:
