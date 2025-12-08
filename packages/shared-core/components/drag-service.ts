@@ -19,7 +19,7 @@ export class DragService extends BaseService {
     // No-op
   }
 
-  makeDraggable(_element: HTMLElement, _options?: any): void {
+  makeDraggable(_element: HTMLElement, _options?: object): void {
     // No-op - stub implementation
   }
 }

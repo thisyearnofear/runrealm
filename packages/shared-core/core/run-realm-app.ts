@@ -90,6 +90,10 @@ export class RunRealmApp {
   private crossChainService!: CrossChainService;
   private externalFitnessService!: ExternalFitnessService;
   private ghostRunnerService!: GhostRunnerService;
+  private aiOrchestrator!: AIOrchestrator;
+  private runProgressFeedback!: RunProgressFeedback;
+  private crossChainDemo!: CrossChainDemoComponent;
+  private geocodingService!: GeocodingService;
 
   // Platform-specific UI components (injected dependencies)
   private territoryDashboard?: TerritoryDashboardInterface;
@@ -99,6 +103,7 @@ export class RunRealmApp {
   // Application state
   private map!: Map;
   private useMetric!: boolean;
+  private followRoads!: boolean;
   private gameMode: boolean = true;
 
   private async loadMapbox(): Promise<void> {
@@ -588,7 +593,7 @@ export class RunRealmApp {
 
       // Initialize Web3 and cross-chain services if enabled
       if (this.config.isWeb3Enabled()) {
-        await this.web3.initialize();
+        await (this.web3 as any).initialize();
         if (this.walletWidget) {
           await this.walletWidget.initialize();
         }

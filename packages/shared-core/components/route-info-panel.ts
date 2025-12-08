@@ -23,9 +23,17 @@ export class RouteInfoPanel {
 
   private setupEventListeners(): void {
     // Listen for AI route ready events
-    this.eventBus.on('ai:routeReady', (data: any) => {
-      this.showRouteInfo(data);
-    });
+    this.eventBus.on(
+      'ai:routeReady',
+      (data: {
+        route: object;
+        distance: number;
+        estimatedTime: number;
+        waypoints: Array<{ name: string; description: string }>;
+      }) => {
+        this.showRouteInfo(data);
+      }
+    );
 
     // Listen for route clear events
     this.eventBus.on('ai:routeClear', () => {
@@ -33,7 +41,7 @@ export class RouteInfoPanel {
     });
 
     // Listen for route failed events
-    this.eventBus.on('ai:routeFailed', (data: any) => {
+    this.eventBus.on('ai:routeFailed', (data: { message: string }) => {
       this.showErrorMessage(data.message);
     });
   }
@@ -103,7 +111,12 @@ export class RouteInfoPanel {
     document.body.appendChild(this.panelElement);
   }
 
-  private showRouteInfo(data: any): void {
+  private showRouteInfo(data: {
+    route: object;
+    distance: number;
+    estimatedTime: number;
+    waypoints: Array<{ name: string; description: string }>;
+  }): void {
     if (!this.panelElement) return;
 
     const contentContainer = this.panelElement.querySelector('#route-info-content');
@@ -214,7 +227,7 @@ export class RouteInfoPanel {
         },
       });
 
-      data.waypoints.forEach((wp: any) => {
+      data.waypoints.forEach((wp: { name: string; description: string }) => {
         const waypointItem = this.domService.createElement('li', {
           innerHTML: `
             <div style="display: flex; align-items: center; margin-bottom: 10px;">

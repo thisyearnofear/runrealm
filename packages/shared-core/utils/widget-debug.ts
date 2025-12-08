@@ -3,8 +3,8 @@
  * Helps debug widget system issues by logging state and DOM
  */
 
-export class WidgetDebug {
-  static logWidgetState(widgetId: string): void {
+export const WidgetDebug = {
+  logWidgetState(widgetId: string): void {
     console.group(`🔍 Widget Debug: ${widgetId}`);
 
     const element = document.getElementById(`widget-${widgetId}`);
@@ -43,9 +43,9 @@ export class WidgetDebug {
     }
 
     console.groupEnd();
-  }
+  },
 
-  static logAllWidgets(): void {
+  logAllWidgets(): void {
     console.group('🔍 All Widget States');
     const widgets = document.querySelectorAll('.widget');
     widgets.forEach((widget, index) => {
@@ -58,9 +58,9 @@ export class WidgetDebug {
       });
     });
     console.groupEnd();
-  }
+  },
 
-  static testWidgetToggle(widgetId: string): void {
+  testWidgetToggle(widgetId: string): void {
     console.log(`🧪 Testing widget toggle: ${widgetId}`);
 
     const element = document.getElementById(`widget-${widgetId}`);
@@ -86,8 +86,8 @@ export class WidgetDebug {
       console.log('⏱️ After toggle:');
       WidgetDebug.logWidgetState(widgetId);
     }, 400);
-  }
-}
+  },
+} as const;
 
 // Make it globally available for console debugging
 (window as any).WidgetDebug = WidgetDebug;

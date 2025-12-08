@@ -53,10 +53,15 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
       }
 
       // Create a CurrentRun-like object for the AI service
-      // The AI service expects CurrentRun which has a distance property
+      // The AI service expects CurrentRun class, but we have RunSession from mobile
+      // This is a necessary type conversion between different run data structures
       const currentRunForAI = {
         distance: currentRun.totalDistance,
-      } as any; // Type assertion needed as CurrentRun is a class but we're using a simple object
+        segments: [], // Add required properties
+        start: { lng: 0, lat: 0 } as any, // Mock required RunStart object
+        addSegment: () => {},
+        removeLastSegment: () => {},
+      } as any; // Simplified object for AI service
 
       const coaching = await aiService.getRunningCoaching(currentRunForAI, {
         distance: 5000, // Default goal
@@ -144,8 +149,8 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
             {coachingData.tips && coachingData.tips.length > 0 && (
               <View style={styles.tipsSection}>
                 <Text style={styles.tipsTitle}>💡 Tips</Text>
-                {coachingData.tips.slice(0, 2).map((tip, index) => (
-                  <Text key={`tip-${index}`} style={styles.tipText}>
+                {coachingData.tips.slice(0, 2).map((tip) => (
+                  <Text key={tip} style={styles.tipText}>
                     • {tip}
                   </Text>
                 ))}
@@ -155,8 +160,8 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
             {coachingData.warnings && coachingData.warnings.length > 0 && (
               <View style={styles.warningsSection}>
                 <Text style={styles.warningsTitle}>⚠️ Warnings</Text>
-                {coachingData.warnings.map((warning, index) => (
-                  <Text key={`warning-${index}`} style={styles.warningText}>
+                {coachingData.warnings.map((warning) => (
+                  <Text key={warning} style={styles.warningText}>
                     • {warning}
                   </Text>
                 ))}

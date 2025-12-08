@@ -1,11 +1,13 @@
 import { BaseService } from '../core/base-service';
 import { ExternalFitnessService } from '../services/external-fitness-service';
 import { ExternalActivity } from '../services/run-tracking-service';
+import { TerritoryPreview } from '../services/territory-service';
 
 export class ExternalFitnessIntegration extends BaseService {
   private container: HTMLElement;
   private fitnessService: ExternalFitnessService;
   private currentPage = 1;
+  private isVisible = false;
 
   constructor(container: HTMLElement) {
     super();
@@ -275,8 +277,8 @@ export class ExternalFitnessIntegration extends BaseService {
           const mapService = this.getService('MapService');
           const runTrackingService = this.getService('RunTrackingService');
           if (mapService && runTrackingService && activity.polyline) {
-            const points = await runTrackingService.decodePolylineToPoints(activity.polyline);
-            mapService.highlightActivity(points);
+            const points = await (runTrackingService as any).decodePolylineToPoints?.(activity.polyline);
+            (mapService as any).highlightActivity?.(points);
           }
         }
       });
@@ -284,7 +286,7 @@ export class ExternalFitnessIntegration extends BaseService {
       card.addEventListener('mouseout', () => {
         const mapService = this.getService('MapService');
         if (mapService) {
-          mapService.clearActivityHighlight();
+          (mapService as any).clearActivityHighlight?.();
         }
       });
     });
@@ -311,36 +313,47 @@ export class ExternalFitnessIntegration extends BaseService {
 
     try {
       // Import activity to generate run session and territory data
-      const runSession = await runTrackingService.importExternalActivity(activity);
+      const runSession = await (runTrackingService as any).importExternalActivity(activity);
 
       if (runSession.territoryEligible && runSession.geohash) {
         // Create territory preview data
-        const territoryPreview = {
-          geohash: runSession.geohash,
+        const center = runSession.points[0]; // Use first point as center
+        const territoryPreview: TerritoryPreview = {
+          geohash: runSession.geohash!,
           bounds: {
-            center: runSession.points[0], // Use first point as center
-            radius: Math.max(runSession.totalDistance / 4, 100), // Dynamic radius based on run distance
+            north: center.lat + 0.01,
+            south: center.lat - 0.01,
+            east: center.lng + 0.01,
+            west: center.lng - 0.01,
+            center: {
+              lat: center.lat,
+              lng: center.lng,
+            },
           },
           isAvailable: true, // Assume available for preview
+          estimatedClaimability: 0.8, // Placeholder value
           metadata: {
+            name: activity.name,
+            description: `Territory from ${activity.name}`,
+            landmarks: [], // Empty for external activities
             difficulty: Math.floor((runSession.totalDistance / 1000) * 10), // Rough difficulty calculation
             rarity:
               runSession.totalDistance > 10000
-                ? 'Epic'
+                ? 'legendary'
                 : runSession.totalDistance > 5000
-                  ? 'Rare'
-                  : 'Common',
+                  ? 'epic'
+                  : 'common',
             estimatedReward: Math.floor(runSession.totalDistance / 100),
           },
         };
 
         // Add territory preview to map
-        mapService.addTerritoryPreview(territoryPreview);
+        (mapService as any).addTerritoryPreview?.(territoryPreview);
 
         // Focus map on territory
         if (runSession.points.length > 0) {
           const centerPoint = runSession.points[Math.floor(runSession.points.length / 2)];
-          mapService.focusOnLocation(centerPoint.lat, centerPoint.lng, 14);
+          (mapService as any).focusOnLocation(centerPoint.lat, centerPoint.lng, 14);
         }
 
         // Update button states
@@ -397,15 +410,19 @@ export class ExternalFitnessIntegration extends BaseService {
       errorDiv.remove();
     });
   }
-  private getService(serviceName: string): any {
-    const services = (window as any).RunRealm?.services;
-    return services?.[serviceName];
+  private getService(serviceName: string): object | null {
+    const services = (window as { RunRealm?: { services?: Record<string, object> } }).RunRealm
+      ?.services;
+    return services?.[serviceName] ?? null;
   }
 
   /**
    * Show territory claim confirmation dialog
    */
-  private showTerritoryClaimConfirmation(activity: any, territoryPreview: any): void {
+  private showTerritoryClaimConfirmation(
+    activity: ExternalActivity,
+    territoryPreview: TerritoryPreview
+  ): void {
     const confirmDialog = document.createElement('div');
     confirmDialog.className = 'territory-claim-modal modal-overlay';
     confirmDialog.innerHTML = `
@@ -478,8 +495,11 @@ export class ExternalFitnessIntegration extends BaseService {
         const territoryService = this.getService('TerritoryService');
         if (territoryService) {
           const runTrackingService = this.getService('RunTrackingService');
-          const runSession = await runTrackingService.importExternalActivity(activity);
-          const result = await territoryService.claimTerritoryFromExternalActivity(runSession);
+          if (!runTrackingService) {
+            throw new Error('Run tracking service not available');
+          }
+          const runSession = await (runTrackingService as any).importExternalActivity?.(activity);
+          const result = await (territoryService as any).claimTerritoryFromExternalActivity?.(runSession);
 
           if (result.success) {
             this.safeEmit('territory:claimed', {

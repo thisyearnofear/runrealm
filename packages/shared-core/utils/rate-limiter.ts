@@ -148,36 +148,38 @@ export class StravaRateLimiter extends RateLimiter {
 /**
  * Rate limiter factory for different services
  */
-export class RateLimiterFactory {
-  private static limiters = new Map<string, RateLimiter>();
+export const RateLimiterFactory = (() => {
+  const limiters = new Map<string, RateLimiter>();
 
-  static getStravaLimiter(): StravaRateLimiter {
-    if (!RateLimiterFactory.limiters.has('strava')) {
-      RateLimiterFactory.limiters.set('strava', new StravaRateLimiter());
-    }
-    return RateLimiterFactory.limiters.get('strava') as StravaRateLimiter;
-  }
+  return {
+    getStravaLimiter(): StravaRateLimiter {
+      if (!limiters.has('strava')) {
+        limiters.set('strava', new StravaRateLimiter());
+      }
+      return limiters.get('strava') as StravaRateLimiter;
+    },
 
-  static createCustomLimiter(
-    key: string,
-    capacity: number,
-    refillIntervalMs: number,
-    refillAmount?: number
-  ): RateLimiter {
-    const limiter = new RateLimiter(capacity, refillIntervalMs, refillAmount);
-    RateLimiterFactory.limiters.set(key, limiter);
-    return limiter;
-  }
+    createCustomLimiter(
+      key: string,
+      capacity: number,
+      refillIntervalMs: number,
+      refillAmount?: number
+    ): RateLimiter {
+      const limiter = new RateLimiter(capacity, refillIntervalMs, refillAmount);
+      limiters.set(key, limiter);
+      return limiter;
+    },
 
-  static getLimiter(key: string): RateLimiter | undefined {
-    return RateLimiterFactory.limiters.get(key);
-  }
+    getLimiter(key: string): RateLimiter | undefined {
+      return limiters.get(key);
+    },
 
-  static clearLimiter(key: string): void {
-    RateLimiterFactory.limiters.delete(key);
-  }
+    clearLimiter(key: string): void {
+      limiters.delete(key);
+    },
 
-  static clearAll(): void {
-    RateLimiterFactory.limiters.clear();
-  }
-}
+    clearAll(): void {
+      limiters.clear();
+    },
+  } as const;
+})();

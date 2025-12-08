@@ -227,6 +227,14 @@ export class AchievementService extends BaseService {
       )
       .map((achievement) => {
         const progress = achievement.progress?.(this.userStats);
+        if (!progress) {
+          return {
+            achievementId: achievement.id,
+            current: 0,
+            target: 0,
+            percentage: 0,
+          };
+        }
         return {
           achievementId: achievement.id,
           current: progress.current,

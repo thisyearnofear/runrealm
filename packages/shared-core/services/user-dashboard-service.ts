@@ -29,8 +29,8 @@ export interface DashboardData {
   ghosts: GhostRunnerNFT[];
   walletInfo: WalletInfo | null;
   aiInsights: {
-    suggestedRoute?: any;
-    territoryAnalysis?: any;
+    suggestedRoute?: object;
+    territoryAnalysis?: object;
     personalizedTips: string[];
   };
   notifications: {
@@ -68,12 +68,15 @@ export class UserDashboardService extends BaseService {
   private updateInterval: number | null = null;
   private debouncedUpdate: (() => void) | null = null;
   private throttledRealTimeUpdate: (() => void) | null = null;
-  private realTimeUpdateInterval: any | null = null;
+  private realTimeUpdateInterval: NodeJS.Timeout | null = null;
   private isDataLoaded: boolean = false;
 
   // Service references
   private progressionService: ProgressionService;
+  private runTrackingService: RunTrackingService;
+  private web3Service: Web3Service;
   private territoryService: TerritoryService;
+  private aiService: AIService;
   private ghostRunnerService: GhostRunnerService;
 
   constructor() {
@@ -94,9 +97,9 @@ export class UserDashboardService extends BaseService {
     return UserDashboardService.instance;
   }
 
-  protected debounce(func: (...args: any[]) => void, wait: number): () => void {
+  protected debounce(func: (...args: object[]) => void, wait: number): () => void {
     let timeout: NodeJS.Timeout | null = null;
-    return (...args: any[]) => {
+    return (...args: object[]) => {
       if (timeout) {
         clearTimeout(timeout);
       }
@@ -104,10 +107,10 @@ export class UserDashboardService extends BaseService {
     };
   }
 
-  protected throttle(func: (...args: any[]) => void, wait: number): () => void {
+  protected throttle(func: (...args: object[]) => void, wait: number): () => void {
     let timeout: NodeJS.Timeout | null = null;
     let lastExecTime = 0;
-    return (...args: any[]) => {
+    return (...args: object[]) => {
       const now = Date.now();
       if (now - lastExecTime > wait) {
         func.apply(this, args);
@@ -233,8 +236,8 @@ export class UserDashboardService extends BaseService {
 
   private setupEventListeners(): void {
     // Listen for player stats updates (debounced)
-    this.subscribe('game:statsUpdated', (data: any) => {
-      this.dashboardData.userStats = data.stats;
+    this.subscribe('game:statsUpdated', (data: { stats: object }) => {
+      this.dashboardData.userStats = data.stats as PlayerStats;
       this.debouncedUpdate?.();
     });
 
@@ -251,7 +254,7 @@ export class UserDashboardService extends BaseService {
       this.throttledRealTimeUpdate?.();
     });
 
-    this.subscribe('run:cleared', (data: any) => {
+    this.subscribe('run:cleared', (data: { runId: string }) => {
       this.dashboardData.recentActivity.lastRun = {
         id: data.runId,
         startTime: Date.now(),
@@ -272,22 +275,23 @@ export class UserDashboardService extends BaseService {
     });
 
     // Listen for territory events
-    this.subscribe('territory:claimed', (_data: any) => {
+    this.subscribe('territory:claimed', (_data: object) => {
       this.dashboardData.notifications.territoryClaimed = true;
       this.dashboardData.notifications.territoryEligible = false;
       this.debouncedUpdate?.();
     });
 
-    this.subscribe('territory:eligible', (_data: any) => {
+    this.subscribe('territory:eligible', (_data: object) => {
       this.dashboardData.notifications.territoryEligible = true;
       this.debouncedUpdate?.();
     });
 
     // Listen for achievement events
     this.subscribe('game:achievementUnlocked', (data: any) => {
-      this.dashboardData.notifications.achievementUnlocked = data.achievementId;
+      const achievementId = (data.achievement as any)?.id || data.achievementId || 'unknown';
+      this.dashboardData.notifications.achievementUnlocked = achievementId;
       if (this.dashboardData.recentActivity.recentAchievements) {
-        this.dashboardData.recentActivity.recentAchievements.push(data.achievementId);
+        this.dashboardData.recentActivity.recentAchievements.push(achievementId);
         // Keep only the last 5 achievements
         if (this.dashboardData.recentActivity.recentAchievements.length > 5) {
           this.dashboardData.recentActivity.recentAchievements.shift();
@@ -298,15 +302,18 @@ export class UserDashboardService extends BaseService {
 
     // Listen for level up events
     this.subscribe('game:levelUp', (data: any) => {
-      this.dashboardData.notifications.levelUp = data.newLevel;
+      const newLevel = (data as any).newLevel || (data as any).level || 1;
+      this.dashboardData.notifications.levelUp = newLevel;
       this.debouncedUpdate?.();
     });
 
     // Listen for wallet events
     this.subscribe('web3:walletConnected', (data: any) => {
+      const address = (data as any).address;
+      const chainId = (data as any).chainId || 1;
       this.dashboardData.walletInfo = {
-        address: data.address,
-        chainId: data.chainId,
+        address,
+        chainId,
         networkName: '', // Will be updated in updateDashboardData
         balance: '0',
       };
@@ -320,11 +327,11 @@ export class UserDashboardService extends BaseService {
 
     // Listen for AI events
     this.subscribe('ai:routeReady', (data: any) => {
-      this.dashboardData.aiInsights.suggestedRoute = data;
+      this.dashboardData.aiInsights.suggestedRoute = data as object;
       this.debouncedUpdate?.();
     });
 
-    this.subscribe('ai:territoryAnalyzed', (data: any) => {
+    this.subscribe('ai:territoryAnalyzed', (data: object) => {
       this.dashboardData.aiInsights.territoryAnalysis = data;
       this.debouncedUpdate?.();
     });

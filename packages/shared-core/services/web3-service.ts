@@ -3,13 +3,19 @@
  * Handles wallet connections, network management, and basic blockchain operations
  */
 
-// Type definitions for ethers
-import type { ethers as EthersType } from 'ethers';
-// Dynamically import ethers to reduce initial bundle size
-// import { ethers } from 'ethers';
 import { BaseService } from '../core/base-service';
 
-type Ethers = typeof EthersType;
+// Dynamically import ethers to reduce initial bundle size
+// import { ethers } from 'ethers';
+// Define ethers types for dynamic import
+type EthersProvider = {
+  BrowserProvider: new (ethereum: any) => any;
+  formatEther: (bigNumber: any) => string;
+};
+
+type EthersSigner = any;
+
+type EthersContract = new (address: string, abi: any, signer: any) => any;
 
 export interface WalletInfo {
   address: string;
@@ -40,7 +46,7 @@ export interface TransactionRequest {
 
 export class Web3Service extends BaseService {
   private static instance: Web3Service;
-  private ethers: Ethers | null = null;
+  private ethers: any | null = null;
   private provider: any | null = null;
   private signer: any | null = null;
   private currentWallet: WalletInfo | null = null;

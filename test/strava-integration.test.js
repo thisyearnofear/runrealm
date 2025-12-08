@@ -3,7 +3,7 @@
  * Tests the basic functionality of the Strava API integration
  */
 
-const { ExternalFitnessService } = require('../src/services/external-fitness-service');
+// const { ExternalFitnessService } = require('../src/services/external-fitness-service');
 
 describe('Strava Integration', () => {
   let _fitnessService;

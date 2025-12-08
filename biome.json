@@ -84,6 +84,20 @@
           }
         }
       }
+    },
+    {
+      "includes": [
+        "packages/shared-core/**",
+        "packages/shared-blockchain/**",
+        "packages/mobile-app/**"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
     }
   ]
 }

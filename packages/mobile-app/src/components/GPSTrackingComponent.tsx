@@ -3,6 +3,7 @@
  * Provides mobile-optimized run tracking UI and functionality
  */
 
+import { RunSession } from '@runrealm/shared-core';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -16,7 +17,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
 // Import BackgroundTrackingService for proper background tracking
 import { BackgroundTrackingService } from '../services/BackgroundTrackingService';
 
@@ -26,7 +26,7 @@ import { AICoachingWidget } from './AICoachingWidget';
 
 interface GPSTrackingProps {
   onRunStart?: () => void;
-  onRunStop?: (runData: any) => void;
+  onRunStop?: (runData: RunSession) => void;
 }
 
 const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunStop }) => {
@@ -155,14 +155,14 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
     pulseAnim.setValue(1);
   };
 
-  const checkTerritoryEligibility = (stats: any) => {
+  const checkTerritoryEligibility = (stats: { distance: number }) => {
     // Simple eligibility check - can be enhanced with real logic
     const eligible = stats && stats.distance > 500; // Basic distance check
     setTerritoryEligible(eligible);
     return eligible;
   };
 
-  const updateRunStats = (stats: any) => {
+  const updateRunStats = (stats: { distance?: number; duration?: number; pace?: number }) => {
     if (stats) {
       setDistance(stats.distance || 0);
       setDuration(stats.duration || 0);

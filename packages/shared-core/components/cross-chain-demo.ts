@@ -125,16 +125,16 @@ export class CrossChainDemoComponent extends BaseService {
 
     // Listen for cross-chain events
     if (this.eventBus) {
-      this.eventBus.on('crosschain:territoryClaimInitiated', (_data: any) => {
+      this.eventBus.on('crosschain:territoryClaimInitiated', (_data: object) => {
         this.updateDemoStatus('🟡', 'Cross-chain claim initiated...', 30);
       });
 
-      this.eventBus.on('web3:crossChainTerritoryClaimed', (data: any) => {
+      this.eventBus.on('web3:crossChainTerritoryClaimed', (data: object) => {
         this.updateDemoStatus('✅', 'Territory claimed successfully!', 100);
         this.showDemoResults(data);
       });
 
-      this.eventBus.on('crosschain:territoryClaimFailed', (data: any) => {
+      this.eventBus.on('crosschain:territoryClaimFailed', (data: { error: string }) => {
         this.updateDemoStatus('❌', `Claim failed: ${data.error}`, 100);
       });
     }
@@ -166,16 +166,17 @@ export class CrossChainDemoComponent extends BaseService {
     this.updateDemoStatus('🟡', 'Initializing cross-chain claim...', 10);
 
     // Get services
-    const services = (window as any).RunRealm?.services;
-    const web3Service = services?.web3;
-    const _crossChainService = services?.crossChain;
+    const services = (window as { RunRealm?: { services?: Record<string, object> } }).RunRealm
+      ?.services;
+    const web3Service = services?.web3 as any;
+    const _crossChainService = services?.crossChain as any;
 
     // Check if wallet is connected
     if (!web3Service?.isConnected()) {
       this.updateDemoStatus('❌', 'Please connect your wallet first', 100);
       // Show wallet connection UI
       if (services?.walletWidget) {
-        services.walletWidget.showWalletModal();
+        (services.walletWidget as any).showWalletModal();
       }
       return;
     }
@@ -273,7 +274,7 @@ ZetaChain Gateway API Usage Examples:
     if (progressFillEl) progressFillEl.style.width = `${progress}%`;
   }
 
-  private showDemoResults(data: any): void {
+  private showDemoResults(data: { hash?: string; originChainId?: number }): void {
     const resultsEl = document.getElementById('demo-results');
     if (resultsEl) {
       resultsEl.style.display = 'block';
@@ -293,7 +294,7 @@ ZetaChain Gateway API Usage Examples:
         8453: 'Base',
         42161: 'Arbitrum',
       };
-      originChainEl.textContent = chainNames[data.originChainId] || `Chain ${data.originChainId}`;
+      originChainEl.textContent = chainNames[data.originChainId ?? 1] || `Chain ${data.originChainId ?? 'unknown'}`;
     }
   }
 

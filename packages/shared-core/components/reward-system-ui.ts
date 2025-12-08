@@ -6,6 +6,7 @@
 import { BaseService } from '../core/base-service';
 import { AnimationService } from '../services/animation-service';
 import { DOMService } from '../services/dom-service';
+import { Territory } from '../services/territory-service';
 import { UIService } from '../services/ui-service';
 import { Web3Service } from '../services/web3-service';
 
@@ -122,36 +123,33 @@ export class RewardSystemUI extends BaseService {
             <span class="reward-label">Available:</span>
             <span class="reward-value highlight">${this.formatTokenAmount(availableToClaim)} REALM</span>
           </div>
-          ${
-            totalEarned > 0
-              ? `
+          ${totalEarned > 0
+        ? `
             <div class="reward-item">
               <span class="reward-label">Total Earned:</span>
               <span class="reward-value">${this.formatTokenAmount(totalEarned)} REALM</span>
             </div>
           `
-              : ''
-          }
-          ${
-            stakedAmount > 0
-              ? `
+        : ''
+      }
+          ${stakedAmount > 0
+        ? `
             <div class="reward-item">
               <span class="reward-label">Staked:</span>
               <span class="reward-value">${this.formatTokenAmount(stakedAmount)} REALM</span>
             </div>
           `
-              : ''
-          }
+        : ''
+      }
         </div>
-        ${
-          availableToClaim > 0
-            ? `
+        ${availableToClaim > 0
+        ? `
           <button id="claim-rewards-btn" class="wallet-reward-btn" data-action="claim-rewards">
             💎 Claim ${this.formatTokenAmount(availableToClaim)} REALM
           </button>
         `
-            : ''
-        }
+        : ''
+      }
       </div>
     `;
   }
@@ -161,7 +159,7 @@ export class RewardSystemUI extends BaseService {
     this.subscribe(
       'territory:claimed',
       (_data: {
-        territory: any;
+        territory: Territory;
         transactionHash: string;
         isCrossChain?: boolean;
         sourceChainId?: number;
@@ -186,13 +184,13 @@ export class RewardSystemUI extends BaseService {
       this.loadRewardData();
       this.updateRewardDisplay();
       // Emit event for wallet widget to update
-      this.safeEmit('rewards:dataUpdated' as any, this.rewardData);
+      this.safeEmit('rewards:dataUpdated', { data: this.rewardData });
     });
 
     this.subscribe('web3:walletDisconnected', () => {
       this.resetRewardData();
       // Emit event for wallet widget to update
-      this.safeEmit('rewards:dataUpdated' as any, this.rewardData);
+      this.safeEmit('rewards:dataUpdated', { data: this.rewardData });
     });
 
     // React to settings changes for rewards visibility
@@ -257,15 +255,14 @@ export class RewardSystemUI extends BaseService {
       </div>
       
       <div class="reward-widget-content">
-        ${
-          !isConnected
-            ? `
+        ${!isConnected
+        ? `
           <div class="reward-connect-prompt">
             <p>Connect your wallet to view and claim rewards</p>
             <p class="connect-hint">Use the wallet widget in the top-right corner</p>
           </div>
         `
-            : `
+        : `
           <div class="reward-stats">
             <div class="stat-row">
               <span class="stat-label">Total Earned:</span>
@@ -308,9 +305,8 @@ export class RewardSystemUI extends BaseService {
             
             <div class="staking-section">
               <div class="staking-info">
-                ${
-                  this.stakingInfo
-                    ? `
+                ${this.stakingInfo
+          ? `
                   <div class="staking-active">
                     <span class="staking-label">Staked: ${this.formatTokenAmount(this.stakingInfo.amount)} REALM</span>
                     <span class="staking-apy">APY: ${this.stakingInfo.apy}%</span>
@@ -319,20 +315,20 @@ export class RewardSystemUI extends BaseService {
                     Unstake Tokens
                   </button>
                 `
-                    : `
+          : `
                   <button id="stake-tokens-btn" class="reward-btn secondary">
                     <span class="btn-icon">📈</span>
                     <span class="btn-text">Stake REALM</span>
                   </button>
                 `
-                }
+        }
               </div>
             </div>
           </div>
           
           ${this.renderRewardHistory()}
         `
-        }
+      }
       </div>
     `;
   }
@@ -542,14 +538,14 @@ export class RewardSystemUI extends BaseService {
 
         // Update data
         this.rewardData.stakedAmount = 0;
-        this.rewardData.availableToClaim += pendingReward;
+        this.rewardData.availableToClaim += pendingReward || 0;
         this.stakingInfo = null;
 
         this.updateRewardDisplay();
         this.saveRewardData();
 
         this.uiService.showToast(
-          `🎉 Unstaked ${this.formatTokenAmount(unstakedAmount)} REALM + ${this.formatTokenAmount(pendingReward)} rewards!`,
+          `🎉 Unstaked ${this.formatTokenAmount(unstakedAmount || 0)} REALM + ${this.formatTokenAmount(pendingReward || 0)} rewards!`,
           {
             type: 'success',
             duration: 5000,
@@ -678,7 +674,7 @@ export class RewardSystemUI extends BaseService {
       this.rewardWidget.innerHTML = this.renderRewardWidget();
     }
     // Emit event for wallet widget to update
-    this.safeEmit('rewards:dataUpdated' as any, this.rewardData);
+    this.safeEmit('rewards:dataUpdated', { data: this.rewardData });
   }
 
   private loadRewardData(): void {

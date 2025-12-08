@@ -169,7 +169,7 @@ export class MobileWeb3Adapter extends BaseService {
   /**
    * Send transaction (delegates to Web3Service)
    */
-  public async sendTransaction(transaction: any): Promise<string> {
+  public async sendTransaction(transaction: object): Promise<string> {
     return this.web3Service.sendTransaction(transaction);
   }
 
@@ -183,7 +183,7 @@ export class MobileWeb3Adapter extends BaseService {
   /**
    * Get contract instance (delegates to Web3Service)
    */
-  public getContract(address: string, abi: any): any {
+  public getContract(address: string, abi: object[]): object {
     return this.web3Service.getContract(address, abi);
   }
 

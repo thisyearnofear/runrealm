@@ -79,7 +79,7 @@ export class GameFiUI extends BaseService {
 
     this.subscribe('web3:walletConnected', (_data) => {
       // Let MainUI handle GameFi widgets visibility
-      this.updatePlayerStats({ realmBalance: 0 } as any);
+      this.updatePlayerStats({ realmBalance: 0 });
       this.safeEmit('ui:gamefiEnabled', { enabled: true });
     });
 
@@ -88,7 +88,7 @@ export class GameFiUI extends BaseService {
       const reward =
         data.territory?.metadata?.estimatedReward || data.territory?.estimatedReward || 25;
       this.showRewardNotification(`🎉 Territory Claimed! +${reward} $REALM`);
-      this.updatePlayerStats({ territoriesOwned: 1 } as any);
+      this.updatePlayerStats({ territoriesOwned: 1 });
     });
 
     // Button event handlers using event delegation - claim button removed as claiming is now handled by TerritoryService

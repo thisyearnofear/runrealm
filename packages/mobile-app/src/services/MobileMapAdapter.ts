@@ -114,7 +114,12 @@ export class MobileMapAdapter {
   /**
    * Convert bounds to polygon coordinates
    */
-  private boundsToCoordinates(bounds: any): Array<{ latitude: number; longitude: number }> {
+  private boundsToCoordinates(bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  }): Array<{ latitude: number; longitude: number }> {
     return [
       { latitude: bounds.south, longitude: bounds.west },
       { latitude: bounds.south, longitude: bounds.east },
@@ -290,7 +295,7 @@ export class MobileMapAdapter {
   /**
    * Draw suggested route
    */
-  public drawSuggestedRoute(points: any[]): void {
+  public drawSuggestedRoute(points: Array<{ latitude: number; longitude: number }>): void {
     // Update MapService
     this.mapService.drawSuggestedRoute(points);
 

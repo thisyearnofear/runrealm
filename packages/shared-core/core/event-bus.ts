@@ -1,4 +1,148 @@
+// Import service types for type safety
+
+import { WidgetState } from '../components/widget-state-service';
 import { GhostRunner } from '../services/ai-service';
+import { RunPoint, RunSession } from '../services/run-tracking-service';
+import {
+  Territory,
+  TerritoryBounds,
+  TerritoryMetadata,
+  TerritoryPreview,
+} from '../services/territory-service';
+
+// Define route-related types
+interface RouteData {
+  coordinates: number[][] | RunPoint[];
+  distance: number;
+  difficulty?: number;
+  waypoints?: RunPoint[];
+  totalDistance?: number;
+  estimatedTime?: number;
+  origin?: string;
+  destination?: string;
+}
+
+interface RouteVisualizationData {
+  coordinates: number[][];
+  type: string;
+  style: MapStyle | VisualStyle;
+  metadata: RouteMetadata;
+}
+
+interface MapStyle {
+  color?: string;
+  weight?: number;
+  opacity?: number;
+  width?: number;
+  test?: boolean;
+  [key: string]: unknown;
+}
+
+interface VisualStyle {
+  strokeColor?: string;
+  strokeWeight?: number;
+  strokeOpacity?: number;
+  [key: string]: unknown;
+}
+
+interface RouteMetadata {
+  name?: string;
+  description?: string;
+  difficulty?: number;
+  elevation?: number;
+  startTime?: number;
+  test?: boolean;
+  [key: string]: unknown;
+}
+
+// Define game-related types
+interface AchievementData {
+  achievementId: string;
+  achievement: Achievement;
+  player: Player;
+}
+
+interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  points: number;
+  unlockedAt?: number;
+}
+
+interface Player {
+  id: string;
+  address: string;
+  level: number;
+  experience: number;
+}
+
+// Define navigation types
+interface RouteInfo {
+  name?: string;
+  path?: string;
+  component?: string;
+  params?: Record<string, unknown>;
+}
+
+interface RouteParams {
+  id?: string;
+  type?: string;
+  filter?: string;
+  [key: string]: unknown;
+}
+
+// Define territory preview point
+interface TerritoryPreviewPoint {
+  lat: number;
+  lng: number;
+}
+
+// Define dashboard data
+interface DashboardData {
+  currentRun?: RunSession;
+  territories?: Territory[];
+  stats?: GameStats;
+  achievements?: Achievement[];
+}
+
+interface GameStats {
+  totalDistance: number;
+  totalDuration: number;
+  averagePace: number;
+  territoriesOwned: number;
+  level: number;
+  experience: number;
+}
+
+// Define cross-chain data types
+interface CrossChainTerritoryData {
+  id: string;
+  geohash: string;
+  owner: string;
+  chainId: number;
+  tokenId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface StatsData {
+  totalRuns: number;
+  totalDistance: number;
+  territoriesClaimed: number;
+  level: number;
+  experience: number;
+  achievementsUnlocked: number;
+}
+
+interface MessageData {
+  id: string;
+  content: string;
+  sender: string;
+  recipient: string;
+  timestamp: number;
+}
 
 // Centralized event system for loose coupling
 export type EventCallback<T = any> = (data: T) => void;
@@ -86,11 +230,15 @@ export interface AppEvents extends Web3Events {
   'mobile:gestureDetected': { type: string; data: any };
   'territory:claimRequested': { runId: string };
   'territory:claimStarted': { territoryId: string; territoryName: string };
-  'territory:eligible': { territory: any; run: any; message: string };
-  'territory:preview': { territory: any; bounds: any; metadata: any };
-  'territory:nearbyUpdated': { count: number; territories: any[] };
+  'territory:eligible': { territory: Territory; run: RunSession; message: string };
+  'territory:preview': {
+    territory: TerritoryPreview;
+    bounds: TerritoryBounds;
+    metadata: TerritoryMetadata;
+  };
+  'territory:nearbyUpdated': { count: number; territories: Territory[] };
   'territory:claimed': {
-    territory: any;
+    territory: Territory;
     transactionHash: string;
     isCrossChain?: boolean;
     sourceChainId?: number;
@@ -98,7 +246,7 @@ export interface AppEvents extends Web3Events {
   };
   'territory:claimFailed': {
     error: string;
-    territory: any;
+    territory: Territory;
     runId?: string;
     isCrossChain?: boolean;
   };
@@ -109,25 +257,20 @@ export interface AppEvents extends Web3Events {
   };
   'ai:ghostRunnerRequested': { difficulty?: number };
   'ai:routeReady': {
-    route: any;
+    route: RouteData;
     distance: number;
     duration: number;
-    waypoints?: any[];
+    waypoints?: RunPoint[];
     totalDistance?: number;
     difficulty?: number;
     estimatedTime?: number;
   };
   'ai:routeFailed': { message: string };
-  'ai:routeVisualize': {
-    coordinates: number[][];
-    type: string;
-    style: any;
-    metadata: any;
-  };
-  'ai:waypointsVisualize': { waypoints: any[]; routeMetadata: any };
+  'ai:routeVisualize': RouteVisualizationData;
+  'ai:waypointsVisualize': { waypoints: RunPoint[]; routeMetadata: RouteMetadata };
   'ai:routeClear': Record<string, never>;
   'ai:ghostRunnerGenerated': {
-    runner: any;
+    runner: GhostRunner;
     difficulty: number;
     success?: boolean;
     fallback?: boolean;
@@ -141,18 +284,14 @@ export interface AppEvents extends Web3Events {
   };
   'map:focusTerritory': { geohash: string };
   'game:levelUp': { newLevel: number; player: string };
-  'game:achievementUnlocked': {
-    achievementId: string;
-    achievement: any;
-    player: string;
-  };
-  'game:statsUpdated': { stats: any };
+  'game:achievementUnlocked': AchievementData;
+  'game:statsUpdated': { stats: GameStats };
   'game:rewardEarned': { amount: number };
-  'navigation:routesRegistered': { routes: any[] };
+  'navigation:routesRegistered': { routes: RouteInfo[] };
   'navigation:routeChanged': {
     routeId: string;
-    route: any;
-    params?: any;
+    route: RouteInfo;
+    params?: RouteParams;
     previousRoute?: string;
   };
   'onboarding:completed': Record<string, never>;
@@ -177,7 +316,7 @@ export interface AppEvents extends Web3Events {
   'location:error': Record<string, never>;
   'config:updated': Record<string, never>;
   'visibility:changed': { elementId: string; visible: boolean };
-  'widget:stateChanged': { widgetId: string; state: any };
+  'widget:stateChanged': { widgetId: string; state: WidgetState };
   'widget:stateReset': { widgetId: string };
   'widget:allStatesReset': Record<string, never>;
   'mobile:swipeLeft': Record<string, never>;
@@ -198,6 +337,7 @@ export interface AppEvents extends Web3Events {
   'staking:stakeStarted': { transactionHash: string; amount: number };
   'staking:rewardEarned': { amount: number };
   'rewards:settingsChanged': Record<string, never>;
+  'rewards:dataUpdated': { data: any };
   'rewards:claim': Record<string, never>;
   'wallet:connect': { provider?: string };
   'wallet:disconnect': Record<string, never>;
@@ -279,10 +419,10 @@ export interface AppEvents extends Web3Events {
   };
   'strava:athlete:deauthorized': { athleteId: number; eventTime: number };
   // Ghost runner events
-  'ghost:unlocked': { ghost: any; reason: string };
-  'ghost:deployed': { ghost: any; territoryId: string };
-  'ghost:completed': { ghostRun: any };
-  'ghost:upgraded': { ghost: any };
+  'ghost:unlocked': { ghost: GhostRunner; reason: string };
+  'ghost:deployed': { ghost: GhostRunner; territoryId: string };
+  'ghost:completed': { ghostRun: { ghostId: string; runId: string; completedAt: number } };
+  'ghost:upgraded': { ghost: GhostRunner };
   'ghost:unlockAvailable': { message: string; types: string[] };
   // Realm token events
   'realm:earned': { amount: number; reason: string };
@@ -296,7 +436,7 @@ export class EventBus {
   private static instance: EventBus;
   private listeners: Map<keyof AppEvents, Set<EventCallback>> = new Map();
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): EventBus {
     if (!EventBus.instance) {

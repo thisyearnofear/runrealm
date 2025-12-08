@@ -778,7 +778,9 @@ export class LocationService extends BaseService {
       this.createLocationModal();
     }
 
-    this.locationModal?.style.display = 'flex';
+    if (this.locationModal) {
+      this.locationModal.style.display = 'flex';
+    }
     document.body.classList.add('modal-open');
 
     // Focus first focusable element in modal

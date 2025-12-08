@@ -19,7 +19,12 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
   currentLocation,
   onRouteSelected,
 }) => {
-  const [suggestedRoute, setSuggestedRoute] = useState<any>(null);
+  const [suggestedRoute, setSuggestedRoute] = useState<{
+    name: string;
+    distance: number;
+    estimatedTime: number;
+    landmarks: string[];
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -114,8 +119,8 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
           {suggestedRoute.landmarks && suggestedRoute.landmarks.length > 0 && (
             <View style={styles.landmarksSection}>
               <Text style={styles.landmarksTitle}>📍 Landmarks</Text>
-              {suggestedRoute.landmarks.slice(0, 3).map((landmark: string, index: number) => (
-                <Text key={`landmark-${index}`} style={styles.landmarkText}>
+              {suggestedRoute.landmarks.slice(0, 3).map((landmark: string) => (
+                <Text key={landmark} style={styles.landmarkText}>
                   • {landmark}
                 </Text>
               ))}

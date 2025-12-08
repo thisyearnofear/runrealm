@@ -6,7 +6,7 @@ import { ContractService } from './contract-service';
 declare class ZetaChainClient {
   constructor(config: { network: string; chainId: number });
   gateway: {
-    sendMessage: (params: any) => Promise<any>;
+    sendMessage: (params: object) => Promise<object>;
   };
 }
 
@@ -21,6 +21,8 @@ export interface CrossChainMessage {
   targetAddress: string;
   data: string;
   gasLimit?: number;
+  territoryData?: any;
+  statsData?: any;
 }
 
 export interface CrossChainEvent {
@@ -36,12 +38,13 @@ export interface CrossChainEvent {
 export class CrossChainService extends BaseService {
   private web3Service: Web3Service | null = null;
   private contractService: ContractService | null = null;
-  private zetaConnector: any = null;
+  private zetaConnector: object | null = null;
+  private zetaClient: ZetaChainClient | null = null;
 
   protected async onInitialize(): Promise<void> {
     // Wait for dependent services
-    this.web3Service = this.getService('Web3Service');
-    this.contractService = this.getService('ContractService');
+    this.web3Service = this.getService('Web3Service') as Web3Service | null;
+    this.contractService = this.getService('ContractService') as ContractService | null;
 
     if (!this.web3Service || !this.contractService) {
       console.warn('CrossChainService: Required services not available');
@@ -82,14 +85,14 @@ export class CrossChainService extends BaseService {
       await this.initializeZetaClient();
     });
 
-    // Listen for cross-chain territory claims
+    // Listen for cross-chain territory claims - note: event payload has different structure
     this.subscribe('crosschain:territoryClaimRequested', async (data: any) => {
-      await this.handleCrossChainTerritoryClaim(data);
+      await this.handleCrossChainTerritoryClaim(data as any);
     });
 
     // Listen for cross-chain stats updates
     this.subscribe('crosschain:statsUpdateRequested', async (data: any) => {
-      await this.handleCrossChainStatsUpdate(data);
+      await this.handleCrossChainStatsUpdate(data as any);
     });
   }
 
@@ -227,10 +230,15 @@ export class CrossChainService extends BaseService {
       });
 
       // Handle specific message types
-      if (decodedData.type === 'territoryUpdate') {
+      if (
+        decodedData &&
+        typeof decodedData === 'object' &&
+        'type' in decodedData &&
+        decodedData.type === 'territoryUpdate'
+      ) {
         this.safeEmit('crosschain:territoryUpdated', {
-          territoryId: decodedData.territoryId,
-          action: decodedData.action,
+          territoryId: (decodedData as any).territoryId,
+          action: (decodedData as any).action,
           sourceChainId: message.sourceChainId,
         });
       }
@@ -252,7 +260,7 @@ export class CrossChainService extends BaseService {
   /**
    * Handle cross-chain territory claim request
    */
-  private async handleCrossChainTerritoryClaim(data: any): Promise<void> {
+  private async handleCrossChainTerritoryClaim(data: CrossChainMessage): Promise<void> {
     try {
       console.log('CrossChainService: Handling cross-chain territory claim', data);
 
@@ -292,7 +300,7 @@ export class CrossChainService extends BaseService {
   /**
    * Handle cross-chain stats update request
    */
-  private async handleCrossChainStatsUpdate(data: any): Promise<void> {
+  private async handleCrossChainStatsUpdate(data: CrossChainMessage): Promise<void> {
     try {
       console.log('CrossChainService: Handling cross-chain stats update', data);
 
@@ -332,7 +340,7 @@ export class CrossChainService extends BaseService {
   /**
    * Encode territory data for cross-chain transmission
    */
-  private encodeTerritoryData(territoryData: any): string {
+  private encodeTerritoryData(territoryData: object): string {
     // In a real implementation, this would properly encode the data
     // For now, we'll use JSON.stringify as a placeholder
     return JSON.stringify(territoryData);
@@ -341,7 +349,7 @@ export class CrossChainService extends BaseService {
   /**
    * Encode stats data for cross-chain transmission
    */
-  private encodeStatsData(statsData: any): string {
+  private encodeStatsData(statsData: object): string {
     // In a real implementation, this would properly encode the data
     // For now, we'll use JSON.stringify as a placeholder
     return JSON.stringify(statsData);
@@ -350,7 +358,7 @@ export class CrossChainService extends BaseService {
   /**
    * Decode cross-chain message data
    */
-  public decodeMessageData(data: string): any {
+  public decodeMessageData(data: string): object | null {
     try {
       return JSON.parse(data);
     } catch (error) {
@@ -395,8 +403,9 @@ export class CrossChainService extends BaseService {
   /**
    * Get service instance from global registry
    */
-  private getService(serviceName: string): any {
-    const services = (window as any).RunRealm?.services;
+  private getService(serviceName: string): object | null {
+    const services = (window as { RunRealm?: { services?: Record<string, object> } }).RunRealm
+      ?.services;
     if (!services) {
       console.warn(`Service registry not found. Cannot access ${serviceName}`);
       return null;
@@ -418,7 +427,7 @@ export class CrossChainService extends BaseService {
       console.log('CrossChainService: Sending enhanced cross-chain message', params);
 
       // Check if we have a real ZetaChain client
-      if (this.zetaConnector && typeof this.zetaConnector.gateway?.sendMessage === 'function') {
+      if (this.zetaConnector && typeof (this.zetaConnector as any).gateway?.sendMessage === 'function') {
         // Use the real ZetaChain client
         console.log('CrossChainService: Using real ZetaChain client');
 

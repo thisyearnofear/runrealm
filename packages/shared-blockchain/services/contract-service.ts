@@ -215,14 +215,16 @@ export class ContractService extends BaseService {
         let tokenId = null;
         try {
           // Look for TerritoryCreated event
-          const territoryCreatedEvent = receipt.logs.find((log: any) => {
-            try {
-              const parsed = this.universalContract.interface.parseLog(log);
-              return parsed.name === CONTRACT_EVENTS.universal.TerritoryCreated;
-            } catch {
-              return false;
+          const territoryCreatedEvent = receipt.logs.find(
+            (log: { topics: string[]; data: string }) => {
+              try {
+                const parsed = this.universalContract.interface.parseLog(log);
+                return parsed.name === CONTRACT_EVENTS.universal.TerritoryCreated;
+              } catch {
+                return false;
+              }
             }
-          });
+          );
 
           if (territoryCreatedEvent) {
             const parsed = this.universalContract.interface.parseLog(territoryCreatedEvent);
@@ -340,7 +342,7 @@ export class ContractService extends BaseService {
    * when a cross-chain message is received
    */
   public async processCrossChainMessage(
-    context: any,
+    context: object,
     zrc20: string,
     amount: number,
     message: string
@@ -414,7 +416,7 @@ export class ContractService extends BaseService {
         await this.universalContract[CONTRACT_METHODS.universal.getPlayerTerritories](
           targetAddress
         );
-      return tokenIds.map((id: any) => Number(id));
+      return tokenIds.map((id: string | number) => Number(id));
     } catch (error) {
       console.error('ContractService: Failed to get territories:', error);
       return [];

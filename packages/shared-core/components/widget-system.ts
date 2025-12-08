@@ -24,7 +24,9 @@ export interface Widget {
 export class WidgetSystem extends BaseService {
   private domService: DOMService;
   private dragService: DragService;
+  private animationService: AnimationService;
   private widgetStateService: WidgetStateService;
+  private visibilityService: VisibilityService | null = null;
   private mobileWidgetService: MobileWidgetService | null = null;
   private widgets: Map<string, Widget> = new Map();
   private activeWidget: string | null = null;
@@ -582,7 +584,7 @@ export class WidgetSystem extends BaseService {
     const widgets = Array.from(document.querySelectorAll('.widget-header'));
     if (widgets.length === 0) return;
 
-    const currentIndex = widgets.indexOf(document.activeElement);
+    const currentIndex = widgets.indexOf(document.activeElement as Element);
 
     let nextIndex: number;
     if (event.shiftKey) {

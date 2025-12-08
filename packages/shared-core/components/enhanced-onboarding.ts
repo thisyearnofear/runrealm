@@ -149,7 +149,7 @@ export class EnhancedOnboarding extends BaseService {
     await this.createOverlay();
     await this.showStep(this.currentStep);
 
-    this.safeEmit('onboarding:started' as any, {});
+    this.safeEmit('onboarding:started', {});
   }
 
   private shouldShowOnboarding(): boolean {
@@ -198,7 +198,7 @@ export class EnhancedOnboarding extends BaseService {
       this.handleStepAction(step);
     }
 
-    this.safeEmit('onboarding:stepShown' as any, { step: step.id, index: stepIndex });
+    this.safeEmit('onboarding:stepShown', { step: step.id, index: stepIndex });
   }
 
   private highlightTarget(target?: string): void {
@@ -261,7 +261,7 @@ export class EnhancedOnboarding extends BaseService {
           </div>
         </div>
       `,
-      parent: this.overlay!,
+      parent: this.overlay,
     });
 
     // Position tooltip
@@ -463,7 +463,7 @@ export class EnhancedOnboarding extends BaseService {
       });
     }
 
-    this.safeEmit('onboarding:completed' as any, {
+    this.safeEmit('onboarding:completed', {
       skipped,
       completedSteps: Array.from(this.completedSteps),
     });
@@ -764,7 +764,8 @@ export class EnhancedOnboarding extends BaseService {
    * Ensure target widget is visible and expanded for onboarding
    */
   private async ensureWidgetVisible(step: OnboardingStep): Promise<void> {
-    const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
+    const widgetSystem = (window as { runRealmApp?: { mainUI?: { widgetSystem?: object } } })
+      .runRealmApp?.mainUI?.widgetSystem;
     if (!widgetSystem) return;
 
     let widgetId: string | null = null;

@@ -3,8 +3,8 @@
  * Simple utilities to test widget functionality
  */
 
-export class WidgetTest {
-  static testWidgetVisibility(): boolean {
+export const WidgetTest = {
+  testWidgetVisibility(): boolean {
     const widgetSystem = document.getElementById('widget-system');
     if (!widgetSystem) {
       console.error('❌ Widget system container not found');
@@ -30,9 +30,9 @@ export class WidgetTest {
     });
 
     return widgets.length > 0;
-  }
+  },
 
-  static testLocationSearch(): void {
+  testLocationSearch(): void {
     console.log('🧪 Testing location search...');
 
     // Simulate location change event
@@ -52,9 +52,9 @@ export class WidgetTest {
     } else {
       console.error('❌ Event bus not available for testing');
     }
-  }
+  },
 
-  static runAllTests(): void {
+  runAllTests(): void {
     console.log('🧪 Running widget system tests...');
 
     setTimeout(() => {
@@ -64,11 +64,12 @@ export class WidgetTest {
     setTimeout(() => {
       WidgetTest.testLocationSearch();
     }, 2000);
-  }
-}
+  },
+} as const;
 
 // Expose globally in development
 if (process.env.NODE_ENV === 'development') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).WidgetTest = WidgetTest;
   console.log('🧪 Widget test utilities available: WidgetTest.runAllTests()');
 }

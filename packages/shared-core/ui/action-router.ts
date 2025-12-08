@@ -1,6 +1,36 @@
 import { EventBus } from '../core/event-bus';
 import { AIOrchestrator } from '../services/ai-orchestrator';
 
+// Define payload types to replace 'any'
+interface RoutePayload {
+  distance?: number;
+  difficulty?: number;
+  goals?: string[];
+  type?: string;
+  timeOfDay?: string;
+  priority?: string;
+  focus?: string;
+  timeConstraint?: string;
+  contextPrompt?: string;
+  quickPromptType?: string;
+}
+
+interface GhostPayload {
+  difficulty?: number;
+}
+
+interface ActionPayload {
+  coordinates?: number[][];
+  distance?: number;
+  goals?: string[];
+  difficulty?: number;
+  networkName?: string;
+  provider?: string;
+  type?: string;
+  chainId?: number;
+  [key: string]: unknown;
+}
+
 export type UIAction =
   | 'ai.requestRoute'
   | 'ai.requestGhostRunner'
@@ -29,7 +59,7 @@ export const AI_DEFAULTS = {
   },
 } as const;
 
-function normalizeRoutePayload(p: any) {
+function normalizeRoutePayload(p: ActionPayload | undefined): RoutePayload {
   return {
     distance: typeof p?.distance === 'number' ? p.distance : AI_DEFAULTS.ROUTE.distance,
     difficulty: typeof p?.difficulty === 'number' ? p.difficulty : AI_DEFAULTS.ROUTE.difficulty,
@@ -37,7 +67,7 @@ function normalizeRoutePayload(p: any) {
   };
 }
 
-function normalizeGhostPayload(p: any) {
+function normalizeGhostPayload(p: ActionPayload | undefined): GhostPayload {
   return {
     difficulty:
       typeof p?.difficulty === 'number' ? p.difficulty : AI_DEFAULTS.GHOST_RUNNER.difficulty,
@@ -45,8 +75,20 @@ function normalizeGhostPayload(p: any) {
 }
 
 // Quick prompt scenarios with enhanced context
-function normalizeQuickPrompt(payload: any) {
-  const scenarios = {
+function normalizeQuickPrompt(payload: ActionPayload | undefined): RoutePayload {
+  const scenarios: Record<
+    string,
+    {
+      contextPrompt: string;
+      goals: string[];
+      distance: number;
+      difficulty: number;
+      timeOfDay?: string;
+      priority?: string;
+      focus?: string;
+      timeConstraint?: string;
+    }
+  > = {
     morning_run: {
       contextPrompt: 'Perfect for a gentle morning start with territory exploration',
       goals: ['exploration'],
@@ -92,7 +134,7 @@ function normalizeQuickPrompt(payload: any) {
     },
   };
 
-  const scenario = scenarios[payload?.type as keyof typeof scenarios];
+  const scenario = scenarios[payload?.type || ''];
   if (!scenario) {
     console.warn('Unknown quick prompt type:', payload?.type);
     return normalizeRoutePayload(payload);
@@ -104,19 +146,15 @@ function normalizeQuickPrompt(payload: any) {
     distance: payload?.distance || scenario.distance,
     difficulty: payload?.difficulty || scenario.difficulty,
     goals: payload?.goals || scenario.goals,
-    ...((scenario as any).timeOfDay && {
-      timeOfDay: (scenario as any).timeOfDay,
-    }),
-    ...((scenario as any).priority && { priority: (scenario as any).priority }),
-    ...((scenario as any).focus && { focus: (scenario as any).focus }),
-    ...((scenario as any).timeConstraint && {
-      timeConstraint: (scenario as any).timeConstraint,
-    }),
+    ...(scenario.timeOfDay && { timeOfDay: scenario.timeOfDay }),
+    ...(scenario.priority && { priority: scenario.priority }),
+    ...(scenario.focus && { focus: scenario.focus }),
+    ...(scenario.timeConstraint && { timeConstraint: scenario.timeConstraint }),
   };
 }
 
 export const ActionRouter = {
-  dispatch(action: UIAction, payload?: any) {
+  dispatch(action: UIAction, payload?: ActionPayload) {
     console.log('ActionRouter: Dispatching action:', action, 'with payload:', payload);
 
     switch (action) {
@@ -173,7 +211,7 @@ export const ActionRouter = {
         break;
       case 'connect-wallet':
         console.log('ActionRouter: Initiating wallet connection');
-        bus.emit('wallet:connect', payload);
+        bus.emit('wallet:connect', payload || {});
         break;
       case 'disconnect-wallet':
         console.log('ActionRouter: Disconnecting wallet');
@@ -181,7 +219,7 @@ export const ActionRouter = {
         break;
       case 'switch-network':
         console.log('ActionRouter: Switching network');
-        bus.emit('wallet:switchNetwork', payload);
+        bus.emit('wallet:switchNetwork', payload || {});
         break;
       case 'claim-rewards':
         console.log('ActionRouter: Claiming rewards');

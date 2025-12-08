@@ -24,9 +24,15 @@ interface MapScreenProps {
 
 const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _route }) => {
   const [_componentsLoaded, setComponentsLoaded] = useState(false);
-  const [TerritoryMapView, setTerritoryMapView] = useState<ComponentType<any> | null>(null);
-  const [GPSTrackingComponent, setGPSTrackingComponent] = useState<ComponentType<any> | null>(null);
-  const [WalletButton, setWalletButton] = useState<ComponentType<any> | null>(null);
+  const [TerritoryMapView, setTerritoryMapView] = useState<ComponentType<
+    Record<string, never>
+  > | null>(null);
+  const [GPSTrackingComponent, setGPSTrackingComponent] = useState<ComponentType<
+    Record<string, never>
+  > | null>(null);
+  const [WalletButton, setWalletButton] = useState<ComponentType<Record<string, never>> | null>(
+    null
+  );
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [completedRunData, setCompletedRunData] = useState<RunSession | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(

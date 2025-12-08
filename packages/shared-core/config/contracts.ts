@@ -9,7 +9,7 @@
 
 export interface ContractConfig {
   address: string;
-  abi: any[];
+  abi: object[];
 }
 
 export interface NetworkConfig {
@@ -208,20 +208,20 @@ export function getCurrentNetworkConfig(): NetworkConfig {
     chainId,
     name: 'ZetaChain Athens Testnet',
     rpcUrl:
-      (globalThis as any).__ENV__?.ZETACHAIN_RPC_URL ||
+      (globalThis as { __ENV__?: { ZETACHAIN_RPC_URL?: string } }).__ENV__?.ZETACHAIN_RPC_URL ||
       'https://zetachain-athens-evm.blockpi.network/v1/rpc/public',
     explorerUrl: 'https://zetachain-athens-3.blockscout.com',
     contracts: {
       universal: {
         address:
-          (globalThis as any).__ENV__?.TERRITORY_MANAGER_ADDRESS ||
-          '0x7A52d845Dc37aC5213a546a59A43148308A88983',
+          (globalThis as { __ENV__?: { TERRITORY_MANAGER_ADDRESS?: string } }).__ENV__
+            ?.TERRITORY_MANAGER_ADDRESS || '0x7A52d845Dc37aC5213a546a59A43148308A88983',
         abi: UNIVERSAL_CONTRACT_ABI,
       },
       realmToken: {
         address:
-          (globalThis as any).__ENV__?.REALM_TOKEN_ADDRESS ||
-          '0x18082d110113B40A24A41dF10b4b249Ee461D3eb',
+          (globalThis as { __ENV__?: { REALM_TOKEN_ADDRESS?: string } }).__ENV__
+            ?.REALM_TOKEN_ADDRESS || '0x18082d110113B40A24A41dF10b4b249Ee461D3eb',
         abi: REALM_TOKEN_ABI,
       },
     },

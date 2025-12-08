@@ -1,5 +1,9 @@
-import { ProgressionService } from '@runrealm/shared-core/services/progression-service';
-import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
+import { Challenge, ProgressionService } from '@runrealm/shared-core/services/progression-service';
+import { Territory } from '@runrealm/shared-core/services/territory-service';
+import {
+  DashboardData,
+  UserDashboardService,
+} from '@runrealm/shared-core/services/user-dashboard-service';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,14 +18,14 @@ import { ChallengeCard } from '../components/ChallengeCard';
 import { GhostManagement } from '../components/GhostManagement';
 
 export const DashboardScreen: React.FC = () => {
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showGhostManagement, setShowGhostManagement] = useState(false);
 
   const [dashboardService] = useState(() => UserDashboardService.getInstance());
   const [progressionService] = useState(() => ProgressionService.getInstance());
-  const [challenges, setChallenges] = useState<any[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
 
   const loadChallenges = useCallback(async () => {
     try {
@@ -54,7 +58,7 @@ export const DashboardScreen: React.FC = () => {
     loadChallenges();
 
     // Set up listeners for real-time updates
-    const handleDataUpdate = (data: any) => {
+    const handleDataUpdate = (data: { data: DashboardData }) => {
       setDashboardData(data.data);
     };
 
@@ -238,14 +242,14 @@ export const DashboardScreen: React.FC = () => {
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryNumber}>
                     {dashboardData.territories
-                      .reduce((sum: number, t: any) => sum + (t.estimatedReward || 0), 0)
+                      .reduce((sum: number, t: Territory) => sum + (t.estimatedReward || 0), 0)
                       .toFixed(2)}
                   </Text>
                   <Text style={styles.summaryLabel}>Total REALM</Text>
                 </View>
               </View>
               <View style={styles.territoriesList}>
-                {dashboardData.territories.slice(0, 3).map((territory: any) => (
+                {dashboardData.territories.slice(0, 3).map((territory: Territory) => (
                   <View
                     key={territory.id}
                     style={[styles.territoryItem, styles[territory.rarity || 'common']]}
