@@ -427,7 +427,10 @@ export class CrossChainService extends BaseService {
       console.log('CrossChainService: Sending enhanced cross-chain message', params);
 
       // Check if we have a real ZetaChain client
-      if (this.zetaConnector && typeof (this.zetaConnector as any).gateway?.sendMessage === 'function') {
+      if (
+        this.zetaConnector &&
+        typeof (this.zetaConnector as any).gateway?.sendMessage === 'function'
+      ) {
         // Use the real ZetaChain client
         console.log('CrossChainService: Using real ZetaChain client');
 

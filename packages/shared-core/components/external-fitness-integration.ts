@@ -277,7 +277,9 @@ export class ExternalFitnessIntegration extends BaseService {
           const mapService = this.getService('MapService');
           const runTrackingService = this.getService('RunTrackingService');
           if (mapService && runTrackingService && activity.polyline) {
-            const points = await (runTrackingService as any).decodePolylineToPoints?.(activity.polyline);
+            const points = await (runTrackingService as any).decodePolylineToPoints?.(
+              activity.polyline
+            );
             (mapService as any).highlightActivity?.(points);
           }
         }
@@ -499,7 +501,9 @@ export class ExternalFitnessIntegration extends BaseService {
             throw new Error('Run tracking service not available');
           }
           const runSession = await (runTrackingService as any).importExternalActivity?.(activity);
-          const result = await (territoryService as any).claimTerritoryFromExternalActivity?.(runSession);
+          const result = await (territoryService as any).claimTerritoryFromExternalActivity?.(
+            runSession
+          );
 
           if (result.success) {
             this.safeEmit('territory:claimed', {

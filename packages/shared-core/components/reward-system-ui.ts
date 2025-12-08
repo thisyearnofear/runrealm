@@ -123,33 +123,36 @@ export class RewardSystemUI extends BaseService {
             <span class="reward-label">Available:</span>
             <span class="reward-value highlight">${this.formatTokenAmount(availableToClaim)} REALM</span>
           </div>
-          ${totalEarned > 0
-        ? `
+          ${
+            totalEarned > 0
+              ? `
             <div class="reward-item">
               <span class="reward-label">Total Earned:</span>
               <span class="reward-value">${this.formatTokenAmount(totalEarned)} REALM</span>
             </div>
           `
-        : ''
-      }
-          ${stakedAmount > 0
-        ? `
+              : ''
+          }
+          ${
+            stakedAmount > 0
+              ? `
             <div class="reward-item">
               <span class="reward-label">Staked:</span>
               <span class="reward-value">${this.formatTokenAmount(stakedAmount)} REALM</span>
             </div>
           `
-        : ''
-      }
+              : ''
+          }
         </div>
-        ${availableToClaim > 0
-        ? `
+        ${
+          availableToClaim > 0
+            ? `
           <button id="claim-rewards-btn" class="wallet-reward-btn" data-action="claim-rewards">
             💎 Claim ${this.formatTokenAmount(availableToClaim)} REALM
           </button>
         `
-        : ''
-      }
+            : ''
+        }
       </div>
     `;
   }
@@ -255,14 +258,15 @@ export class RewardSystemUI extends BaseService {
       </div>
       
       <div class="reward-widget-content">
-        ${!isConnected
-        ? `
+        ${
+          !isConnected
+            ? `
           <div class="reward-connect-prompt">
             <p>Connect your wallet to view and claim rewards</p>
             <p class="connect-hint">Use the wallet widget in the top-right corner</p>
           </div>
         `
-        : `
+            : `
           <div class="reward-stats">
             <div class="stat-row">
               <span class="stat-label">Total Earned:</span>
@@ -305,8 +309,9 @@ export class RewardSystemUI extends BaseService {
             
             <div class="staking-section">
               <div class="staking-info">
-                ${this.stakingInfo
-          ? `
+                ${
+                  this.stakingInfo
+                    ? `
                   <div class="staking-active">
                     <span class="staking-label">Staked: ${this.formatTokenAmount(this.stakingInfo.amount)} REALM</span>
                     <span class="staking-apy">APY: ${this.stakingInfo.apy}%</span>
@@ -315,20 +320,20 @@ export class RewardSystemUI extends BaseService {
                     Unstake Tokens
                   </button>
                 `
-          : `
+                    : `
                   <button id="stake-tokens-btn" class="reward-btn secondary">
                     <span class="btn-icon">📈</span>
                     <span class="btn-text">Stake REALM</span>
                   </button>
                 `
-        }
+                }
               </div>
             </div>
           </div>
           
           ${this.renderRewardHistory()}
         `
-      }
+        }
       </div>
     `;
   }

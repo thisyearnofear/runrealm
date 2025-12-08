@@ -294,7 +294,8 @@ ZetaChain Gateway API Usage Examples:
         8453: 'Base',
         42161: 'Arbitrum',
       };
-      originChainEl.textContent = chainNames[data.originChainId ?? 1] || `Chain ${data.originChainId ?? 'unknown'}`;
+      originChainEl.textContent =
+        chainNames[data.originChainId ?? 1] || `Chain ${data.originChainId ?? 'unknown'}`;
     }
   }
 

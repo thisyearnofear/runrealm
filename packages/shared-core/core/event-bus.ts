@@ -436,7 +436,7 @@ export class EventBus {
   private static instance: EventBus;
   private listeners: Map<keyof AppEvents, Set<EventCallback>> = new Map();
 
-  private constructor() { }
+  private constructor() {}
 
   static getInstance(): EventBus {
     if (!EventBus.instance) {
