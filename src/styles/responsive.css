@@ -302,80 +302,85 @@
 }
 
 /* ===== MOBILE WIDGET OPTIMIZATION (≤768px) ===== */
-/* Phase 4: Ultra-compact widget pills for mobile UX */
+/* MOBILE-FIRST: Icon-only pills on mobile for maximum map visibility
+   - All widgets render as 44×44px icon pills
+   - Tapping opens dashboard modal or triggers specific action
+   - Zero inline expansion on mobile
+   - Run Tracker is separate primary action button
+*/
 
 @media (max-width: 768px) {
-  /* MOBILE UX FIX: Keep widgets minimized on mobile
-     They now trigger dashboard instead of expanding inline
-     Widget headers become visual indicators (44px minimum touch target)
-  */
-  .widget {
-    min-width: 44px;
-    width: auto;
-    max-width: 100px;
+  /* Force ALL widgets to icon-only pill mode */
+  .widget-system .widget {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-radius: 50%;
   }
 
-  /* When minimized on mobile, show only icon */
-  .widget-system .widget.minimized {
-    width: 44px;
-    min-width: 44px;
-    /* Override persistent min-width */
-    max-width: 44px;
-    height: 44px;
-    padding: 0;
-    overflow: hidden;
+  /* Override any expanded state - stay as pill */
+  .widget-system .widget.expanded {
+    width: 44px !important;
+    height: 44px !important;
+    max-width: 44px !important;
   }
 
-  /* Hide title on mobile minimized widgets */
-  .widget-system .widget.minimized .widget-title {
-    display: none;
+  /* Hide ALL text on mobile pills */
+  .widget-system .widget .widget-title {
+    display: none !important;
+    visibility: hidden !important;
   }
 
-  /* Keep icon visible and centered */
-  .widget-system .widget.minimized .widget-header {
-    padding: 0;
+  .widget-system .widget .widget-toggle {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  .widget-system .widget .widget-content {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Center icon perfectly */
+  .widget-system .widget .widget-header {
     width: 100%;
     height: 100%;
-    border: none;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
     background: var(--widget-bg);
-    justify-content: center;
-    display: flex;
-    align-items: center;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
-  /* Hide widget content on minimized mobile widgets */
-  .widget-system .widget.minimized .widget-content {
-    display: none;
+  /* Icon styling */
+  .widget-system .widget .widget-icon {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 24px !important;
+    line-height: 1 !important;
   }
 
-  /* Hide toggle button on minimized mobile widgets */
-  .widget-system .widget.minimized .widget-toggle {
-    display: none;
+  /* Compact widget spacing */
+  .widget-zone {
+    gap: 8px !important;
   }
 
-  /* Ensure expanded widgets still work on desktop-size tablets (768px) */
-  .widget.expanded {
-    width: auto;
-    max-width: 320px;
+  /* Widget positioning adjustments for compactness */
+  .widget-zone.top-left,
+  .widget-zone.bottom-left {
+    left: 8px;
+    max-width: none;
   }
 
-  .widget.expanded .widget-title {
-    display: inline;
-  }
-
-  .widget.expanded .widget-toggle {
-    display: block;
-  }
-
-  .widget.expanded .widget-content {
-    display: block;
-  }
-
-  /* Better spacing for icon in minimized state */
-  /* Better spacing for icon in minimized state */
-  .widget-system .widget.minimized .widget-icon {
-    margin: 0;
-    font-size: 24px;
+  .widget-zone.top-right,
+  .widget-zone.bottom-right {
+    right: 8px;
+    max-width: none;
   }
 }
 

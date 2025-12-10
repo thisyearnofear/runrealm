@@ -245,31 +245,39 @@ export class MainUI extends BaseService {
 
   /**
    * Create widgets using the widget system
+   * MOBILE-FIRST: On mobile (≤768px), only show Run Tracker + Dashboard widget
+   * All other functionality is hidden behind the Dashboard for cleaner UX
    */
   private createWidgets(): void {
-    // Run Controls are now handled by EnhancedRunControls service
-    // (Removed old widget-based run controls to avoid duplication)
+    const isMobile = window.innerWidth <= 768;
 
-    const _isMobile = this.config.getConfig().ui.isMobile;
+    // MOBILE: Skip creating extra widgets - focus on Run Tracker + Dashboard only
+    if (isMobile) {
+      // Run Tracker is created separately by EnhancedRunControls
+      // Only add Dashboard widget for accessing all features
+      this.createDashboardWidget();
+      return;
+    }
 
-    // Location Widget (top-left) - minimized on mobile for map visibility
+    // DESKTOP: Create full widget suite for power users
+    // Location Widget (top-left)
     this.widgetSystem.registerWidget({
       id: 'location-info',
       title: 'Location',
       icon: '📍',
       position: 'top-left',
-      minimized: true, // Always start minimized
+      minimized: true,
       priority: 9,
       content: this.getLocationContent(),
     });
 
-    // Wallet Widget (top-right) - minimized on mobile
+    // Wallet Widget (top-right)
     this.widgetSystem.registerWidget({
       id: 'wallet-info',
       title: 'Wallet',
       icon: '🦊',
       position: 'top-right',
-      minimized: true, // Always start minimized
+      minimized: true,
       priority: 9,
       content: this.walletWidget.getWidgetContent(),
     });
@@ -1365,8 +1373,48 @@ export class MainUI extends BaseService {
     `;
   }
 
+  /**
+   * Create Dashboard widget for mobile users
+   * Tapping this opens the full UserDashboard modal with all features
+   */
+  private createDashboardWidget(): void {
+    this.widgetSystem.registerWidget({
+      id: 'dashboard-access',
+      title: 'Dashboard',
+      icon: '📊',
+      position: 'top-right',
+      minimized: true,
+      priority: 15,
+      content: '<div class="widget-tip">📊 Tap to open Dashboard</div>',
+    });
+
+    // Listen for taps on dashboard widget to open modal
+    this.subscribe('widget:clicked', (data: { widgetId: string }) => {
+      if (data.widgetId === 'dashboard-access') {
+        this.openDashboardModal('overview');
+      }
+    });
+  }
+
+  /**
+   * Open the dashboard modal programmatically
+   */
+  private openDashboardModal(targetTab?: string): void {
+    this.safeEmit('dashboard:open', {
+      visible: true,
+      minimized: false,
+      targetTab: targetTab || 'overview',
+      sourceWidget: 'dashboard-access',
+    });
+  }
+
   /**\n   * Create GameFi widgets when GameFi mode is enabled\n   */
   private createGameFiWidgets(): void {
+    // MOBILE: Skip GameFi widgets on mobile - all features accessed via Dashboard
+    if (window.innerWidth <= 768) {
+      console.log('MainUI: Skipping GameFi widgets on mobile - use Dashboard instead');
+      return;
+    }
     const _isMobile = this.config.getConfig().ui.isMobile;
 
     // Player Stats Widget (top-left, highest priority) - always minimized on mobile

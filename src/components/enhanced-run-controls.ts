@@ -176,13 +176,19 @@ export class EnhancedRunControls extends BaseService {
     const widgetSystem = this.getWidgetSystem();
 
     if (widgetSystem) {
+      // Mobile: Run Tracker is the PRIMARY widget
+      // Desktop: Still use bottom-left but it's not primary focus
+      const isMobile = window.innerWidth <= 768;
+      const position = isMobile ? 'bottom-right' : 'bottom-left';
+      const priority = isMobile ? 25 : 10; // Highest priority on mobile
+
       widgetSystem.registerWidget({
         id: 'run-tracker',
         title: 'Run Tracker',
         icon: '🏃‍♂️',
-        position: 'bottom-left',
+        position,
         minimized: true, // Always start minimized to prevent viewport domination
-        priority: 10,
+        priority,
         content: this.getWidgetContent(),
       });
 

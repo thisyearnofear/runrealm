@@ -517,6 +517,8 @@ export class WidgetSystem extends BaseService {
         // Prevent rapid clicking during animation
         const widget = this.getWidgetElement(widgetId);
         if (widget && !widget.classList.contains('widget-animating')) {
+          // Emit click event for widgets to handle (e.g., dashboard widget opening modal)
+          this.safeEmit('widget:clicked', { widgetId });
           this.toggleWidget(widgetId);
         }
       }
