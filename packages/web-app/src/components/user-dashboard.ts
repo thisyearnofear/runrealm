@@ -162,6 +162,30 @@ export class UserDashboard {
     console.log('Dashboard action:', action);
 
     switch (action) {
+      // MOBILE WEB3: Wallet connection actions
+      case 'connect-wallet': {
+        // Connect with MetaMask (default)
+        this.eventBus.emit('wallet:connectRequested', { provider: 'metamask' });
+        break;
+      }
+
+      case 'connect-wallet-provider': {
+        const provider = target.getAttribute('data-provider');
+        if (provider) {
+          this.eventBus.emit('wallet:connectRequested', { provider });
+        }
+        break;
+      }
+
+      case 'disconnect-wallet': {
+        this.eventBus.emit('wallet:disconnectRequested', {});
+        // Briefly minimize to show success feedback
+        setTimeout(() => {
+          this.dashboardService.minimize();
+        }, 500);
+        break;
+      }
+
       case 'open-territory-widget': {
         this.eventBus.emit('dashboard:openWidget', { widgetId: 'territory-info' });
         // Toggle territory widget
@@ -582,16 +606,78 @@ export class UserDashboard {
   }
 
   private renderWalletInfo(walletInfo: any): string {
-    if (!walletInfo)
-      return '<div class="dashboard-section"><h3>Wallet</h3><p>Not connected</p></div>';
+    // MOBILE WEB3: Show prominent wallet connection UI
+    // When disconnected: show connect button with provider options
+    // When connected: show wallet details with balance
+
+    if (!walletInfo) {
+      return `
+        <div class="dashboard-section wallet-section disconnected">
+          <div class="wallet-header">
+            <h3>🔗 Connect Wallet</h3>
+            <p class="wallet-subtext">Required to claim territories and participate in GameFi</p>
+          </div>
+          
+          <div class="wallet-cta">
+            <button class="wallet-connect-btn primary" data-action="connect-wallet">
+              <span class="btn-icon">🦊</span>
+              <span class="btn-text">Connect MetaMask</span>
+            </button>
+            
+            <div class="wallet-alternatives">
+              <p class="alternatives-label">Or connect with:</p>
+              <button class="wallet-connect-btn secondary" data-action="connect-wallet-provider" data-provider="walletconnect">
+                <span class="btn-icon">📱</span>
+                <span class="btn-text">WalletConnect (Mobile)</span>
+              </button>
+              <button class="wallet-connect-btn secondary" data-action="connect-wallet-provider" data-provider="coinbase">
+                <span class="btn-icon">🔵</span>
+                <span class="btn-text">Coinbase Wallet</span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="wallet-benefits">
+            <div class="benefit-item">
+              <span class="benefit-icon">🏆</span>
+              <span class="benefit-text">Claim territories you've run</span>
+            </div>
+            <div class="benefit-item">
+              <span class="benefit-icon">💰</span>
+              <span class="benefit-text">Earn $REALM rewards</span>
+            </div>
+            <div class="benefit-item">
+              <span class="benefit-icon">👻</span>
+              <span class="benefit-text">Deploy Ghost Runners</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     return `
-      <div class="dashboard-section">
-        <h3>Wallet</h3>
+      <div class="dashboard-section wallet-section connected">
+        <div class="wallet-header">
+          <h3>🔗 Wallet Connected</h3>
+        </div>
         <div class="wallet-info">
-          <div class="wallet-address">${walletInfo.address?.substring(0, 6)}...${walletInfo.address?.substring(walletInfo.address.length - 4)}</div>
-          <div class="wallet-balance">${walletInfo.balance || 0} $REALM</div>
-          <div class="wallet-network">${walletInfo.networkName || 'Unknown Network'}</div>
+          <div class="wallet-row">
+            <span class="wallet-label">Address</span>
+            <span class="wallet-value">${walletInfo.address?.substring(0, 6)}...${walletInfo.address?.substring(walletInfo.address.length - 4)}</span>
+          </div>
+          <div class="wallet-row">
+            <span class="wallet-label">Balance</span>
+            <span class="wallet-value">${walletInfo.balance || '0'} $REALM</span>
+          </div>
+          <div class="wallet-row">
+            <span class="wallet-label">Network</span>
+            <span class="wallet-value">${walletInfo.networkName || 'Connected'}</span>
+          </div>
+        </div>
+        <div class="wallet-actions">
+          <button class="wallet-action-btn secondary" data-action="disconnect-wallet">
+            Disconnect
+          </button>
         </div>
       </div>
     `;
@@ -762,7 +848,7 @@ export class UserDashboard {
     // Update content
     const contentContainer = this.container.querySelector('.dashboard-content');
     if (contentContainer) {
-      contentContainer.innerHTML = this.renderDashboardContent(data);
+      contentContainer.innerHTML = this.renderTabContent(data);
     }
 
     // Update minimize button text
@@ -788,18 +874,46 @@ export class UserDashboard {
       this.container.style.pointerEvents = 'auto';
       this.container.style.zIndex = '2000'; // Above map and widgets
 
-      // Centered compact layout
+      // MOBILE-RESPONSIVE: Adapt layout for screen size
+      const isMobile = window.innerWidth <= 480;
+      const isTablet = window.innerWidth <= 768;
+
       this.container.style.position = 'fixed';
-      this.container.style.top = '50%';
-      this.container.style.left = '50%';
-      this.container.style.transform = 'translate(-50%, -50%)';
-      this.container.style.width = minimized ? '400px' : '700px';
-      this.container.style.maxHeight = '85vh';
-      this.container.style.height = 'auto';
-      this.container.style.maxWidth = '90vw';
-      this.container.style.overflow = 'auto';
       this.container.style.transition = 'width 0.3s ease, height 0.3s ease';
+      this.container.style.overflow = 'auto';
       this.container.style.bottom = 'auto';
+
+      if (isMobile) {
+        // Ultra-compact phones: Full-screen modal (100vw, 100vh)
+        this.container.style.top = '0';
+        this.container.style.left = '0';
+        this.container.style.transform = 'none';
+        this.container.style.width = '100vw';
+        this.container.style.height = minimized ? 'auto' : '100vh';
+        this.container.style.maxHeight = '100vh';
+        this.container.style.maxWidth = '100vw';
+        this.container.style.borderRadius = '0';
+      } else if (isTablet) {
+        // Tablets: Centered, responsive width
+        this.container.style.top = '50%';
+        this.container.style.left = '50%';
+        this.container.style.transform = 'translate(-50%, -50%)';
+        this.container.style.width = minimized ? '90vw' : '90vw';
+        this.container.style.maxWidth = minimized ? '500px' : '700px';
+        this.container.style.maxHeight = '85vh';
+        this.container.style.height = 'auto';
+        this.container.style.borderRadius = 'var(--radius-lg)';
+      } else {
+        // Desktop: Fixed size, centered
+        this.container.style.top = '50%';
+        this.container.style.left = '50%';
+        this.container.style.transform = 'translate(-50%, -50%)';
+        this.container.style.width = minimized ? '400px' : '700px';
+        this.container.style.maxHeight = '85vh';
+        this.container.style.height = 'auto';
+        this.container.style.maxWidth = '90vw';
+        this.container.style.borderRadius = 'var(--radius-lg)';
+      }
 
       // No body classes needed for centered layout
       if (minimized) {

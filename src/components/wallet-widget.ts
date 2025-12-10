@@ -129,6 +129,29 @@ export class WalletWidget extends BaseService {
   }
 
   private setupEventListeners(): void {
+    // MOBILE WEB3: Listen for dashboard wallet connection requests
+    // Dashboard emits wallet:connectRequested with provider ID
+    this.subscribe('wallet:connectRequested', async (data: { provider: string }) => {
+      console.log('WalletWidget: Connection requested from dashboard for provider:', data.provider);
+      try {
+        await this.connectWallet(data.provider);
+      } catch (error) {
+        console.error('WalletWidget: Connection error:', error);
+        this.uiService.showToast('❌ Wallet connection failed. Please try again.', {
+          type: 'error',
+        });
+      }
+    });
+
+    this.subscribe('wallet:disconnectRequested', async () => {
+      console.log('WalletWidget: Disconnection requested from dashboard');
+      try {
+        await this.disconnectWallet();
+      } catch (error) {
+        console.error('WalletWidget: Disconnection error:', error);
+      }
+    });
+
     // Listen for Web3 events
     this.subscribe('web3:walletConnected', (data) => {
       this.updateWalletState({
