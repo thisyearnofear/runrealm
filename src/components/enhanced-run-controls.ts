@@ -184,7 +184,7 @@ export class EnhancedRunControls extends BaseService {
     if (widgetSystem) {
       // Mobile: Run Tracker is the PRIMARY widget
       // Desktop: Still use bottom-left but it's not primary focus
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = this.isMobileViewport();
       const position = isMobile ? 'bottom-right' : 'bottom-left';
       const priority = isMobile ? 25 : 10; // Highest priority on mobile
 
@@ -338,7 +338,7 @@ export class EnhancedRunControls extends BaseService {
 
   private getWidgetContent(): string {
     // On mobile, widget is just the icon pill - content shown in bottom sheet
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = this.isMobileViewport();
     if (isMobile) {
       return `<div class="mobile-run-hint" style="display: none;">Tap to open tracker</div>`;
     }
@@ -448,7 +448,7 @@ export class EnhancedRunControls extends BaseService {
     console.log('Run tracker click detected:', target.id, target.className);
 
     // Mobile: clicking the icon pill opens bottom sheet
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = this.isMobileViewport();
     const widgetHeader = target.closest('.widget-header');
     if (isMobile && widgetHeader && !target.closest('.control-btn')) {
       event.preventDefault();
@@ -1837,8 +1837,16 @@ export class EnhancedRunControls extends BaseService {
   private isMobile(): boolean {
     return (
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-      window.innerWidth <= 768
+      this.isMobileViewport()
     );
+  }
+
+  /**
+   * Detect if we're in mobile viewport (≤768px)
+   * Uses CSS media query to ensure consistency with responsive.css breakpoints
+   */
+  private isMobileViewport(): boolean {
+    return window.matchMedia('(max-width: 768px)').matches;
   }
 
   private setupSwipeGestures(): void {

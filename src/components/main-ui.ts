@@ -214,7 +214,7 @@ export class MainUI extends BaseService {
     }
 
     // Create Settings widget (desktop only - mobile users access settings via Dashboard)
-    if (window.innerWidth > 768) {
+    if (!this.isMobileViewport()) {
       this.createSettingsWidget();
       console.log('MainUI: Settings widget created');
     }
@@ -236,6 +236,14 @@ export class MainUI extends BaseService {
   }
 
   /**
+   * Detect if we're in mobile viewport (≤768px)
+   * Uses CSS media query to ensure consistency with responsive.css breakpoints
+   */
+  private isMobileViewport(): boolean {
+    return window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  /**
    * Create the main user interface
    */
   private createMainInterface(): void {
@@ -251,7 +259,7 @@ export class MainUI extends BaseService {
    * All other functionality is hidden behind the Dashboard for cleaner UX
    */
   private createWidgets(): void {
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = this.isMobileViewport();
 
     // MOBILE: Skip creating extra widgets - focus on Run Tracker + Dashboard only
     if (isMobile) {
@@ -1413,7 +1421,7 @@ export class MainUI extends BaseService {
   /**\n   * Create GameFi widgets when GameFi mode is enabled\n   */
   private createGameFiWidgets(): void {
     // MOBILE: Skip GameFi widgets on mobile - all features accessed via Dashboard
-    if (window.innerWidth <= 768) {
+    if (this.isMobileViewport()) {
       console.log('MainUI: Skipping GameFi widgets on mobile - use Dashboard instead');
       return;
     }
