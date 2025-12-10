@@ -5,6 +5,17 @@
 pre-commit:
   parallel: true
   commands:
+    # Prevent stale compiled .js files from being committed
+    check-stale-js:
+      run: |
+        if git diff --cached --name-only | grep -q "^src/components/.*\.js$"; then
+          echo "❌ ERROR: Stale compiled .js files detected in src/components/"
+          echo "Only TypeScript (.ts) source files should be committed."
+          echo "Delete the .js files and let the build system regenerate them."
+          exit 1
+        fi
+      fail_text: "Stale compiled JavaScript files detected. Remove them before committing."
+
     lint:
       run: npx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
       stage_fixed: true

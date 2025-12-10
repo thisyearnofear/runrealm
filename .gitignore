@@ -68,6 +68,7 @@ public/*.css
 public/*.html
 !public/index.html  # Keep the template file if it exists for build process
 src/**/*.js
+src/components/**/*.js  # Explicitly ignore stale compiled .js files in components
 !src/**/*.ts
 !src/**/*.tsx
 
