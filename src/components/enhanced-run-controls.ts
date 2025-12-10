@@ -38,6 +38,11 @@ export class EnhancedRunControls extends BaseService {
   private lastCompletedRun: RunSession | null = null;
   private showingPreview = false;
 
+  // Mobile bottom sheet state
+  private bottomSheetOpen = false;
+  private bottomSheet: HTMLElement | null = null;
+  private lastMilestoneDistance = 0; // For haptic feedback on 0.5km milestones
+
   constructor() {
     super();
     this.boundClickHandler = this.handleRunTrackerClick.bind(this);
@@ -104,6 +109,7 @@ export class EnhancedRunControls extends BaseService {
 
     this.subscribe('run:statsUpdated' as any, (data: any) => {
       this.updateStats(data.stats);
+      this.checkForMilestones(data.stats);
     });
 
     this.subscribe('run:pointAdded' as any, (data: any) => {
@@ -331,6 +337,13 @@ export class EnhancedRunControls extends BaseService {
   }
 
   private getWidgetContent(): string {
+    // On mobile, widget is just the icon pill - content shown in bottom sheet
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      return `<div class="mobile-run-hint" style="display: none;">Tap to open tracker</div>`;
+    }
+
+    // Desktop: full expanded content
     return `
       <div class="run-status ${this.getStatusClass()}">
         ${this.getStatusText()}
@@ -434,6 +447,16 @@ export class EnhancedRunControls extends BaseService {
     // Debug logging
     console.log('Run tracker click detected:', target.id, target.className);
 
+    // Mobile: clicking the icon pill opens bottom sheet
+    const isMobile = window.innerWidth <= 768;
+    const widgetHeader = target.closest('.widget-header');
+    if (isMobile && widgetHeader && !target.closest('.control-btn')) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.toggleMobileBottomSheet();
+      return;
+    }
+
     // Handle different button clicks with improved selector logic
     if (
       target.matches('#start-run-btn, #start-run-btn *, .control-btn.primary') ||
@@ -485,6 +508,242 @@ export class EnhancedRunControls extends BaseService {
       event.preventDefault();
       event.stopPropagation();
       this.recordLap();
+    }
+  }
+
+  /**
+   * Mobile Bottom Sheet Management
+   */
+  private toggleMobileBottomSheet(): void {
+    if (this.bottomSheetOpen) {
+      this.closeMobileBottomSheet();
+    } else {
+      this.openMobileBottomSheet();
+    }
+  }
+
+  private openMobileBottomSheet(): void {
+    if (this.bottomSheetOpen) return;
+
+    this.bottomSheetOpen = true;
+    this.bottomSheet = this.createBottomSheet();
+    document.body.appendChild(this.bottomSheet);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+      this.bottomSheet?.classList.add('active');
+    });
+
+    // Setup close handlers
+    this.setupBottomSheetHandlers();
+  }
+
+  private closeMobileBottomSheet(): void {
+    if (!this.bottomSheet) return;
+
+    this.bottomSheetOpen = false;
+    this.bottomSheet.classList.remove('active');
+
+    setTimeout(() => {
+      if (this.bottomSheet?.parentNode) {
+        this.bottomSheet.parentNode.removeChild(this.bottomSheet);
+      }
+      this.bottomSheet = null;
+    }, 300);
+  }
+
+  private createBottomSheet(): HTMLElement {
+    const sheet = document.createElement('div');
+    sheet.className = 'run-tracker-bottom-sheet';
+    sheet.innerHTML = this.getBottomSheetContent();
+    return sheet;
+  }
+
+  private getBottomSheetContent(): string {
+    const stats = this.currentStats;
+    const distance = stats ? this.formatDistance(stats.distance) : '0.00';
+    const distanceNum = stats ? stats.distance / 1000 : 0;
+    const duration = stats ? this.formatDuration(stats.duration) : '00:00';
+    const speed = stats ? this.formatSpeed(stats.averageSpeed) : '0.0';
+    const pace = stats ? this.formatPace(stats.averageSpeed) : '--:--';
+
+    return `
+      <div class="bottom-sheet-backdrop"></div>
+      <div class="bottom-sheet-content">
+        <div class="bottom-sheet-handle"></div>
+        <div class="bottom-sheet-header">
+          <h2>Run Tracker</h2>
+          <button class="close-btn" aria-label="Close">✕</button>
+        </div>
+
+        <!-- Primary stat: Distance (large and prominent) -->
+        <div class="bottom-sheet-primary-stat">
+          <span class="distance-value">${distance}</span>
+          <span class="distance-label">km</span>
+        </div>
+
+        <!-- Secondary stats: 3-column grid -->
+        <div class="bottom-sheet-stats-grid">
+          <div class="stat-col">
+            <div class="stat-label">Time</div>
+            <div class="stat-value">${duration}</div>
+          </div>
+          <div class="stat-col">
+            <div class="stat-label">Speed</div>
+            <div class="stat-value">${speed}</div>
+          </div>
+          <div class="stat-col">
+            <div class="stat-label">Pace</div>
+            <div class="stat-value">${pace}</div>
+          </div>
+        </div>
+
+        ${
+          stats?.territoryEligible
+            ? `
+          <div class="bottom-sheet-territory-alert">
+            <span class="territory-icon">🏆</span>
+            <span class="territory-text">Territory Eligible!</span>
+          </div>
+        `
+            : ''
+        }
+
+        <!-- Control buttons: Full-width stacked -->
+        <div class="bottom-sheet-controls">
+          ${this.renderBottomSheetButtons()}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderBottomSheetButtons(): string {
+    if (!this.isRecording && !this.isPaused) {
+      return `
+        <button class="bottom-btn primary full-width" id="bs-start-run">
+          ▶️ Start Run
+        </button>
+        <button class="bottom-btn secondary full-width" id="bs-gps-check">
+          📍 Check GPS
+        </button>
+      `;
+    }
+
+    if (this.isRecording) {
+      return `
+        <button class="bottom-btn primary full-width" id="bs-lap">
+          🚩 Lap
+        </button>
+        <button class="bottom-btn warning full-width" id="bs-pause">
+          ⏸️ Pause
+        </button>
+        <button class="bottom-btn success full-width" id="bs-stop">
+          ⏹️ Finish Run
+        </button>
+        <button class="bottom-btn danger full-width" id="bs-cancel">
+          ❌ Cancel
+        </button>
+      `;
+    }
+
+    if (this.isPaused) {
+      return `
+        <button class="bottom-btn primary full-width" id="bs-resume">
+          ▶️ Resume
+        </button>
+        <button class="bottom-btn success full-width" id="bs-stop">
+          ⏹️ Finish Run
+        </button>
+        <button class="bottom-btn danger full-width" id="bs-cancel">
+          ❌ Cancel
+        </button>
+      `;
+    }
+
+    return '';
+  }
+
+  private setupBottomSheetHandlers(): void {
+    if (!this.bottomSheet) return;
+
+    // Close on backdrop click
+    const backdrop = this.bottomSheet.querySelector('.bottom-sheet-backdrop');
+    backdrop?.addEventListener('click', () => this.closeMobileBottomSheet());
+
+    // Close on close button
+    const closeBtn = this.bottomSheet.querySelector('.close-btn');
+    closeBtn?.addEventListener('click', () => this.closeMobileBottomSheet());
+
+    // Swipe down to close
+    let touchStart = 0;
+    const content = this.bottomSheet.querySelector('.bottom-sheet-content');
+    content?.addEventListener('touchstart', (e: any) => {
+      touchStart = e.touches[0].clientY;
+    });
+    content?.addEventListener('touchend', (e: any) => {
+      const touchEnd = e.changedTouches[0].clientY;
+      if (touchEnd - touchStart > 100) {
+        this.closeMobileBottomSheet();
+      }
+    });
+
+    // Button handlers
+    this.bottomSheet.querySelector('#bs-start-run')?.addEventListener('click', () => {
+      this.closeMobileBottomSheet();
+      this.startRun();
+    });
+
+    this.bottomSheet.querySelector('#bs-gps-check')?.addEventListener('click', () => {
+      this.checkGPS();
+    });
+
+    this.bottomSheet.querySelector('#bs-lap')?.addEventListener('click', () => {
+      this.recordLap();
+    });
+
+    this.bottomSheet.querySelector('#bs-pause')?.addEventListener('click', () => {
+      this.pauseRun();
+    });
+
+    this.bottomSheet.querySelector('#bs-resume')?.addEventListener('click', () => {
+      this.closeMobileBottomSheet();
+      this.resumeRun();
+    });
+
+    this.bottomSheet.querySelector('#bs-stop')?.addEventListener('click', () => {
+      this.closeMobileBottomSheet();
+      this.stopRun();
+    });
+
+    this.bottomSheet.querySelector('#bs-cancel')?.addEventListener('click', () => {
+      this.closeMobileBottomSheet();
+      this.cancelRun();
+    });
+  }
+
+  /**
+   * Check for milestone distance and trigger haptic feedback
+   */
+  private checkForMilestones(stats: RunStats): void {
+    if (!this.isRecording) return;
+
+    const currentDistance = stats.distance / 1000; // Convert to km
+    const milestoneInterval = 0.5; // Every 500m
+    const currentMilestone = Math.floor(currentDistance / milestoneInterval) * milestoneInterval;
+
+    if (currentMilestone > this.lastMilestoneDistance) {
+      this.lastMilestoneDistance = currentMilestone;
+      this.triggerMilestoneHaptic();
+    }
+  }
+
+  private triggerMilestoneHaptic(): void {
+    try {
+      if ('vibrate' in navigator) {
+        navigator.vibrate([50, 50, 50]); // Triple vibration pattern
+      }
+    } catch (_error) {
+      // Silently ignore if vibration not supported
     }
   }
 
@@ -631,6 +890,8 @@ export class EnhancedRunControls extends BaseService {
     this.isRecording = false;
     this.isPaused = false;
     this.stopRealTimeUpdates();
+    this.lastMilestoneDistance = 0; // Reset milestone counter
+    this.closeMobileBottomSheet(); // Close bottom sheet on completion
     this.updateDisplay();
 
     const distance = this.formatDistance(data.run.totalDistance);
@@ -667,7 +928,9 @@ export class EnhancedRunControls extends BaseService {
     this.isRecording = false;
     this.isPaused = false;
     this.currentStats = null;
+    this.lastMilestoneDistance = 0; // Reset milestone counter
     this.stopRealTimeUpdates();
+    this.closeMobileBottomSheet(); // Close bottom sheet on cancellation
     this.updateDisplay();
     this.showFeedback('❌ Run cancelled', 'warning');
 
@@ -689,6 +952,30 @@ export class EnhancedRunControls extends BaseService {
   private updateStats(stats: RunStats): void {
     this.currentStats = stats;
     this.updateDisplay();
+    // Update bottom sheet if open
+    if (this.bottomSheetOpen && this.bottomSheet) {
+      this.updateBottomSheetStats();
+    }
+  }
+
+  private updateBottomSheetStats(): void {
+    if (!this.bottomSheet) return;
+
+    const stats = this.currentStats;
+    const distance = stats ? this.formatDistance(stats.distance) : '0.00';
+    const duration = stats ? this.formatDuration(stats.duration) : '00:00';
+    const speed = stats ? this.formatSpeed(stats.averageSpeed) : '0.0';
+    const pace = stats ? this.formatPace(stats.averageSpeed) : '--:--';
+
+    // Update distance (primary stat)
+    const distanceValue = this.bottomSheet.querySelector('.distance-value');
+    if (distanceValue) distanceValue.textContent = distance;
+
+    // Update secondary stats
+    const statValues = this.bottomSheet.querySelectorAll('.stat-col .stat-value');
+    if (statValues[0]) statValues[0].textContent = duration;
+    if (statValues[1]) statValues[1].textContent = speed;
+    if (statValues[2]) statValues[2].textContent = pace;
   }
 
   private updateStatsDisplay(): void {

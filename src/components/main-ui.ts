@@ -213,9 +213,11 @@ export class MainUI extends BaseService {
       localStorage.removeItem('runrealm_welcomed');
     }
 
-    // Create Settings widget (top-right)
-    this.createSettingsWidget();
-    console.log('MainUI: Settings widget created');
+    // Create Settings widget (desktop only - mobile users access settings via Dashboard)
+    if (window.innerWidth > 768) {
+      this.createSettingsWidget();
+      console.log('MainUI: Settings widget created');
+    }
 
     // Initialize run tracker widget now that widget system is ready
     // Use setTimeout to ensure services are fully registered
