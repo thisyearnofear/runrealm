@@ -214,9 +214,13 @@ export class MainUI extends BaseService {
     }
 
     // Create Settings widget (desktop only - mobile users access settings via Dashboard)
-    if (!this.isMobileViewport()) {
+    const isSettingsMobile = this.isMobileViewport();
+    console.log(`MainUI: Settings widget check - isMobile=${isSettingsMobile}`);
+    if (!isSettingsMobile) {
       this.createSettingsWidget();
       console.log('MainUI: Settings widget created');
+    } else {
+      console.log('MainUI: Skipping Settings widget on mobile');
     }
 
     // Initialize run tracker widget now that widget system is ready
@@ -260,15 +264,20 @@ export class MainUI extends BaseService {
    */
   private createWidgets(): void {
     const isMobile = this.isMobileViewport();
+    console.log(
+      `MainUI.createWidgets: isMobile=${isMobile}, viewport=${window.matchMedia('(max-width: 768px)').matches}`
+    );
 
     // MOBILE: Skip creating extra widgets - focus on Run Tracker + Dashboard only
     if (isMobile) {
+      console.log('MainUI: Mobile mode - creating only Dashboard widget');
       // Run Tracker is created separately by EnhancedRunControls
       // Only add Dashboard widget for accessing all features
       this.createDashboardWidget();
       return;
     }
 
+    console.log('MainUI: Desktop mode - creating full widget suite');
     // DESKTOP: Create full widget suite for power users
     // Location Widget (top-left)
     this.widgetSystem.registerWidget({
