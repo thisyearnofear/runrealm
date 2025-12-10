@@ -6,7 +6,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-import { Alert, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Define OnboardingStep interface locally for mobile component
 interface OnboardingStep {
@@ -77,20 +77,9 @@ const MobileOnboarding: React.FC<MobileOnboardingProps> = ({ onComplete, onSkip 
   };
 
   const skipOnboarding = () => {
-    Alert.alert(
-      'Skip Onboarding?',
-      'Are you sure you want to skip the introduction? You can always access help later.',
-      [
-        { text: 'Continue Tutorial', style: 'cancel' },
-        {
-          text: 'Skip',
-          onPress: () => {
-            completeOnboarding();
-            onSkip?.();
-          },
-        },
-      ]
-    );
+    // Respect user choice immediately - no confirmation needed
+    completeOnboarding();
+    onSkip?.();
   };
 
   const completeOnboarding = async () => {

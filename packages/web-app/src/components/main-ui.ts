@@ -218,17 +218,25 @@ export class MainUI extends BaseService {
     this.eventHandler.setupRouteStateListeners();
     console.log('MainUI: Route state listeners set up');
 
-    // Create Settings widget (top-right)
-    this.widgetCreator.createSettingsWidget();
-    console.log('MainUI: Settings widget created');
+    // Create Settings and Dashboard widgets (desktop only - mobile users access via Dashboard)
+    const isMobileViewport = window.matchMedia('(max-width: 768px)').matches;
+    if (!isMobileViewport) {
+      this.widgetCreator.createSettingsWidget();
+      console.log('MainUI: Settings widget created');
 
-    // Create Dashboard toggle widget (top-right)
-    this.widgetCreator.createDashboardToggleWidget();
-    console.log('MainUI: Dashboard toggle widget created');
+      this.widgetCreator.createDashboardToggleWidget();
+      console.log('MainUI: Dashboard toggle widget created');
+    } else {
+      console.log('MainUI: Skipping Settings and Dashboard toggle widgets on mobile');
+    }
 
     // Setup settings widget event handlers
     this.eventHandler.setupSettingsEventHandlers();
     console.log('MainUI: Settings event handlers set up');
+
+    // Setup responsive widget visibility
+    this.widgetCreator.setupResponsiveWidgetVisibility();
+    console.log('MainUI: Responsive widget visibility setup complete');
 
     // Listen for GameFi toggle events
     // GameFi widgets are now displayed in the dashboard, not on the map

@@ -418,13 +418,8 @@ export class EnhancedOnboarding extends BaseService {
   }
 
   public async skipOnboarding(): Promise<void> {
-    if (
-      confirm(
-        'Are you sure you want to skip the tutorial? You can restart it anytime from settings.'
-      )
-    ) {
-      await this.completeOnboarding(true);
-    }
+    // Respect user choice immediately - no confirmation needed
+    await this.completeOnboarding(true);
   }
 
   private async completeOnboarding(skipped: boolean = false): Promise<void> {

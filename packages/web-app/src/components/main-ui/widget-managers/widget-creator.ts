@@ -55,9 +55,65 @@ export class WidgetCreator {
   }
 
   /**
+   * Detect if we're in mobile viewport (≤768px)
+   */
+  private isMobileViewport(): boolean {
+    return window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  /**
+   * Setup responsive widget visibility based on viewport size
+   */
+  setupResponsiveWidgetVisibility(): void {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+
+    const handleViewportChange = (e: MediaQueryListEvent) => {
+      const isMobile = e.matches;
+      console.log(
+        `MainUI: Viewport changed to ${isMobile ? 'mobile' : 'desktop'} (${window.innerWidth}px)`
+      );
+
+      // Hide/show widgets based on viewport
+      const widgetsToHide = ['location-info', 'wallet-info', 'settings', 'dashboard-toggle'];
+
+      widgetsToHide.forEach((widgetId) => {
+        const widget = document.querySelector(`[data-widget-id="${widgetId}"]`);
+        if (widget) {
+          if (isMobile) {
+            (widget as HTMLElement).style.display = 'none';
+            console.log(`MainUI: Hidden widget ${widgetId} for mobile`);
+          } else {
+            (widget as HTMLElement).style.display = '';
+            console.log(`MainUI: Shown widget ${widgetId} for desktop`);
+          }
+        }
+      });
+    };
+
+    // Set initial state
+    handleViewportChange({ matches: this.isMobileViewport() } as MediaQueryListEvent);
+
+    // Listen for changes
+    mediaQuery.addEventListener('change', handleViewportChange);
+    console.log('MainUI: Responsive widget visibility listener setup');
+  }
+
+  /**
    * Create all core widgets
+   * MOBILE-FIRST: On mobile (≤768px), only show Run Tracker + Dashboard widget
+   * All other functionality is hidden behind the Dashboard for cleaner UX
    */
   createWidgets(): void {
+    const isMobile = this.isMobileViewport();
+
+    // MOBILE: Skip creating location and wallet widgets on mobile - use Dashboard instead
+    if (isMobile) {
+      console.log('MainUI: Mobile mode - skipping location and wallet widgets');
+      return;
+    }
+
+    console.log('MainUI: Desktop mode - creating full widget suite');
+    // DESKTOP: Create location and wallet widgets
     // Location Widget (top-left) - minimized on mobile for map visibility
     this.widgetSystem.registerWidget({
       id: 'location-info',
