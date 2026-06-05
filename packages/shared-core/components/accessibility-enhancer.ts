@@ -58,7 +58,7 @@ export class AccessibilityEnhancer extends BaseService {
 
   private addLandmarks(): void {
     // Add main landmark
-    const mapContainer = document.querySelector('#mapbox-container');
+    const mapContainer = document.querySelector('#maplibre-container');
     if (mapContainer) {
       mapContainer.setAttribute('role', 'main');
       mapContainer.setAttribute('aria-label', 'Interactive running map');
@@ -105,7 +105,7 @@ export class AccessibilityEnhancer extends BaseService {
     const skipLinks = this.domService.createElement('div', {
       className: 'skip-links',
       innerHTML: `
-        <a href="#mapbox-container" class="skip-link">Skip to map</a>
+        <a href="#maplibre-container" class="skip-link">Skip to map</a>
         <a href="#enhanced-run-controls" class="skip-link">Skip to run controls</a>
         <a href="#location-info" class="skip-link">Skip to location info</a>
       `,

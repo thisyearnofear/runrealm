@@ -1,6 +1,6 @@
 // Main application controller - orchestrates all services
-// Dynamically import mapbox-gl to reduce initial bundle size
-// import mapboxgl, { Map, MapMouseEvent, NavigationControl, GeolocateControl } from 'mapbox-gl';
+// Dynamically import maplibre-gl to reduce initial bundle size
+// import maplibregl, { Map, MapMouseEvent, NavigationControl, GeolocateControl } from 'maplibre-gl';
 
 // Note: ContractService and CrossChainService moved to shared-blockchain package
 import { ContractService } from '@runrealm/shared-blockchain/services/contract-service';
@@ -44,21 +44,21 @@ import { getStyleById } from '../utils/map-style';
 import { ConfigService } from './app-config';
 import { EventBus } from './event-bus';
 
-// Type definitions for Mapbox
-type MapboxGL = typeof import('mapbox-gl');
-type Map = import('mapbox-gl').Map;
-type MapMouseEvent = import('mapbox-gl').MapMouseEvent;
-type NavigationControl = import('mapbox-gl').NavigationControl;
-type GeolocateControl = import('mapbox-gl').GeolocateControl;
+// Type definitions for MapLibre
+type MaplibreGL = typeof import('maplibre-gl');
+type Map = import('maplibre-gl').Map;
+type MapMouseEvent = import('maplibre-gl').MapMouseEvent;
+type NavigationControl = import('maplibre-gl').NavigationControl;
+type GeolocateControl = import('maplibre-gl').GeolocateControl;
 
 export class RunRealmApp {
   private static instance: RunRealmApp;
 
-  // Mapbox GL library reference
-  private mapboxgl: MapboxGL | null = null;
-  private Map: typeof import('mapbox-gl').Map | null = null;
-  private NavigationControl: typeof import('mapbox-gl').NavigationControl | null = null;
-  private GeolocateControl: typeof import('mapbox-gl').GeolocateControl | null = null;
+  // MapLibre GL library reference
+  private maplibregl: MaplibreGL | null = null;
+  private Map: typeof import('maplibre-gl').Map | null = null;
+  private NavigationControl: typeof import('maplibre-gl').NavigationControl | null = null;
+  private GeolocateControl: typeof import('maplibre-gl').GeolocateControl | null = null;
 
   // Core services
   private config!: ConfigService;
@@ -106,20 +106,20 @@ export class RunRealmApp {
   private followRoads!: boolean;
   private gameMode: boolean = true;
 
-  private async loadMapbox(): Promise<void> {
-    if (this.mapboxgl) return; // Already loaded
+  private async loadMapLibre(): Promise<void> {
+    if (this.maplibregl) return; // Already loaded
 
     try {
-      const mapboxModule = await import('mapbox-gl');
-      this.mapboxgl = mapboxModule.default;
-      this.Map = mapboxModule.Map;
-      this.NavigationControl = mapboxModule.NavigationControl;
-      this.GeolocateControl = mapboxModule.GeolocateControl;
+      const maplibreModule = await import('maplibre-gl');
+      this.maplibregl = maplibreModule.default;
+      this.Map = maplibreModule.Map;
+      this.NavigationControl = maplibreModule.NavigationControl;
+      this.GeolocateControl = maplibreModule.GeolocateControl;
 
-      console.log('Mapbox GL loaded successfully');
+      console.log('MapLibre GL loaded successfully');
     } catch (error) {
-      console.error('Failed to load Mapbox GL:', error);
-      throw new Error('Mapbox GL failed to load');
+      console.error('Failed to load MapLibre GL:', error);
+      throw new Error('MapLibre GL failed to load');
     }
   }
 
@@ -499,9 +499,9 @@ export class RunRealmApp {
         this.animation.map = this.map;
         console.log('RunRealmApp: AnimationService map reference set');
 
-        // Also expose mapboxgl globally for AnimationService to use
-        if (this.mapboxgl) {
-          (window as any).mapboxgl = this.mapboxgl;
+        // Also expose maplibregl globally for AnimationService to use
+        if (this.maplibregl) {
+          (window as any).maplibregl = this.maplibregl;
         }
       }
 
@@ -522,29 +522,29 @@ export class RunRealmApp {
   }
 
   private async initializeMap(): Promise<void> {
-    // Load Mapbox dynamically
-    await this.loadMapbox();
+    // Load MapLibre dynamically
+    await this.loadMapLibre();
 
     const config = this.config.getConfig();
     const initialFocus = this.preferenceService.getLastOrDefaultFocus();
     const mapStyle = getStyleById(this.preferenceService.getMapStyle());
 
-    // Set Mapbox access token with fallback
-    let mapboxToken = config.mapbox.accessToken;
+    // Set MapLibre style URL with fallback
+    let maplibreToken = config.mapbox.accessToken;
 
     // Fallback: try to get token from localStorage if config doesn't have it
-    if (!mapboxToken) {
-      mapboxToken = localStorage.getItem('runrealm_mapbox_access_token') || '';
-      console.debug('Using Mapbox token from localStorage fallback');
+    if (!maplibreToken) {
+      maplibreToken = localStorage.getItem('runrealm_mapbox_access_token') || '';
+      console.debug('Using MapLibre config from localStorage fallback');
     }
 
-    console.debug(`Initializing map with token: ${mapboxToken ? 'Token available' : 'No token'}`);
-    (this.mapboxgl as any).accessToken = mapboxToken;
+    console.debug(`Initializing map with token: ${maplibreToken ? 'Token available' : 'No token'}`);
+    (this.maplibregl as any).accessToken = maplibreToken;
 
     // Check if container exists
-    const container = document.getElementById('mapbox-container');
+    const container = document.getElementById('maplibre-container');
     if (!container) {
-      throw new Error('Mapbox container not found');
+      throw new Error('MapLibre container not found');
     }
 
     console.log(
@@ -557,7 +557,7 @@ export class RunRealmApp {
         pitchWithRotate: false,
         center: [initialFocus.lng, initialFocus.lat],
         zoom: initialFocus.zoom,
-        container: 'mapbox-container',
+        container: 'maplibre-container',
         style: mapStyle,
       });
 
@@ -798,14 +798,14 @@ export class RunRealmApp {
             id: 'welcome',
             title: 'Welcome to RunRealm!',
             description: 'Claim, trade, and defend real-world running territories as NFTs.',
-            targetElement: '#mapbox-container',
+            targetElement: '#maplibre-container',
             position: 'bottom' as const,
           },
           {
             id: 'map-intro',
             title: 'Interactive Map',
             description: 'Click anywhere on the map to start planning your running route.',
-            targetElement: '#mapbox-container',
+            targetElement: '#maplibre-container',
             position: 'bottom' as const,
             completionCondition: 'run:pointAdded',
           },
@@ -978,7 +978,7 @@ export class RunRealmApp {
         (bounds, coord) => {
           return bounds.extend(coord as [number, number]);
         },
-        new (this.mapboxgl as any).LngLatBounds()
+        new (this.maplibregl as any).LngLatBounds()
       );
 
       // Fit map to bounds with padding

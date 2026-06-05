@@ -1,5 +1,6 @@
-import type { Map as MapboxMap } from 'mapbox-gl';
+import type { Map as MaplibreMap } from 'maplibre-gl';
 import { BaseService } from '../core/base-service';
+import { makeEaseToThrottle, makeMapThrottle, type ThrottledFn } from '../utils/map-throttle';
 import { RunPoint } from './run-tracking-service';
 import { TerritoryIntent, TerritoryPreview } from './territory-service';
 
@@ -26,7 +27,7 @@ export interface TerritoryMapOptions {
 }
 
 export class MapService extends BaseService {
-  private map: MapboxMap | null = null;
+  private map: MaplibreMap | null = null;
   private territoriesVisible: boolean = true;
   // New: Territory preview state management
   private territoryPreviews: Map<string, TerritoryPreview> = new Map();
@@ -40,10 +41,15 @@ export class MapService extends BaseService {
     intentOpacity: 0.4,
   };
 
-  public setMap(map: MapboxMap): void {
+  public setMap(map: MaplibreMap): void {
     this.map = map;
+    this.throttledSetData = makeMapThrottle({ intervalMs: 150 });
+    this.throttledEaseTo = makeEaseToThrottle(map, { intervalMs: 250 });
     this.initializeMapLayers();
   }
+
+  private throttledSetData: ThrottledFn = () => {};
+  private throttledEaseTo: (opts: object) => void = () => {};
 
   /**
    * Initialize map layers for territory preview functionality
@@ -175,17 +181,19 @@ export class MapService extends BaseService {
 
     const coordinates = points.map((p) => [p.lng, p.lat]);
 
-    const source = this.map.getSource(ACTIVITY_HIGHLIGHT_SOURCE_ID) as any;
-    if (source) {
-      source.setData({
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: coordinates,
-        },
-      });
-    }
+    this.throttledSetData(() => {
+      const source = this.map?.getSource(ACTIVITY_HIGHLIGHT_SOURCE_ID) as any;
+      if (source) {
+        source.setData({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: coordinates,
+          },
+        });
+      }
+    });
   }
 
   public clearActivityHighlight(): void {
@@ -479,44 +487,47 @@ export class MapService extends BaseService {
 
     const coordinates = points.map((p) => [p.lng, p.lat]);
 
-    const source = this.map.getSource(TRAIL_SOURCE_ID) as any;
-    if (source) {
-      source.setData({
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: coordinates,
-        },
-      });
-    } else {
-      this.map.addSource(TRAIL_SOURCE_ID, {
-        type: 'geojson',
-        data: {
+    this.throttledSetData(() => {
+      if (!this.map) return;
+      const source = this.map.getSource(TRAIL_SOURCE_ID) as any;
+      if (source) {
+        source.setData({
           type: 'Feature',
           properties: {},
           geometry: {
             type: 'LineString',
             coordinates: coordinates,
           },
-        },
-      });
+        });
+      } else {
+        this.map.addSource(TRAIL_SOURCE_ID, {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: coordinates,
+            },
+          },
+        });
 
-      this.map.addLayer({
-        id: TRAIL_LAYER_ID,
-        type: 'line',
-        source: TRAIL_SOURCE_ID,
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-        },
-        paint: {
-          'line-color': '#00ff88',
-          'line-width': 4,
-          'line-opacity': 0.8,
-        },
-      });
-    }
+        this.map.addLayer({
+          id: TRAIL_LAYER_ID,
+          type: 'line',
+          source: TRAIL_SOURCE_ID,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#ff6b35',
+            'line-width': 5,
+            'line-opacity': 0.9,
+          },
+        });
+      }
+    });
   }
 
   public drawTerritory(points: RunPoint[]): void {

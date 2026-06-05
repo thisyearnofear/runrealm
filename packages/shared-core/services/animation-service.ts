@@ -3,7 +3,7 @@
  * Provides consistent animations and transitions across the application
  */
 
-import type { Map as MapboxMap } from 'mapbox-gl';
+import type { Map as MaplibreMap } from 'maplibre-gl';
 import { BaseService } from '../core/base-service';
 import { GhostRunner } from './ai-service';
 
@@ -15,7 +15,7 @@ export interface AnimationConfig {
 
 export class AnimationService extends BaseService {
   private static instance: AnimationService;
-  public map: MapboxMap | null = null;
+  public map: MaplibreMap | null = null;
   private userLocationMarker: any = null;
 
   // Common easing functions
@@ -402,10 +402,10 @@ export class AnimationService extends BaseService {
     markerElement.appendChild(outerCircle);
     markerElement.appendChild(innerCircle);
 
-    // Create marker using Mapbox
-    const mapboxgl = (window as any).mapboxgl;
-    if (mapboxgl?.Marker) {
-      this.userLocationMarker = new mapboxgl.Marker({
+    // Create marker using MapLibre
+    const maplibregl = (window as any).maplibregl;
+    if (maplibregl?.Marker) {
+      this.userLocationMarker = new maplibregl.Marker({
         element: markerElement,
         anchor: 'center',
       })
@@ -435,7 +435,7 @@ export class AnimationService extends BaseService {
         document.head.appendChild(style);
       }
     } else {
-      console.warn('AnimationService: MapboxGL not available for marker creation');
+      console.warn('AnimationService: MapLibreGL not available for marker creation');
     }
   }
 
@@ -758,7 +758,7 @@ export class AnimationService extends BaseService {
     if (!this.map) return;
 
     // Create popup element
-    const popup = new (window as any).mapboxgl.Popup({
+    const popup = new (window as any).maplibregl.Popup({
       closeButton: false,
       closeOnClick: false,
     });
@@ -850,7 +850,7 @@ export class AnimationService extends BaseService {
     const ghostMarkerElement = document.createElement('div');
     ghostMarkerElement.className = 'ghost-marker'; // I'll need to add styles for this
 
-    const ghostMarker = new (window as any).mapboxgl.Marker({
+    const ghostMarker = new (window as any).maplibregl.Marker({
       element: ghostMarkerElement,
     })
       .setLngLat([ghost.route[0].lng, ghost.route[0].lat])

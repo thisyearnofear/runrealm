@@ -7,7 +7,7 @@ import DirectionsFactory, {
 import * as turfHelpers from '@turf/helpers';
 import length from '@turf/length';
 import { LineString } from 'geojson';
-import { LngLat } from 'mapbox-gl';
+import { LngLat } from 'maplibre-gl';
 import { v4 as uuid } from 'uuid';
 
 // Legacy RunSegment interface for route planning (not GPS tracking)

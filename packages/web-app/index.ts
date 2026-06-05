@@ -48,18 +48,13 @@ if (process.env.NODE_ENV === 'production') {
 
   // Helper function to check if message contains sensitive tokens
   const containsToken = (message: string) => {
-    return (
-      message.includes('access_token=') ||
-      message.includes('pk.eyJ') || // Mapbox token prefix
-      message.includes('AIzaSy')
-    ); // Google API key prefix
+    return message.includes('access_token=') || message.includes('AIzaSy'); // Google API key prefix
   };
 
   // Helper function to sanitize messages with tokens
   const sanitizeMessage = (message: string) => {
     return message
       .replace(/access_token=[^&\s]*/g, 'access_token=[REDACTED]')
-      .replace(/pk\.eyJ[A-Za-z0-9._-]*/g, 'pk.[REDACTED]')
       .replace(/AIzaSy[A-Za-z0-9._-]*/g, 'AIzaSy[REDACTED]');
   };
 

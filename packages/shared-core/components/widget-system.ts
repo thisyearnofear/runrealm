@@ -785,7 +785,7 @@ export class WidgetSystem extends BaseService {
       const target = event.target as HTMLElement;
 
       // Check if click is on map container (not on widgets)
-      if (target.id === 'mapbox-container' || target.closest('#mapbox-container')) {
+      if (target.id === 'maplibre-container' || target.closest('#maplibre-container')) {
         // Minimize all expanded widgets except run tracker when it's active
         this.widgets.forEach((widget, widgetId) => {
           if (!widget.minimized && widgetId !== 'run-tracker') {

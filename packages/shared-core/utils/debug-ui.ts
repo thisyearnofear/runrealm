@@ -20,7 +20,7 @@ export class DebugUI {
     console.group('🔍 UI Elements Debug');
 
     // Check for main containers
-    const containers = ['mapbox-container', 'gamefi-hud', 'territory-dashboard-root', 'loading'];
+    const containers = ['maplibre-container', 'gamefi-hud', 'territory-dashboard-root', 'loading'];
 
     containers.forEach((id) => {
       const element = document.getElementById(id);
