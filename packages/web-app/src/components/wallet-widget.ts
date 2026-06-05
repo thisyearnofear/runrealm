@@ -38,6 +38,7 @@ export class WalletWidget extends BaseService {
   private walletState: WalletState = { status: 'disconnected' };
   private retryCount: number = 0;
   private maxRetries: number = 3;
+  private externalModalOwner: boolean = false;
 
   // Centralized wallet provider definitions
   private readonly walletProviders: WalletProvider[] = [
@@ -107,6 +108,15 @@ export class WalletWidget extends BaseService {
         this.updateWidgetContent();
       });
     }
+  }
+
+  /**
+   * Suppress the legacy wallet modal — a React tree has taken over
+   * rendering. Connection logic and `connectWallet(providerId)` stay
+   * intact; only the imperative DOM modal is disabled.
+   */
+  public setExternalModalOwner(): void {
+    this.externalModalOwner = true;
   }
 
   /**
@@ -301,6 +311,7 @@ export class WalletWidget extends BaseService {
   }
 
   public showWalletModal(): void {
+    if (this.externalModalOwner) return;
     const modal = this.domService.createElement('div', {
       id: 'wallet-modal-overlay',
       className: 'wallet-modal-overlay',

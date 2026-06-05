@@ -1,0 +1,360 @@
+/* WalletSheet + ConnectButton — polished wallet flow.
+   Uses --rr-* tokens from design-tokens.css. */
+
+/* ============== ConnectButton ============== */
+
+.rr-connect {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rr-s-2);
+  border: 0;
+  cursor: pointer;
+  font-family: var(--rr-font-body);
+  font-weight: var(--rr-w-medium);
+  letter-spacing: var(--rr-track-normal);
+  border-radius: var(--rr-r-pill);
+  background: var(--rr-accent);
+  color: var(--rr-accent-ink);
+  transition:
+    background var(--rr-d-2) var(--rr-ease-out),
+    transform var(--rr-d-1) var(--rr-ease-out);
+  white-space: nowrap;
+}
+
+.rr-connect:hover:not(:disabled) {
+  background: var(--rr-accent-hover);
+}
+
+.rr-connect:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.rr-connect:focus-visible {
+  outline: none;
+  box-shadow: var(--rr-sh-focus);
+}
+
+.rr-connect:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.rr-connect[data-size="sm"] {
+  padding: 6px 12px;
+  font-size: var(--rr-text-xs);
+}
+.rr-connect[data-size="md"] {
+  padding: 8px 16px;
+  font-size: var(--rr-text-sm);
+}
+.rr-connect[data-size="lg"] {
+  padding: 10px 20px;
+  font-size: var(--rr-text-md);
+}
+
+.rr-connect[data-status="error"] {
+  background: var(--rr-signal);
+  color: var(--rr-signal-ink);
+}
+
+/* Connected state pill */
+.rr-connect--connected {
+  background: var(--rr-bg-2);
+  color: var(--rr-text-1);
+  border: var(--rr-b-1);
+}
+.rr-connect--connected:hover {
+  background: var(--rr-bg-3);
+}
+
+.rr-connect__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--rr-r-pill);
+  background: var(--rr-success);
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.18);
+}
+
+.rr-connect__addr {
+  font-family: var(--rr-font-mono);
+  font-size: inherit;
+  font-weight: var(--rr-w-medium);
+  letter-spacing: 0;
+}
+
+.rr-connect__disconnect {
+  border: 0;
+  background: transparent;
+  color: var(--rr-text-2);
+  font-family: inherit;
+  font-size: var(--rr-text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--rr-track-caps);
+  cursor: pointer;
+  padding: 2px 6px;
+  margin-left: var(--rr-s-1);
+  border-radius: var(--rr-r-2);
+}
+.rr-connect__disconnect:hover {
+  color: var(--rr-signal);
+  background: rgba(255, 92, 74, 0.08);
+}
+
+/* ============== WalletSheet (modal) ============== */
+
+.rr-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: var(--rr-z-sheet-backdrop);
+  animation: rr-fade-in var(--rr-d-3) var(--rr-ease-out);
+  padding: var(--rr-s-4);
+}
+
+@media (min-width: 640px) {
+  .rr-sheet-backdrop {
+    align-items: center;
+  }
+}
+
+.rr-sheet {
+  background: var(--rr-bg-1);
+  border: var(--rr-b-1);
+  border-radius: var(--rr-r-5) var(--rr-r-5) 0 0;
+  width: 100%;
+  max-width: var(--rr-w-sheet-max);
+  padding: var(--rr-s-6);
+  box-shadow: var(--rr-sh-3);
+  position: relative;
+  z-index: var(--rr-z-sheet);
+  animation: rr-sheet-in var(--rr-d-4) var(--rr-ease-spring);
+}
+
+@media (min-width: 640px) {
+  .rr-sheet {
+    border-radius: var(--rr-r-4);
+    padding: var(--rr-s-8);
+  }
+}
+
+.rr-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--rr-s-2);
+}
+
+.rr-sheet__title {
+  font-family: var(--rr-font-display);
+  font-weight: var(--rr-w-semibold);
+  font-size: var(--rr-text-2xl);
+  letter-spacing: var(--rr-track-tight);
+  line-height: var(--rr-lead-tight);
+  color: var(--rr-text-1);
+  margin: 0;
+}
+
+.rr-sheet__close {
+  background: transparent;
+  border: var(--rr-b-1);
+  border-radius: var(--rr-r-pill);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--rr-text-2);
+  cursor: pointer;
+  transition:
+    background var(--rr-d-2) var(--rr-ease-out),
+    color var(--rr-d-2) var(--rr-ease-out);
+}
+.rr-sheet__close:hover {
+  background: var(--rr-bg-2);
+  color: var(--rr-text-1);
+}
+.rr-sheet__close:focus-visible {
+  outline: none;
+  box-shadow: var(--rr-sh-focus);
+}
+
+.rr-sheet__lede {
+  font-size: var(--rr-text-sm);
+  line-height: var(--rr-lead-normal);
+  color: var(--rr-text-2);
+  margin: 0 0 var(--rr-s-6) 0;
+}
+
+.rr-providers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rr-s-2);
+}
+
+.rr-provider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rr-s-3);
+  padding: var(--rr-s-4) var(--rr-s-5);
+  background: var(--rr-bg-2);
+  border: var(--rr-b-1);
+  border-radius: var(--rr-r-3);
+  cursor: pointer;
+  font-family: var(--rr-font-body);
+  font-size: var(--rr-text-md);
+  color: var(--rr-text-1);
+  text-align: left;
+  transition:
+    background var(--rr-d-2) var(--rr-ease-out),
+    border-color var(--rr-d-2) var(--rr-ease-out);
+}
+
+.rr-provider:hover:not(:disabled) {
+  background: var(--rr-bg-3);
+  border-color: var(--rr-border-strong);
+}
+
+.rr-provider:focus-visible {
+  outline: none;
+  box-shadow: var(--rr-sh-focus);
+}
+
+.rr-provider:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rr-provider[aria-busy="true"] {
+  border-color: var(--rr-accent);
+}
+
+.rr-provider__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rr-s-2);
+  font-weight: var(--rr-w-medium);
+}
+
+.rr-provider__tag {
+  font-size: var(--rr-text-3xs);
+  font-weight: var(--rr-w-semibold);
+  letter-spacing: var(--rr-track-caps);
+  color: var(--rr-text-3);
+  border: var(--rr-b-1);
+  border-radius: var(--rr-r-1);
+  padding: 1px 5px;
+  text-transform: uppercase;
+}
+
+.rr-provider__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rr-s-2);
+  font-size: var(--rr-text-xs);
+  color: var(--rr-text-2);
+}
+
+.rr-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rr-s-1);
+  padding: 2px 8px;
+  border-radius: var(--rr-r-pill);
+  font-size: var(--rr-text-3xs);
+  font-weight: var(--rr-w-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--rr-track-caps);
+  background: var(--rr-bg-3);
+  color: var(--rr-text-2);
+}
+.rr-pill--ok {
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--rr-success);
+}
+
+.rr-link {
+  color: var(--rr-accent);
+  text-decoration: none;
+  font-weight: var(--rr-w-medium);
+}
+.rr-link:hover {
+  text-decoration: underline;
+}
+
+.rr-sheet__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--rr-s-2);
+  margin-top: var(--rr-s-6);
+  padding-top: var(--rr-s-4);
+  border-top: var(--rr-b-1);
+  font-size: var(--rr-text-2xs);
+  color: var(--rr-text-3);
+  line-height: var(--rr-lead-normal);
+}
+
+.rr-sheet__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: var(--rr-r-pill);
+  background: var(--rr-text-3);
+  flex-shrink: 0;
+}
+
+/* ============== Spinner ============== */
+
+.rr-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  display: inline-block;
+  animation: rr-spin 720ms linear infinite;
+}
+
+/* ============== Animations ============== */
+
+@keyframes rr-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rr-sheet-in {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes rr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rr-sheet-backdrop,
+  .rr-sheet,
+  .rr-spinner {
+    animation: none;
+  }
+}

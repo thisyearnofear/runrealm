@@ -343,6 +343,11 @@ export interface AppEvents extends Web3Events {
   'wallet:disconnect': Record<string, never>;
   'wallet:switchNetwork': { chainId?: number };
   'wallet:retryConnection': Record<string, never>;
+  'wallet:stateChanged': {
+    status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'switching';
+    wallet?: { address: string; chainId: number; networkName?: string; balance?: string };
+    error?: string;
+  };
   // Dashboard events
   'dashboard:dataUpdated': { data: any; state: any };
   'dashboard:visibilityChanged': { visible: boolean; minimized: boolean };

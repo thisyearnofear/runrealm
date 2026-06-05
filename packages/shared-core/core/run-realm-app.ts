@@ -258,6 +258,10 @@ export class RunRealmApp {
     return this.platformUI.mainUI;
   }
 
+  getEventBus(): import('./event-bus').EventBus {
+    return this.services.eventBus;
+  }
+
   getOnboardingService() {
     return this.services.onboarding;
   }

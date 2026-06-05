@@ -10,6 +10,8 @@ import './styles/components.css'; // Widgets, GameFi UI, controls, rewards
 import './styles/interfaces.css'; // Modals, location, wallet, cross-chain
 import './styles/responsive.css'; // Mobile-first responsive design
 import './styles/external-fitness.css'; // External fitness integration
+import './styles/design-tokens.css'; // New design system tokens (--rr-*)
+import './styles/wallet-sheet.css'; // Polished wallet connect flow
 
 // Register service worker for offline support
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
@@ -169,6 +171,48 @@ async function initializeApp(): Promise<void> {
     dashboardContainer.id = 'user-dashboard-root';
     document.body.appendChild(dashboardContainer);
     userDashboard.initialize(dashboardContainer);
+
+    // Mount the React wallet flow. The legacy WalletWidget still owns
+    // connection state and connect logic; the React root owns the
+    // modal. Suppress the legacy modal so only the React one shows.
+    const { createRoot } = await import('react-dom/client');
+    const { createElement } = await import('react');
+    const { WalletRoot } = await import('./src/components/react/WalletRoot');
+    const { useWallet } = await import('./src/components/react/useWallet');
+    const eventBus = app.getEventBus();
+    const walletForReact = {
+      eventBus,
+      listProviders: () =>
+        walletWidget.getWalletProviders().map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          installed: p.isInstalled(),
+          popular: Boolean(p.popular),
+          downloadUrl: p.downloadUrl,
+        })),
+      connect: async (id: string) => {
+        await walletWidget.connectWallet(id);
+      },
+      disconnect: async () => {
+        await walletWidget.disconnectWallet();
+      },
+    };
+    // Disable the legacy wallet modal — React owns it now.
+    walletWidget.setExternalModalOwner?.();
+
+    const walletRootContainer = document.createElement('div');
+    walletRootContainer.id = 'react-wallet-root';
+    document.body.appendChild(walletRootContainer);
+    const reactRoot = createRoot(walletRootContainer);
+    reactRoot.render(
+      createElement(() => {
+        // Re-render hook by reading snapshot on each tick.
+        const wallet = useWallet(walletForReact as any);
+        return createElement(WalletRoot, { wallet: wallet as any, eventBus });
+      })
+    );
+    // biome-ignore lint/suspicious/noExplicitAny: dev-only debug export
+    (window as any).reactWalletRoot = reactRoot;
 
     // Remove loading indicator from template
     const loadingDiv = document.getElementById('loading');
