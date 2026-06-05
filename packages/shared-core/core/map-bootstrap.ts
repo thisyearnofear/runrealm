@@ -9,6 +9,7 @@
  * import, container lookup, token fallback, load/error wiring,
  * controls, click handler, style-load hook).
  */
+import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { MapService } from '../services/map-service';
 import type { PreferenceService } from '../services/preference-service';
 import { getStyleById } from '../utils/map-style';
@@ -39,7 +40,10 @@ export interface CreateMapOptions {
   isMobile: boolean;
 }
 
-export async function createMap(handles: MaplibreHandles, opts: CreateMapOptions): Promise<Map> {
+export async function createMap(
+  handles: MaplibreHandles,
+  opts: CreateMapOptions
+): Promise<MaplibreMap> {
   const container = document.getElementById(opts.containerId ?? 'maplibre-container');
   if (!container) {
     throw new Error('MapLibre container not found');
@@ -73,7 +77,7 @@ export async function createMap(handles: MaplibreHandles, opts: CreateMapOptions
 }
 
 export interface MapWiringOptions {
-  map: Map;
+  map: MaplibreMap;
   handles: MaplibreHandles;
   preferenceService: PreferenceService;
   isMobile: boolean;
@@ -118,7 +122,7 @@ export function wireMapControls(opts: MapWiringOptions): void {
   void territoryToggle;
 }
 
-export function saveMapFocus(map: Map, preferenceService: PreferenceService): void {
+export function saveMapFocus(map: MaplibreMap, preferenceService: PreferenceService): void {
   const center = map.getCenter();
   const position = {
     coords: { latitude: center.lat, longitude: center.lng },
@@ -126,7 +130,11 @@ export function saveMapFocus(map: Map, preferenceService: PreferenceService): vo
   preferenceService.saveCurrentFocus(position, map.getZoom());
 }
 
-export function fitMapToRoute(map: Map, maplibregl: MaplibreGL, coordinates: number[][]): void {
+export function fitMapToRoute(
+  map: MaplibreMap,
+  maplibregl: MaplibreGL,
+  coordinates: number[][]
+): void {
   if (!coordinates || coordinates.length < 2) return;
 
   try {

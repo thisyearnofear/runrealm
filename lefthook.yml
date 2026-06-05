@@ -21,10 +21,24 @@ pre-commit:
       stage_fixed: true
       glob: "**/*.{ts,tsx,js,jsx,json}"
 
+    # Hardcoded credential scan. Cheap (only staged files), catches
+    # AWS/GitHub/OpenAI/Anthropic/Google/Stripe/Slack/Mapbox/PEM/JWT
+    # patterns. See scripts/secrets-scan.sh for allowlist + details.
+    secrets-scan:
+      run: bash scripts/secrets-scan.sh staged
+      fail_text: "Hardcoded secret detected. See scripts/secrets-scan.sh output."
+
 # Pre-push hooks - run before pushing to remote
 pre-push:
   parallel: false
   commands:
+    # Scan files changed since origin/main for hardcoded secrets.
+    # Catches secrets that landed in earlier commits before the hook
+    # existed. ~1s for normal PR sizes.
+    secrets-scan-push:
+      run: bash scripts/secrets-scan.sh pushed
+      fail_text: "Hardcoded secret in a commit about to push. See scripts/secrets-scan.sh output."
+
     # Run tests for all packages
     test:
       run: npm run test
@@ -39,3 +53,4 @@ pre-push:
     typecheck:
       run: npm run build:shared
       fail_text: "Type checking failed. Please fix TypeScript errors before pushing."
+

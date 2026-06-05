@@ -74,6 +74,10 @@ const makeStubServices = (overrides: Partial<Services> = {}): Services => {
       // biome-ignore lint/suspicious/noExplicitAny: stub
       refreshConfig: jest.fn().mockResolvedValue(undefined),
     } as never,
+    haptics: {
+      // biome-ignore lint/suspicious/noExplicitAny: stub
+      trigger: jest.fn(),
+    } as never,
     ...overrides,
   };
   return stub as Services;

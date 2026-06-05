@@ -243,9 +243,7 @@ app.post('/api/runs', express.json({ limit: '5mb' }), (req, res) => {
     return res.status(400).json({ error: 'invalid run payload' });
   }
   const pointCount = Array.isArray(run.points) ? run.points.length : 0;
-  console.log(
-    `[runs] received run ${run.id} (${pointCount} points, ${run.totalDistance ?? '?'}m)`
-  );
+  console.log(`[runs] received run ${run.id} (${pointCount} points, ${run.totalDistance ?? '?'}m)`);
   // TODO(step-3): validate route, compute H3 cells, persist, queue chain submission.
   res.status(202).json({ status: 'accepted', runId: run.id });
 });

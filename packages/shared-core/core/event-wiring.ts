@@ -95,7 +95,11 @@ export function wireEvents(opts: EventWiringOptions): void {
     if (data.distance) services.progression.addDistance(data.distance);
     if (data.duration) services.progression.addTime(data.duration);
     services.sound.playSuccessSound();
-    if (services.animation && typeof services.animation.confetti === 'function') {
+    if (
+      services.animation &&
+      typeof services.animation.confetti === 'function' &&
+      typeof document !== 'undefined'
+    ) {
       services.animation.confetti(document.body);
     }
   });
@@ -103,7 +107,11 @@ export function wireEvents(opts: EventWiringOptions): void {
   services.eventBus.on('territory:claimed', () => {
     services.progression.addTerritory();
     services.sound.playSuccessSound();
-    if (services.animation && typeof services.animation.confetti === 'function') {
+    if (
+      services.animation &&
+      typeof services.animation.confetti === 'function' &&
+      typeof document !== 'undefined'
+    ) {
       services.animation.confetti(document.body);
     }
   });

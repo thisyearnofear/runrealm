@@ -1,21 +1,21 @@
-module.exports = function (api) {
+module.exports = (api) => {
   api.cache(true);
   return {
-    presets: ["babel-preset-expo"],
+    presets: ['babel-preset-expo'],
     plugins: [
       [
-        "module-resolver",
+        'module-resolver',
         {
-          extensions: [".ts", ".tsx", ".js", ".json"],
+          extensions: ['.ts', '.tsx', '.js', '.json'],
           alias: {
-            "@runrealm/shared-core": "../shared-core",
-            "@runrealm/shared-types": "../shared-types",
-            "@runrealm/shared-utils": "../shared-utils",
-            "@runrealm/shared-blockchain": "../shared-blockchain",
+            '@runrealm/shared-core': '../shared-core',
+            '@runrealm/shared-types': '../shared-types',
+            '@runrealm/shared-utils': '../shared-utils',
+            '@runrealm/shared-blockchain': '../shared-blockchain',
           },
         },
       ],
-      "react-native-reanimated/plugin",
+      'react-native-reanimated/plugin',
     ],
   };
 };

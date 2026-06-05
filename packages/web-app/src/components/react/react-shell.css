@@ -39,7 +39,7 @@
   pointer-events: none;
 }
 
-.rr-game-hud[data-recording='1'] .rr-game-hud__value {
+.rr-game-hud[data-recording="1"] .rr-game-hud__value {
   color: #ff6b35;
 }
 
@@ -109,15 +109,15 @@
   max-height: 28vh;
 }
 
-.rr-bottom-sheet[data-state='collapsed'] {
+.rr-bottom-sheet[data-state="collapsed"] {
   max-height: 60px;
 }
 
-.rr-bottom-sheet[data-state='half'] {
+.rr-bottom-sheet[data-state="half"] {
   max-height: 28vh;
 }
 
-.rr-bottom-sheet[data-state='full'] {
+.rr-bottom-sheet[data-state="full"] {
   max-height: 80vh;
 }
 
