@@ -169,6 +169,18 @@ export function wireEvents(opts: EventWiringOptions): void {
   // The fallback only existed to log a different message; the call
   // sites are equivalent.
 
+  // Haptics on key game events. Centralized here so the audio cue,
+  // toast, and haptic all fire in one place.
+  services.eventBus.on('territory:claimed', () => {
+    services.haptics.trigger('success');
+  });
+  services.eventBus.on('territory:claimFailed', () => {
+    services.haptics.trigger('error');
+  });
+  services.eventBus.on('run:completed', () => {
+    services.haptics.trigger('heavy');
+  });
+
   // Forward map click → orchestrator
   void opts.onMapClick;
 }

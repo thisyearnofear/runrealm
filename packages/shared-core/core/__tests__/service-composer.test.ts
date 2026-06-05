@@ -82,6 +82,8 @@ describe('service-composer', () => {
       'ghostRunnerService',
       'enhancedRunControls',
       'gamefiUI',
+      'haptics',
+      'replay',
     ];
     for (const key of expectedKeys) {
       expect((services as unknown as Record<string, unknown>)[key]).toBeDefined();

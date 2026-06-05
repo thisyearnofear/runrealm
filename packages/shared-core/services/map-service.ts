@@ -1,6 +1,8 @@
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { BaseService } from '../core/base-service';
+import { cellToPolygon, type TerritoryCell } from '../utils/h3-territory';
 import { makeEaseToThrottle, makeMapThrottle, type ThrottledFn } from '../utils/map-throttle';
+import { ReplayService } from './replay-service';
 import { RunPoint } from './run-tracking-service';
 import { TerritoryIntent, TerritoryPreview } from './territory-service';
 
@@ -17,6 +19,13 @@ const TERRITORY_SELECTION_SOURCE_ID = 'territory-selection-source';
 const TERRITORY_SELECTION_LAYER_ID = 'territory-selection-layer';
 const ACTIVITY_HIGHLIGHT_SOURCE_ID = 'activity-highlight-source';
 const ACTIVITY_HIGHLIGHT_LAYER_ID = 'activity-highlight-layer';
+// Step 7: H3 cell capture + replay + contested-border pulse
+const H3_CELLS_SOURCE_ID = 'h3-cells-source';
+const H3_CELLS_LAYER_ID = 'h3-cells-layer';
+const H3_CELLS_BORDER_LAYER_ID = 'h3-cells-border-layer';
+const CONTESTED_CELLS_SOURCE_ID = 'contested-cells-source';
+const CONTESTED_CELLS_LAYER_ID = 'contested-cells-layer';
+const CONTESTED_CELLS_BORDER_LAYER_ID = 'contested-cells-border-layer';
 
 export interface TerritoryMapOptions {
   showPreviews?: boolean;
@@ -50,6 +59,9 @@ export class MapService extends BaseService {
 
   private throttledSetData: ThrottledFn = () => {};
   private throttledEaseTo: (opts: object) => void = () => {};
+  // Step 7: contested-border pulse animation handle
+  private contestedPulseRafId: number | null = null;
+  private contestedPulseStartMs: number = 0;
 
   /**
    * Initialize map layers for territory preview functionality
@@ -651,6 +663,203 @@ export class MapService extends BaseService {
           'line-dasharray': [3, 2],
         },
       });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Step 7: H3 cell capture reveal, replay, contested-border pulse
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Render a set of H3 cells as filled hex polygons. The first call
+   * adds the source + fill + border layers; subsequent calls just
+   * setData. Used by the cell-capture reveal animation (passes cells
+   * one at a time as the runner crosses them).
+   */
+  public drawH3Cells(cells: TerritoryCell[], opts?: { color?: string; opacity?: number }): void {
+    if (!this.map) return;
+    const color = opts?.color ?? '#00ff88';
+    const opacity = opts?.opacity ?? 0.3;
+
+    const features = cells.map((cell) => ({
+      type: 'Feature' as const,
+      properties: { h3Index: cell.h3Index },
+      geometry: cellToPolygon(cell.h3Index),
+    }));
+
+    this.throttledSetData(() => {
+      if (!this.map) return;
+      const source = this.map.getSource(H3_CELLS_SOURCE_ID) as any;
+      if (source) {
+        source.setData({ type: 'FeatureCollection', features });
+      } else {
+        this.map.addSource(H3_CELLS_SOURCE_ID, {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features },
+        });
+        this.map.addLayer({
+          id: H3_CELLS_LAYER_ID,
+          type: 'fill',
+          source: H3_CELLS_SOURCE_ID,
+          paint: {
+            'fill-color': color,
+            'fill-opacity': opacity,
+          },
+        });
+        this.map.addLayer({
+          id: H3_CELLS_BORDER_LAYER_ID,
+          type: 'line',
+          source: H3_CELLS_SOURCE_ID,
+          paint: {
+            'line-color': color,
+            'line-width': 2,
+            'line-opacity': 0.7,
+          },
+        });
+      }
+    });
+  }
+
+  /**
+   * Add a single cell to the existing H3 layer (cell-capture reveal).
+   * If the layer doesn't exist yet, this seeds it with just this cell.
+   */
+  public revealH3Cell(cell: TerritoryCell, opts?: { color?: string }): void {
+    if (!this.map) return;
+
+    if (!this.map.getSource(H3_CELLS_SOURCE_ID)) {
+      this.drawH3Cells([cell], opts);
+      return;
+    }
+
+    // Append to existing source without re-adding the layer.
+    const source = this.map.getSource(H3_CELLS_SOURCE_ID) as any;
+    const existing = (source._data ?? { features: [] }) as { features: GeoJSON.Feature[] };
+    const merged = {
+      type: 'FeatureCollection' as const,
+      features: [
+        ...existing.features,
+        {
+          type: 'Feature' as const,
+          properties: { h3Index: cell.h3Index },
+          geometry: cellToPolygon(cell.h3Index),
+        },
+      ],
+    };
+    this.throttledSetData(() => {
+      if (!this.map) return;
+      const s = this.map.getSource(H3_CELLS_SOURCE_ID) as any;
+      s?.setData(merged);
+    });
+  }
+
+  public clearH3Cells(): void {
+    if (!this.map) return;
+    if (this.map.getLayer(H3_CELLS_BORDER_LAYER_ID)) this.map.removeLayer(H3_CELLS_BORDER_LAYER_ID);
+    if (this.map.getLayer(H3_CELLS_LAYER_ID)) this.map.removeLayer(H3_CELLS_LAYER_ID);
+    if (this.map.getSource(H3_CELLS_SOURCE_ID)) this.map.removeSource(H3_CELLS_SOURCE_ID);
+  }
+
+  /**
+   * Animate a run replay. Streams the points through `onTick` on each
+   * frame; the consumer typically calls `drawRunTrail(slice)` to paint
+   * the partial trail. Uses the same throttle as live recording.
+   *
+   * Convenience wrapper over ReplayService. The service itself is
+   * registered in the composer; this method exists for callers that
+   * want a one-shot.
+   */
+  public async replayRun(
+    points: RunPoint[],
+    opts: { speed?: number; onComplete?: () => void } = {}
+  ): Promise<void> {
+    const replay = ReplayService.getInstance();
+    await replay.play(points, {
+      speed: opts.speed ?? 4,
+      onTick: (slice) => this.drawRunTrail(slice),
+      onComplete: opts.onComplete,
+    });
+  }
+
+  /**
+   * Start a pulsing animation on the borders of `cells` to signal a
+   * contested territory. The pulse loops until `stopContestedPulse()`
+   * is called. Uses `requestAnimationFrame` so it's a no-op on
+   * headless test environments (no rAF = no loop).
+   */
+  public startContestedPulse(cells: TerritoryCell[]): void {
+    if (!this.map) return;
+    this.stopContestedPulse();
+
+    const features = cells.map((cell) => ({
+      type: 'Feature' as const,
+      properties: { h3Index: cell.h3Index },
+      geometry: cellToPolygon(cell.h3Index),
+    }));
+
+    const source = this.map.getSource(CONTESTED_CELLS_SOURCE_ID) as any;
+    if (source) {
+      source.setData({ type: 'FeatureCollection', features });
+    } else {
+      this.map.addSource(CONTESTED_CELLS_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features },
+      });
+      this.map.addLayer({
+        id: CONTESTED_CELLS_LAYER_ID,
+        type: 'fill',
+        source: CONTESTED_CELLS_SOURCE_ID,
+        paint: {
+          'fill-color': '#ff3366',
+          'fill-opacity': 0.15,
+        },
+      });
+      this.map.addLayer({
+        id: CONTESTED_CELLS_BORDER_LAYER_ID,
+        type: 'line',
+        source: CONTESTED_CELLS_SOURCE_ID,
+        paint: {
+          'line-color': '#ff3366',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 14, 3, 18, 5],
+          'line-opacity': 0.9,
+        },
+      });
+    }
+
+    this.contestedPulseStartMs = performance.now();
+    const tick = () => {
+      if (!this.map || this.contestedPulseRafId === null) return;
+      const t = (performance.now() - this.contestedPulseStartMs) / 1000;
+      // Sinusoidal pulse: 0..1, period 1.4s
+      const pulse = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * ((2 * Math.PI) / 1.4)));
+      if (this.map.getLayer(CONTESTED_CELLS_LAYER_ID)) {
+        this.map.setPaintProperty(CONTESTED_CELLS_LAYER_ID, 'fill-opacity', 0.1 + pulse * 0.3);
+      }
+      if (this.map.getLayer(CONTESTED_CELLS_BORDER_LAYER_ID)) {
+        this.map.setPaintProperty(CONTESTED_CELLS_BORDER_LAYER_ID, 'line-width', 1 + pulse * 3);
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: rAF signature
+      this.contestedPulseRafId = (globalThis as any).requestAnimationFrame(tick);
+    };
+    // biome-ignore lint/suspicious/noExplicitAny: rAF signature
+    this.contestedPulseRafId = (globalThis as any).requestAnimationFrame(tick);
+  }
+
+  public stopContestedPulse(): void {
+    if (this.contestedPulseRafId !== null) {
+      // biome-ignore lint/suspicious/noExplicitAny: cancelAnimationFrame signature
+      (globalThis as any).cancelAnimationFrame?.(this.contestedPulseRafId);
+      this.contestedPulseRafId = null;
+    }
+    if (!this.map) return;
+    if (this.map.getLayer(CONTESTED_CELLS_BORDER_LAYER_ID)) {
+      this.map.removeLayer(CONTESTED_CELLS_BORDER_LAYER_ID);
+    }
+    if (this.map.getLayer(CONTESTED_CELLS_LAYER_ID)) {
+      this.map.removeLayer(CONTESTED_CELLS_LAYER_ID);
+    }
+    if (this.map.getSource(CONTESTED_CELLS_SOURCE_ID)) {
+      this.map.removeSource(CONTESTED_CELLS_SOURCE_ID);
     }
   }
 }

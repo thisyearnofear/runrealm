@@ -33,12 +33,14 @@ import { ExternalFitnessService } from '../services/external-fitness-service';
 import { GameService } from '../services/game-service';
 import { GeocodingService } from '../services/geocoding-service';
 import { GhostRunnerService } from '../services/ghost-runner-service';
+import { HapticsService } from '../services/haptics-service';
 import { LocationService } from '../services/location-service';
 import { MapService } from '../services/map-service';
 import { NavigationService } from '../services/navigation-service';
 import { OnboardingService } from '../services/onboarding-service';
 import { PreferenceService } from '../services/preference-service';
 import { ProgressionService } from '../services/progression-service';
+import { ReplayService } from '../services/replay-service';
 import { RunTrackingService } from '../services/run-tracking-service';
 import { SoundService } from '../services/sound-service';
 import { TerritoryService } from '../services/territory-service';
@@ -80,6 +82,8 @@ export interface Services {
   ghostRunnerService: GhostRunnerService;
   enhancedRunControls: EnhancedRunControls;
   gamefiUI: GameFiUI;
+  haptics: HapticsService;
+  replay: ReplayService;
 }
 
 export interface TokenDependentServices {
@@ -115,6 +119,8 @@ export function createServices(): Services {
   const ghostRunnerService = GhostRunnerService.getInstance();
   const enhancedRunControls = new EnhancedRunControls();
   const gamefiUI = GameFiUI.getInstance();
+  const haptics = HapticsService.getInstance();
+  const replay = ReplayService.getInstance();
 
   return {
     config,
@@ -144,6 +150,8 @@ export function createServices(): Services {
     ghostRunnerService,
     enhancedRunControls,
     gamefiUI,
+    haptics,
+    replay,
   };
 }
 
