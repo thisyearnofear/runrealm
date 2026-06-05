@@ -13,11 +13,6 @@ pnpm-debug.log*
 .env.production.local
 
 # Sensitive configuration
-/src/appsettings.secrets.ts
-/src/appsettings.secrets.d.ts
-/src/dev-setup.d.ts
-/src/dev-setup.ts
-/src/appsettings.secrets.dev.ts
 config/secrets.json
 **/appsettings.secrets.js
 **/appsettings.secrets.ts
@@ -53,13 +48,18 @@ packages/*/dist/
 packages/*/build/
 packages/*/*.tsbuildinfo
 tsconfig.tsbuildinfo
-# Additional build artifacts
-packages/*/*.js
-packages/*/*.d.ts
-packages/*/*.d.ts.map
-packages/*/*.js.map
-!packages/*/*.ts
-!packages/*/*.tsx
+# Recursively ignore compiled artifacts emitted by tsc next to sources
+packages/**/*.js
+packages/**/*.d.ts
+packages/**/*.d.ts.map
+packages/**/*.js.map
+# Negations: hand-authored .js and config files that must stay tracked
+!packages/**/sw.js
+!packages/**/*.config.js
+!packages/**/*.config.cjs
+!packages/**/*.config.mjs
+!packages/web-app/src/components/ghost-button.js
+!packages/web-app/src/components/ghost-management.js
 
 # Auto-generated JS files from compilation
 **/*.js.map
@@ -67,10 +67,6 @@ public/*.js
 public/*.css
 public/*.html
 !public/index.html  # Keep the template file if it exists for build process
-src/**/*.js
-src/components/**/*.js  # Explicitly ignore stale compiled .js files in components
-!src/**/*.ts
-!src/**/*.tsx
 
 packages/*/.expo/
 packages/*/.expo-shared/

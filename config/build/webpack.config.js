@@ -84,7 +84,6 @@ module.exports = (env, argv) => {
       extensions: [".ts", ".tsx", ".js"],
       modules: [
         path.resolve(__dirname, "../../packages"),
-        path.resolve(__dirname, "../../src"),
         path.resolve(__dirname, "../../node_modules"),
         "node_modules"
       ],

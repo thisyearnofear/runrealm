@@ -24,7 +24,7 @@
       "@components/*": ["./packages/shared-core/components/*"]
     }
   },
-  "include": ["packages/**/*", "src/**/*", "types/**/*"],
+  "include": ["packages/**/*", "types/**/*"],
   "exclude": [
     "node_modules",
     "config",
