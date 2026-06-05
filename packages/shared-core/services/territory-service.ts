@@ -1,6 +1,12 @@
 import * as turf from '@turf/turf';
 import { BaseService } from '../core/base-service';
 import { calculateDistance } from '../utils/distance-formatter';
+import {
+  H3_RESOLUTION,
+  H3_RESOLUTION_AREA_KM2,
+  routeToCells,
+  type TerritoryCell,
+} from '../utils/h3-territory';
 import { RunSession } from './run-tracking-service';
 
 export interface TerritoryBounds {
@@ -66,6 +72,13 @@ export interface Territory {
   activityPoints?: number; // 0-1000
   lastActivityUpdate?: number; // timestamp
   defenseStatus?: 'strong' | 'moderate' | 'vulnerable' | 'claimable';
+  // H3 hexagonal cells covered by the run that produced this territory.
+  // Additive alongside `geohash`; populated when a RunSession is processed
+  // for H3-aware features (contested-cell detection, replay, map render).
+  // The on-chain identifier is still `geohash` until the contract is
+  // upgraded — see contracts/H3_MIGRATION.md.
+  h3Cells?: TerritoryCell[];
+  h3Resolution?: number;
 }
 
 export interface TerritoryClaimResult {
@@ -313,6 +326,35 @@ export class TerritoryService extends BaseService {
   }
 
   /**
+   * Attach H3 cells to a territory record in place. Pure function over the
+   * territory + run; no side effects, no chain calls. Called by
+   * `createTerritoryFromRun` and exposed publicly so map / replay code can
+   * backfill cells for legacy territories that only have `geohash`.
+   */
+  public attachH3Cells(territory: Territory, run: RunSession): Territory {
+    if (!run.points || run.points.length === 0) return territory;
+    const cells = routeToCells(run.points.map((p) => ({ lat: p.lat, lng: p.lng })));
+    return { ...territory, h3Cells: cells, h3Resolution: H3_RESOLUTION };
+  }
+
+  /**
+   * Read-only summary of H3 metadata. Used by /api/runs and any other
+   * consumer that needs to confirm the H3 model is wired without pulling
+   * the full territory object.
+   */
+  public h3Summary(territory: Territory): {
+    cellCount: number;
+    resolution: number;
+    areaKm2: number;
+  } {
+    return {
+      cellCount: territory.h3Cells?.length ?? 0,
+      resolution: territory.h3Resolution ?? H3_RESOLUTION,
+      areaKm2: H3_RESOLUTION_AREA_KM2,
+    };
+  }
+
+  /**
    * Load territory intents from storage
    */
   private async loadTerritoryIntents(): Promise<void> {
@@ -518,7 +560,7 @@ export class TerritoryService extends BaseService {
       status: 'claimable',
     };
 
-    return territory;
+    return this.attachH3Cells(territory, run);
   }
 
   /**
