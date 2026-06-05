@@ -230,6 +230,26 @@ app.get('/index.html', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// ---------------------------------------------------------------------------
+// /api/runs — STUB endpoint for mobile RunSyncService.
+// The mobile app uploads completed RunSession objects here for off-chain
+// validation and (eventually) territory-cell minting. Right now this only
+// acknowledges receipt; persistence + chain submission is the next milestone.
+// See packages/mobile-app/src/services/RunSyncService.ts for the client.
+// ---------------------------------------------------------------------------
+app.post('/api/runs', express.json({ limit: '5mb' }), (req, res) => {
+  const run = req.body?.run;
+  if (!run || typeof run !== 'object' || typeof run.id !== 'string') {
+    return res.status(400).json({ error: 'invalid run payload' });
+  }
+  const pointCount = Array.isArray(run.points) ? run.points.length : 0;
+  console.log(
+    `[runs] received run ${run.id} (${pointCount} points, ${run.totalDistance ?? '?'}m)`
+  );
+  // TODO(step-3): validate route, compute H3 cells, persist, queue chain submission.
+  res.status(202).json({ status: 'accepted', runId: run.id });
+});
+
 const server = app.listen(port, async () => {
   console.log(`Server running at http://localhost:${port}`);
 

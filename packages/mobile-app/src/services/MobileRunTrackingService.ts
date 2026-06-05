@@ -1,186 +1,233 @@
 /**
- * Mobile Run Tracking Service
- * Provides mobile-specific run tracking functionality
- * using shared core RunTrackingService
+ * MobileRunTrackingService
+ *
+ * Mobile-side composition of:
+ *  - shared RunTrackingService (state machine, distance calc, territory logic)
+ *  - MobileLocationAdapter (expo-location foreground watcher + background flush)
+ *  - BackgroundTrackingService (expo-task-manager background buffer)
+ *  - RunSyncService (offline-first upload queue)
+ *  - expo-keep-awake (wake lock bound to recording state)
+ *
+ * Replaces the previous mock that emitted hardcoded NYC coordinates and never
+ * actually persisted location through the screen-lock barrier.
  */
+
+import AsyncStorageDefault, * as AsyncStorageModule from '@react-native-async-storage/async-storage';
 import {
   RunSession,
   RunTrackingService,
 } from '@runrealm/shared-core/services/run-tracking-service';
+import { AppState, type AppStateStatus } from 'react-native';
 import { BackgroundTrackingService } from './BackgroundTrackingService';
+import { MobileLocationAdapter } from './MobileLocationAdapter';
+import { type RunSyncConfig, RunSyncService } from './RunSyncService';
+
+const AsyncStorage = (AsyncStorageDefault ??
+  (AsyncStorageModule as { default?: unknown }).default ??
+  AsyncStorageModule) as {
+  getItem: (k: string) => Promise<string | null>;
+  setItem: (k: string, v: string) => Promise<void>;
+  removeItem: (k: string) => Promise<void>;
+};
+
+// Lazy require so unit tests that don't have expo-keep-awake linked don't crash.
+let KeepAwake: typeof import('expo-keep-awake') | null = null;
+try {
+  KeepAwake = require('expo-keep-awake');
+} catch (err) {
+  console.warn('expo-keep-awake not available:', err);
+}
+
+export interface MobileRunTrackingConfig {
+  sync?: RunSyncConfig;
+  enableBackgroundOnStart?: boolean;
+}
 
 class MobileRunTrackingService {
-  private runTrackingService: RunTrackingService;
-  private backgroundTrackingService: BackgroundTrackingService;
+  private readonly runTrackingService: RunTrackingService;
+  private readonly backgroundTracker: BackgroundTrackingService;
+  private readonly locationAdapter: MobileLocationAdapter;
+  private readonly syncService: RunSyncService | null;
+  private readonly enableBackgroundOnStart: boolean;
+  private appStateSubscription: { remove: () => void } | null = null;
 
-  constructor() {
-    // Initialize with the shared core service
+  constructor(config: MobileRunTrackingConfig = {}) {
     this.runTrackingService = new RunTrackingService();
-    this.backgroundTrackingService = BackgroundTrackingService.getInstance();
+    this.backgroundTracker = BackgroundTrackingService.getInstance();
+    this.locationAdapter = new MobileLocationAdapter();
+    this.syncService = config.sync ? new RunSyncService(config.sync) : null;
+    this.enableBackgroundOnStart = config.enableBackgroundOnStart ?? true;
   }
 
   /**
-   * Initialize location tracking with mobile-specific permissions and settings
+   * Must be called once, typically from the screen that owns the run UI.
+   * Wires the shared RunTrackingService to the real expo-location adapter
+   * and starts watching foreground GPS.
    */
-  async initializeLocationTracking(): Promise<void> {
-    // Mobile-specific location initialization
-    console.log('Initializing mobile location tracking with shared service');
+  async initialize(): Promise<void> {
+    this.runTrackingService.setLocationService(this.locationAdapter);
 
-    try {
-      // Create a mobile-specific location service that integrates with React Native Geolocation
-      const mobileLocationService = {
-        async getCurrentLocation() {
-          return new Promise((resolve, _reject) => {
-            // This would be replaced with actual React Native Geolocation call
-            // For now, return mock data
-            resolve({
-              lat: 40.7128,
-              lng: -74.006,
-              accuracy: 10,
-              timestamp: Date.now(),
-            });
-          });
-        },
-      };
+    await this.locationAdapter.startWatching((loc) => {
+      // Forward foreground updates through the shared event bus the
+      // RunTrackingService listens on.
+      // RunTrackingService subscribes to 'location:changed' in its base service.
+      // We emit via the same window-level bridge the shared service uses.
+      try {
+        const bus = this.runTrackingService as unknown as {
+          emit?: (e: string, p: unknown) => void;
+        };
+        if (typeof bus.emit === 'function') {
+          bus.emit('location:changed', loc);
+        }
+      } catch {
+        // Fall through; the location is already captured via the adapter ref
+        // if the bus isn't wired in this environment.
+      }
+    });
 
-      // Set the location service on the shared RunTrackingService
-      this.runTrackingService.setLocationService(mobileLocationService);
+    this.appStateSubscription = AppState.addEventListener('change', (next: AppStateStatus) => {
+      void this.handleAppStateChange(next);
+    });
+  }
 
-      this.locationTrackingEnabled = true;
-      console.log('Mobile location tracking enabled');
-    } catch (error) {
-      console.error('Failed to initialize location tracking:', error);
-      throw error;
+  async dispose(): Promise<void> {
+    this.locationAdapter.stopWatching();
+    if (this.appStateSubscription) {
+      this.appStateSubscription.remove();
+      this.appStateSubscription = null;
     }
+    await this.backgroundTracker.stopBackgroundTracking();
+    this.deactivateWakeLock();
   }
 
-  /**
-   * Start a run with mobile-specific tracking
-   */
   async startRun(): Promise<string> {
-    console.log('Starting run via mobile tracking service');
-    try {
-      // Set location service if needed
-      // this.runTrackingService.setLocationService(/* mobile location service */);
-
-      const runId = await this.runTrackingService.startRun();
-      console.log(`Run started with ID: ${runId}`);
-      return runId;
-    } catch (error) {
-      console.error('Failed to start run:', error);
-      throw error;
+    const runId = await this.runTrackingService.startRun();
+    this.activateWakeLock();
+    if (this.enableBackgroundOnStart) {
+      try {
+        await this.backgroundTracker.startBackgroundTracking();
+      } catch (err) {
+        // Background permission denied is recoverable; run continues foreground-only.
+        console.warn('Background tracking unavailable, continuing foreground-only:', err);
+      }
     }
+    return runId;
   }
 
-  /**
-   * Start a run with predefined route
-   */
   async startRunWithRoute(coordinates: number[][], distance: number): Promise<string> {
-    console.log('Starting run with predefined route');
-    try {
-      const runId = await this.runTrackingService.startRunWithRoute(coordinates, distance);
-      console.log(`Run with route started with ID: ${runId}`);
-      return runId;
-    } catch (error) {
-      console.error('Failed to start run with route:', error);
-      throw error;
+    const runId = await this.runTrackingService.startRunWithRoute(coordinates, distance);
+    this.activateWakeLock();
+    if (this.enableBackgroundOnStart) {
+      try {
+        await this.backgroundTracker.startBackgroundTracking();
+      } catch (err) {
+        console.warn('Background tracking unavailable:', err);
+      }
     }
+    return runId;
   }
 
-  /**
-   * Pause the current run
-   */
   pauseRun(): void {
     this.runTrackingService.pauseRun();
   }
 
-  /**
-   * Resume a paused run
-   */
   resumeRun(): void {
     this.runTrackingService.resumeRun();
   }
 
-  /**
-   * Stop the current run
-   */
-  stopRun(): RunSession | null {
-    return this.runTrackingService.stopRun();
+  async stopRun(): Promise<RunSession | null> {
+    const session = this.runTrackingService.stopRun();
+    await this.afterRunComplete(session);
+    return session;
   }
 
-  /**
-   * Cancel the current run
-   */
-  cancelRun(): void {
+  async cancelRun(): Promise<void> {
     this.runTrackingService.cancelRun();
+    await this.afterRunComplete(null);
   }
 
-  /**
-   * Get current run stats
-   */
   getCurrentStats() {
     return this.runTrackingService.getCurrentStats();
   }
 
-  /**
-   * Get current run session
-   */
   getCurrentRun(): RunSession | null {
     return this.runTrackingService.getCurrentRun();
   }
 
-  /**
-   * Enable background location tracking
-   */
-  async enableBackgroundTracking(): Promise<void> {
+  async pendingUploads(): Promise<number> {
+    return this.syncService ? this.syncService.pendingCount() : 0;
+  }
+
+  async flushUploads(): Promise<void> {
+    if (this.syncService) await this.syncService.flush();
+  }
+
+  // --- internals ---
+
+  private async afterRunComplete(session: RunSession | null): Promise<void> {
+    this.deactivateWakeLock();
     try {
-      await this.backgroundTrackingService.startBackgroundTracking();
-      console.log('Background tracking enabled');
-    } catch (error) {
-      console.error('Failed to enable background tracking:', error);
-      throw error;
+      await this.backgroundTracker.stopBackgroundTracking();
+    } catch (e) {
+      console.warn('Failed to stop background tracking:', e);
+    }
+    if (session && this.syncService) {
+      await this.syncService.enqueue(session);
+    }
+    await this.saveRunToHistory(session);
+  }
+
+  private async handleAppStateChange(next: AppStateStatus): Promise<void> {
+    if (next !== 'active') return;
+    // App returned to foreground. Drain background buffer and replay through
+    // the same emitter the foreground watcher uses so the run timeline stays
+    // contiguous.
+    const buffered = await this.backgroundTracker.flush();
+    if (buffered.length > 0) {
+      this.locationAdapter.onBackgroundFlush(buffered);
+    }
+    if (this.syncService) {
+      void this.syncService.flush();
     }
   }
 
-  /**
-   * Disable background location tracking
-   */
-  async disableBackgroundTracking(): Promise<void> {
+  private activateWakeLock(): void {
+    if (!KeepAwake) return;
     try {
-      await this.backgroundTrackingService.stopBackgroundTracking();
-      console.log('Background tracking disabled');
-    } catch (error) {
-      console.error('Failed to disable background tracking:', error);
-      throw error;
+      // Tag the wake lock so multiple subsystems can hold and release independently.
+      void KeepAwake.activateKeepAwakeAsync('run-tracking');
+    } catch (e) {
+      console.warn('Failed to activate keep-awake:', e);
     }
   }
 
-  /**
-   * Save a completed run to history
-   */
-  async saveRunToHistory(run: RunSession): Promise<void> {
+  private deactivateWakeLock(): void {
+    if (!KeepAwake) return;
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      const historyString = await AsyncStorage.getItem('runrealm_run_history');
-      const history: RunSession[] = historyString ? JSON.parse(historyString) : [];
+      KeepAwake.deactivateKeepAwake('run-tracking');
+    } catch (e) {
+      console.warn('Failed to deactivate keep-awake:', e);
+    }
+  }
+
+  async saveRunToHistory(run: RunSession | null): Promise<void> {
+    if (!run) return;
+    try {
+      const raw = await AsyncStorage.getItem('runrealm_run_history');
+      const history: RunSession[] = raw ? JSON.parse(raw) : [];
       history.push(run);
       await AsyncStorage.setItem('runrealm_run_history', JSON.stringify(history));
-      console.log('Run saved to history:', run.id);
-    } catch (error) {
-      console.error('Failed to save run to history:', error);
+    } catch (e) {
+      console.error('Failed to save run to history:', e);
     }
   }
 
-  /**
-   * Get run history from storage
-   */
   async getRunHistory(): Promise<RunSession[]> {
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      const historyString = await AsyncStorage.getItem('runrealm_run_history');
-      return historyString ? JSON.parse(historyString) : [];
-    } catch (error) {
-      console.error('Failed to get run history:', error);
+      const raw = await AsyncStorage.getItem('runrealm_run_history');
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      console.error('Failed to read run history:', e);
       return [];
     }
   }

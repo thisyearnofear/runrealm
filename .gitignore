@@ -58,6 +58,7 @@ packages/**/*.js.map
 !packages/**/*.config.js
 !packages/**/*.config.cjs
 !packages/**/*.config.mjs
+!packages/mobile-app/jest.setup.js
 !packages/web-app/src/components/ghost-button.js
 !packages/web-app/src/components/ghost-management.js
 

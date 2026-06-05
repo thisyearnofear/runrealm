@@ -15,19 +15,37 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow RunRealm to use your location to track runs and claim territories."
+          "locationAlwaysAndWhenInUsePermission": "RunRealm uses your location to record runs and claim territories, including while the screen is off so your run isn't lost.",
+          "locationWhenInUsePermission": "RunRealm needs your location to record runs and claim territories.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
-      ]
+      ],
+      "expo-keep-awake"
     ],
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": ["location", "fetch"],
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "RunRealm records your run path even when the screen is off so you don't lose progress mid-run.",
+        "NSLocationWhenInUseUsageDescription": "RunRealm uses your location to record runs and claim territories.",
+        "NSMotionUsageDescription": "RunRealm uses motion data to improve run accuracy."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "WAKE_LOCK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
