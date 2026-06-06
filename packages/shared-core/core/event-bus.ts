@@ -451,6 +451,13 @@ export interface AppEvents extends Web3Events {
   'territory:activityUpdated': { territory: any };
   'territory:vulnerable': { territory: any };
   'territory:boostRequested': { territoryId: string; cost: number; points: number };
+  // GameFi toggle event
+  'gamefi:toggled': { enabled: boolean };
+  // Dashboard events
+  'dashboard:open': { widgetId: string };
+  // Wallet request events
+  'wallet:connectRequested': { provider?: string };
+  'wallet:disconnectRequested': Record<string, never>;
 }
 
 export class EventBus {

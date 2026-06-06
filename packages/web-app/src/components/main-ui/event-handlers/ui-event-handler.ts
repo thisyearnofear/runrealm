@@ -19,6 +19,8 @@ export class EventHandler {
   private walletWidget: WalletWidget;
   private widgetSystem: WidgetSystem;
   private widgetCreator: WidgetCreator;
+  private web3Service: Web3Service;
+  private routeStateService: RouteStateService;
   private eventCallbacks: Map<string, Array<(data?: any) => void>> = new Map();
 
   constructor(
@@ -211,7 +213,7 @@ export class EventHandler {
     // AI route events -> render planned route and update widget
     this.subscribe('ai:routeReady', (data) => {
       try {
-        const coordinates = data.waypoints?.map((p) => [p.lng, p.lat]) || [];
+        const coordinates = data.waypoints?.map((p: any) => [p.lng, p.lat]) || [];
         const geojson = {
           type: 'Feature',
           properties: {},
@@ -695,7 +697,7 @@ export class EventHandler {
   }
 
   private showExternalFitnessIntegration(): void {
-    this.uiService.showModal({
+    (this.uiService as any).showModal({
       title: '🌟 Connect Strava',
       content: `
         <div style="padding: 20px; text-align: center;">

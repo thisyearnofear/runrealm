@@ -47,8 +47,10 @@ export class MainUI extends BaseService {
   private transactionStatus!: TransactionStatus;
   private rewardSystemUI!: RewardSystemUI;
   private contractService!: ContractService;
+  private gamefiUI: GameFiUI;
   private web3Service: Web3Service;
   private configService: ConfigService;
+  private routeStateService: RouteStateService;
 
   // Modular components
   private widgetCreator!: WidgetCreator;

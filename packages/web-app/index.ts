@@ -148,10 +148,12 @@ async function initializeApp(): Promise<void> {
     );
 
     // Import platform-specific ghost UI components
-    let ghostManagement: unknown;
-    let ghostButton: unknown;
+    let ghostManagement: { initialize(container: HTMLElement): void | Promise<void> } | undefined;
+    let ghostButton: { initialize(container: HTMLElement): void } | undefined;
     try {
+      // @ts-expect-error - legacy JS module without type declarations
       const { GhostManagement } = await import('./src/components/ghost-management.js');
+      // @ts-expect-error - legacy JS module without type declarations
       const { GhostButton } = await import('./src/components/ghost-button.js');
       ghostManagement = new GhostManagement();
       ghostButton = new GhostButton(ghostManagement);
@@ -161,7 +163,12 @@ async function initializeApp(): Promise<void> {
     }
 
     // Initialize platform UI with all components
-    app.initializePlatformUI(mainUI, walletWidget, undefined, ghostManagement, ghostButton);
+    app.initializePlatformUI({
+      mainUI,
+      walletWidget,
+      ghostManagement,
+      ghostButton,
+    });
 
     await app.initialize();
 

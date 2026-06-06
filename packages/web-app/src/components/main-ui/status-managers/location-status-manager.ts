@@ -10,6 +10,7 @@ export class StatusManager {
   private locationService: LocationService;
   private widgetSystem: WidgetSystem;
   private widgetCreator: WidgetCreator;
+  private eventHandler: EventHandler;
 
   // GPS and Network status for location widget
   private gpsStatus: {
@@ -123,7 +124,7 @@ export class StatusManager {
     const newContent = this.widgetCreator.getLocationContent(
       this.gpsStatus,
       this.networkStatus,
-      currentLocation
+      currentLocation ?? undefined
     );
     this.widgetSystem.updateWidget('location-info', newContent);
   }

@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "(tsc || true) && echo 'TypeScript compilation completed'",
+    "build": "tsc && echo 'TypeScript compilation completed'",
     "test": "jest --passWithNoTests"
   },
   "exports": {
