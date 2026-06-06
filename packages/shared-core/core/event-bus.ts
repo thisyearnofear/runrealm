@@ -67,9 +67,17 @@ interface Achievement {
   name: string;
   description: string;
   icon: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  points: number;
+  rarity?: 'common' | 'rare' | 'epic' | 'legendary';
+  points?: number;
   unlockedAt?: number;
+  criteria?: {
+    type: 'distance' | 'territories' | 'level' | 'challenges' | 'streak' | 'time';
+    value: number;
+  };
+  reward?: {
+    experience: number;
+    items?: string[];
+  };
 }
 
 interface Player {
@@ -294,13 +302,15 @@ export interface AppEvents extends Web3Events {
     params?: RouteParams;
     previousRoute?: string;
   };
-  'onboarding:completed': Record<string, never>;
+  'onboarding:started': Record<string, never>;
+  'onboarding:completed': { skipped?: boolean; completedSteps?: string[] };
   'onboarding:skipped': Record<string, never>;
   'onboarding:stepChanged': {
     stepIndex: number;
     stepId: string;
     totalSteps: number;
   };
+  'onboarding:stepShown': { step: string; index: number };
   'progression:achievementsLoaded': { count: number };
   'progression:levelsLoaded': { maxLevel: number };
   'run:startRequested': { runId?: string };
@@ -319,6 +329,7 @@ export interface AppEvents extends Web3Events {
   'widget:stateChanged': { widgetId: string; state: WidgetState };
   'widget:stateReset': { widgetId: string };
   'widget:allStatesReset': Record<string, never>;
+  'widget:toggled': { widgetId: string };
   'mobile:swipeLeft': Record<string, never>;
   'mobile:swipeRight': Record<string, never>;
   'mobile:orientationChanged': { orientation: string; compactMode?: boolean };
@@ -327,6 +338,11 @@ export interface AppEvents extends Web3Events {
   'run:addPointRequested': Record<string, never>;
   'run:undoRequested': Record<string, never>;
   'run:clearRequested': Record<string, never>;
+  'run:lapRequested': Record<string, never>;
+  'run:pauseRequested': Record<string, never>;
+  'run:resumeRequested': Record<string, never>;
+  'run:stopRequested': Record<string, never>;
+  'run:lap': { lap: { number: number; distance: number; time: number }; runId: string };
   'ui:territoryPreview': { point: any; totalDistance: number };
   'ui:gamefiEnabled': { enabled: boolean };
   'token:transferStarted': {

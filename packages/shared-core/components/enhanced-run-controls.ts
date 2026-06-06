@@ -57,22 +57,16 @@ export class EnhancedRunControls extends BaseService {
     }, 100);
   }
 
-  private getWidgetSystem(): object | null {
+  private getWidgetSystem(): any {
     return (
-      (window as { runRealmApp?: { mainUI?: { widgetSystem?: object } } }).runRealmApp?.mainUI
-        ?.widgetSystem ||
-      (window as { RunRealm?: { mainUI?: { widgetSystem?: object } } }).RunRealm?.mainUI
-        ?.widgetSystem ||
+      (window as any).runRealmApp?.mainUI?.widgetSystem ||
+      (window as any).RunRealm?.mainUI?.widgetSystem ||
       null
     );
   }
 
-  private getUIService(): object | null {
-    const globalWindow = window as {
-      runRealmApp?: { ui?: object };
-      RunRealm?: { ui?: object };
-      UIService?: { getInstance?: () => object };
-    };
+  private getUIService(): any {
+    const globalWindow = window as any;
     return (
       globalWindow.runRealmApp?.ui ||
       globalWindow.RunRealm?.ui ||
@@ -81,44 +75,59 @@ export class EnhancedRunControls extends BaseService {
     );
   }
 
-  private getMapService(): object | null {
-    return (
-      (window as { RunRealm?: { services?: { mapService?: object } } }).RunRealm?.services
-        ?.mapService || null
-    );
+  private getMapService(): any {
+    return (window as any).RunRealm?.services?.mapService || null;
   }
 
   private setupEventListeners(): void {
     // Listen for run tracking events
-    this.subscribe('run:started', (data: { timestamp: number; location?: object }) => {
+    this.subscribe('run:started', (data) => {
       this.handleRunStarted(data);
     });
 
-    this.subscribe('run:paused', (data: { timestamp: number; stats?: object }) => {
+    this.subscribe('run:paused', (data) => {
       this.handleRunPaused(data);
     });
 
-    this.subscribe('run:resumed', (data: { timestamp: number }) => {
+    this.subscribe('run:resumed', (data) => {
       this.handleRunResumed(data);
     });
 
-    this.subscribe('run:completed', (data: { stats: object; duration: number }) => {
+    this.subscribe('run:completed', (data) => {
       this.handleRunCompleted(data);
     });
 
-    this.subscribe('run:cancelled', (data: { reason?: string }) => {
+    this.subscribe('run:cancelled', (data) => {
       this.handleRunCancelled(data);
     });
 
-    this.subscribe('run:statsUpdated', (data: { stats: object }) => {
-      this.updateStats(data.stats);
+    this.subscribe('run:statsUpdated', (data) => {
+      this.updateStats({
+        distance: data.distance,
+        duration: data.duration,
+        averageSpeed: data.speed,
+        maxSpeed: data.speed,
+        pointCount: 0,
+        segmentCount: 0,
+        status: '',
+        territoryEligible: false,
+      });
     });
 
-    this.subscribe('run:pointAdded', (data: { stats: object }) => {
-      this.updateStats(data.stats);
+    this.subscribe('run:pointAdded', (data) => {
+      this.updateStats({
+        distance: data.totalDistance,
+        duration: 0,
+        averageSpeed: 0,
+        maxSpeed: 0,
+        pointCount: 0,
+        segmentCount: 0,
+        status: '',
+        territoryEligible: false,
+      });
       this.showPointAddedFeedback();
 
-      const runTrackingService = (window as { RunRealm?: { services?: { runTracking?: object } } })
+      const runTrackingService = (window as { RunRealm?: { services?: { runTracking?: any } } })
         .RunRealm?.services?.runTracking;
       if (runTrackingService) {
         const currentRun = runTrackingService.getCurrentRun();
@@ -131,19 +140,16 @@ export class EnhancedRunControls extends BaseService {
       }
     });
 
-    this.subscribe(
-      'run:lap',
-      (data: { lap: { number: number; distance: number; time: number } }) => {
-        this.addLapToList(data.lap);
-      }
-    );
+    this.subscribe('run:lap', (data) => {
+      this.addLapToList(data.lap);
+    });
 
-    this.subscribe('territory:eligible', (data: { location: object; eligibility: object }) => {
+    this.subscribe('territory:eligible', (data) => {
       this.showTerritoryEligibleNotification(data);
       // Add haptic feedback for territory eligibility
       this.hapticFeedback('heavy');
 
-      const runTrackingService = (window as { RunRealm?: { services?: { runTracking?: object } } })
+      const runTrackingService = (window as { RunRealm?: { services?: { runTracking?: any } } })
         .RunRealm?.services?.runTracking;
       if (runTrackingService) {
         const currentRun = runTrackingService.getCurrentRun();
@@ -168,10 +174,8 @@ export class EnhancedRunControls extends BaseService {
 
     if (widgetSystem) {
       const mobileWidgetService =
-        (window as { RunRealm?: { services?: { mobileWidget?: object } } }).RunRealm?.services
-          ?.mobileWidget ||
-        (window as { runRealmApp?: { mobileWidgetService?: object } }).runRealmApp
-          ?.mobileWidgetService;
+        (window as any).RunRealm?.services?.mobileWidget ||
+        (window as any).runRealmApp?.mobileWidgetService;
       const isMobile = mobileWidgetService?.isMobileDevice?.() || false;
 
       widgetSystem.registerWidget({
@@ -490,7 +494,7 @@ export class EnhancedRunControls extends BaseService {
 
     const lapElement = document.createElement('li');
     lapElement.innerHTML = `
-      <span class="lap-number">Lap ${lap.lapNumber}</span>
+      <span class="lap-number">Lap ${lap.number}</span>
       <span class="lap-distance">${this.formatDistance(lap.distance)}</span>
       <span class="lap-time">${this.formatDuration(lap.time)}</span>
     `;
@@ -590,7 +594,7 @@ export class EnhancedRunControls extends BaseService {
     });
   }
 
-  private handleRunStarted(_data: { timestamp: number; location?: object }): void {
+  private handleRunStarted(_data: any): void {
     this.isRecording = true;
     this.isPaused = false;
     this.startTime = Date.now();
@@ -609,7 +613,7 @@ export class EnhancedRunControls extends BaseService {
     }
   }
 
-  private handleRunPaused(_data: { timestamp: number; stats?: object }): void {
+  private handleRunPaused(_data: any): void {
     this.isRecording = false;
     this.isPaused = true;
     this.stopRealTimeUpdates();
@@ -617,7 +621,7 @@ export class EnhancedRunControls extends BaseService {
     this.showFeedback('⏸️ Run paused', 'info');
   }
 
-  private handleRunResumed(_data: { timestamp: number }): void {
+  private handleRunResumed(_data: any): void {
     this.isRecording = true;
     this.isPaused = false;
     this.startRealTimeUpdates();
@@ -625,7 +629,7 @@ export class EnhancedRunControls extends BaseService {
     this.showFeedback('▶️ Run resumed', 'success');
   }
 
-  private handleRunCompleted(data: { run: RunSession; territoryEligible: boolean }): void {
+  private handleRunCompleted(data: any): void {
     this.isRecording = false;
     this.isPaused = false;
     this.stopRealTimeUpdates();
@@ -658,7 +662,7 @@ export class EnhancedRunControls extends BaseService {
     }
   }
 
-  private handleRunCancelled(_data: { reason?: string }): void {
+  private handleRunCancelled(_data: any): void {
     this.isRecording = false;
     this.isPaused = false;
     this.currentStats = null;
@@ -733,10 +737,7 @@ export class EnhancedRunControls extends BaseService {
     }
   }
 
-  private showTerritoryEligibleNotification(_data: {
-    location: object;
-    eligibility: object;
-  }): void {
+  private showTerritoryEligibleNotification(_data: any): void {
     this.showFeedback('🏆 Territory eligible! Complete your run to claim.', 'success');
     this.renderWidget(); // Re-render to show territory indicator
 

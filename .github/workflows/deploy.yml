@@ -20,7 +20,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --ignore-scripts
       
     - name: Build frontend
       run: npm run build
@@ -41,7 +41,7 @@ jobs:
           # Install dependencies
           source ~/.nvm/nvm.sh
           nvm use 20
-          npm ci --only=production
+          npm ci --only=production --ignore-scripts
           
           # Build frontend
           npm run build

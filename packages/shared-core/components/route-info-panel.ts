@@ -23,17 +23,22 @@ export class RouteInfoPanel {
 
   private setupEventListeners(): void {
     // Listen for AI route ready events
-    this.eventBus.on(
-      'ai:routeReady',
-      (data: {
-        route: object;
-        distance: number;
-        estimatedTime: number;
-        waypoints: Array<{ name: string; description: string }>;
-      }) => {
-        this.showRouteInfo(data);
-      }
-    );
+    this.eventBus.on('ai:routeReady', (data: any) => {
+      // Coerce RunPoint[] waypoints into UI-friendly shape if needed
+      const uiData = {
+        route: data.route,
+        distance: data.distance,
+        estimatedTime: data.estimatedTime,
+        difficulty: data.difficulty,
+        reasoning: data.reasoning,
+        waypoints: (data.waypoints || []).map((wp: any) => ({
+          name: wp.name || `${wp.lat?.toFixed(4)}, ${wp.lng?.toFixed(4)}`,
+          description: wp.description || '',
+          type: wp.type,
+        })),
+      };
+      this.showRouteInfo(uiData);
+    });
 
     // Listen for route clear events
     this.eventBus.on('ai:routeClear', () => {
@@ -114,8 +119,10 @@ export class RouteInfoPanel {
   private showRouteInfo(data: {
     route: object;
     distance: number;
-    estimatedTime: number;
-    waypoints: Array<{ name: string; description: string }>;
+    estimatedTime?: number;
+    difficulty?: number;
+    waypoints: Array<{ name: string; description: string; type?: string }>;
+    reasoning?: string;
   }): void {
     if (!this.panelElement) return;
 
@@ -227,7 +234,7 @@ export class RouteInfoPanel {
         },
       });
 
-      data.waypoints.forEach((wp: { name: string; description: string }) => {
+      data.waypoints.forEach((wp) => {
         const waypointItem = this.domService.createElement('li', {
           innerHTML: `
             <div style="display: flex; align-items: center; margin-bottom: 10px;">
@@ -244,7 +251,7 @@ export class RouteInfoPanel {
               }; margin-right: 10px;"></div>
               <div>
                 <div style="font-weight: bold; color: #333;">${wp.name}</div>
-                <div style="font-size: 12px; color: #666;">${wp.type.replace('_', ' ')}</div>
+                <div style="font-size: 12px; color: #666;">${(wp.type || '').replace('_', ' ')}</div>
               </div>
             </div>
             ${wp.description ? `<div style="font-size: 13px; color: #666; margin-left: 30px; margin-bottom: 10px;">${wp.description}</div>` : ''}

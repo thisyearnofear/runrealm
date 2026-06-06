@@ -498,8 +498,20 @@ export class ProgressionService extends BaseService {
     // Emit achievement unlocked event
     this.safeEmit('game:achievementUnlocked', {
       achievementId,
-      achievement,
-      player: this.getWalletAddress(),
+      achievement: {
+        id: achievement.id,
+        name: achievement.name,
+        description: achievement.description,
+        icon: achievement.icon,
+        criteria: achievement.criteria,
+        reward: achievement.reward,
+      },
+      player: {
+        id: this.getWalletAddress(),
+        address: this.getWalletAddress(),
+        level: this.stats.level,
+        experience: this.stats.experience,
+      },
     });
 
     // Show notification
@@ -564,7 +576,17 @@ export class ProgressionService extends BaseService {
    */
   private emitStatsUpdate(): void {
     this.safeEmit('game:statsUpdated', {
-      stats: this.getStats(),
+      stats: {
+        totalDistance: this.stats.totalDistance,
+        totalDuration: this.stats.totalTime * 1000, // PlayerStats totalTime is in seconds, GameStats expects ms
+        averagePace:
+          this.stats.totalTime > 0
+            ? this.stats.totalDistance / this.stats.totalTime // meters per second
+            : 0,
+        territoriesOwned: this.stats.territoriesOwned,
+        level: this.stats.level,
+        experience: this.stats.experience,
+      },
     });
   }
 

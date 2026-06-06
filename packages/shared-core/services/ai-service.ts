@@ -305,11 +305,20 @@ export class AIService extends BaseService {
               });
               return;
             }
+            const coords = fallback.suggestedRoute.coordinates || [];
             this.safeEmit('ai:routeReady', {
-              route: fallback.suggestedRoute.coordinates || [],
-              distance: fallback.suggestedRoute.distance,
+              route: {
+                coordinates: coords,
+                distance: fallback.suggestedRoute.distance || 0,
+                difficulty: fallback.suggestedRoute.difficulty,
+              },
+              distance: fallback.suggestedRoute.distance || 0,
               duration: Math.round((fallback.suggestedRoute.distance || 0) * 5),
-              waypoints,
+              waypoints: waypoints.map((wp) => ({
+                lat: wp.lat,
+                lng: wp.lng,
+                timestamp: Date.now(),
+              })),
               totalDistance: fallback.suggestedRoute.distance,
               difficulty: fallback.suggestedRoute.difficulty,
               estimatedTime: Math.round((fallback.suggestedRoute.distance || 0) * 5), // naive 5s/m

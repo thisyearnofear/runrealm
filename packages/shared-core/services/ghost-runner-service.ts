@@ -186,7 +186,13 @@ export class GhostRunnerService extends BaseService {
     this.ghostRuns.push(ghostRun);
 
     this.safeEmit('ghost:deployed', { ghost, territoryId });
-    this.safeEmit('ghost:completed', { ghostRun });
+    this.safeEmit('ghost:completed', {
+      ghostRun: {
+        ghostId: ghostRun.ghostId,
+        runId: ghostRun.territoryId,
+        completedAt: ghostRun.startTime.getTime(),
+      },
+    });
 
     return ghostRun;
   }

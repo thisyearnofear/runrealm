@@ -104,9 +104,14 @@ export class NavigationService extends BaseService {
 
       this.updateNavigationUI();
 
+      const prevRoute = this.routes.get(previousRoute);
       this.safeEmit('navigation:routeChanged', {
         routeId: previousRoute,
-        route: this.routes.get(previousRoute),
+        route: prevRoute || {
+          id: previousRoute,
+          path: `/${previousRoute}`,
+          title: previousRoute,
+        },
         params: this.state.params,
         previousRoute: this.state.previousRoute,
       });

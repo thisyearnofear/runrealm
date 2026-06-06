@@ -394,9 +394,10 @@ export class TerritoryService extends BaseService {
   }
 
   private async handleClaimRequest(runId: string): Promise<void> {
+    let territory: Territory | null = null;
     try {
       // Find the territory associated with this run
-      const territory = this.findTerritoryByRunId(runId);
+      territory = this.findTerritoryByRunId(runId);
       if (!territory) {
         throw new Error('No claimable territory found for this run');
       }
@@ -404,7 +405,7 @@ export class TerritoryService extends BaseService {
       // Attempt to claim territory
       const result = await this.claimTerritory(territory);
 
-      if (result.success) {
+      if (result.success && result.territory) {
         this.safeEmit('territory:claimed', {
           territory: result.territory,
           transactionHash: result.transactionHash || '',
@@ -413,12 +414,13 @@ export class TerritoryService extends BaseService {
         this.safeEmit('territory:claimFailed', {
           error: result.error || 'Unknown error',
           territory,
+          runId,
         });
       }
     } catch (error) {
       this.safeEmit('territory:claimFailed', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        territory: null,
+        territory: territory || ({} as Territory),
         runId,
       });
     }
@@ -929,7 +931,7 @@ export class TerritoryService extends BaseService {
 
     this.safeEmit('territory:nearbyUpdated', {
       count: nearby.length,
-      territories: nearby,
+      territories: nearby.map((n) => n.territory),
     });
   }
 

@@ -261,7 +261,7 @@ export class EnhancedOnboarding extends BaseService {
           </div>
         </div>
       `,
-      parent: this.overlay,
+      parent: this.overlay || document.body,
     });
 
     // Position tooltip
@@ -759,8 +759,7 @@ export class EnhancedOnboarding extends BaseService {
    * Ensure target widget is visible and expanded for onboarding
    */
   private async ensureWidgetVisible(step: OnboardingStep): Promise<void> {
-    const widgetSystem = (window as { runRealmApp?: { mainUI?: { widgetSystem?: object } } })
-      .runRealmApp?.mainUI?.widgetSystem;
+    const widgetSystem = (window as any).runRealmApp?.mainUI?.widgetSystem;
     if (!widgetSystem) return;
 
     let widgetId: string | null = null;
