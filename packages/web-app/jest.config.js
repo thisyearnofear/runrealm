@@ -8,6 +8,9 @@ module.exports = {
   moduleNameMapper: {
     '^@runrealm/shared-core$': '<rootDir>/../shared-core',
     '^@runrealm/shared-core/(.*)$': '<rootDir>/../shared-core/$1',
+    '^react$': '<rootDir>/../../node_modules/react',
+    '^react-dom$': '<rootDir>/../../node_modules/react-dom',
+    '^react-dom/(.*)$': '<rootDir>/../../node_modules/react-dom/$1',
   },
   transform: {
     '^.+\\.tsx?$': [

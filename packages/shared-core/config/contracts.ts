@@ -145,7 +145,10 @@ const BOOST_CONTRACT_ABI = [
     type: 'function',
   },
   {
-    inputs: [{ internalType: 'address', name: '', type: 'address' }, { internalType: 'uint256', name: '', type: 'uint256' }],
+    inputs: [
+      { internalType: 'address', name: '', type: 'address' },
+      { internalType: 'uint256', name: '', type: 'uint256' },
+    ],
     name: 'lastBoostDay',
     outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
     stateMutability: 'view',
@@ -179,12 +182,12 @@ const BOOST_CONTRACT_ABI = [
 ];
 
 /**
- * Phase 4 (Zama scaffolding) — minimal ABI for
- * `ConfidentialTerritoryDefense`. Mirrors the public surface of
- * `IConfidentialTerritory` plus the contract's own view helpers
- * (`isAnchored`, `getDefenseMetadata`, `applyEncryptedDecay`,
- * `lastBoostDay`). When the real Zama lib is wired in, the ABI
- * does not need to change — the contract surface stays the same.
+ * Phase 5 — ABI for `ConfidentialTerritoryDefense`. Mirrors the
+ * public surface of `IConfidentialTerritory` plus the contract's own
+ * view helpers (`isAnchored`, `getDefenseMetadata`, `applyEncryptedDecay`,
+ * `lastBoostDay`). The ABI uses real FHE types (`externalEuint32`,
+ * `bytes` proof) consumed by `@fhevm/solidity` on the Zama Protocol
+ * FHEVM host chain (Ethereum Sepolia testnet by default).
  */
 const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
   {
@@ -200,8 +203,8 @@ const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
   {
     inputs: [
       { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
-      { internalType: 'uint32', name: 'encryptedAmount', type: 'uint32' },
-      { internalType: 'bytes', name: 'proof', type: 'bytes' },
+      { internalType: 'externalEuint32', name: 'encryptedAmount', type: 'bytes32' },
+      { internalType: 'bytes', name: 'inputProof', type: 'bytes' },
     ],
     name: 'boostEncrypted',
     outputs: [],
@@ -211,8 +214,8 @@ const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
   {
     inputs: [
       { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
-      { internalType: 'uint32', name: 'encryptedAmount', type: 'uint32' },
-      { internalType: 'bytes', name: 'proof', type: 'bytes' },
+      { internalType: 'externalEuint32', name: 'encryptedAmount', type: 'bytes32' },
+      { internalType: 'bytes', name: 'inputProof', type: 'bytes' },
     ],
     name: 'contestEncrypted',
     outputs: [],
@@ -222,7 +225,14 @@ const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
   {
     inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
     name: 'myDefenseCipher',
-    outputs: [{ internalType: 'uint32', name: '', type: 'uint32' }],
+    outputs: [{ internalType: 'euint32', name: '', type: 'bytes32' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'lastContestOutcome',
+    outputs: [{ internalType: 'ebool', name: '', type: 'bytes32' }],
     stateMutability: 'view',
     type: 'function',
   },
@@ -248,7 +258,7 @@ const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
         components: [
           { internalType: 'address', name: 'owner', type: 'address' },
           { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
-          { internalType: 'uint32', name: 'points', type: 'uint32' },
+          { internalType: 'euint32', name: 'points', type: 'bytes32' },
           { internalType: 'uint64', name: 'lastDecayDay', type: 'uint64' },
           { internalType: 'bool', name: 'anchored', type: 'bool' },
         ],
@@ -275,7 +285,7 @@ const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
     inputs: [
       { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
       { indexed: true, internalType: 'address', name: 'owner', type: 'address' },
-      { indexed: false, internalType: 'uint32', name: 'initialPoints', type: 'uint32' },
+      { indexed: false, internalType: 'bytes32', name: 'initialPointsCipher', type: 'bytes32' },
     ],
     name: 'TerritoryAnchored',
     type: 'event',
@@ -285,7 +295,7 @@ const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
     inputs: [
       { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
       { indexed: true, internalType: 'address', name: 'player', type: 'address' },
-      { indexed: false, internalType: 'uint32', name: 'newPointsCipher', type: 'uint32' },
+      { indexed: false, internalType: 'bytes32', name: 'newPointsCipher', type: 'bytes32' },
       { indexed: false, internalType: 'uint32', name: 'currentDay', type: 'uint32' },
     ],
     name: 'EncryptedBoost',
@@ -297,8 +307,13 @@ const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
       { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
       { indexed: true, internalType: 'address', name: 'defender', type: 'address' },
       { indexed: true, internalType: 'address', name: 'challenger', type: 'address' },
-      { indexed: false, internalType: 'uint32', name: 'defenderPointsRemaining', type: 'uint32' },
-      { indexed: false, internalType: 'uint32', name: 'challengerPointsRemaining', type: 'uint32' },
+      {
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'defenderPointsRemainingCipher',
+        type: 'bytes32',
+      },
+      { indexed: false, internalType: 'bytes32', name: 'challengerWonCipher', type: 'bytes32' },
     ],
     name: 'EncryptedContest',
     type: 'event',
@@ -307,7 +322,7 @@ const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
     anonymous: false,
     inputs: [
       { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
-      { indexed: false, internalType: 'uint32', name: 'newPointsCipher', type: 'uint32' },
+      { indexed: false, internalType: 'bytes32', name: 'newPointsCipher', type: 'bytes32' },
       { indexed: false, internalType: 'uint64', name: 'currentDay', type: 'uint64' },
     ],
     name: 'EncryptedDecayApplied',
@@ -422,22 +437,51 @@ export function getCurrentNetworkConfig(): NetworkConfig {
         abi: BOOST_CONTRACT_ABI,
       },
       confidentialTerritoryDefense: {
-        // Phase 4 (Zama scaffolding) — additive
-        // `ConfidentialTerritoryDefense` contract. Address is
-        // read from the RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS
-        // env var, with a zero-address placeholder until the
-        // deployment script publishes it. While Zama fhEVM is
-        // pre-publication, the contract is local-dev only; the
-        // off-chain `ConfidentialContractService` surfaces a
-        // clear "not deployed" error when the placeholder is in
-        // use (same pattern as `ContractService.isBoostReady`).
+        // The additive `ConfidentialTerritoryDefense` contract, deployed
+        // to the Zama Protocol FHEVM host chain (Ethereum Sepolia). Its
+        // address is read from RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS with
+        // a zero-address placeholder until the deploy script publishes
+        // it. NOTE: this contract lives on Sepolia, not ZetaChain — the
+        // `ConfidentialContractService` binds it to the Sepolia network
+        // via `getConfidentialNetworkConfig()`, independent of the
+        // ZetaChain network this NetworkConfig otherwise describes.
         address:
           (globalThis as { __ENV__?: { RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS?: string } }).__ENV__
-            ?.RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS ||
-          '0x0000000000000000000000000000000000000000',
+            ?.RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS || '0x0000000000000000000000000000000000000000',
         abi: CONFIDENTIAL_TERRITORY_DEFENSE_ABI,
       },
     },
+  };
+}
+
+/**
+ * The Zama Protocol FHEVM host chain (Ethereum Sepolia). The
+ * confidential `ConfidentialTerritoryDefense` contract lives here,
+ * separate from the ZetaChain network that carries public territory
+ * ownership. `ConfidentialContractService` uses this to bind its
+ * contract instance and to gate encrypted actions on the correct
+ * chainId (the wallet must be on Sepolia to touch the encrypted side).
+ */
+export const ZAMA_FHEVM_CHAIN = {
+  chainId: 11155111,
+  name: 'Ethereum Sepolia',
+  rpcUrl:
+    (globalThis as { __ENV__?: { SEPOLIA_RPC_URL?: string } }).__ENV__?.SEPOLIA_RPC_URL ||
+    'https://ethereum-sepolia-rpc.publicnode.com',
+  explorerUrl: 'https://sepolia.etherscan.io',
+} as const;
+
+/**
+ * Confidential contract config bound to the Sepolia FHEVM chain.
+ * Mirrors `getContractConfig('confidentialTerritoryDefense')` but is
+ * the canonical accessor for the confidential side so callers don't
+ * accidentally read the ZetaChain-scoped network config.
+ */
+export function getConfidentialNetworkConfig() {
+  const zetaConfig = getCurrentNetworkConfig();
+  return {
+    ...ZAMA_FHEVM_CHAIN,
+    contract: zetaConfig.contracts.confidentialTerritoryDefense,
   };
 }
 
@@ -520,6 +564,7 @@ export const CONTRACT_METHODS = {
     boostEncrypted: 'boostEncrypted',
     contestEncrypted: 'contestEncrypted',
     myDefenseCipher: 'myDefenseCipher',
+    lastContestOutcome: 'lastContestOutcome',
     applyEncryptedDecay: 'applyEncryptedDecay',
     isAnchored: 'isAnchored',
     getDefenseMetadata: 'getDefenseMetadata',

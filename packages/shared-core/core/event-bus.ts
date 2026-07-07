@@ -450,7 +450,12 @@ export interface AppEvents extends Web3Events {
   // Territory activity events
   'territory:activityUpdated': { territory: any };
   'territory:vulnerable': { territory: any };
-  'territory:boostRequested': { territoryId: string; cost: number; points: number };
+  'territory:boostRequested': {
+    territoryId: string;
+    tokenId?: string;
+    cost: string;
+    points: number;
+  };
   // GameFi toggle event
   'gamefi:toggled': { enabled: boolean };
   // Dashboard events

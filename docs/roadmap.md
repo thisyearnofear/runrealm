@@ -14,8 +14,8 @@ the deployed public chain.
 | 1 | Consolidation audit | ✅ Complete | `BaseService.getSiblingService` / `getWalletSnapshot`; legacy stubs quarantined; production `setInterval` simulator fenced. |
 | 2 | DRY foundation | ✅ Complete | `game-rules.ts` regenerates `RealmRules.sol` + `ConfidentialRules.sol`; `RealmToken.sol` and `reward-system-ui.ts` consume the canonical source. |
 | 3 | ZetaChain honesty pass | ✅ Complete (Jul 2026) | Additive `RunRealmBoostV1` contract; `claimTerritory` is receipt-gated on `status === 1` + parsed `tokenId`; `chainSupportsZama(chainId)` + `encryptedShieldEnabled` toggle; `boostCostRealmWei` precomputed bigint; Phase 2 latent sync-script bug fixed. |
-| 4 | Zama scaffolding | 🟡 Next | `contracts/zama/ConfidentialTerritoryDefense.sol` (`euint32` mirror of activity-points + encrypted decay) + Mock-mode Hardhat tests + `IConfidentialTerritory` interface + Sepolia deploy script. |
-| 5 | Live Zama UX | 🟡 Planned | `EncryptedShield`, `ConfidentialDefensePanel`, `FogOfWarMap`, `ContestModal`. Reuses the existing widget system; feature-flagged via `VITE_ENABLE_ZAMA`. |
+| 4 | Zama scaffolding | ✅ Complete (Jul 2026) | `contracts/zama/ConfidentialTerritoryDefense.sol` rewritten with real `euint32` FHE (`@fhevm/solidity`); `IConfidentialTerritory` interface; 18 Hardhat tests via `@fhevm/hardhat-plugin` mock coprocessor; Sepolia deploy script. Mock `Mocks.sol` removed. |
+| 5 | Live Zama UX | ✅ Complete | `EncryptedShield`, `ConfidentialDefensePanel`, `FogOfWarMap`, `ContestModal`, `useConfidentialShield`; wired into `AppShell`; real `@zama-fhe/relayer-sdk` encrypt / user-decrypt / public-decrypt. |
 | 6 | Cross-chain anchor | 🟡 Planned | `CrossChainAnchor` reads ZetaChain `TerritoryCreated` events and calls `ConfidentialTerritoryDefense.anchorFromZeta(tokenId, owner)`. This is the moment the two chains visibly work together. |
 | 7 | Performance & polish | 🟡 Planned | Encrypted-decay cadence animation; relayer SDK connection pooling; per-territory ciphertext cache (TTL 30 min). |
 | 8 | Tests & CI | 🟡 Planned | Unit tests for `ConfidentialTerritoryService`; `ci:rules-drift` step in `ci.yml`; lefthook pre-commit hook re-runs `sync:rules`. |
@@ -74,12 +74,15 @@ only see a glowing silhouette on the map until they win a contest.
 | `packages/shared-blockchain/services/zama-support.ts` | New (Phase 3): `ZamaSupportService` exposes `chainSupportsZama(chainId)` and `getEncryptedShieldState(chainId)`; emits `web3:zamaUnsupported` for UI listeners. | 3 |
 | `contracts/zama/ConfidentialTerritoryDefense.sol` | New: `euint32` activity-points + encrypted decay. | 4 |
 | `contracts/zama/CrossChainAnchor.sol` | New: reads ZetaChain events, anchors Zama defense state. | 6 |
-| `packages/shared-core/services/confidential-territory-service.ts` | New: `extends TerritoryService`; adds `boostEncrypted` / `contestEncrypted` / `myDefenseCipher`. | 4 |
-| `packages/shared-core/services/zama-relayer.ts` | New: wraps `@zama-fhe/react-sdk` (or legacy Relayer SDK) for one `encryptFor(handle, value)` call site. | 4 |
-| `packages/web-app/src/components/react/EncryptedShield.tsx` | New: pure visual layer; no crypto. | 5 |
-| `packages/web-app/src/components/react/ConfidentialDefensePanel.tsx` | New: ties `EncryptedShield` to `ConfidentialTerritoryService`. | 5 |
-| `packages/web-app/src/components/react/FogOfWarMap.tsx` | New: MapLibre layer where the player's territories glow and rivals show as silhouettes. | 5 |
+| `packages/shared-core/services/confidential-territory-service.ts` | Real FHE wiring: `boostEncrypted` / `contestEncrypted` / `myDefenseCipher` using `@zama-fhe/relayer-sdk`. | 4-5 |
+| `packages/shared-core/services/zama-relayer.ts` | New: lazy-loaded `@zama-fhe/relayer-sdk/web` — `initSDK`, `createInstance`, `createEncryptedInput(...).add32().encrypt()`, `userDecrypt`, `publicDecrypt`. | 4-5 |
+| `packages/shared-blockchain/services/confidential-contract-service.ts` | New: ethers wrapper for `ConfidentialTerritoryDefense` on Sepolia (chainId 11155111). | 4 |
+| `packages/web-app/src/components/react/EncryptedShield.tsx` | New: HUD shield badge; status: ready / busy / unsupported / error. | 5 |
+| `packages/web-app/src/components/react/ConfidentialDefensePanel.tsx` | New: inspector card for encrypted defense + boost presets. | 5 |
+| `packages/web-app/src/components/react/FogOfWarMap.tsx` | New: map overlay that dims non-anchored territories when shield is active. | 5 |
 | `packages/web-app/src/components/react/ContestModal.tsx` | New: encrypted-bounty contest flow. | 5 |
+| `packages/web-app/src/components/react/useConfidentialShield.ts` | New: hook that mirrors the confidential service state into React. | 5 |
+| `packages/web-app/src/components/react/AppShell.tsx` | Wires shield, panel, modal, and fog overlay into the React shell. | 5 |
 
 ## What we are NOT doing
 

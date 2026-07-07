@@ -224,10 +224,10 @@ The dashboard has been transformed from a centered overlay to a primary interfac
      `TerritoryCreated` event. Optimistic state mutation is gone.
   3. `chainSupportsZama(chainId)` + `encryptedShieldEnabled` toggle.
      New `ZamaSupportService` keys the EncryptedShield flag off
-     `GAME_RULES.zama.supportedChainIds` (empty today, so the flag
-     defaults to safe `false` for every chain). `CrossChainService`
-     updates the flag reactively on wallet connect / network change.
-     `Territory.confidentialShield` is set at claim time.
+     `GAME_RULES.zama.supportedChainIds` (Sepolia 11155111 is the
+     public Zama FHEVM testnet). `CrossChainService` updates the flag
+     reactively on wallet connect / network change; `Territory.confidentialShield`
+     is set at claim time.
 - `boostCostRealmWei: 50n * 10n ** 18n` added to `game-rules.ts` as a
   precomputed bigint paired with `boostCostRealmE18: '50 * 10**18'`
   (the Solidity-emitted string) so the JS side skips runtime
@@ -239,10 +239,11 @@ The dashboard has been transformed from a centered overlay to a primary interfac
   exactly one library declaration. The `as <type>` regex was
   broadened to handle `as const` / `as number` / `as readonly number[]`
   / `as Generic<T>` uniformly.
-- See [docs/roadmap.md](roadmap.md) for the 9-phase plan; Phase 4
-  (Zama scaffolding) is now next.
+- See [docs/roadmap.md](roadmap.md) for the 9-phase plan; Phases 4–5
+  (real Zama FHEVM contract + live confidential UX) are complete;
+  Phase 6 (cross-chain anchor) is next.
 
-### Project Status (June 2026)
+### Project Status (July 2026)
 - **Phase 1 — Consolidation audit** complete. `BaseService.getSiblingService` and
   `BaseService.getWalletSnapshot` replace the per-service `getService()` boilerplate
   that previously lived in territory-service, run-tracking-service, cross-chain-service,

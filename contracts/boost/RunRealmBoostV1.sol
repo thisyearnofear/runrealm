@@ -29,7 +29,7 @@ import {RealmRules} from "../generated/RealmRules.sol";
  *     receipt, and apply the +100 activityPoints mutation locally.
  *
  * NON-universal: this is a direct user-call contract, not a ZetaChain
- * Universal. Cross-chain boost flows (Zama fhEVM in Phase 4) will
+ * Universal. Cross-chain boost flows (Zama fhEVM, Phase 5) can
  * forward into this contract via the existing `RunRealmUniversal.onCall`
  * path, not via a new onCall entry.
  */

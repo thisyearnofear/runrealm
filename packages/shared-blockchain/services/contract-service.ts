@@ -131,10 +131,10 @@ export class ContractService extends BaseService {
       // "boost contract not deployed" error from the off-chain
       // service rather than a confusing revert from a missing
       // contract.
-      this.boostContract = boostConfig.address ===
-        '0x0000000000000000000000000000000000000000'
-        ? null
-        : this.web3Service.getContract(boostConfig.address, boostConfig.abi);
+      this.boostContract =
+        boostConfig.address === '0x0000000000000000000000000000000000000000'
+          ? null
+          : this.web3Service.getContract(boostConfig.address, boostConfig.abi);
 
       console.log('ContractService: Contracts initialized successfully');
       console.log('Universal Contract:', universalConfig.address);
@@ -182,8 +182,8 @@ export class ContractService extends BaseService {
    * `Promise<string>`) so `TerritoryService.claimTerritory` can gate
    * the local state mutation on `receipt.status === 1` and require
    * `tokenId` from the `TerritoryCreated` event. `confirmations = 1`
-   * is the right default for ZetaChain Athens testnet; Phase 4
-   * mainnet paths should override to 3+.
+   * is the right default for ZetaChain Athens testnet; mainnet
+   * paths should override to 3+.
    */
   public async mintTerritory(
     territoryData: TerritoryClaimData,
@@ -351,14 +351,13 @@ export class ContractService extends BaseService {
       throw new Error('Wallet not connected');
     }
 
-    const gasEstimate = await this.boostContract[
-      CONTRACT_METHODS.boost.boostTerritoryActivity
-    ].estimateGas(tokenId);
+    const gasEstimate =
+      await this.boostContract[CONTRACT_METHODS.boost.boostTerritoryActivity].estimateGas(tokenId);
     const gasLimit = Math.ceil(Number(gasEstimate) * 1.2);
 
-    const tx = await this.boostContract[
-      CONTRACT_METHODS.boost.boostTerritoryActivity
-    ](tokenId, { gasLimit });
+    const tx = await this.boostContract[CONTRACT_METHODS.boost.boostTerritoryActivity](tokenId, {
+      gasLimit,
+    });
 
     this.safeEmit('web3:transactionSubmitted', {
       hash: tx.hash,
@@ -379,16 +378,10 @@ export class ContractService extends BaseService {
    * The off-chain `TerritoryService` uses this to short-circuit
    * the on-chain call when a boost has already been used today.
    */
-  public async getLastBoostDay(
-    address: string,
-    tokenId: number | string
-  ): Promise<number> {
+  public async getLastBoostDay(address: string, tokenId: number | string): Promise<number> {
     if (!this.boostContract) return 0;
     try {
-      const day = await this.boostContract[CONTRACT_METHODS.boost.lastBoostDay](
-        address,
-        tokenId
-      );
+      const day = await this.boostContract[CONTRACT_METHODS.boost.lastBoostDay](address, tokenId);
       return Number(day);
     } catch (error) {
       console.warn('ContractService: getLastBoostDay failed:', error);

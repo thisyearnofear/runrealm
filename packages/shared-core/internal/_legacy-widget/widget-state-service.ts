@@ -3,7 +3,7 @@
  * TODO: Remove when widget-system is refactored
  */
 
-import { BaseService } from '../core/base-service';
+import { BaseService } from '../../core/base-service';
 
 export interface WidgetState {
   id: string;

@@ -53,6 +53,15 @@ export class GameFiUI extends BaseService {
     return this.initialize();
   }
 
+  /**
+   * Enable GameFi mode: add the global `gamefi-mode` class and notify
+   * any listeners so MainUI can show GameFi widgets.
+   */
+  public enableGameFiMode(): void {
+    document.body.classList.add('gamefi-mode');
+    this.safeEmit('gamefi:toggled', { enabled: true });
+  }
+
   protected async onInitialize(): Promise<void> {
     // Service-only mode: no direct HUD DOM creation; MainUI renders widgets
     this.setupEventHandlers();

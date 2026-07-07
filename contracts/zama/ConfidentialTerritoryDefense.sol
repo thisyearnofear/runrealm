@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {FHE, euint32, externalEuint32, ebool} from "@fhevm/solidity/lib/FHE.sol";
+import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {ConfidentialRules} from "./generated/ConfidentialRules.sol";
 import {IConfidentialTerritory} from "./IConfidentialTerritory.sol";
-import {Mocks} from "./Mocks.sol";
 
 /**
  * @title ConfidentialTerritoryDefense
- * @dev Phase 4 (Zama scaffolding) — the on-chain home of the
- * encrypted territory defense score. Implements
- * `IConfidentialTerritory` on top of the Zama fhEVM `euint32` /
- * `TFHE` surface (or the Phase 4 `Mocks.sol` shim for local dev and
- * Hardhat tests).
+ * @dev The on-chain home of the encrypted territory defense score,
+ * built on the Zama Protocol FHEVM (fhevm/solidity). Implements
+ * `IConfidentialTerritory` over the real `euint32` ciphertext surface
+ * and inherits `ZamaEthereumConfig` so it resolves the Zama
+ * coprocessor / KMS / ACL addresses on Ethereum Sepolia (and mainnet).
  *
  * Design:
  *  - ADDS to the existing RunRealm on ZetaChain without mutating the
- *    bytecode-frozen `RunRealmUniversal`. Defense scores live in
+ *    bytecode-frozen `RunRealmUniversal`. Defense scores live as
  *    ciphertext here; ownership / public metadata stay on ZetaChain.
  *  - REALM payment for a boost is the responsibility of the additive
  *    `RunRealmBoostV1` contract (Phase 3). This contract only owns
@@ -30,22 +31,28 @@ import {Mocks} from "./Mocks.sol";
  *    `applyEncryptedDecay`). This matches the existing off-chain
  *    `applyActivityDecay` cadence in `territory-service.ts`.
  *  - Boost rate limit is per-address per-tokenId per-UTC-day, the
- *    same key format `RunRealmBoostV1` uses. The two contracts
- *    can have independent limits (the encrypted boost is the
- *    *ciphertext* update; the REALM payment is a separate
- *    on-chain action). For now they share the same one-per-day
- *    policy.
+ *    same key format `RunRealmBoostV1` uses.
  *
- * Migration to real Zama:
- *   1. `npm install @zama-fhe/solidity` (when published)
- *   2. Replace the `import "./Mocks.sol"` line with the real Zama
- *      import (the API surface is identical — `euint32` / `TFHE`)
- *   3. Re-run `npx hardhat compile`
- *   No contract body change required.
+ * FHE design notes (why this is NOT a plaintext contract):
+ *  - The score is an `euint32` ciphertext handle. It is never
+ *    revealed on-chain. The owner reads it via client-side
+ *    user-decryption (Relayer SDK + signed EIP-712 permit); the ACL
+ *    granted with `FHE.allow` is what authorizes that decryption.
+ *  - You cannot branch on a ciphertext with a plaintext `if`/`revert`.
+ *    So the boost "cap at MAX" is `FHE.min(sum, MAX)` and the contest /
+ *    decay "floor at 0" is `FHE.select(ge, 0, sub)` — all under FHE.
+ *  - Every ciphertext that is stored (or must be re-read in a later
+ *    transaction) is re-authorized with `FHE.allowThis` (contract) and
+ *    `FHE.allow(handle, owner)` (the decrypting user) after each write.
+ *  - A contest also records the encrypted win/loss outcome and makes
+ *    it publicly decryptable, so the *result* of a contest can be
+ *    revealed to everyone while both sides' *scores* stay private.
  */
-contract ConfidentialTerritoryDefense is IConfidentialTerritory, ReentrancyGuard {
-    using Mocks for *;
-
+contract ConfidentialTerritoryDefense is
+    IConfidentialTerritory,
+    ZamaEthereumConfig,
+    ReentrancyGuard
+{
     // Defense records, keyed by the on-chain ZetaChain tokenId.
     mapping(uint256 => EncryptedDefense) private _defenses;
 
@@ -53,13 +60,17 @@ contract ConfidentialTerritoryDefense is IConfidentialTerritory, ReentrancyGuard
     // keying as `RunRealmBoostV1` (`block.timestamp / 1 days`).
     mapping(address => mapping(uint256 => uint256)) public lastBoostDay;
 
-    // Custom errors. The ZetaChain flavor of `ConfidentialTerritoryDefense`
-    // uses named errors so the off-chain service can branch on a
-    // typed revert reason (matches `RunRealmBoostV1.BoostAlreadyUsedToday`).
+    // Encrypted outcome of the most recent contest per tokenId.
+    // `true` means the challenger's strike exceeded the defender's
+    // score. Made publicly decryptable in `contestEncrypted`.
+    mapping(uint256 => ebool) private _lastContestChallengerWon;
+
+    // Custom errors — the off-chain service branches on a typed
+    // revert reason (matches `RunRealmBoostV1.BoostAlreadyUsedToday`).
     error NotAnchored(uint256 tokenId);
     error NotOwner(uint256 tokenId, address caller, address owner);
     error BoostAlreadyUsedToday(uint256 day);
-    error DefenseWouldOverflow(uint256 attempted);
+    error SelfContest(uint256 tokenId);
 
     /*//////////////////////////////////////////////////////////////
                               ANCHORING
@@ -76,15 +87,26 @@ contract ConfidentialTerritoryDefense is IConfidentialTerritory, ReentrancyGuard
         }
         require(owner != address(0), "ConfidentialTerritoryDefense: zero owner");
 
+        // Trivially-encrypt the public initial constant into a
+        // ciphertext handle. The value is public (it's a constant)
+        // but the *type* is now euint32 so every downstream op stays
+        // homomorphic.
+        euint32 initial = FHE.asEuint32(ConfidentialRules.ACTIVITY_INITIAL_POINTS);
+
         _defenses[tokenId] = EncryptedDefense({
             owner: owner,
             tokenId: tokenId,
-            points: ConfidentialRules.ACTIVITY_INITIAL_POINTS,
+            points: initial,
             lastDecayDay: uint64(block.timestamp / 1 days),
             anchored: true
         });
 
-        emit TerritoryAnchored(tokenId, owner, ConfidentialRules.ACTIVITY_INITIAL_POINTS);
+        // ACL: the contract must be able to operate on the handle in
+        // later txs, and the owner must be able to user-decrypt it.
+        FHE.allowThis(initial);
+        FHE.allow(initial, owner);
+
+        emit TerritoryAnchored(tokenId, owner, euint32.unwrap(initial));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -94,50 +116,35 @@ contract ConfidentialTerritoryDefense is IConfidentialTerritory, ReentrancyGuard
     /// @inheritdoc IConfidentialTerritory
     function boostEncrypted(
         uint256 tokenId,
-        uint32 encryptedAmount,
-        bytes calldata proof
+        externalEuint32 encryptedAmount,
+        bytes calldata inputProof
     ) external override nonReentrant {
         EncryptedDefense storage d = _defenses[tokenId];
         if (!d.anchored) revert NotAnchored(tokenId);
         if (d.owner != msg.sender) revert NotOwner(tokenId, msg.sender, d.owner);
 
-        // Proof is ignored under the mock shim (the value is
-        // already plaintext). The real Zama lib requires a ZK
-        // proof that the ciphertext is well-formed and tied to
-        // `msg.sender`; the implementation file checks it via
-        // the upstream `einput` verifier. Keeping the parameter
-        // in the interface so callers don't change when we
-        // swap the mock for the real lib.
-        proof;
-
         // Rate limit: one boost per (player, tokenId) per UTC day.
         uint256 currentDay = block.timestamp / 1 days;
-        uint256 previousDay = lastBoostDay[msg.sender][tokenId];
-        if (previousDay >= currentDay) {
+        if (lastBoostDay[msg.sender][tokenId] >= currentDay) {
             revert BoostAlreadyUsedToday(currentDay);
         }
         lastBoostDay[msg.sender][tokenId] = currentDay;
 
-        // Mirror the off-chain `ACTIVITY_BOOST_POINTS` for the
-        // mock shim (encryptedAmount is plaintext). Under the
-        // real Zama lib this would be a `TFHE.add` over
-        // ciphertexts.
-        euint32 current = euint32.wrap(uint256(d.points));
-        euint32 amount = euint32.wrap(uint256(encryptedAmount));
-        euint32 next = Mocks.TFHE.add(current, amount);
+        // Verify the external ciphertext + proof and import it as a
+        // usable euint32 bound to this contract + caller.
+        euint32 amount = FHE.fromExternal(encryptedAmount, inputProof);
 
-        uint32 newPoints = Mocks.TFHE.decrypt(next);
-        if (newPoints > ConfidentialRules.ACTIVITY_MAX_POINTS) {
-            revert DefenseWouldOverflow(uint256(newPoints));
-        }
-        d.points = newPoints;
+        // newPoints = min(current + amount, MAX). We clamp under FHE
+        // rather than reverting because the sum is a ciphertext and
+        // cannot be compared with a plaintext branch.
+        euint32 sum = FHE.add(d.points, amount);
+        euint32 capped = FHE.min(sum, FHE.asEuint32(ConfidentialRules.ACTIVITY_MAX_POINTS));
+        d.points = capped;
 
-        // Emit the new ciphertext handle. Under the mock shim
-        // this is the plaintext, which is fine for the wallet
-        // UI to render the "boosted" toast. Under the real Zama
-        // lib this is the actual ciphertext handle that the
-        // owner decrypts via the Relayer SDK.
-        emit EncryptedBoost(tokenId, msg.sender, newPoints, uint32(currentDay));
+        FHE.allowThis(capped);
+        FHE.allow(capped, d.owner);
+
+        emit EncryptedBoost(tokenId, msg.sender, euint32.unwrap(capped), uint32(currentDay));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -147,48 +154,55 @@ contract ConfidentialTerritoryDefense is IConfidentialTerritory, ReentrancyGuard
     /// @inheritdoc IConfidentialTerritory
     function contestEncrypted(
         uint256 tokenId,
-        uint32 encryptedAmount,
-        bytes calldata proof
+        externalEuint32 encryptedAmount,
+        bytes calldata inputProof
     ) external override nonReentrant {
         EncryptedDefense storage d = _defenses[tokenId];
         if (!d.anchored) revert NotAnchored(tokenId);
         // Challenger must NOT be the current defender.
-        if (d.owner == msg.sender) {
-            revert NotOwner(tokenId, msg.sender, d.owner);
-        }
+        if (d.owner == msg.sender) revert SelfContest(tokenId);
 
-        proof;
+        euint32 amount = FHE.fromExternal(encryptedAmount, inputProof);
 
-        euint32 defender = euint32.wrap(uint256(d.points));
-        euint32 amount = euint32.wrap(uint256(encryptedAmount));
+        // The reveal moment: did the challenger's strike exceed the
+        // defender's (still-secret) score? Computed under FHE — the
+        // scores never leak, only this boolean outcome does.
+        ebool challengerWon = FHE.gt(amount, d.points);
 
-        // Subtract with a floor at 0 — the defender's defense
-        // can't go negative. The challenger (msg.sender) tracks
-        // their own defense in a separate storage slot keyed by
-        // (msg.sender, tokenId); for now we just emit the
-        // ciphertext handle so the challenger knows what they
-        // captured.
-        euint32 newDefender = Mocks.TFHE.subFloor(defender, amount);
-        uint32 newDefenderPoints = Mocks.TFHE.decrypt(newDefender);
+        // Score drain, floored at 0:
+        //   newDefender = amount >= points ? 0 : points - amount
+        ebool wipes = FHE.ge(amount, d.points);
+        euint32 newDefender = FHE.select(
+            wipes,
+            FHE.asEuint32(0),
+            FHE.sub(d.points, amount)
+        );
+        d.points = newDefender;
 
-        // Challenger's per-(challenger, tokenId) accrued power.
-        // In the mock shim, the challenger simply gets the
-        // encrypted amount as a ciphertext handle to emit.
-        euint32 challengerAccrual = amount;
+        // Persist + ACL the defender's new score (defender-only read).
+        FHE.allowThis(newDefender);
+        FHE.allow(newDefender, d.owner);
 
-        d.points = newDefenderPoints;
-        // lastBoostDay for the challenger — not strictly needed
-        // for contests, but mirrors the boost pattern so a
-        // single user can call either method with the same
-        // "one action per day" semantic.
+        // Record + expose the outcome. Both participants are granted
+        // read access AND the outcome is made publicly decryptable so
+        // the win/loss can be revealed on the map to everyone without
+        // exposing either side's underlying score.
+        _lastContestChallengerWon[tokenId] = challengerWon;
+        FHE.allowThis(challengerWon);
+        FHE.allow(challengerWon, d.owner);
+        FHE.allow(challengerWon, msg.sender);
+        FHE.makePubliclyDecryptable(challengerWon);
+
+        // Mirror the boost pattern: a challenger's contest also
+        // consumes their "one encrypted action per day" for this token.
         lastBoostDay[msg.sender][tokenId] = block.timestamp / 1 days;
 
         emit EncryptedContest(
             tokenId,
             d.owner,
             msg.sender,
-            newDefenderPoints,
-            Mocks.TFHE.decrypt(challengerAccrual)
+            euint32.unwrap(newDefender),
+            ebool.unwrap(challengerWon)
         );
     }
 
@@ -197,10 +211,17 @@ contract ConfidentialTerritoryDefense is IConfidentialTerritory, ReentrancyGuard
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IConfidentialTerritory
-    function myDefenseCipher(uint256 tokenId) external view override returns (uint32) {
+    function myDefenseCipher(uint256 tokenId) external view override returns (euint32) {
         EncryptedDefense storage d = _defenses[tokenId];
         if (!d.anchored) revert NotAnchored(tokenId);
         return d.points;
+    }
+
+    /// @notice The encrypted outcome of the most recent contest for
+    /// `tokenId`. Publicly decryptable via the Relayer SDK. Returns
+    /// the zero handle if no contest has occurred yet.
+    function lastContestOutcome(uint256 tokenId) external view returns (ebool) {
+        return _lastContestChallengerWon[tokenId];
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -214,24 +235,34 @@ contract ConfidentialTerritoryDefense is IConfidentialTerritory, ReentrancyGuard
 
         uint64 currentDay = uint64(block.timestamp / 1 days);
         if (d.lastDecayDay >= currentDay) {
-            // Idempotent within the same UTC day. Emit a no-op
-            // event for the off-chain indexer's benefit.
+            // Idempotent within the same UTC day.
             return;
         }
 
-        // Apply decay for every day that has elapsed since the
-        // last recorded day. Decay is capped at the current
-        // defense so a long-inactive territory sits at 0 rather
-        // than underflowing.
+        // The number of elapsed days is public (it's derived from
+        // block.timestamp), so the decay amount is a public scalar
+        // encrypted into a euint32 for the homomorphic subtraction.
         uint256 daysToDecay = uint256(currentDay - d.lastDecayDay);
         uint256 decayTotal = daysToDecay * uint256(ConfidentialRules.ACTIVITY_DECAY_PER_DAY);
-        uint256 currentPoints = uint256(d.points);
-        uint256 newPoints = currentPoints > decayTotal ? currentPoints - decayTotal : 0;
+        if (decayTotal > type(uint32).max) {
+            decayTotal = type(uint32).max;
+        }
+        euint32 decay = FHE.asEuint32(uint32(decayTotal));
 
-        d.points = uint32(newPoints);
+        // Floor at 0 under FHE: newPoints = decay >= points ? 0 : points - decay
+        ebool wipes = FHE.ge(decay, d.points);
+        euint32 newPoints = FHE.select(
+            wipes,
+            FHE.asEuint32(0),
+            FHE.sub(d.points, decay)
+        );
+        d.points = newPoints;
         d.lastDecayDay = currentDay;
 
-        emit EncryptedDecayApplied(tokenId, d.points, currentDay);
+        FHE.allowThis(newPoints);
+        FHE.allow(newPoints, d.owner);
+
+        emit EncryptedDecayApplied(tokenId, euint32.unwrap(newPoints), currentDay);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -239,9 +270,9 @@ contract ConfidentialTerritoryDefense is IConfidentialTerritory, ReentrancyGuard
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Read-only view of the underlying defense struct
-    /// (without the ciphertext). Useful for the off-chain
-    /// indexer / dashboard to render a "decayed today?" badge
-    /// without going through `myDefenseCipher`.
+    /// (the `points` field is the ciphertext handle). Useful for the
+    /// off-chain indexer / dashboard to render a "decayed today?"
+    /// badge and resolve the owner without going through the relayer.
     function getDefenseMetadata(uint256 tokenId) external view returns (EncryptedDefense memory) {
         return _defenses[tokenId];
     }

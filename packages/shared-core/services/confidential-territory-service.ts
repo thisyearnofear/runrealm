@@ -1,8 +1,10 @@
 /**
- * ConfidentialTerritoryService — Phase 4 (Zama scaffolding)
+ * ConfidentialTerritoryService — Phase 5 (live Zama FHEVM)
  *
  * Extends `TerritoryService` with the three encrypted-side methods
- * that pair with the on-chain `ConfidentialTerritoryDefense` contract:
+ * that pair with the on-chain `ConfidentialTerritoryDefense` contract
+ * on the Zama Protocol FHEVM host chain (Ethereum Sepolia testnet by
+ * default):
  *
  *   - `boostEncrypted(territoryId, amount)` — encrypts `amount` via
  *     the `ZamaRelayer` and calls `ConfidentialTerritoryDefense
@@ -13,15 +15,15 @@
  *   - `contestEncrypted(territoryId, amount)` — same shape, calls
  *     `ConfidentialTerritoryDefense.contestEncrypted(...)`.
  *   - `myDefenseCipher(territoryId)` — reads the ciphertext handle
- *     from the contract and decrypts it via the relayer (only the
- *     owner can decrypt under the real Zama lib; the mock has no
- *     ACL check).
+ *     from the contract and decrypts it via the relayer. Only the
+ *     territory owner holds the ACL key to decrypt.
  *
  * Pre-flight gate: every method that touches the encrypted side
  * checks `ZamaSupportService.chainSupportsZama(wallet.chainId)`.
- * When the supported list is empty (the current default) the
- * methods surface a clear "Confidential shield unavailable on
- * this chain" error via a `ui:toast` event.
+ * Sepolia (11155111) is in `GAME_RULES.zama.supportedChainIds`, so a
+ * wallet on Sepolia enables the confidential shield. On unsupported
+ * chains the methods surface a clear "Confidential shield unavailable
+ * on this chain" error via a `ui:toast` event.
  *
  * This service lives in `shared-core` (not `shared-blockchain`)
  * because it composes the existing `TerritoryService` singleton
@@ -31,21 +33,25 @@
  * already imports `ZamaSupportService` from `shared-blockchain`,
  * and `ZamaSupportService` is a singleton without a wallet binding).
  */
+import { BrowserProvider, type Signer } from 'ethers';
+import { getConfidentialNetworkConfig } from '../config/contracts';
 import { BaseService } from '../core/base-service';
-import { TerritoryService, type Territory } from './territory-service';
-import { ZamaRelayer, type ZamaCiphertext } from './zama-relayer';
+import { type Territory, TerritoryService } from './territory-service';
+import { type ZamaCiphertext, ZamaRelayer } from './zama-relayer';
 
-// Phase 4: a minimal local re-export of the gate so the file is
-// self-contained for testing. The real `ZamaSupportService` lives
-// in `shared-blockchain` and exposes the same `chainSupportsZama`
-// surface.
+/** EIP-1193 provider surface we read off `window.ethereum`. */
+type Eip1193 = { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
+
+// Local re-export of the gate so the file is self-contained for testing.
+// The real `ZamaSupportService` lives in `shared-blockchain` and exposes
+// the same `chainSupportsZama` surface.
 interface ZamaSupportLike {
   chainSupportsZama(chainId: number): boolean;
 }
 
 export class ConfidentialTerritoryService extends TerritoryService {
   /**
-   * Phase 4 — dedicated static instance. Two singletons + a
+   * Dedicated static instance. Two singletons + a
    * parent reference (rather than cast-sharing the parent's
    * static instance) is the correct shape for this subclass.
    *
@@ -87,7 +93,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
   /**
    * Constructor receives the shared `TerritoryService` parent.
    * `super()` goes through the parent's `protected` constructor
-   * (the parent was originally `private`; Phase 4 flipped it to
+   * (the parent was originally `private`; later flipped to
    * `protected` so this subclass can call it).
    */
   protected constructor(parentService: TerritoryService) {
@@ -127,20 +133,20 @@ export class ConfidentialTerritoryService extends TerritoryService {
   }
 
   /**
-   * Phase 4 — wire the Zama-support gate. Called by the
-   * application bootstrap after `ZamaSupportService` is registered.
-   * The default is `null` (no gate) which means every encrypted
-   * call falls through to the contract — exactly the wrong
-   * default for production, so the bootstrap must call this.
+   * Wire the Zama-support gate. Called by the application
+   * bootstrap after `ZamaSupportService` is registered. The default
+   * is `null` (no gate) which means every encrypted call falls
+   * through to the contract — exactly the wrong default for
+   * production, so the bootstrap must call this.
    */
   public setZamaSupport(support: ZamaSupportLike): void {
     this.zamaSupport = support;
   }
 
   /**
-   * Phase 4 — `onInitialize` override. Critically, this does
-   * NOT call `super.onInitialize()`. The shared `EventBus` is
-   * global, so if the parent's `onInitialize` ran twice (once
+   * `onInitialize` override. Critically, this does NOT call
+   * `super.onInitialize()`. The shared `EventBus` is global, so if
+   * the parent's `onInitialize` ran twice (once
    * via the parent's singleton `initialize()` and once via
    * the subclass's), it would register the same listeners
    * twice, causing duplicate toasts, duplicate state
@@ -160,9 +166,9 @@ export class ConfidentialTerritoryService extends TerritoryService {
   }
 
   /**
-   * Phase 4 — `claimedTerritoriesMap` override. Forwards the
-   * read to the shared parent singleton. The cast is required
-   * because the parent's accessor is `protected`, and TypeScript
+   * `claimedTerritoriesMap` override. Forwards the read to the
+   * shared parent singleton. The cast is required because the
+   * parent's accessor is `protected`, and TypeScript
    * rejects accessing a `protected` member on a `TerritoryService`
    * reference from a derived class (the access check is on the
    * property's declared modifier, not on the access syntax).
@@ -219,30 +225,39 @@ export class ConfidentialTerritoryService extends TerritoryService {
       return null;
     }
 
-    // Encrypt the amount. Under the mock this is a deterministic
-    // 32-byte hex; under the real Zama lib it is a ciphertext
-    // handle + ZK proof.
-    const cipher: ZamaCiphertext = await this.zamaRelayer.encryptFor(
-      `defense.${tokenId}.${wallet.address}`,
+    // Encrypt the amount with the Zama Relayer SDK: a bytes32
+    // external ciphertext handle + a ZK input proof bound to this
+    // contract and caller.
+    const confidentialAddress = getConfidentialNetworkConfig().contract.address;
+    const provider = this.getInjectedProvider();
+    if (!provider) {
+      this.safeEmit('ui:toast', {
+        message: '❌ No wallet provider found for encryption.',
+        type: 'error',
+      });
+      return null;
+    }
+    await this.zamaRelayer.init(provider);
+    const cipher: ZamaCiphertext = await this.zamaRelayer.encrypt32(
+      confidentialAddress,
+      wallet.address,
       amount
     );
 
-    // Call the confidential contract. The production
-    // `ContractService` would expose a `confidentialBoostEncrypted`
-    // method that wraps the ethers call; in Phase 4 scaffold the
-    // service is wired through the parent class's `getSiblingService`
-    // helper so the existing `ContractService` shape is reused
-    // (a future Phase 4 PR will add the
-    // `ContractService.confidentialBoostEncrypted` method itself).
-    const confidentialContractService = this.getSiblingService('ConfidentialContractService') as
-      | {
-          boostEncrypted: (tokenId: string, handle: string, proof: string) => Promise<{
-            transactionHash: string;
-            blockNumber: number;
-            status: number;
-          }>;
-        }
-      | null;
+    // Call the confidential contract via the sibling
+    // `ConfidentialContractService` (the ethers wrapper bound to the
+    // Sepolia FHEVM contract).
+    const confidentialContractService = this.getSiblingService('ConfidentialContractService') as {
+      boostEncrypted: (
+        tokenId: string,
+        handle: string,
+        inputProof: string
+      ) => Promise<{
+        transactionHash: string;
+        blockNumber: number;
+        status: number;
+      }>;
+    } | null;
 
     if (!confidentialContractService) {
       this.safeEmit('ui:toast', {
@@ -256,7 +271,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const receipt = await confidentialContractService.boostEncrypted(
       tokenId,
       cipher.handle,
-      cipher.proof
+      cipher.inputProof
     );
 
     // Mirror the Phase 3 boost pattern: emit a typed event so
@@ -282,7 +297,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
   ): Promise<{ transactionHash: string; blockNumber: number; status: number } | null> {
     const guard = this.preflightEncrypted(territoryId, 'contest');
     if (!guard.ok) return null;
-    const { territory } = guard;
+    const { territory, wallet } = guard;
 
     const tokenId = territory.tokenId;
     if (!tokenId) {
@@ -293,20 +308,33 @@ export class ConfidentialTerritoryService extends TerritoryService {
       return null;
     }
 
-    const cipher: ZamaCiphertext = await this.zamaRelayer.encryptFor(
-      `contest.${tokenId}`,
+    const confidentialAddress = getConfidentialNetworkConfig().contract.address;
+    const provider = this.getInjectedProvider();
+    if (!provider) {
+      this.safeEmit('ui:toast', {
+        message: '❌ No wallet provider found for encryption.',
+        type: 'error',
+      });
+      return null;
+    }
+    await this.zamaRelayer.init(provider);
+    const cipher: ZamaCiphertext = await this.zamaRelayer.encrypt32(
+      confidentialAddress,
+      wallet.address,
       amount
     );
 
-    const confidentialContractService = this.getSiblingService('ConfidentialContractService') as
-      | {
-          contestEncrypted: (tokenId: string, handle: string, proof: string) => Promise<{
-            transactionHash: string;
-            blockNumber: number;
-            status: number;
-          }>;
-        }
-      | null;
+    const confidentialContractService = this.getSiblingService('ConfidentialContractService') as {
+      contestEncrypted: (
+        tokenId: string,
+        handle: string,
+        inputProof: string
+      ) => Promise<{
+        transactionHash: string;
+        blockNumber: number;
+        status: number;
+      }>;
+    } | null;
 
     if (!confidentialContractService) {
       this.safeEmit('ui:toast', {
@@ -320,7 +348,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const receipt = await confidentialContractService.contestEncrypted(
       tokenId,
       cipher.handle,
-      cipher.proof
+      cipher.inputProof
     );
 
     this.safeEmit('territory:encryptedContestConfirmed' as any, {
@@ -339,10 +367,10 @@ export class ConfidentialTerritoryService extends TerritoryService {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * Read the encrypted defense for a territory. Returns the
-   * decrypted plaintext (the mock relayer is a hex parse; the
-   * real relayer will require the caller's wallet to be the
-   * owner of the ciphertext — only the owner can decrypt).
+   * Read + user-decrypt the caller's own encrypted defense for a
+   * territory. Only the territory owner can decrypt (the contract
+   * granted them access via `FHE.allow`); the relayer requires a
+   * signed EIP-712 permit, so this prompts the wallet to sign.
    */
   public async myDefenseCipher(territoryId: string): Promise<bigint | null> {
     const guard = this.preflightEncrypted(territoryId, 'read');
@@ -358,11 +386,9 @@ export class ConfidentialTerritoryService extends TerritoryService {
       return null;
     }
 
-    const confidentialContractService = this.getSiblingService('ConfidentialContractService') as
-      | {
-          myDefenseCipher: (tokenId: string) => Promise<string>;
-        }
-      | null;
+    const confidentialContractService = this.getSiblingService('ConfidentialContractService') as {
+      myDefenseCipher: (tokenId: string) => Promise<string>;
+    } | null;
 
     if (!confidentialContractService) {
       this.safeEmit('ui:toast', {
@@ -373,8 +399,35 @@ export class ConfidentialTerritoryService extends TerritoryService {
       return null;
     }
 
+    const provider = this.getInjectedProvider();
+    if (!provider) {
+      this.safeEmit('ui:toast', {
+        message: '❌ No wallet provider found for decryption.',
+        type: 'error',
+      });
+      return null;
+    }
+    await this.zamaRelayer.init(provider);
+    const signer = await new BrowserProvider(provider as Eip1193).getSigner();
+
+    const confidentialAddress = getConfidentialNetworkConfig().contract.address;
     const handle = await confidentialContractService.myDefenseCipher(tokenId);
-    return this.zamaRelayer.decryptCipher(handle);
+    return this.zamaRelayer.userDecrypt(handle, confidentialAddress, signer as unknown as Signer);
+  }
+
+  /*//////////////////////////////////////////////////////////////
+                          PROVIDER HELPERS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * Resolve the injected EIP-1193 provider (`window.ethereum`) used
+   * by the Zama Relayer SDK for encryption and by ethers for the
+   * decryption signer. Returns `null` outside the browser.
+   */
+  private getInjectedProvider(): Eip1193 | null {
+    if (typeof window === 'undefined') return null;
+    const eth = (window as unknown as { ethereum?: Eip1193 }).ethereum;
+    return eth ?? null;
   }
 
   /*//////////////////////////////////////////////////////////////
@@ -390,16 +443,16 @@ export class ConfidentialTerritoryService extends TerritoryService {
   private preflightEncrypted(
     territoryId: string,
     intent: 'boost' | 'contest' | 'read'
-  ): {
-    ok: true;
-    territory: Territory;
-    contractService: unknown;
-    wallet: { address: string; chainId: number };
-  } | { ok: false } {
+  ):
+    | {
+        ok: true;
+        territory: Territory;
+        contractService: unknown;
+        wallet: { address: string; chainId: number };
+      }
+    | { ok: false } {
     // Read the parent's `claimedTerritories` map via the
-    // `protected` accessor (Phase 4 review fix — the old cast
-    // hack `(this as unknown as TerritoryService & { ... })` is
-    // gone).
+    // `protected` accessor (old cast hack removed).
     const territory = this.claimedTerritoriesMap.get(territoryId);
     if (!territory) {
       this.safeEmit('ui:toast', {

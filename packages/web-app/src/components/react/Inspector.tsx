@@ -4,7 +4,7 @@
  * claim button. The map drives selection through MapService; this
  * component just renders whatever is in `selected`.
  */
-import { useCallback } from 'react';
+import { type ReactNode, useCallback } from 'react';
 
 export interface InspectorTerritory {
   id: string;
@@ -21,6 +21,7 @@ export interface InspectorProps {
   selected: InspectorTerritory | null;
   onClaim?: (territoryId: string) => void;
   onClose?: () => void;
+  children?: ReactNode;
 }
 
 const RARITY_COLORS: Record<InspectorTerritory['rarity'], string> = {
@@ -30,7 +31,12 @@ const RARITY_COLORS: Record<InspectorTerritory['rarity'], string> = {
   legendary: '#FFD700',
 };
 
-export function Inspector({ selected, onClaim, onClose }: InspectorProps): JSX.Element | null {
+export function Inspector({
+  selected,
+  onClaim,
+  onClose,
+  children,
+}: InspectorProps): JSX.Element | null {
   const handleClaim = useCallback(() => {
     if (selected && onClaim) onClaim(selected.id);
   }, [selected, onClaim]);
@@ -96,6 +102,7 @@ export function Inspector({ selected, onClaim, onClose }: InspectorProps): JSX.E
           Claim Territory
         </button>
       )}
+      {children}
     </aside>
   );
 }

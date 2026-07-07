@@ -526,8 +526,7 @@ export class RewardSystemUI extends BaseService {
       const dailyReward =
         (amount * GAME_RULES.rewards.stakingUiApyPercent) / GAME_RULES.rewards.apyDaysPerYear;
       const monthlyReward =
-        (amount * GAME_RULES.rewards.stakingUiApyPercent) /
-        GAME_RULES.rewards.apyMonthsPerYear;
+        (amount * GAME_RULES.rewards.stakingUiApyPercent) / GAME_RULES.rewards.apyMonthsPerYear;
 
       if (dailyPreview) dailyPreview.textContent = `${this.formatTokenAmount(dailyReward)} REALM`;
       if (monthlyPreview)

@@ -33,6 +33,15 @@ jest.mock(
   }),
   { virtual: true }
 );
+jest.mock(
+  '@runrealm/shared-blockchain/services/confidential-contract-service',
+  () => ({
+    ConfidentialContractService: class {
+      /* mock */
+    },
+  }),
+  { virtual: true }
+);
 
 import {
   createServices,
@@ -66,6 +75,7 @@ describe('service-composer', () => {
       'ai',
       'game',
       'contractService',
+      'confidentialContractService',
       'territory',
       'territoryToggle',
       'runProgressFeedback',

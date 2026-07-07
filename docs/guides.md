@@ -176,22 +176,22 @@ imports `RealmRules` directly.
      `ContractService` is kept for defensive backward compatibility.
   3. `chainSupportsZama(chainId)` + `encryptedShieldEnabled` toggle.
      New `packages/shared-blockchain/services/zama-support.ts` keys
-     the flag off `GAME_RULES.zama.supportedChainIds` (empty today,
-     so the flag is safe `false` for every chain). `CrossChainService`
+     the flag off `GAME_RULES.zama.supportedChainIds` (Sepolia
+     11155111, the public Zama FHEVM testnet). `CrossChainService`
      updates the flag reactively on wallet connect / network change;
      `Territory.confidentialShield` is set at claim time.
 - `boostCostRealmWei: 50n * 10n ** 18n` added to `game-rules.ts` as
   a precomputed bigint paired with the Solidity-emitted
   `boostCostRealmE18` string. The two stay in lockstep by sitting
   side-by-side in the same `game-rules.ts` object literal.
-- **Phase 2 latent sync-script bug fixed**: the previous
-  `emitConfidentialRules` had a duplicated `library ConfidentialRules { ... }`
-  block in its template literal — the generated `ConfidentialRules.sol`
-  was malformed. Both `.sol` siblings now have exactly one library
-  declaration each. The `as <type>` regex was broadened to handle
-  `as const` / `as number` / `as readonly number[]` / `as Generic<T>`
-  uniformly.
-- See [docs/roadmap.md](roadmap.md); Phase 4 (Zama scaffolding) is next.
+- **Phases 4–5 — Zama FHEVM live**. `ConfidentialTerritoryDefense.sol`
+  now uses real `euint32` ciphertexts from `@fhevm/solidity`; 18
+  Hardhat tests run against the `@fhevm/hardhat-plugin` mock coprocessor;
+  `zama-relayer.ts` wraps the live `@zama-fhe/relayer-sdk`; the React
+  shell adds `EncryptedShield`, `ConfidentialDefensePanel`,
+  `FogOfWarMap`, `ContestModal`, and `useConfidentialShield`. The old
+  plaintext `Mocks.sol` shim is deleted.
+- See [docs/roadmap.md](roadmap.md); Phase 6 (cross-chain anchor) is next.
 
 ### Project Status (June 2026)
 - **Phase 1 — Consolidation audit** complete. `BaseService.getSiblingService` /

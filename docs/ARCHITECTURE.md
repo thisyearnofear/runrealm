@@ -187,13 +187,14 @@ side-by-side in the same `game-rules.ts` object literal.
 
 ### Phase 3 — EncryptedShield Toggle (`chainSupportsZama`)
 
-The Zama fhEVM confidential layer (phase 4+) needs a runtime gate so
+The Zama fhEVM confidential layer (phases 4–5) needs a runtime gate so
 the UI and the cross-chain service can branch on whether the
-connected wallet is on a Zama-supported chain. Phase 3 adds:
+connected wallet is on a Zama-supported chain. Phase 3 adds the gate;
+Phase 4 populated it with Sepolia (11155111):
 
-- `game-rules.ts` gets a `zama: { supportedChainIds: [] as readonly number[] }`
-  block — empty today (Zama fhEVM mainnet / testnet are pre-publication),
-  so the EncryptedShield flag defaults to safe `false` for every chain.
+- `game-rules.ts` has a `zama: { supportedChainIds: [11155111] as readonly number[] }`
+  block — Ethereum Sepolia, the public Zama Protocol FHEVM testnet.
+  `npm run sync:rules` regenerates `ConfidentialRules.sol` from this list.
 - New `packages/shared-blockchain/services/zama-support.ts` exposes
   `chainSupportsZama(chainId)`, `getEncryptedShieldState(chainId)`
   (`'enabled' | 'disabled' | 'unavailable'`), and emits
@@ -202,10 +203,9 @@ connected wallet is on a Zama-supported chain. Phase 3 adds:
   `web3:walletConnected` and `web3:networkChanged`. Exposed via
   `isEncryptedShieldEnabled()` / `getEncryptedShieldState()`.
 - `Territory.confidentialShield` is set at claim time to reflect the
-  current wallet's chain. When Zama publishes its mainnet/testnet
-  chain IDs, add them to `game-rules.ts` and re-run `npm run sync:rules`
-  — the flag flips to `enabled` for those chains automatically. No
-  further code changes are required.
+  current wallet's chain. When Zama adds more host chains, add their
+  chain IDs to `game-rules.ts` and re-run `npm run sync:rules`
+  — the flag flips automatically. No further code changes are required.
 
 ### Phase 3 — Receipt-Gated `claimTerritory`
 
@@ -316,28 +316,41 @@ Mobile Territory Claim → Shared TerritoryService → Blockchain → Web Portfo
 Web Territory Management → Shared TerritoryService → Mobile Notifications
 ```
 
-### Planned: Zama fhEVM Confidential Layer
+### Zama fhEVM Confidential Layer
 
-RunRealm's public, on-chain state currently exposes every player's
-`activityPoints` (0–1000) on every territory they own. That visibility is
-the reason rivals can snipe a territory the moment its defense drops below
-100 points. The 9-phase [roadmap](roadmap.md) adds a parallel Zama fhEVM
-layer (Sepolia testnet for development, Ethereum mainnet for production)
-that holds the *defense score* in ciphertext:
+RunRealm's public ZetaChain state exposes territory ownership and REALM
+accounting, but the *defense score* (`activityPoints`, 0–1000) is now
+held in ciphertext on the Zama Protocol FHEVM host chain (Ethereum
+Sepolia testnet). Phases 4 and 5 built this layer; Phase 6 will add the
+cross-chain anchor that seeds Zama state from ZetaChain `TerritoryCreated`
+events automatically.
 
 - **ZetaChain** keeps the public GameFi surface: territory NFT ownership,
   REALM token accounting, cross-chain messaging, public leaderboards,
   marketplace, and the territory metadata that everyone can see.
 - **Zama fhEVM** keeps the private surface: the `euint32` activity-point
   value, the encrypted-bounty a defender places, the ciphertext
-  challenger-versus-defender score, the encrypted pace on a leaderboard
-  race. Each user holds the ACL key to decrypt their own values; rivals
-  see only a glowing silhouette on the map until they win a contest.
+  challenger-versus-defender score, and the encrypted contest outcome.
+  Each user holds the ACL key to decrypt their own values; rivals see
+  only a dimmed silhouette on the map until they win a contest.
 
-A new `CrossChainAnchor` contract (phase 6) reads ZetaChain
-`TerritoryCreated` events and calls
+`ConfidentialTerritoryDefense` uses `@fhevm/solidity` (`FHE.min`,
+`FHE.select`, `FHE.allow`, `FHE.allowThis`, `FHE.makePubliclyDecryptable`)
+for homomorphic clamp, floor, ACL grants, and publicly-decryptable
+contest results. The off-chain `@zama-fhe/relayer-sdk` encrypts inputs
+and decrypts authorized outputs.
+
+The contract is deployed on Ethereum Sepolia at
+`0x243D95fE43777533aC3E81b5fB8251A282b17E3A`. Set
+`RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS` to this address (or the new
+address after a redeploy) so `ConfidentialContractService` binds to the
+live contract.
+
+A new `CrossChainAnchor` contract (phase 6) will read ZetaChain
+`TerritoryCreated` events and call
 `ConfidentialTerritoryDefense.anchorFromZeta(tokenId, owner)` to seed
-the encrypted state. From there, defense and contest operations live
+the encrypted state. Until then, territories can be anchored manually or
+via a future script. From there, defense and contest operations live
 entirely on Zama; the public ZetaChain state only knows that the
 territory is owned by `X`, not what `X`'s defense score is.
 

@@ -4,30 +4,22 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 
 /**
- * Phase 4 (Zama scaffolding) — Sepolia deploy script for
- * `ConfidentialTerritoryDefense`. Mirrors the structure of
- * `scripts/deployment/deploy-universal.js` but is simpler:
+ * Phase 5 — Sepolia deploy script for `ConfidentialTerritoryDefense`.
  *
- *  - No `GameLogic` library to deploy (this contract doesn't
- *    depend on it).
- *  - No `RealmToken` to deploy (it lives on ZetaChain Athens
- *    from the original Phase 0 deploy; the encrypted contract
- *    does not pull REALM, it just needs the address for future
- *    Phase 6 cross-chain anchoring).
- *  - Constructor is parameterless in the current Phase 4 build.
- *    When Phase 6 wires `CrossChainAnchor` and the encrypted
- *    contract needs the ZetaChain universal address, this
- *    script will pass it as a constructor arg.
+ * The contract is a real Zama Protocol FHEVM deployment on Ethereum
+ * Sepolia (chainId 11155111). It uses native `euint32` / `ebool`
+ * ciphertexts, ACL grants (`FHE.allow`), and publicly-decryptable
+ * outputs (`FHE.makePubliclyDecryptable`).
  *
  * Usage:
- *   REALM_TOKEN_ADDRESS=0x... npx hardhat run \
+ *   npx hardhat run \
  *     scripts/deployment/deploy-confidential-territory-defense.js \
  *     --network sepolia
  *
- * The script writes the deployed address to
- * `deployments/sepolia/ConfidentialTerritoryDefense.json` so
- * downstream services (Phase 6 `CrossChainAnchor` deploy, the
- * `ConfidentialContractService` TS service) can read it.
+ * The deployer's private key is read from `PRIVATE_KEY` via Hardhat's
+ * `sepolia` network config in `hardhat.config.js`. The deployed address
+ * is written to `deployments/sepolia/ConfidentialTerritoryDefense.json`
+ * and should be exported as `RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS`.
  */
 
 const DEPLOYMENT_CONFIG = {
@@ -73,14 +65,8 @@ class ConfidentialTerritoryDefenseDeployer {
     console.log(`❌ ${message}`);
   }
 
-  /**
-   * Phase 4: constructor is parameterless. The contract is fully
-   * self-contained (no external dependencies beyond the
-   * `ConfidentialRules` library which is inlined via import).
-   * Phase 6 will add a `_zetaChainUniversal` constructor arg.
-   */
   async deployConfidentialTerritoryDefense() {
-    this.log('Deploying ConfidentialTerritoryDefense...');
+    this.log('Deploying ConfidentialTerritoryDefense (real FHEVM)...');
 
     const ConfidentialTerritoryDefense = await hre.ethers.getContractFactory(
       'ConfidentialTerritoryDefense'
@@ -92,7 +78,7 @@ class ConfidentialTerritoryDefenseDeployer {
 
     this.deploymentRecord.contracts.ConfidentialTerritoryDefense = {
       address,
-      type: 'Confidential Territory Defense (mock mode)',
+      type: 'Confidential Territory Defense (Zama FHEVM)',
       constructorArgs: [],
     };
 
@@ -100,36 +86,23 @@ class ConfidentialTerritoryDefenseDeployer {
     return defense;
   }
 
-  /**
-   * Phase 4: no constructor args, so no further wiring is needed.
-   * Phase 6 will add: authorize `CrossChainAnchor` as the anchor
-   * caller (the only address allowed to call `anchorFromZeta`).
-   * For now, anyone can anchor — this is by design for the
-   * devnet scaffold.
-   */
   async configureContracts() {
-    this.log('No additional configuration for Phase 4 (mock mode).');
+    this.log('No additional configuration required (parameterless deploy).');
   }
 
   async verifyDeployment(defense) {
     this.log('Verifying deployment...');
 
-    // 1) The `isAnchored(0)` view should be false (uninitialized).
+    // Read-only sanity check: a fresh deployment must report unanchored
+    // for token 0. Encrypted writes are exercised by the Hardhat test
+    // suite (`test/contracts/ConfidentialTerritoryDefense.test.js`) using
+    // the FHEVM mock coprocessor; the deploy script stays read-only so
+    // it also works against Sepolia before any relayer calls.
     assert.equal(
       await defense.isAnchored(0),
       false,
       'isAnchored(0) must be false on a fresh deployment'
     );
-
-    // 2) An anchor + boost + decay smoke test (skip on production
-    // networks — just the read-only check).
-    if (Number(this.network.chainId) === 31337) {
-      const [testOwner] = await hre.ethers.getSigners();
-      await defense.anchorFromZeta(999, testOwner.address);
-      const meta = await defense.getDefenseMetadata(999);
-      assert.equal(meta.points, 500, 'Initial defense points must be 500');
-      this.success(`Anchor smoke test: tokenId=999 owner=${meta.owner} points=${meta.points}`);
-    }
 
     this.success('Verification complete.');
   }
@@ -166,7 +139,7 @@ class ConfidentialTerritoryDefenseDeployer {
 }
 
 async function main() {
-  console.log('🔐 RunRealm Confidential Territory Defense (Phase 4) Deployment');
+  console.log('🔐 RunRealm Confidential Territory Defense (Phase 5) Deployment');
   console.log('========================================================');
 
   const [deployer] = await hre.ethers.getSigners();
@@ -195,22 +168,21 @@ async function main() {
     await deployerInstance.saveDeployment();
     await deployerInstance.verifyOnEtherscan(defense);
 
+    const deployedAddress =
+      deployerInstance.deploymentRecord.contracts.ConfidentialTerritoryDefense.address;
+
     console.log('\n🎉 DEPLOYMENT COMPLETE!');
     console.log('========================');
-    console.log(
-      `🔐 Confidential Territory Defense: ${deployerInstance.deploymentRecord.contracts.ConfidentialTerritoryDefense.address}`
-    );
+    console.log(`🔐 Confidential Territory Defense: ${deployedAddress}`);
     if (deployerInstance.config.explorerUrl) {
-      console.log(
-        `🔍 Explorer: ${deployerInstance.config.explorerUrl}/address/${deployerInstance.deploymentRecord.contracts.ConfidentialTerritoryDefense.address}`
-      );
+      console.log(`🔍 Explorer: ${deployerInstance.config.explorerUrl}/address/${deployedAddress}`);
     }
     console.log('\n🎯 Next Steps:');
-    console.log('1. Wire ConfidentialContractService in the app bootstrap');
-    console.log(
-      '2. Call ConfidentialTerritoryService.setZamaSupport() to register the gate'
-    );
-    console.log('3. Phase 6: deploy CrossChainAnchor and authorize it as the anchor caller');
+    console.log(`1. Export the address in your environment:`);
+    console.log(`   export RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=${deployedAddress}`);
+    console.log(`2. Rebuild shared-core so contracts.ts picks up the new address`);
+    console.log(`3. Wire ConfidentialContractService in the app bootstrap`);
+    console.log(`4. Call ConfidentialTerritoryService.setZamaSupport() to register the gate`);
 
     return deployerInstance.deploymentRecord;
   } catch (error) {

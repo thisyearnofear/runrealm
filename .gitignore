@@ -34,6 +34,7 @@ access_token*
 /public/*.js.LICENSE.txt
 /public/*.css
 /public/*.css.map
+/public/*.wasm
 /public/index.html
 /dist/
 /build/
@@ -197,3 +198,7 @@ logs/
 
 # Generated files and directories
 packages/*/types/
+
+# Zama FHEVM plugin temp artifacts
+fhevmTemp/
+.deployer-address.txt

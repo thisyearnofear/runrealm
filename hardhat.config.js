@@ -1,5 +1,8 @@
 require('@nomicfoundation/hardhat-toolbox');
 require('@nomicfoundation/hardhat-verify');
+// Zama FHEVM plugin — injects the `fhevm` mock coprocessor into the HRE
+// for local Hardhat tests and provides the Sepolia FHEVM toolchain.
+require('@fhevm/hardhat-plugin');
 require('dotenv').config();
 
 // Helper to get accounts array - returns empty array if no private key
@@ -21,11 +24,26 @@ module.exports = {
         runs: 200,
       },
       viaIR: true,
+      // FHEVM requires the Cancun EVM (the default for solc >=0.8.25,
+      // set explicitly so the Zama coprocessor precompiles resolve).
+      evmVersion: 'cancun',
     },
   },
   networks: {
     hardhat: {
-      chainId: 1337,
+      // 31337 is required by the Zama FHEVM mock plugin (and is the
+      // Hardhat default). The local RealmToken/Universal tests pass
+      // their own chainId as constructor args, independent of this.
+      chainId: 31337,
+    },
+    // Ethereum Sepolia — the Zama Protocol FHEVM host chain used for the
+    // confidential ConfidentialTerritoryDefense deploy. A public RPC is the
+    // default so no Infura/Alchemy key is required; override with
+    // SEPOLIA_RPC_URL for a private endpoint.
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
+      chainId: 11155111,
+      accounts: getAccounts(),
     },
     zetachain_testnet: {
       url: 'https://zetachain-athens-evm.blockpi.network/v1/rpc/public',
@@ -55,14 +73,14 @@ module.exports = {
       accounts: getAccounts(),
     },
   },
+  sourcify: {
+    enabled: true,
+  },
   etherscan: {
-    apiKey: {
-      mainnet: process.env.ETHERSCAN_API_KEY || '',
-      polygon: process.env.POLYGONSCAN_API_KEY || '',
-      bsc: process.env.BSCSCAN_API_KEY || '',
-      zetachain_testnet: 'abc123abc123', // ZetaChain doesn't require API key
-      zetachain_mainnet: 'abc123abc123', // ZetaChain doesn't require API key
-    },
+    // Etherscan API v2 — single key for all Etherscan-family explorers
+    // (Ethereum mainnet, Sepolia, etc.). For other explorers, add them
+    // as customChains below.
+    apiKey: process.env.ETHERSCAN_API_KEY || '',
     customChains: [
       {
         network: 'zetachain_testnet',

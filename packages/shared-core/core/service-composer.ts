@@ -17,9 +17,10 @@
  * Token-dependent services (geocoding, route info) get a separate
  * call so the mapbox access token can be loaded from runtime first.
  */
+
+import { ConfidentialContractService } from '@runrealm/shared-blockchain/services/confidential-contract-service';
 import { ContractService } from '@runrealm/shared-blockchain/services/contract-service';
 import { CrossChainService } from '@runrealm/shared-blockchain/services/cross-chain-service';
-import { ConfidentialContractService } from '@runrealm/shared-blockchain/services/confidential-contract-service';
 import { CrossChainDemoComponent } from '../components/cross-chain-demo';
 import { EnhancedRunControls } from '../components/enhanced-run-controls';
 import { GameFiUI } from '../components/gamefi-ui';
@@ -203,8 +204,8 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     progression: services.progression,
     game: services.game,
     contractService: services.contractService,
-    // Phase 4 (Zama scaffolding) — registered with PascalCase to
-    // match `ConfidentialTerritoryService.getSiblingService(
+    // Phase 5 — registered with PascalCase to match
+    // `ConfidentialTerritoryService.getSiblingService(
     // 'ConfidentialContractService')`. The other services in this
     // registry use camelCase keys; the PascalCase here is
     // intentional and matches the consumer's lookup convention.

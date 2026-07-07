@@ -39,4 +39,7 @@ library RealmRules {
   uint256 public constant MIN_TERRITORY_DISTANCE_METERS    = 100;
   uint256 public constant MAX_TERRITORY_DISTANCE_METERS    = 50000;
   uint256 public constant LEVEL_DISTANCE_THRESHOLD_METERS  = 10000;
+
+  // Zama fhEVM supported chain IDs (mirrors GAME_RULES.zama.supportedChainIds).
+  uint256 public constant ZAMA_CHAIN_ID_0 = 11155111;
 }

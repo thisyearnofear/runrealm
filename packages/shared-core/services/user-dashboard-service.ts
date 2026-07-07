@@ -3,8 +3,8 @@
  * Aggregates data from various services into a unified interface
  */
 
-import { WidgetStateService } from '../internal/_legacy-widget/widget-state-service';
 import { BaseService } from '../core/base-service';
+import { WidgetStateService } from '../internal/_legacy-widget/widget-state-service';
 import { AIService } from './ai-service';
 import { GhostRunnerNFT, GhostRunnerService } from './ghost-runner-service';
 import { PlayerStats, ProgressionService } from './progression-service';

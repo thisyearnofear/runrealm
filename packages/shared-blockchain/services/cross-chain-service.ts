@@ -2,7 +2,7 @@ import { BaseService } from '@runrealm/shared-core/core/base-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
 import { attachMockOrFail } from '../__stubs__/zeta-mock';
 import { ContractService } from './contract-service';
-import { ZamaSupportService, type EncryptedShieldState } from './zama-support';
+import { type EncryptedShieldState, ZamaSupportService } from './zama-support';
 
 // Type declaration for ZetaChainClient (external library)
 declare class ZetaChainClient {
@@ -47,9 +47,8 @@ export class CrossChainService extends BaseService {
    * Phase 3 EncryptedShield flag. True only when the connected wallet
    * is on a chainId listed in `GAME_RULES.zama.supportedChainIds`.
    * Updated reactively on `web3:walletConnected` and
-   * `web3:networkChanged`. Empty `supportedChainIds` list means the
-   * flag stays false for every chain (the safe default while Zama
-   * fhEVM mainnet / testnet are pre-publication).
+   * `web3:networkChanged`. Sepolia (11155111) is the public Zama FHEVM
+   * testnet, so a wallet on Sepolia flips this flag to true.
    */
   private encryptedShieldEnabled: boolean = false;
 
@@ -136,7 +135,7 @@ export class CrossChainService extends BaseService {
    * the wallet is not connected or the chain is not in
    * `GAME_RULES.zama.supportedChainIds`. Off-chain claim paths use
    * this to branch on whether to dispatch a `ConfidentialTerritoryDefense`
-   * message (Phase 4) or the standard cross-chain claim.
+   * message or the standard cross-chain claim.
    */
   public isEncryptedShieldEnabled(): boolean {
     return this.encryptedShieldEnabled;

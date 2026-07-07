@@ -5,7 +5,7 @@ module.exports = {
     '^.+\\.m?js$': ['ts-jest', { isolatedModules: true }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(h3-js|@turf|rbush|quickselect|concaveman|tinyqueue)/)',
+    'node_modules/(?!(h3-js|@turf|rbush|quickselect|concaveman|tinyqueue|robust-predicates)/)',
   ],
   moduleNameMapper: {
     '^@runrealm/shared-blockchain/(.*)$':

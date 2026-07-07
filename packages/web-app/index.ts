@@ -175,10 +175,10 @@ async function initializeApp(): Promise<void> {
 
     await app.initialize();
 
-    // Phase 4 (Zama scaffolding) — wire the
-    // `ConfidentialContractService` so the encrypted-side
-    // methods in `ConfidentialTerritoryService` (boost / contest
-    // / read) find it via `getSiblingService('ConfidentialContractService')`.
+    // Phase 5 — wire the `ConfidentialContractService` so the
+    // encrypted-side methods in `ConfidentialTerritoryService`
+    // (boost / contest / read) find it via
+    // `getSiblingService('ConfidentialContractService')`.
     // The service's own `onInitialize` defers if the wallet
     // isn't connected yet; re-initialization is triggered by the
     // `web3:walletConnected` event listener the service
@@ -186,21 +186,22 @@ async function initializeApp(): Promise<void> {
     // (BaseService guards against double-init) so it's safe to
     // call before or after the wallet connects.
     const confidentialContractService = (
-      window as { RunRealm?: { services?: { ConfidentialContractService?: ConfidentialContractService } } }
+      window as {
+        RunRealm?: { services?: { ConfidentialContractService?: ConfidentialContractService } };
+      }
     ).RunRealm?.services?.ConfidentialContractService;
     if (confidentialContractService) {
       await confidentialContractService.initialize();
     }
 
-    // Phase 4 (Zama scaffolding) — wire `ZamaSupportService` into
-    // the `ConfidentialTerritoryService` so the chainId gate
-    // fires the preflight check (`chainSupportsZama(chainId)`)
-    // rather than the "Zama support not wired" toast. The gate
-    // is a no-op while `GAME_RULES.zama.supportedChainIds` is
-    // empty (Zama fhEVM mainnet/testnet pre-publication) but
-    // the wiring is still required so the methods proceed past
-    // the "Zama support not wired" check to the real chainId
-    // gate.
+    // Phase 5 — wire `ZamaSupportService` into the
+    // `ConfidentialTerritoryService` so the chainId gate fires
+    // the preflight check (`chainSupportsZama(chainId)`) rather
+    // than the "Zama support not wired" toast. Sepolia (11155111)
+    // is the public Zama FHEVM testnet and is listed in
+    // `GAME_RULES.zama.supportedChainIds`; the wiring is required
+    // so the methods proceed past the "Zama support not wired"
+    // check to the real chainId gate.
     //
     // `ConfidentialTerritoryService.getInstance()` resolves the
     // parent `TerritoryService` from the registry populated by

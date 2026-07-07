@@ -63,6 +63,15 @@ Now edit `.env` with your own API keys:
      STRAVA_REDIRECT_URI=http://localhost:3000/auth/strava/callback
      ```
 
+#### Zama FHEVM / Confidential Defense:
+
+The confidential territory-defense layer lives on **Ethereum Sepolia** (the Zama Protocol FHEVM host chain). The deployed `ConfidentialTerritoryDefense` address is already set in the example env; if you redeploy, update `.env`:
+
+```env
+RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=0x243D95fE43777533aC3E81b5fB8251A282b17E3A
+SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+```
+
 #### Minimal `.env` file (to get started):
 
 ```env
@@ -147,6 +156,7 @@ runrealm/
 - Connect a wallet (MetaMask)
 - Switch to ZetaChain Athens Testnet (Chain ID: 7001)
 - Claim territories as NFTs when you run
+- Switch to Ethereum Sepolia (Chain ID: 11155111) to enable the confidential defense shield (Zama FHEVM)
 
 ### 4. Strava Integration
 - Connect your Strava account

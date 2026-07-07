@@ -131,7 +131,7 @@ export class TerritoryService extends BaseService {
   }
 
   /**
-   * Phase 4 — read-only accessor for subclasses. `ConfidentialTerritoryService`
+   * Read-only accessor for subclasses. `ConfidentialTerritoryService`
    * needs to resolve `territoryId` (synthetic `territory_<id>`) to a
    * `Territory` to look up the on-chain `tokenId` before calling
    * the encrypted side. The map is a `private` field for the
@@ -1189,7 +1189,8 @@ export class TerritoryService extends BaseService {
 
     if (!contractService.isBoostReady()) {
       this.safeEmit('ui:toast', {
-        message: '❌ Boost contract not deployed. Set RUNREALM_BOOST_ADDRESS in env and reconnect wallet.',
+        message:
+          '❌ Boost contract not deployed. Set RUNREALM_BOOST_ADDRESS in env and reconnect wallet.',
         type: 'error',
       });
       return;

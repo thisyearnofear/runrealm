@@ -104,17 +104,19 @@ export const GAME_RULES = {
   },
 
   // ---------------------------------------------------------------------
-  // Zama fhEVM confidential shield support.
-  //   `supportedChainIds` is empty today because Zama fhEVM mainnet /
-  //   testnet are not yet public. The `zama-support.ts` service keys
-  //   the EncryptedShield flag off this list, and the sync script
-  //   emits `ZAMA_CHAIN_ID_<i>` Solidity constants for every entry
-  //   (omits the block when the list is empty so `--check` stays
-  //   idempotent). When Zama publishes its mainnet/testnet chain IDs,
-  //   add them here and re-run `npm run sync:rules`.
+  // Zama Protocol FHEVM confidential shield support.
+  //   `supportedChainIds` lists the chains where the confidential
+  //   `ConfidentialTerritoryDefense` contract is deployed and the Zama
+  //   coprocessor / relayer are available. Ethereum Sepolia (11155111)
+  //   is the live Zama Protocol host chain used by the Builder-Track
+  //   integration. The `zama-support.ts` service keys the
+  //   EncryptedShield flag off this list, and the sync script emits
+  //   `ZAMA_CHAIN_ID_<i>` Solidity constants for every entry. To add
+  //   Ethereum mainnet (1) later, append it here and re-run
+  //   `npm run sync:rules`.
   // ---------------------------------------------------------------------
   zama: {
-    supportedChainIds: [] as readonly number[],
+    supportedChainIds: [11155111] as readonly number[],
   },
 } as const;
 

@@ -35,4 +35,7 @@ library ConfidentialRules {
   uint64 public constant LEVEL_DISTANCE_THRESHOLD_METERS  = uint64(10000);
 
   uint64 public constant H3_RESOLUTION                    = uint64(9);
+
+  // Zama fhEVM supported chain IDs (mirrors GAME_RULES.zama.supportedChainIds).
+  uint256 public constant ZAMA_CHAIN_ID_0 = 11155111;
 }
