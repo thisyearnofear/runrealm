@@ -23,6 +23,7 @@ export interface ConfidentialDefensePanelProps {
   error?: string;
   onRefresh: () => Promise<void>;
   onBoost: (amount: number) => Promise<void>;
+  onSwitchNetwork?: () => Promise<void>;
 }
 
 const BOOST_PRESETS = [50, 100, 200];
@@ -35,6 +36,7 @@ export function ConfidentialDefensePanel({
   error,
   onRefresh,
   onBoost,
+  onSwitchNetwork,
 }: ConfidentialDefensePanelProps): ReactElement | null {
   const [customAmount, setCustomAmount] = useState<string>('100');
 
@@ -46,6 +48,16 @@ export function ConfidentialDefensePanel({
           Confidential shield is only available on Ethereum Sepolia. Switch networks to boost or
           contest this territory privately.
         </p>
+        {onSwitchNetwork && (
+          <button
+            type="button"
+            className="rr-confidential-panel__switch"
+            onClick={() => void onSwitchNetwork()}
+            disabled={busy}
+          >
+            {busy ? 'Switching…' : 'Switch to Sepolia'}
+          </button>
+        )}
       </div>
     );
   }

@@ -17,31 +17,41 @@ export interface EncryptedShieldProps {
   status: ConfidentialShieldStatus;
   busy?: boolean;
   onClick?: () => void;
+  onSwitchNetwork?: () => Promise<void>;
 }
 
 export function EncryptedShield({
   status,
   busy,
   onClick,
+  onSwitchNetwork,
 }: EncryptedShieldProps): ReactElement | null {
   if (status === 'uninitialized') return null;
 
   const title =
     status === 'unsupported'
-      ? 'Confidential shield requires Sepolia'
+      ? 'Click to switch to Sepolia'
       : status === 'error'
         ? 'Shield error — tap to retry'
         : busy
           ? 'Shield transaction in progress…'
           : 'Confidential shield active';
 
+  const handleClick = () => {
+    if (status === 'unsupported' && onSwitchNetwork) {
+      void onSwitchNetwork();
+      return;
+    }
+    onClick?.();
+  };
+
   return (
     <button
       type="button"
       className={`rr-encrypted-shield rr-encrypted-shield--${status}`}
       title={title}
-      onClick={onClick}
-      disabled={busy || !onClick}
+      onClick={handleClick}
+      disabled={busy}
       aria-busy={busy}
     >
       <span className="rr-encrypted-shield__icon" aria-hidden>
@@ -64,7 +74,11 @@ export function EncryptedShield({
         )}
       </span>
       <span className="rr-encrypted-shield__label">
-        {status === 'unsupported' ? 'Sepolia only' : status === 'error' ? 'Shield error' : 'Shield'}
+        {status === 'unsupported'
+          ? 'Switch to Sepolia'
+          : status === 'error'
+            ? 'Shield error'
+            : 'Shield'}
       </span>
     </button>
   );

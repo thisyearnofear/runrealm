@@ -57,6 +57,9 @@ export function AppShell({
         off: () => {},
       } as unknown as UseConfidentialShieldOptions['eventBus'],
       isSupportedChain: () => false,
+      switchNetwork: async () => {
+        throw new Error('Switch network not configured');
+      },
       getDefenseMetadata: async () => null,
       myDefenseCipher: async () => null,
       publicDecryptOutcome: async () => null,
@@ -109,6 +112,7 @@ export function AppShell({
             status={confidential.status}
             busy={confidential.busy}
             onClick={() => selectedTerritoryId && void confidential.refresh(selectedTerritoryId)}
+            onSwitchNetwork={confidential.switchToSepolia}
           />
         }
       />
@@ -131,6 +135,7 @@ export function AppShell({
             error={confidential.error}
             onRefresh={() => void confidential.refresh(selectedTerritoryId)}
             onBoost={(amount) => void confidential.boost(selectedTerritoryId, amount)}
+            onSwitchNetwork={confidential.switchToSepolia}
           />
         )}
         {selected?.owner && selectedTerritoryId && confidential.defense?.anchored && (

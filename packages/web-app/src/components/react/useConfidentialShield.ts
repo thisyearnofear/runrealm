@@ -29,6 +29,8 @@ export interface UseConfidentialShieldOptions {
   eventBus: EventBus;
   /** True when the wallet is on the Sepolia FHEVM chain. */
   isSupportedChain: () => boolean;
+  /** Switch the wallet to the Sepolia FHEVM chain. */
+  switchNetwork: (chainId: number) => Promise<void>;
   /** Read the on-chain encrypted defense metadata. */
   getDefenseMetadata: (territoryId: string) => Promise<{
     owner: string;
@@ -71,6 +73,8 @@ export interface UseConfidentialShieldResult {
   boost: (territoryId: string, amount: number) => Promise<void>;
   /** Contest the territory by an encrypted amount. */
   contest: (territoryId: string, amount: number) => Promise<void>;
+  /** Switch the wallet to Sepolia so confidential features work. */
+  switchToSepolia: () => Promise<void>;
   /** True while an async shield action is in flight. */
   busy: boolean;
 }
@@ -194,6 +198,20 @@ export function useConfidentialShield(
     [options, refresh]
   );
 
+  const switchToSepolia = useCallback(async () => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      await options.switchNetwork(11155111);
+      setStatus('ready');
+    } catch (err) {
+      setStatus('error');
+      setError(err instanceof Error ? err.message : 'Failed to switch to Sepolia');
+    } finally {
+      setBusy(false);
+    }
+  }, [options]);
+
   return {
     status,
     defense,
@@ -201,6 +219,7 @@ export function useConfidentialShield(
     refresh,
     boost,
     contest,
+    switchToSepolia,
     busy,
   };
 }
