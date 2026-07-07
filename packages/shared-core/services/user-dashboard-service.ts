@@ -8,7 +8,7 @@ import { WidgetStateService } from '../internal/_legacy-widget/widget-state-serv
 import { AIService } from './ai-service';
 import { GhostRunnerNFT, GhostRunnerService } from './ghost-runner-service';
 import { PlayerStats, ProgressionService } from './progression-service';
-import { RunSession, RunTrackingService } from './run-tracking-service';
+import { RunPoint, RunSession, RunTrackingService } from './run-tracking-service';
 import { Territory, TerritoryService } from './territory-service';
 import { WalletInfo, Web3Service } from './web3-service';
 
@@ -29,7 +29,12 @@ export interface DashboardData {
   ghosts: GhostRunnerNFT[];
   walletInfo: WalletInfo | null;
   aiInsights: {
-    suggestedRoute?: object;
+    suggestedRoute?: {
+      route: { coordinates: number[][] | RunPoint[]; distance: number; difficulty?: number };
+      distance: number;
+      duration?: number;
+      waypoints?: RunPoint[];
+    };
     territoryAnalysis?: object;
     personalizedTips: string[];
   };
@@ -327,7 +332,12 @@ export class UserDashboardService extends BaseService {
 
     // Listen for AI events
     this.subscribe('ai:routeReady', (data: any) => {
-      this.dashboardData.aiInsights.suggestedRoute = data as object;
+      this.dashboardData.aiInsights.suggestedRoute = data as {
+        route: { coordinates: number[][] | RunPoint[]; distance: number; difficulty?: number };
+        distance: number;
+        duration?: number;
+        waypoints?: RunPoint[];
+      };
       this.debouncedUpdate?.();
     });
 

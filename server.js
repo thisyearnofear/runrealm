@@ -231,21 +231,89 @@ app.get('/index.html', (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// /api/runs — STUB endpoint for mobile RunSyncService.
+// /api/runs — Mobile run sync endpoint.
 // The mobile app uploads completed RunSession objects here for off-chain
-// validation and (eventually) territory-cell minting. Right now this only
-// acknowledges receipt; persistence + chain submission is the next milestone.
+// validation. Valid runs are held in an in-memory queue and exposed via
+// GET /api/runs/pending so the web app can claim them on-chain. Actual
+// minting still happens from the wallet client; this endpoint does not
+// hold a private key or submit transactions.
 // See packages/mobile-app/src/services/RunSyncService.ts for the client.
 // ---------------------------------------------------------------------------
+const pendingRuns = new Map();
+
+function validateRun(run) {
+  const errors = [];
+  if (!run.id || typeof run.id !== 'string') errors.push('run.id is required');
+  if (!Array.isArray(run.points) || run.points.length < 2) {
+    errors.push('run.points must contain at least two points');
+  }
+  if (typeof run.totalDistance !== 'number' || run.totalDistance <= 0) {
+    errors.push('run.totalDistance must be a positive number');
+  }
+  if (typeof run.totalDuration !== 'number' || run.totalDuration <= 0) {
+    errors.push('run.totalDuration must be a positive number');
+  }
+  if (errors.length > 0) return { valid: false, errors };
+
+  // Basic territory eligibility: 500m+ and a closed-ish loop (start/end within 100m)
+  const minClaimDistance = 500;
+  const loopThreshold = 100;
+  const eligible =
+    run.totalDistance >= minClaimDistance &&
+    (() => {
+      const first = run.points[0];
+      const last = run.points[run.points.length - 1];
+      if (!first || !last) return false;
+      const dx = first.lat - last.lat;
+      const dy = first.lng - last.lng;
+      // rough degrees-to-meters conversion at mid-latitudes
+      const meters = Math.sqrt(dx * dx + dy * dy) * 111_000;
+      return meters <= loopThreshold;
+    })();
+
+  return { valid: true, eligible };
+}
+
 app.post('/api/runs', express.json({ limit: '5mb' }), (req, res) => {
   const run = req.body?.run;
-  if (!run || typeof run !== 'object' || typeof run.id !== 'string') {
+  if (!run || typeof run !== 'object') {
     return res.status(400).json({ error: 'invalid run payload' });
   }
+
+  const validation = validateRun(run);
+  if (!validation.valid) {
+    return res.status(400).json({ error: 'validation failed', details: validation.errors });
+  }
+
   const pointCount = Array.isArray(run.points) ? run.points.length : 0;
-  console.log(`[runs] received run ${run.id} (${pointCount} points, ${run.totalDistance ?? '?'}m)`);
-  // TODO(step-3): validate route, compute H3 cells, persist, queue chain submission.
-  res.status(202).json({ status: 'accepted', runId: run.id });
+  const summary = {
+    runId: run.id,
+    distance: run.totalDistance,
+    duration: run.totalDuration,
+    pointCount,
+    eligible: validation.eligible,
+    receivedAt: new Date().toISOString(),
+  };
+
+  pendingRuns.set(run.id, { ...summary, run });
+  console.log(
+    `[runs] accepted ${run.id} (${pointCount} points, ${run.totalDistance}m, eligible=${validation.eligible})`
+  );
+  res.status(202).json({ status: 'accepted', ...summary });
+});
+
+app.get('/api/runs/pending', (req, res) => {
+  const runs = Array.from(pendingRuns.values()).map((entry) => entry.summary || entry);
+  res.json({ pending: runs, count: runs.length });
+});
+
+app.delete('/api/runs/:runId', (req, res) => {
+  const { runId } = req.params;
+  if (!pendingRuns.has(runId)) {
+    return res.status(404).json({ error: 'run not found' });
+  }
+  pendingRuns.delete(runId);
+  res.json({ status: 'deleted', runId });
 });
 
 const server = app.listen(port, async () => {

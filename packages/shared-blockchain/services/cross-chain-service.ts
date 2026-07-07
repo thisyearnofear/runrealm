@@ -73,20 +73,34 @@ export class CrossChainService extends BaseService {
 
   private async initializeZetaClient(): Promise<void> {
     try {
-      // Initialize ZetaChain client
+      // Try to load the optional ZetaChain client package. It is not a
+      // required dependency for the core game loop, so a missing package
+      // is handled gracefully rather than crashing service init.
       console.log('CrossChainService: Initializing ZetaChain client');
 
-      // Initialize ZetaChain client for Athens testnet
-      this.zetaClient = new ZetaChainClient({
-        network: 'athens', // or 'mainnet' for production
+      // @ts-expect-error — @zetachain/client is an optional peer dependency for
+      // cross-chain messaging; if it is not installed we degrade gracefully.
+      const pkg = await import('@zetachain/client').catch(() => null);
+      const ZetaClient = pkg?.ZetaChainClient ?? (globalThis as any).ZetaChainClient;
+      if (!ZetaClient) {
+        console.warn(
+          'CrossChainService: @zetachain/client not available; cross-chain messaging is disabled.'
+        );
+        this.zetaClient = null;
+        return;
+      }
+
+      this.zetaClient = new ZetaClient({
+        network: 'athens',
         chainId: 7001,
       });
+      this.zetaConnector = this.zetaClient;
 
       console.log('CrossChainService: ZetaChain client initialized successfully');
     } catch (error) {
       console.error('CrossChainService: Failed to initialize ZetaChain client:', error);
-      // Fallback to mock implementation for development
       this.zetaClient = null;
+      this.zetaConnector = null;
     }
   }
 
@@ -170,22 +184,31 @@ export class CrossChainService extends BaseService {
     try {
       console.log('CrossChainService: Sending cross-chain message', message);
 
-      // In a real implementation, this would use ZetaChain's Gateway API
-      // For the hackathon, we'll simulate the process but show what the real implementation would look like
+      const realClient =
+        this.zetaConnector && typeof (this.zetaConnector as any).gateway?.sendMessage === 'function'
+          ? this.zetaConnector
+          : null;
 
-      // Real implementation would look like this:
-      // const zetaClient = new ZetaChainClient();
-      // const tx = await zetaClient.gateway.sendMessage({
-      //   destinationChainId: message.targetChainId,
-      //   destinationAddress: message.targetAddress,
-      //   message: message.data,
-      //   gasLimit: message.gasLimit || 500000
-      // });
+      let messageId: string;
 
-      // For simulation, we'll generate a mock message ID
-      const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      if (realClient) {
+        const tx = await (realClient as any).gateway.sendMessage({
+          destinationChainId: message.targetChainId,
+          destinationAddress: message.targetAddress,
+          message: message.data,
+          gasLimit: message.gasLimit || 500000,
+        });
+        messageId = tx?.hash || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      } else if (process.env.NODE_ENV !== 'production') {
+        // Development fallback: simulate a message ID so UI flows can be exercised
+        messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      } else {
+        throw new Error(
+          'CrossChainService: no real ZetaChain client available in production. Call attachRelayer(client) first.'
+        );
+      }
 
-      // Emit event for UI updates
       this.safeEmit('crosschain:messageSent', {
         messageId,
         targetChainId: message.targetChainId,
@@ -193,10 +216,6 @@ export class CrossChainService extends BaseService {
         data: message.data,
       });
 
-      // Simulate processing delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Simulate successful message sending
       console.log(
         `CrossChainService: Message ${messageId} sent successfully to chain ${message.targetChainId}`
       );
@@ -213,43 +232,57 @@ export class CrossChainService extends BaseService {
    */
   public async listenForMessages(): Promise<void> {
     if (!this.zetaConnector) {
-      throw new Error('ZetaChain connector not initialized');
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'CrossChainService: cannot listen in production without a real ZetaChain client. Call attachRelayer(client) first.'
+        );
+      }
+      console.warn(
+        'CrossChainService: no connector available; inbound message listening is disabled'
+      );
+      return;
     }
 
     try {
       console.log('CrossChainService: Listening for cross-chain messages');
-
-      // In a real implementation, this would set up listeners for incoming messages
-      // For the hackathon, we'll simulate this with periodic checks
-
-      // Real implementation would look like:
-      // this.zetaConnector.on('crossChainMessage', async (message) => {
-      //   await this.handleIncomingCrossChainMessage(message);
-      // });
-
-      // For simulation, we'll periodically check for messages
-      // In a real app, this would be event-driven
-
-      // Set up a mock listener for demonstration
-      this.setupMockMessageListener();
+      this.setupInboundMessageListener();
     } catch (error) {
       console.error('CrossChainService: Failed to listen for messages:', error);
     }
   }
 
   /**
-   * Set up mock message listener for demonstration.
-   *
-   * The interval timer itself lives in
-   * `packages/shared-blockchain/__stubs__/zeta-mock.ts`; production
-   * paths throw there, so a real ZetaChain client is required to take
-   * this off the mock path.
+   * Set up the inbound message listener. In development we fall back to
+   * a harmless simulator so UI flows can be tested without a real relayer.
+   * In production a real ZetaChain client must be attached via
+   * `attachRelayer(client)` or this service stays in a disabled state.
    */
-  private setupMockMessageListener(): void {
-    attachMockOrFail(
-      (event) => this.handleIncomingCrossChainMessage(event),
-      () => this.contractService?.getContractAddresses().universal || ''
-    );
+  private setupInboundMessageListener(): void {
+    if (process.env.NODE_ENV === 'production') {
+      if (!this.zetaConnector) {
+        console.warn(
+          'CrossChainService: production inbound listener skipped — no real ZetaChain client attached.'
+        );
+      }
+      return;
+    }
+
+    if (!this.zetaConnector) {
+      attachMockOrFail(
+        (event) => this.handleIncomingCrossChainMessage(event),
+        () => this.contractService?.getContractAddresses().universal || ''
+      );
+    }
+  }
+
+  /**
+   * Attach a real ZetaChain client for production cross-chain messaging.
+   * Call this after service initialization (e.g. from the platform layer).
+   */
+  public attachRelayer(client: ZetaChainClient): void {
+    this.zetaClient = client;
+    this.zetaConnector = client;
+    console.log('CrossChainService: real ZetaChain client attached');
   }
 
   /**
