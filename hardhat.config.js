@@ -2,7 +2,16 @@ require('@nomicfoundation/hardhat-toolbox');
 require('@nomicfoundation/hardhat-verify');
 // Zama FHEVM plugin — injects the `fhevm` mock coprocessor into the HRE
 // for local Hardhat tests and provides the Sepolia FHEVM toolchain.
-require('@fhevm/hardhat-plugin');
+// It only supports hardhat/localhost/anvil/sepolia/mainnet, so skip
+// loading it for other networks (e.g., ZetaChain testnet/mainnet) to
+// avoid a "network not supported" error during deployment.
+const networkArg = process.argv.indexOf('--network');
+const selectedNetwork =
+  networkArg !== -1 && process.argv[networkArg + 1] ? process.argv[networkArg + 1] : 'hardhat';
+const fhevmSupportedNetworks = ['hardhat', 'localhost', 'anvil', 'sepolia', 'mainnet'];
+if (fhevmSupportedNetworks.includes(selectedNetwork)) {
+  require('@fhevm/hardhat-plugin');
+}
 require('dotenv').config();
 
 // Helper to get accounts array - returns empty array if no private key
