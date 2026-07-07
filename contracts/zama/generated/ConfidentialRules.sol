@@ -21,20 +21,6 @@ pragma solidity ^0.8.24;
 
 library ConfidentialRules {
   uint32 public constant ACTIVITY_MAX_POINTS               = uint32(1000);
-/**
- * Mirror of GAME_RULES typed for Zama fhEVM ciphertext operations.
- * Privacy-relevant counters (defence score, decay rate, thresholds)
- * are sized to fit `euint32` so the Zama Relayer SDK can encode/decode
- * them without overflow. Non-private counters that still need a
- * chain-side canonical home are kept as plain uint32/uint64.
- *
- * `scripts/build/sync-game-rules.mjs` regenerates this file whenever
- * the TS source changes. Do not hand-edit.
- */
-pragma solidity ^0.8.24;
-
-library ConfidentialRules {
-  uint32 public constant ACTIVITY_MAX_POINTS               = uint32(1000);
   uint32 public constant ACTIVITY_INITIAL_POINTS          = uint32(500);
   uint32 public constant ACTIVITY_DECAY_PER_DAY           = uint32(10);
   uint32 public constant ACTIVITY_BOOST_POINTS            = uint32(100);

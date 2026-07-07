@@ -23,6 +23,22 @@ export interface TerritoryClaimData {
   landmarks: string[];
 }
 
+/**
+ * Receipt shape returned by `mintTerritory` (Phase 3). The off-chain
+ * `TerritoryService.claimTerritory` MUST gate the local state mutation
+ * on `status === 1` and require `tokenId` to be present in the parsed
+ * event log — both checks are what makes the claim "real" rather than
+ * optimistic. `events` is exposed for future cross-service listeners
+ * (e.g. an event-driven map layer that subscribes to `TerritoryCreated`).
+ */
+export interface TerritoryMintReceipt {
+  transactionHash: string;
+  blockNumber: number;
+  status: number;
+  tokenId: string | null;
+  events?: unknown[];
+}
+
 export interface TerritoryMetadata {
   geohash: string;
   difficulty: number;
@@ -56,6 +72,7 @@ export class ContractService extends BaseService {
 
   private universalContract: any = null;
   private realmTokenContract: any = null;
+  private boostContract: any = null;
 
   constructor(web3Service: Web3Service) {
     super();
@@ -94,6 +111,7 @@ export class ContractService extends BaseService {
       // Get contract configurations from centralized config
       const universalConfig = getContractConfig('universal');
       const realmTokenConfig = getContractConfig('realmToken');
+      const boostConfig = getContractConfig('boost');
 
       // Initialize Universal Contract
       this.universalContract = this.web3Service.getContract(
@@ -107,9 +125,21 @@ export class ContractService extends BaseService {
         realmTokenConfig.abi
       );
 
+      // Initialize Boost Contract (Phase 3 additive). The
+      // `address(0)` placeholder from the config is treated as
+      // "not yet deployed" — boost calls will surface a clear
+      // "boost contract not deployed" error from the off-chain
+      // service rather than a confusing revert from a missing
+      // contract.
+      this.boostContract = boostConfig.address ===
+        '0x0000000000000000000000000000000000000000'
+        ? null
+        : this.web3Service.getContract(boostConfig.address, boostConfig.abi);
+
       console.log('ContractService: Contracts initialized successfully');
       console.log('Universal Contract:', universalConfig.address);
       console.log('REALM Token:', realmTokenConfig.address);
+      console.log('Boost Contract:', boostConfig.address);
     } catch (error) {
       console.error('ContractService: Failed to initialize contracts:', error);
       throw error;
@@ -146,9 +176,19 @@ export class ContractService extends BaseService {
 
   /**
    * Mint/claim a territory on the blockchain
-   * ENHANCEMENT: Uses actual deployed contract method
+   * ENHANCEMENT: Uses actual deployed contract method.
+   *
+   * Phase 3: now returns a structured `TerritoryMintReceipt` (was
+   * `Promise<string>`) so `TerritoryService.claimTerritory` can gate
+   * the local state mutation on `receipt.status === 1` and require
+   * `tokenId` from the `TerritoryCreated` event. `confirmations = 1`
+   * is the right default for ZetaChain Athens testnet; Phase 4
+   * mainnet paths should override to 3+.
    */
-  public async mintTerritory(territoryData: TerritoryClaimData): Promise<string> {
+  public async mintTerritory(
+    territoryData: TerritoryClaimData,
+    confirmations: number = 1
+  ): Promise<TerritoryMintReceipt> {
     // Track territory claim attempt
     this.userContextService.trackUserAction('territory_claim_attempted', {
       geohash: territoryData.geohash,
@@ -207,33 +247,44 @@ export class ContractService extends BaseService {
         type: 'territory_mint',
       });
 
-      // Wait for confirmation
-      const receipt = await tx.wait();
+      // Wait for `confirmations` blocks. Phase 3 default of 1 is
+      // safe for ZetaChain Athens; mainnet-fork callers should
+      // pass 3+.
+      const receipt = await tx.wait(confirmations);
+
+      // Extract token ID from event logs (best-effort: the
+      // receipt is the source of truth, but we also need the
+      // minted tokenId to populate Territory.tokenId locally).
+      let tokenId: string | null = null;
+      try {
+        const territoryCreatedEvent = receipt.logs.find(
+          (log: { topics: string[]; data: string }) => {
+            try {
+              const parsed = this.universalContract.interface.parseLog(log);
+              return parsed.name === CONTRACT_EVENTS.universal.TerritoryCreated;
+            } catch {
+              return false;
+            }
+          }
+        );
+
+        if (territoryCreatedEvent) {
+          const parsed = this.universalContract.interface.parseLog(territoryCreatedEvent);
+          tokenId = parsed.args.tokenId.toString();
+        }
+      } catch (error) {
+        console.warn('Could not extract tokenId from events:', error);
+      }
+
+      const mintReceipt: TerritoryMintReceipt = {
+        transactionHash: tx.hash,
+        blockNumber: receipt.blockNumber,
+        status: receipt.status,
+        tokenId,
+        events: receipt.logs,
+      };
 
       if (receipt.status === 1) {
-        // Extract token ID from event logs
-        let tokenId = null;
-        try {
-          // Look for TerritoryCreated event
-          const territoryCreatedEvent = receipt.logs.find(
-            (log: { topics: string[]; data: string }) => {
-              try {
-                const parsed = this.universalContract.interface.parseLog(log);
-                return parsed.name === CONTRACT_EVENTS.universal.TerritoryCreated;
-              } catch {
-                return false;
-              }
-            }
-          );
-
-          if (territoryCreatedEvent) {
-            const parsed = this.universalContract.interface.parseLog(territoryCreatedEvent);
-            tokenId = parsed.args.tokenId.toString();
-          }
-        } catch (error) {
-          console.warn('Could not extract tokenId from events:', error);
-        }
-
         // Emit success events
         this.safeEmit('web3:transactionConfirmed', {
           hash: tx.hash,
@@ -253,13 +304,18 @@ export class ContractService extends BaseService {
           difficulty: territoryData.difficulty,
         });
 
-        console.log('ContractService: Territory minted successfully!', {
-          tokenId,
-          hash: tx.hash,
-        });
-        return tx.hash;
+        console.log('ContractService: Territory minted successfully!', mintReceipt);
+        return mintReceipt;
       } else {
-        throw new Error('Transaction failed');
+        // Phase 3: surface a typed "reverted" error so the caller
+        // can distinguish "tx didn't make it on-chain" from "no
+        // contract at address". The receipt itself is returned in
+        // the error for the off-chain service to log.
+        const err = new Error(
+          `Territory mint reverted on-chain (tx ${tx.hash}, block ${receipt.blockNumber})`
+        );
+        (err as Error & { receipt?: TerritoryMintReceipt }).receipt = mintReceipt;
+        throw err;
       }
     } catch (error) {
       console.error('ContractService: Territory mint failed:', error);
@@ -270,6 +326,93 @@ export class ContractService extends BaseService {
 
       throw error;
     }
+  }
+
+  /**
+   * Phase 3 — boost a territory's defence score by burning REALM.
+   * Pulls `BOOST_COST` from the caller and emits `TerritoryBoosted`
+   * from `RunRealmBoostV1`. The off-chain `TerritoryService` listens
+   * for the event and applies the +100 `activityPoints` mutation
+   * locally; this method only deals with the on-chain payment.
+   *
+   * The caller must have `approve(d, BOOST_COST)` for the boost
+   * contract already — if not, the transaction reverts with
+   * "REALM transferFrom failed" inside the contract.
+   */
+  public async boostTerritoryActivity(
+    tokenId: number | string
+  ): Promise<{ transactionHash: string; blockNumber: number; status: number }> {
+    if (!this.boostContract) {
+      throw new Error(
+        'Boost contract not deployed. Set RUNREALM_BOOST_ADDRESS in env and reconnect wallet.'
+      );
+    }
+    if (!this.web3Service.isConnected()) {
+      throw new Error('Wallet not connected');
+    }
+
+    const gasEstimate = await this.boostContract[
+      CONTRACT_METHODS.boost.boostTerritoryActivity
+    ].estimateGas(tokenId);
+    const gasLimit = Math.ceil(Number(gasEstimate) * 1.2);
+
+    const tx = await this.boostContract[
+      CONTRACT_METHODS.boost.boostTerritoryActivity
+    ](tokenId, { gasLimit });
+
+    this.safeEmit('web3:transactionSubmitted', {
+      hash: tx.hash,
+      type: 'territory_boost',
+    });
+
+    const receipt = await tx.wait(1);
+    return {
+      transactionHash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      status: receipt.status,
+    };
+  }
+
+  /**
+   * Phase 3 — query the on-chain rate limit. Returns the UTC day of
+   * the caller's most recent boost for `tokenId`, or `0` if none.
+   * The off-chain `TerritoryService` uses this to short-circuit
+   * the on-chain call when a boost has already been used today.
+   */
+  public async getLastBoostDay(
+    address: string,
+    tokenId: number | string
+  ): Promise<number> {
+    if (!this.boostContract) return 0;
+    try {
+      const day = await this.boostContract[CONTRACT_METHODS.boost.lastBoostDay](
+        address,
+        tokenId
+      );
+      return Number(day);
+    } catch (error) {
+      console.warn('ContractService: getLastBoostDay failed:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Phase 3 — convenience wrapper for legacy callers that expected
+   * the old `Promise<string>` return shape (Phase 2 signature). The
+   * source-of-truth `mintTerritory` now returns a structured
+   * `TerritoryMintReceipt` so `TerritoryService.claimTerritory` can
+   * gate the local state mutation on `status === 1` and a parsed
+   * `tokenId`. New code MUST use `mintTerritory` directly; this
+   * method exists for backward compatibility with any external
+   * consumer that hasn't migrated yet.
+   *
+   * @deprecated Use `mintTerritory` (returns `TerritoryMintReceipt`).
+   * Will be removed once the wallet widget boost modal and any other
+   * downstream callers are confirmed migrated.
+   */
+  public async mintTerritoryHash(territoryData: TerritoryClaimData): Promise<string> {
+    const receipt = await this.mintTerritory(territoryData);
+    return receipt.transactionHash;
   }
 
   /**
@@ -558,6 +701,18 @@ export class ContractService extends BaseService {
   }
 
   /**
+   * Phase 3 — true when the additive `RunRealmBoostV1` contract has
+   * been initialised (i.e. `RUNREALM_BOOST_ADDRESS` is set in env).
+   * Callers should check this before invoking `boostTerritoryActivity`
+   * to surface a clear "boost contract not deployed" error in the
+   * wallet UI rather than letting the ethers.js call fail with a
+   * generic revert.
+   */
+  public isBoostReady(): boolean {
+    return this.boostContract !== null;
+  }
+
+  /**
    * Check if we're on the correct network
    */
   public isOnCorrectNetwork(): boolean {
@@ -589,5 +744,6 @@ export class ContractService extends BaseService {
   protected async onDestroy(): Promise<void> {
     this.universalContract = null;
     this.realmTokenContract = null;
+    this.boostContract = null;
   }
 }

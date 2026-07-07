@@ -28,8 +28,14 @@ export const GAME_RULES = {
     initialPoints: 500,
     decayPerDay: 10,
     /** Cost of one +100-point boost. Quoted in `* 10**18` so the synced
-     *  Solidity constant is a single uint256 (50 REALM at 1e18 decimals). */
+     *  Solidity constant is a single uint256 (50 REALM at 1e18 decimals).
+     *  Paired with `boostCostRealmWei` (a precomputed `bigint`) for
+     *  JS consumers that want to skip `Function()` evaluation. The two
+     *  values MUST agree — the sync script inlines the `* 10**18`
+     *  string into `RealmRules.ACTIVITY_BOOST_COST_REALM_E18`, and
+     *  `boostCostRealmWei` must equal the same number. */
     boostCostRealmE18: '50 * 10**18',
+    boostCostRealmWei: 50n * 10n ** 18n,
     boostPoints: 100,
     /** One boost per territory per calendar day — enforced on-chain via
      *  a per-address `lastBoostDay` mapping keyed off this constant. */
@@ -95,6 +101,20 @@ export const GAME_RULES = {
   // ---------------------------------------------------------------------
   h3: {
     resolution: 9,
+  },
+
+  // ---------------------------------------------------------------------
+  // Zama fhEVM confidential shield support.
+  //   `supportedChainIds` is empty today because Zama fhEVM mainnet /
+  //   testnet are not yet public. The `zama-support.ts` service keys
+  //   the EncryptedShield flag off this list, and the sync script
+  //   emits `ZAMA_CHAIN_ID_<i>` Solidity constants for every entry
+  //   (omits the block when the list is empty so `--check` stays
+  //   idempotent). When Zama publishes its mainnet/testnet chain IDs,
+  //   add them here and re-run `npm run sync:rules`.
+  // ---------------------------------------------------------------------
+  zama: {
+    supportedChainIds: [] as readonly number[],
   },
 } as const;
 

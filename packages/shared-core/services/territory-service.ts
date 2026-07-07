@@ -1,4 +1,5 @@
 import * as turf from '@turf/turf';
+import { GAME_RULES } from '../config/game-rules';
 import { BaseService } from '../core/base-service';
 import { calculateDistance } from '../utils/distance-formatter';
 import {
@@ -69,6 +70,14 @@ export interface Territory {
   sourceChainId?: number;
   crossChainClaimTxHash?: string;
   intentId?: string;
+  /**
+   * Phase 3 — set at claim time to `true` when the wallet's chainId
+   * is in `GAME_RULES.zama.supportedChainIds` and the Zama fhEVM
+   * confidential shield is available. Defaults to undefined / false
+   * for every claim today (the list is empty until Zama publishes
+   * its mainnet/testnet chain IDs).
+   */
+  confidentialShield?: boolean;
   // Activity staking system
   activityPoints?: number; // 0-1000
   lastActivityUpdate?: number; // timestamp
@@ -765,7 +774,14 @@ export class TerritoryService extends BaseService {
   }
 
   /**
-   * Claim territory on blockchain
+   * Claim territory on blockchain.
+   *
+   * Phase 3 (Zeta Honesty Pass): the local state mutation
+   * (`status = 'claimed'`, `owner`, `claimedAt`, `tokenId`) is now
+   * gated on a real on-chain receipt — `receipt.status === 1` AND a
+   * non-null `tokenId` parsed from the `TerritoryCreated` event.
+   * Optimistic state mutations are gone; the wallet UI can now trust
+   * the `success: true` return value.
    */
   private async claimTerritory(territory: Territory): Promise<TerritoryClaimResult> {
     try {
@@ -847,15 +863,46 @@ export class TerritoryService extends BaseService {
           landmarks: territory.metadata.landmarks,
         };
 
-        // Submit to blockchain using ContractService
-        const transactionHash = await contractService.mintTerritory(territoryData);
+        // Phase 3: receive a structured `TerritoryMintReceipt` from
+        // the contract service. We gate the local mutation on both
+        // `status === 1` (the EVM reported success) and a non-null
+        // `tokenId` (the `TerritoryCreated` event was parsed
+        // successfully). Either check failing means the claim is
+        // NOT "real" — return a typed error so the UI can branch.
+        const receipt = await contractService.mintTerritory(territoryData);
 
-        // Update territory status
+        if (receipt.status !== 1) {
+          return {
+            success: false,
+            error: `Territory mint reverted on-chain (tx ${receipt.transactionHash}, block ${receipt.blockNumber})`,
+            territory,
+          };
+        }
+        if (!receipt.tokenId) {
+          return {
+            success: false,
+            error: `Territory minted but tokenId not found in receipt logs (tx ${receipt.transactionHash})`,
+            territory,
+          };
+        }
+
+        // Local state mutation — only on a verified receipt.
         territory.status = 'claimed';
         territory.owner = wallet.address;
         territory.claimedAt = Date.now();
-        territory.transactionHash = transactionHash;
+        territory.transactionHash = receipt.transactionHash;
         territory.chainId = wallet.chainId;
+        territory.tokenId = receipt.tokenId;
+
+        // Phase 3: branch on EncryptedShield availability. The
+        // cross-chain service exposes the flag via
+        // `isEncryptedShieldEnabled()`; today this is always
+        // false (Zama chainIds list is empty) so `confidentialShield`
+        // is set to false on every claim. When Zama ships, claims
+        // from Zama chains will flip this to true automatically.
+        if (crossChainService && typeof crossChainService.isEncryptedShieldEnabled === 'function') {
+          territory.confidentialShield = crossChainService.isEncryptedShieldEnabled();
+        }
 
         // Store locally
         this.claimedTerritories.set(territory.id, territory);
@@ -864,7 +911,7 @@ export class TerritoryService extends BaseService {
         return {
           success: true,
           territory,
-          transactionHash,
+          transactionHash: receipt.transactionHash,
         };
       }
     } catch (error) {
@@ -1082,9 +1129,33 @@ export class TerritoryService extends BaseService {
   }
 
   /**
-   * Boost territory activity by spending REALM tokens
+   * Phase 3 — boost a territory's defence score by burning REALM.
+   *
+   * The flow:
+   *   1. Resolve the synthetic `territory_<id>` to the on-chain
+   *      `tokenId` (the only thing `RunRealmBoostV1` accepts).
+   *      Local-only territories (no on-chain tokenId) cannot be
+   *      boosted and surface a clear "claim the territory first"
+   *      error.
+   *   2. Query `getLastBoostDay` to short-circuit if the player has
+   *      already boosted today (the contract reverts on duplicate
+   *      day, but a pre-check gives the UI a free rate-limit
+   *      message before the user signs a transaction).
+   *   3. Call `ContractService.boostTerritoryActivity(tokenId)`. The
+   *      service handles gas estimation, tx submission, and receipt
+   *      wait. The caller must have approved `BOOST_COST` REALM to
+   *      the boost contract first — a separate `approve` flow
+   *      driven by the wallet UI.
+   *   4. On `receipt.status === 1`, apply the +100 activityPoints
+   *      locally via `updateTerritoryActivity`. The on-chain event
+   *      `TerritoryBoosted` is the source of truth; the local
+   *      mutation mirrors it for the UI to consume immediately
+   *      without a refresh round-trip.
+   *
+   * Cost comes from `GAME_RULES.activity.boostCostRealmE18` (single
+   * source of truth), not a hardcoded literal.
    */
-  boostTerritoryActivity(territoryId: string): void {
+  async boostTerritoryActivity(territoryId: string): Promise<void> {
     const territory = this.claimedTerritories.get(territoryId);
     if (!territory) {
       this.safeEmit('ui:toast', {
@@ -1094,24 +1165,103 @@ export class TerritoryService extends BaseService {
       return;
     }
 
-    const boostCost = 50; // 50 REALM for +100 points
-    const boostPoints = 100;
+    const contractService = this.getSiblingService('ContractService');
+    const web3Service = this.getSiblingService('Web3Service');
+    if (!contractService || !web3Service || !web3Service.isConnected()) {
+      this.safeEmit('ui:toast', {
+        message: '❌ Wallet not connected',
+        type: 'error',
+      });
+      return;
+    }
 
-    // Check if user has enough REALM (this would integrate with GhostRunnerService or wallet)
-    // For now, we'll emit an event to request the boost
+    if (!contractService.isBoostReady()) {
+      this.safeEmit('ui:toast', {
+        message: '❌ Boost contract not deployed. Set RUNREALM_BOOST_ADDRESS in env and reconnect wallet.',
+        type: 'error',
+      });
+      return;
+    }
+
+    const tokenId = territory.tokenId;
+    if (!tokenId) {
+      this.safeEmit('ui:toast', {
+        message: '❌ Territory not on chain yet — claim it first before boosting.',
+        type: 'error',
+      });
+      return;
+    }
+
+    const wallet = web3Service.getCurrentWallet();
+    if (!wallet) {
+      this.safeEmit('ui:toast', {
+        message: '❌ Wallet not connected',
+        type: 'error',
+      });
+      return;
+    }
+
+    // Pre-check the on-chain rate limit so the wallet UI can
+    // show a "next boost in N hours" message before the user
+    // signs a transaction. The contract reverts on duplicate
+    // day as a backstop.
+    const today = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+    const lastDay = await contractService.getLastBoostDay(wallet.address, tokenId);
+    if (lastDay >= today) {
+      this.safeEmit('ui:toast', {
+        message: '⏳ Boost already used today. Try again after midnight UTC.',
+        type: 'info',
+      });
+      return;
+    }
+
+    // Surface the cost in the request event so the wallet UI can
+    // preview it. `GAME_RULES.activity.boostCostRealmE18` is the
+    // single source of truth; RealmRules.ACTIVITY_BOOST_COST_REALM_E18
+    // is the chain-side mirror.
+    const boostCostStr = GAME_RULES.activity.boostCostRealmE18;
+    const boostPoints = GAME_RULES.activity.boostPoints;
     this.safeEmit('territory:boostRequested', {
       territoryId,
-      cost: boostCost,
+      tokenId,
+      cost: boostCostStr,
       points: boostPoints,
     });
 
-    // The actual boost will be applied when confirmed
-    // For now, apply it directly
-    this.updateTerritoryActivity(territoryId, boostPoints);
+    try {
+      const receipt = await contractService.boostTerritoryActivity(tokenId);
+      if (receipt.status !== 1) {
+        this.safeEmit('ui:toast', {
+          message: `❌ Boost reverted on-chain (tx ${receipt.transactionHash})`,
+          type: 'error',
+        });
+        return;
+      }
 
-    this.safeEmit('ui:toast', {
-      message: `✨ Territory boosted! +${boostPoints} defense points`,
-      type: 'success',
-    });
+      // Receipt is the source of truth for the on-chain payment;
+      // the local activityPoints mutation mirrors the on-chain
+      // event so the UI updates immediately. The
+      // `TerritoryBoosted` event is also re-emitted locally so
+      // future map / replay layers can subscribe uniformly.
+      this.updateTerritoryActivity(territoryId, boostPoints);
+      this.safeEmit('territory:boostConfirmed' as any, {
+        territoryId,
+        tokenId,
+        transactionHash: receipt.transactionHash,
+        blockNumber: receipt.blockNumber,
+        points: boostPoints,
+      });
+
+      this.safeEmit('ui:toast', {
+        message: `✨ Territory boosted! +${boostPoints} defense points`,
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Territory boost failed:', error);
+      this.safeEmit('ui:toast', {
+        message: `❌ Boost failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        type: 'error',
+      });
+    }
   }
 }

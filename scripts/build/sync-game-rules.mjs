@@ -6,7 +6,7 @@
  * two Solidity sibling libraries that ship the same constants in
  * chain-readable form:
  *
- *   contracts/generated/RealmRules.sol          (ZetaChain uint256)
+ *   contracts/generated/RealmRules.sol             (ZetaChain uint256)
  *   contracts/zama/generated/ConfidentialRules.sol (Zama fhEVM, euint32-friendly widths)
  *
  * Modes:
@@ -43,8 +43,13 @@ function loadRules() {
     // Strip the `export type …` alias line entirely — types are JS
     // no-ops at runtime and vm cannot parse `type` syntax.
     .replace(/^export\s+type\s+[^\n;]+;?\s*$/gm, '')
-    // Strip `as const` modifiers from object/property assertions.
-    .replace(/\s+as\s+const\b\s*;?/g, ';');
+    // Strip `as <type>` type assertions from object/property literals.
+    // Handles `as const`, `as number`, `as readonly number[]`, and
+    // `as Generic<T>` casts. The optional `readonly` modifier can
+    // appear immediately after `as`; the optional `<...>` and `[]`
+    // groups are greedy-stopped at the first `>` / `]` so nested
+    // generics stay unsupported by design.
+    .replace(/\s+as\s+(?:readonly\s+)?[A-Za-z_$][\w$]*(?:\s*<[^>]*>)?(?:\s*\[\s*\])?/g, '');
   const ctx = {};
   vm.createContext(ctx);
   // `const`/`let` declarations inside vm.runInContext are scoped to
@@ -65,10 +70,28 @@ const COMMON_HEADER = `// SPDX-License-Identifier: MIT
 
 const ZAMA_HEADER = COMMON_HEADER.replace('pragma solidity ^0.8.26;', 'pragma solidity ^0.8.24;');
 
+/**
+ * Emit a `ZAMA_CHAIN_ID_<i>` constant block when the source list is
+ * non-empty. When empty (today's reality, before Zama fhEVM mainnet
+ * publishes its chain IDs) the block is omitted entirely so the
+ * generated file is byte-stable for an unchanged source — keeps
+ * `sync:check` exit-0 idempotent.
+ */
+function emitZamaChainConstants(r, indent) {
+  const ids = r.zama?.supportedChainIds ?? [];
+  if (ids.length === 0) {
+    return '';
+  }
+  const header = `${indent}// Zama fhEVM supported chain IDs (mirrors GAME_RULES.zama.supportedChainIds).`;
+  const lines = ids.map((id, i) => `${indent}uint256 public constant ZAMA_CHAIN_ID_${i} = ${id};`);
+  return `\n${header}\n${lines.join('\n')}\n`;
+}
+
 function emitRealmRules(r) {
   const a = r.activity;
   const rw = r.rewards;
   const t = r.territory;
+  const zamaIds = emitZamaChainConstants(r, '  ');
   return `${COMMON_HEADER}
 /**
  * Mirror of GAME_RULES — single source of truth lives in TypeScript.
@@ -107,7 +130,7 @@ library RealmRules {
   uint256 public constant MIN_TERRITORY_DISTANCE_METERS    = ${t.minDistanceMeters};
   uint256 public constant MAX_TERRITORY_DISTANCE_METERS    = ${t.maxDistanceMeters};
   uint256 public constant LEVEL_DISTANCE_THRESHOLD_METERS  = ${t.levelDistanceThresholdMeters};
-}
+${zamaIds}}
 `;
 }
 
@@ -116,6 +139,7 @@ function emitConfidentialRules(r) {
   const rw = r.rewards;
   const t = r.territory;
   const h = r.h3;
+  const zamaIds = emitZamaChainConstants(r, '  ');
   return `${ZAMA_HEADER}
 /**
  * Mirror of GAME_RULES typed for Zama fhEVM ciphertext operations.
@@ -128,20 +152,6 @@ function emitConfidentialRules(r) {
  * emitting it would require a float-to-int conversion that loses
  * precision silently. Consumers that need H3 area should source it
  * from \`packages/shared-core/utils/h3-territory.ts\` on the JS side.
- *
- * \`scripts/build/sync-game-rules.mjs\` regenerates this file whenever
- * the TS source changes. Do not hand-edit.
- */
-pragma solidity ^0.8.24;
-
-library ConfidentialRules {
-  uint32 public constant ACTIVITY_MAX_POINTS               = uint32(${a.maxPoints});
-/**
- * Mirror of GAME_RULES typed for Zama fhEVM ciphertext operations.
- * Privacy-relevant counters (defence score, decay rate, thresholds)
- * are sized to fit \`euint32\` so the Zama Relayer SDK can encode/decode
- * them without overflow. Non-private counters that still need a
- * chain-side canonical home are kept as plain uint32/uint64.
  *
  * \`scripts/build/sync-game-rules.mjs\` regenerates this file whenever
  * the TS source changes. Do not hand-edit.
@@ -164,7 +174,7 @@ library ConfidentialRules {
   uint64 public constant LEVEL_DISTANCE_THRESHOLD_METERS  = uint64(${t.levelDistanceThresholdMeters});
 
   uint64 public constant H3_RESOLUTION                    = uint64(${h.resolution});
-}
+${zamaIds}}
 `;
 }
 

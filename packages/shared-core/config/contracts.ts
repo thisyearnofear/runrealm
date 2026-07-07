@@ -20,6 +20,7 @@ export interface NetworkConfig {
   contracts: {
     universal: ContractConfig;
     realmToken: ContractConfig;
+    boost: ContractConfig;
   };
 }
 
@@ -129,6 +130,53 @@ const UNIVERSAL_CONTRACT_ABI = [
   },
 ];
 
+const BOOST_CONTRACT_ABI = [
+  {
+    inputs: [{ internalType: 'address', name: '_realmTokenAddress', type: 'address' }],
+    stateMutability: 'nonpayable',
+    type: 'constructor',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'boostTerritoryActivity',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'address', name: '', type: 'address' }, { internalType: 'uint256', name: '', type: 'uint256' }],
+    name: 'lastBoostDay',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'realmToken',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'BOOST_COST',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'address', name: 'player', type: 'address' },
+      { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { indexed: false, internalType: 'uint256', name: 'cost', type: 'uint256' },
+      { indexed: false, internalType: 'uint256', name: 'currentDay', type: 'uint256' },
+    ],
+    name: 'TerritoryBoosted',
+    type: 'event',
+  },
+];
+
 const REALM_TOKEN_ABI = [
   {
     inputs: [],
@@ -224,6 +272,17 @@ export function getCurrentNetworkConfig(): NetworkConfig {
             ?.REALM_TOKEN_ADDRESS || '0x18082d110113B40A24A41dF10b4b249Ee461D3eb',
         abi: REALM_TOKEN_ABI,
       },
+      boost: {
+        // Phase 3: RunRealmBoostV1 is the additive boost contract
+        // deployed alongside (not replacing) the existing
+        // RunRealmUniversal. Address is read from the
+        // RUNREALM_BOOST_ADDRESS env var, with a zero-address
+        // placeholder until the deployment script publishes it.
+        address:
+          (globalThis as { __ENV__?: { RUNREALM_BOOST_ADDRESS?: string } }).__ENV__
+            ?.RUNREALM_BOOST_ADDRESS || '0x0000000000000000000000000000000000000000',
+        abi: BOOST_CONTRACT_ABI,
+      },
     },
   };
 }
@@ -231,7 +290,7 @@ export function getCurrentNetworkConfig(): NetworkConfig {
 /**
  * Get contract configuration by name
  */
-export function getContractConfig(contractName: 'universal' | 'realmToken'): ContractConfig {
+export function getContractConfig(contractName: 'universal' | 'realmToken' | 'boost'): ContractConfig {
   const networkConfig = getCurrentNetworkConfig();
   return networkConfig.contracts[contractName];
 }
@@ -244,6 +303,7 @@ export function getContractAddresses() {
   return {
     universal: networkConfig.contracts.universal.address,
     realmToken: networkConfig.contracts.realmToken.address,
+    boost: networkConfig.contracts.boost.address,
   };
 }
 
@@ -292,6 +352,11 @@ export const CONTRACT_METHODS = {
     name: 'name',
     symbol: 'symbol',
     decimals: 'decimals',
+  },
+  boost: {
+    boostTerritoryActivity: 'boostTerritoryActivity',
+    lastBoostDay: 'lastBoostDay',
+    BOOST_COST: 'BOOST_COST',
   },
 } as const;
 

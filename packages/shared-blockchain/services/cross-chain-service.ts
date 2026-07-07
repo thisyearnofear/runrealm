@@ -2,6 +2,7 @@ import { BaseService } from '@runrealm/shared-core/core/base-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
 import { attachMockOrFail } from '../__stubs__/zeta-mock';
 import { ContractService } from './contract-service';
+import { ZamaSupportService, type EncryptedShieldState } from './zama-support';
 
 // Type declaration for ZetaChainClient (external library)
 declare class ZetaChainClient {
@@ -41,6 +42,16 @@ export class CrossChainService extends BaseService {
   private contractService: ContractService | null = null;
   private zetaConnector: object | null = null;
   private zetaClient: ZetaChainClient | null = null;
+  private zamaSupport: ZamaSupportService = ZamaSupportService.getInstance();
+  /**
+   * Phase 3 EncryptedShield flag. True only when the connected wallet
+   * is on a chainId listed in `GAME_RULES.zama.supportedChainIds`.
+   * Updated reactively on `web3:walletConnected` and
+   * `web3:networkChanged`. Empty `supportedChainIds` list means the
+   * flag stays false for every chain (the safe default while Zama
+   * fhEVM mainnet / testnet are pre-publication).
+   */
+  private encryptedShieldEnabled: boolean = false;
 
   protected async onInitialize(): Promise<void> {
     // Wait for dependent services
@@ -83,7 +94,13 @@ export class CrossChainService extends BaseService {
   private setupEventListeners(): void {
     // Listen for wallet connections
     this.subscribe('web3:walletConnected', async () => {
+      this.refreshEncryptedShieldFlag();
       await this.initializeZetaClient();
+    });
+
+    // Network changes flip the EncryptedShield flag.
+    this.subscribe('web3:networkChanged', () => {
+      this.refreshEncryptedShieldFlag();
     });
 
     // Listen for cross-chain territory claims - note: event payload has different structure
@@ -95,6 +112,44 @@ export class CrossChainService extends BaseService {
     this.subscribe('crosschain:statsUpdateRequested', async (data: any) => {
       await this.handleCrossChainStatsUpdate(data as any);
     });
+  }
+
+  /**
+   * Recompute the EncryptedShield flag from the connected wallet's
+   * chainId. Safe to call before / after wallet connection: when no
+   * wallet is present the flag is set to false. Emits a
+   * `web3:encryptedShieldChanged` event whenever the boolean flips
+   * so UI listeners (e.g. the wallet widget) can show / hide the
+   * confidential-shield badge.
+   */
+  private refreshEncryptedShieldFlag(): void {
+    const wallet = this.getWalletSnapshot();
+    const next = wallet ? this.zamaSupport.chainSupportsZama(wallet.chainId) : false;
+    if (next !== this.encryptedShieldEnabled) {
+      this.encryptedShieldEnabled = next;
+      this.safeEmit('web3:encryptedShieldChanged' as any, { enabled: next });
+    }
+  }
+
+  /**
+   * Public read of the EncryptedShield flag. The flag is `false` when
+   * the wallet is not connected or the chain is not in
+   * `GAME_RULES.zama.supportedChainIds`. Off-chain claim paths use
+   * this to branch on whether to dispatch a `ConfidentialTerritoryDefense`
+   * message (Phase 4) or the standard cross-chain claim.
+   */
+  public isEncryptedShieldEnabled(): boolean {
+    return this.encryptedShieldEnabled;
+  }
+
+  /**
+   * Fine-grained state — useful for UI tooltips and the `/api/runs`
+   * health endpoint. Returns `enabled` / `unavailable` / `disabled`.
+   */
+  public getEncryptedShieldState(): EncryptedShieldState {
+    const wallet = this.getWalletSnapshot();
+    if (!wallet) return 'disabled';
+    return this.zamaSupport.getEncryptedShieldState(wallet.chainId);
   }
 
   /**
