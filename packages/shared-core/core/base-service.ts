@@ -6,6 +6,12 @@
 import { ConfigService } from './app-config';
 import { EventBus } from './event-bus';
 
+export interface WalletSnapshot {
+  address: string;
+  chainId: number;
+  connected: boolean;
+}
+
 export abstract class BaseService {
   protected eventBus: EventBus;
   protected config: ConfigService;
@@ -193,6 +199,41 @@ export abstract class BaseService {
           inThrottle = false;
         }, limit);
       }
+    };
+  }
+
+  /**
+   * Resolve a sibling service from the global RunRealm registry.
+   * Replaces per-service `getService(name)` boilerplate — every concrete
+   * service used to copy-paste the same `(window as any).RunRealm?.services`
+   * lookup. Returns `null` when the registry is not initialised (e.g.
+   * during boot or under SSR). Subclasses can narrow with `as`.
+   */
+  protected getSiblingService(name: string): any {
+    if (typeof window === 'undefined') return null;
+    const services = (window as any).RunRealm?.services;
+    if (!services) {
+      console.warn(`[${this.constructor.name}] service registry not found; cannot access ${name}`);
+      return null;
+    }
+    return services[name];
+  }
+
+  /**
+   * Read a typed snapshot of the connected wallet via `Web3Service`.
+   * Returns `null` when there is no wallet or the service has not
+   * published itself yet. Used everywhere we used to repeat
+   * `web3Service.getCurrentWallet() && web3Service.isConnected()` checks.
+   */
+  protected getWalletSnapshot(): WalletSnapshot | null {
+    const web3 = this.getSiblingService('Web3Service');
+    if (!web3) return null;
+    const wallet = typeof web3.getCurrentWallet === 'function' ? web3.getCurrentWallet() : null;
+    if (!wallet) return null;
+    return {
+      address: wallet.address,
+      chainId: wallet.chainId,
+      connected: Boolean(typeof web3.isConnected === 'function' ? web3.isConnected() : false),
     };
   }
 

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {RealmRules} from "./generated/RealmRules.sol";
 
 
 /**
@@ -15,19 +16,24 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  */
 contract RealmToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
 
-    // Token constants
-    uint256 public constant INITIAL_SUPPLY = 1_000_000_000 * 10**18; // 1 billion tokens
-    uint256 public constant MAX_SUPPLY = 10_000_000_000 * 10**18; // 10 billion tokens max
+    // Token constants — source of truth lives in packages/shared-core/
+    //   config/game-rules.ts, regenerated to RealmRules.sol by
+    //   scripts/build/sync-game-rules.mjs. Adjusting any value MUST be
+    //   done there, not here. Local aliases preserve this contract's
+    //   public ABI: every existing `INITIAL_SUPPLY.<method>()`
+    //   read from external code keeps working unchanged.
+    uint256 public constant INITIAL_SUPPLY = RealmRules.REALM_INITIAL_SUPPLY_E18;
+    uint256 public constant MAX_SUPPLY = RealmRules.REALM_MAX_SUPPLY_E18;
 
 
 
     // Reward rates (tokens per meter)
-    uint256 public constant BASE_REWARD_RATE = 10**15; // 0.001 REALM per meter
-    uint256 public constant DIFFICULTY_BONUS_MAX = 2 * 10**18; // Max 2 REALM difficulty bonus
+    uint256 public constant BASE_REWARD_RATE = RealmRules.BASE_REWARD_PER_METER_E15;
+    uint256 public constant DIFFICULTY_BONUS_MAX = RealmRules.DIFFICULTY_BONUS_MAX_E18;
 
     // Staking parameters
-    uint256 public constant MIN_STAKE_PERIOD = 7 days;
-    uint256 public constant STAKE_REWARD_RATE = 10; // 10% APY base rate
+    uint256 public constant MIN_STAKE_PERIOD = RealmRules.STAKING_MIN_PERIOD_DAYS * 1 days;
+    uint256 public constant STAKE_REWARD_RATE = RealmRules.STAKING_BASE_APY_PERCENT;
 
     // Authorized contracts
     mapping(address => bool) public authorizedMinters;
@@ -54,7 +60,7 @@ contract RealmToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     // Daily limits for reward distribution
     mapping(address => uint256) public dailyRewardsClaimed;
     mapping(address => uint256) public lastClaimDate;
-    uint256 public constant DAILY_REWARD_LIMIT = 1000 * 10**18; // 1000 REALM per day max
+    uint256 public constant DAILY_REWARD_LIMIT = RealmRules.DAILY_REWARD_CAP_E18;
 
     // Events
     event RewardDistributed(

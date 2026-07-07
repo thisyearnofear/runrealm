@@ -274,8 +274,8 @@ export class ExternalFitnessIntegration extends BaseService {
           ?.getAttribute('data-activity');
         if (activityData) {
           const activity = JSON.parse(activityData);
-          const mapService = this.getService('MapService');
-          const runTrackingService = this.getService('RunTrackingService');
+          const mapService = this.getSiblingService('MapService');
+          const runTrackingService = this.getSiblingService('RunTrackingService');
           if (mapService && runTrackingService && activity.polyline) {
             const points = await (runTrackingService as any).decodePolylineToPoints?.(
               activity.polyline
@@ -286,7 +286,7 @@ export class ExternalFitnessIntegration extends BaseService {
       });
 
       card.addEventListener('mouseout', () => {
-        const mapService = this.getService('MapService');
+        const mapService = this.getSiblingService('MapService');
         if (mapService) {
           (mapService as any).clearActivityHighlight?.();
         }
@@ -297,8 +297,8 @@ export class ExternalFitnessIntegration extends BaseService {
   }
 
   private async previewTerritoryForActivity(activity: ExternalActivity): Promise<void> {
-    const runTrackingService = this.getService('RunTrackingService');
-    const mapService = this.getService('MapService');
+    const runTrackingService = this.getSiblingService('RunTrackingService');
+    const mapService = this.getSiblingService('MapService');
 
     if (!runTrackingService || !mapService) return;
 
@@ -494,9 +494,9 @@ export class ExternalFitnessIntegration extends BaseService {
         confirmBtnElement.disabled = true;
 
         // Get territory service and claim territory
-        const territoryService = this.getService('TerritoryService');
+        const territoryService = this.getSiblingService('TerritoryService');
         if (territoryService) {
-          const runTrackingService = this.getService('RunTrackingService');
+          const runTrackingService = this.getSiblingService('RunTrackingService');
           if (!runTrackingService) {
             throw new Error('Run tracking service not available');
           }

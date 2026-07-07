@@ -6,10 +6,10 @@
 import { BaseService } from '../core/base-service';
 import { AnimationService } from '../services/animation-service';
 import { DOMService } from '../services/dom-service';
-import { DragService } from './drag-service';
+import { DragService } from '../internal/_legacy-widget/drag-service';
 import { MobileWidgetService } from './mobile-widget-service';
-import { VisibilityService } from './visibility-service';
-import { WidgetState, WidgetStateService } from './widget-state-service';
+import { VisibilityService } from '../internal/_legacy-widget/visibility-service';
+import { WidgetState, WidgetStateService } from '../internal/_legacy-widget/widget-state-service';
 
 export interface Widget {
   id: string;

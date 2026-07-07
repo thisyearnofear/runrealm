@@ -1,4 +1,4 @@
-import { VisibilityService } from '@runrealm/shared-core/components/visibility-service';
+import { VisibilityService } from '@runrealm/shared-core/internal/_legacy-widget';
 import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
 import { ConfigService } from '@runrealm/shared-core/core/app-config';
 import { LocationService } from '@runrealm/shared-core/services/location-service';

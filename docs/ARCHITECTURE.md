@@ -121,6 +121,35 @@ RunRealm/
 - Minted for territory claims and run completions
 - Used for GameFi progression and rewards
 
+### Game-Rule Constants — Single Source of Truth
+
+As of June 2026, every numeric game-rule constant (territory bounds, daily
+reward cap, decay rate, staking APY, H3 resolution) flows from a single
+TypeScript source:
+
+```
+packages/shared-core/config/game-rules.ts   ← single source
+              │
+              ▼ scripts/build/sync-game-rules.mjs
+              │
+   ┌──────────┴──────────┐
+   ▼                     ▼
+contracts/generated/   contracts/zama/generated/
+  RealmRules.sol         ConfidentialRules.sol
+   (ZetaChain uint256)   (Zama fhEVM uint32/uint64)
+```
+
+`RealmToken.sol` consumes `RealmRules` via local public-constant aliases
+(preserving the public ABI). `GameLogic.sol` keeps its inline constants
+under a `// MIRROR of RealmRules` docblock because the deployed
+`RunRealmUniversal.sol` is bytecode-frozen on ZetaChain Athens; importing
+would shift the IPFS metadata hash and break explorer source
+verification. `reward-system-ui.ts` reads `GAME_RULES` directly.
+
+The sync script is idempotent. `npm run sync:rules` regenerates the two
+siblings; `npm run sync:check` exits non-zero if either is out of sync
+(CI hook).
+
 ### Territory Defense & Activity System
 
 **Activity Staking Model**:
@@ -213,6 +242,35 @@ Mobile GPS Data → Shared RunTrackingService → Analytics Service → Web Dash
 Mobile Territory Claim → Shared TerritoryService → Blockchain → Web Portfolio
 Web Territory Management → Shared TerritoryService → Mobile Notifications
 ```
+
+### Planned: Zama fhEVM Confidential Layer
+
+RunRealm's public, on-chain state currently exposes every player's
+`activityPoints` (0–1000) on every territory they own. That visibility is
+the reason rivals can snipe a territory the moment its defense drops below
+100 points. The 9-phase [roadmap](roadmap.md) adds a parallel Zama fhEVM
+layer (Sepolia testnet for development, Ethereum mainnet for production)
+that holds the *defense score* in ciphertext:
+
+- **ZetaChain** keeps the public GameFi surface: territory NFT ownership,
+  REALM token accounting, cross-chain messaging, public leaderboards,
+  marketplace, and the territory metadata that everyone can see.
+- **Zama fhEVM** keeps the private surface: the `euint32` activity-point
+  value, the encrypted-bounty a defender places, the ciphertext
+  challenger-versus-defender score, the encrypted pace on a leaderboard
+  race. Each user holds the ACL key to decrypt their own values; rivals
+  see only a glowing silhouette on the map until they win a contest.
+
+A new `CrossChainAnchor` contract (phase 6) reads ZetaChain
+`TerritoryCreated` events and calls
+`ConfidentialTerritoryDefense.anchorFromZeta(tokenId, owner)` to seed
+the encrypted state. From there, defense and contest operations live
+entirely on Zama; the public ZetaChain state only knows that the
+territory is owned by `X`, not what `X`'s defense score is.
+
+The model is "privacy from strangers, transparency to yourself":
+defenders can always read their own score via the Zama Relayer SDK; the
+defense state never leaves ciphertext until the owner decrypts it.
 
 ### Route Generation Flow
 ```

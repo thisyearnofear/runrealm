@@ -1,6 +1,6 @@
 // Import service types for type safety
 
-import { WidgetState } from '../components/widget-state-service';
+import { WidgetState } from '../internal/_legacy-widget/widget-state-service';
 import { GhostRunner } from '../services/ai-service';
 import { RunPoint, RunSession } from '../services/run-tracking-service';
 import {

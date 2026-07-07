@@ -5,14 +5,14 @@
  */
 
 import { ContractService } from '@runrealm/shared-blockchain/services/contract-service';
-import { DragService } from '@runrealm/shared-core/components/drag-service';
+import { DragService } from '@runrealm/shared-core/internal/_legacy-widget/drag-service';
 import { GameFiUI } from '@runrealm/shared-core/components/gamefi-ui';
 import { MobileWidgetService } from '@runrealm/shared-core/components/mobile-widget-service';
 import { RewardSystemUI } from '@runrealm/shared-core/components/reward-system-ui';
 import { TouchGestureService } from '@runrealm/shared-core/components/touch-gesture-service';
 import { TransactionStatus } from '@runrealm/shared-core/components/transaction-status';
-import { VisibilityService } from '@runrealm/shared-core/components/visibility-service';
-import { WidgetStateService } from '@runrealm/shared-core/components/widget-state-service';
+import { VisibilityService } from '@runrealm/shared-core/internal/_legacy-widget/visibility-service';
+import { WidgetStateService } from '@runrealm/shared-core/internal/_legacy-widget/widget-state-service';
 import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
 import { ConfigService } from '@runrealm/shared-core/core/app-config';
 import { BaseService } from '@runrealm/shared-core/core/base-service';

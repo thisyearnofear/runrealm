@@ -111,7 +111,70 @@ toggle() {
 4. **Event Integration**: Emit visibility change events through `EventBus`
 5. **Mobile Optimization**: Apply mobile-specific styling via `MobileWidgetService`
 
+## Common Commands
+
+```bash
+# Development
+npm run dev              # Start everything
+npm run dev:web          # Web app only
+npm run dev:backend      # Backend only
+
+# Building
+npm run build            # Build everything
+npm run build:web        # Build web app only
+npm run build:shared     # Build shared packages
+
+# Testing
+npm run test             # Run all tests
+npm run lint             # Check code style
+
+# Game-rules sync (Phase 2 — single source of truth)
+npm run sync:rules       # Regenerate RealmRules.sol + ConfidentialRules.sol
+                         #   from packages/shared-core/config/game-rules.ts.
+                         #   Run after editing the TS source.
+npm run sync:check       # CI hook: exit 1 if the generated .sol siblings are
+                         #   out of sync with the TS source. Run before any
+                         #   contract PR; wire into your local pre-commit.
+npm run ci:rules-drift   # Alias for sync:check used in ci.yml.
+
+# Cleanup
+npm run clean            # Remove build artifacts
+```
+
+### Editing game-rule constants
+
+Every numeric constant that lives in both the deployed contracts and the
+running JavaScript (territory bounds, daily reward cap, decay rate, staking
+APY, H3 resolution) has a single home:
+
+`packages/shared-core/config/game-rules.ts`
+
+Change a value there, then run `npm run sync:rules`. The two Solidity
+siblings regenerate, and you can verify with `npm run sync:check`. The
+three workspace typechecks (`shared-core`, `shared-blockchain`, `web-app`)
+should still pass because `game-rules.ts` is typed TypeScript.
+
+`GameLogic.sol` carries inline constants under a `// MIRROR of
+RealmRules` docblock rather than a real import — the deployed contract
+on ZetaChain Athens is bytecode-frozen. When the next deploy cycle picks
+up the Phase 2 changes end-to-end, that mirror goes away and `GameLogic`
+imports `RealmRules` directly.
+
 ## Changelog
+
+### Project Status (June 2026)
+- **Phase 1 — Consolidation audit** complete. `BaseService.getSiblingService` /
+  `getWalletSnapshot` replace the per-service `getService()` boilerplate; legacy
+  widget stubs quarantined into `internal/_legacy-widget/`; the production
+  `setInterval` simulator was fenced behind a `process.env.NODE_ENV === 'production'`
+  throw in `__stubs__/zeta-mock.ts`. See [roadmap](roadmap.md) for the full picture.
+- **Phase 2 — DRY foundation** complete. `packages/shared-core/config/game-rules.ts`
+  is now the single source of truth for activity / rewards / territory constants.
+  `scripts/build/sync-game-rules.mjs` regenerates
+  `contracts/generated/RealmRules.sol` and
+  `contracts/zama/generated/ConfidentialRules.sol`; `npm run sync:check` fails
+  CI on drift.
+
 
 ### Ghost Runners (Phase 1)
 - **GhostRunnerService**: Complete ghost lifecycle management system

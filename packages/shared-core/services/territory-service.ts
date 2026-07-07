@@ -7,6 +7,7 @@ import {
   routeToCells,
   type TerritoryCell,
 } from '../utils/h3-territory';
+import { territoryIdFromBounds } from '../utils/territory-id';
 import { RunSession } from './run-tracking-service';
 
 export interface TerritoryBounds {
@@ -184,7 +185,7 @@ export class TerritoryService extends BaseService {
     estimatedDistance?: number,
     estimatedDuration?: number
   ): Promise<TerritoryIntent> {
-    const geohash = this.generateGeohash(bounds);
+    const geohash = territoryIdFromBounds(bounds);
 
     // Create a mock RunSession for metadata generation
     const mockRunSession: RunSession = {
@@ -234,7 +235,7 @@ export class TerritoryService extends BaseService {
    * Get territory preview for a given area
    */
   public async getTerritoryPreview(bounds: TerritoryBounds): Promise<TerritoryPreview> {
-    const geohash = this.generateGeohash(bounds);
+    const geohash = territoryIdFromBounds(bounds);
     const isAvailable = await this.checkTerritoryAvailability(geohash);
 
     // Create a mock RunSession for metadata generation
@@ -382,15 +383,6 @@ export class TerritoryService extends BaseService {
     } catch (error) {
       console.warn('Failed to save territory intents:', error);
     }
-  }
-
-  /**
-   * Generate geohash from bounds (simplified implementation)
-   */
-  private generateGeohash(bounds: TerritoryBounds): string {
-    const lat = bounds.center.lat;
-    const lng = bounds.center.lng;
-    return `${lat.toFixed(6)}_${lng.toFixed(6)}`;
   }
 
   private async handleClaimRequest(runId: string): Promise<void> {
@@ -778,9 +770,9 @@ export class TerritoryService extends BaseService {
   private async claimTerritory(territory: Territory): Promise<TerritoryClaimResult> {
     try {
       // Get Web3, Contract, and CrossChain services
-      const web3Service = this.getService('Web3Service');
-      const contractService = this.getService('ContractService');
-      const crossChainService = this.getService('CrossChainService');
+      const web3Service = this.getSiblingService('Web3Service');
+      const contractService = this.getSiblingService('ContractService');
+      const crossChainService = this.getSiblingService('CrossChainService');
 
       if (!web3Service || !web3Service.isConnected()) {
         throw new Error('Wallet not connected');
@@ -889,7 +881,7 @@ export class TerritoryService extends BaseService {
    */
   private async checkTerritoryAvailability(geohash: string): Promise<boolean> {
     try {
-      const contractService = this.getService('ContractService');
+      const contractService = this.getSiblingService('ContractService');
       if (!contractService || !contractService.isReady()) {
         console.warn('Contract service not ready, cannot check territory availability');
         return true; // Assume available if we can't check
@@ -1025,18 +1017,6 @@ export class TerritoryService extends BaseService {
    */
   private generateTerritoryId(): string {
     return `territory_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Get service instance from global registry
-   */
-  private getService(serviceName: string): any {
-    const services = (window as any).RunRealm?.services;
-    if (!services) {
-      console.warn(`Service registry not found. Cannot access ${serviceName}`);
-      return null;
-    }
-    return services[serviceName];
   }
 
   /**

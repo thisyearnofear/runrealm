@@ -3,6 +3,7 @@
  * Provides clear visualization of earnings, staking, and reward claiming
  */
 
+import { GAME_RULES } from '../config/game-rules';
 import { BaseService } from '../core/base-service';
 import { AnimationService } from '../services/animation-service';
 import { DOMService } from '../services/dom-service';
@@ -516,8 +517,17 @@ export class RewardSystemUI extends BaseService {
 
     stakeInput?.addEventListener('input', () => {
       const amount = parseFloat(stakeInput.value) || 0;
-      const dailyReward = (amount * 0.125) / 365; // 12.5% APY
-      const monthlyReward = dailyReward * 30;
+      // Single source of truth for the staking APY and daily-per-year
+      // divider lives in packages/shared-core/config/game-rules.ts. The
+      // on-chain base rate (10% from RealmRules) differs from this UI
+      // floor (12.5%) deliberately — a marketing invitation — so the
+      // sync-game-rules.ts source carries both as
+      // `stakingApyPercent` and `stakingUiApyPercent`.
+      const dailyReward =
+        (amount * GAME_RULES.rewards.stakingUiApyPercent) / GAME_RULES.rewards.apyDaysPerYear;
+      const monthlyReward =
+        (amount * GAME_RULES.rewards.stakingUiApyPercent) /
+        GAME_RULES.rewards.apyMonthsPerYear;
 
       if (dailyPreview) dailyPreview.textContent = `${this.formatTokenAmount(dailyReward)} REALM`;
       if (monthlyPreview)

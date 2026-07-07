@@ -1,5 +1,12 @@
 # RunRealm Features
 
+> **Status note (June 2026).** Phases 1 and 2 of the
+> [roadmap](roadmap.md) are complete: the codebase has been consolidated
+> and game-rule constants now flow from a single TypeScript source into
+> the deployed Solidity contracts. Future phases add a parallel Zama
+> fhEVM layer for confidential territory defense. See
+> [docs/roadmap.md](roadmap.md) for the full plan.
+
 ## Ghost Runner Implementation - Phase 1
 
 ### Status: Core Functionality Implemented (Off-Chain)
@@ -197,3 +204,27 @@ The dashboard has been transformed from a centered overlay to a primary interfac
 - **Layout**: Dashboard on the left (60%), map on the right (40%).
 - **Collapsible**: The dashboard can be minimized to a 60px sidebar.
 - **Responsive**: The map automatically adjusts its size and position based on the dashboard's state.
+## Changelog
+
+### Project Status (June 2026)
+- **Phase 1 — Consolidation audit** complete. `BaseService.getSiblingService` and
+  `BaseService.getWalletSnapshot` replace the per-service `getService()` boilerplate
+  that previously lived in territory-service, run-tracking-service, cross-chain-service,
+  and external-fitness-integration. Five legacy widget stubs (`drag-service`,
+  `visibility-service`, `widget-state-service`, `widget-debug`, `widget-test`) moved
+  to `packages/shared-core/internal/_legacy-widget/`. The production `setInterval`
+  simulator was fenced behind a `process.env.NODE_ENV === 'production'` throw in
+  `__stubs__/zeta-mock.ts`.
+- **Phase 2 — DRY foundation** complete. `packages/shared-core/config/game-rules.ts`
+  is now the single source of truth for activity / rewards / territory / H3
+  constants. `scripts/build/sync-game-rules.mjs` regenerates
+  `contracts/generated/RealmRules.sol` and
+  `contracts/zama/generated/ConfidentialRules.sol`; `npm run sync:check` fails
+  CI on drift. `RealmToken.sol` and `reward-system-ui.ts` consume the canonical
+  source. `GameLogic.sol` keeps its inline constants under a `// MIRROR of
+  RealmRules` docblock because the deployed contract on ZetaChain Athens is
+  bytecode-frozen.
+- Phases 3-9 (ZetaChain honesty pass, Zama scaffolding, confidential UX, cross-
+  chain anchor, performance, tests, gameplay fun-factor) are sequenced in
+  `docs/roadmap.md`.
+

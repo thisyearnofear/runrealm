@@ -29,6 +29,11 @@
       "require": "./dist/components/*.js",
       "types": "./dist/components/*.d.ts"
     },
+    "./internal/*": {
+      "import": "./dist/internal/*.js",
+      "require": "./dist/internal/*.js",
+      "types": "./dist/internal/*.d.ts"
+    },
     "./types/*": {
       "import": "./dist/types/*.js",
       "require": "./dist/types/*.js",

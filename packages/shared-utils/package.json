@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc && echo 'TypeScript compilation completed'",
-    "test": "echo 'TODO(M4): enable jest; 3 of 4 specs need fixes (@turf ESM transform, assertion drift)'"
+    "test": "jest"
   },
   "dependencies": {
     "@runrealm/shared-types": "^2.0.0"

@@ -1,6 +1,7 @@
 import { LocationInfo } from '@runrealm/shared-types/location';
 import { BaseService } from '../core/base-service';
 import { calculateDistance } from '../utils/distance-formatter';
+import { territoryIdFromCenter } from '../utils/territory-id';
 
 export interface RunPoint {
   lat: number;
@@ -597,26 +598,19 @@ export class RunTrackingService extends BaseService {
     this.currentRun.territoryEligible = meetsDistance && isLoop;
 
     if (this.currentRun.territoryEligible) {
-      // Generate geohash for territory
-      this.currentRun.geohash = this.generateTerritoryGeohash(startPoint);
+      // Stable identifier for territory claiming. Source of truth is
+      // `packages/shared-core/utils/territory-id.ts`. Six-decimal precision
+      // and no timestamp suffix — this is what GameLogic.validateTerritory
+      // accepts on the deployed ZetaChain contract.
+      this.currentRun.geohash = territoryIdFromCenter(startPoint.lat, startPoint.lng);
     }
-  }
-
-  /**
-   * Generate geohash for territory claiming
-   */
-  private generateTerritoryGeohash(centerPoint: RunPoint): string {
-    // Simple geohash implementation - in production, use a proper geohash library
-    const lat = centerPoint.lat.toFixed(4);
-    const lng = centerPoint.lng.toFixed(4);
-    return `${lat}_${lng}_${Date.now()}`;
   }
 
   /**
    * Start GPS tracking
    */
   private startGPSTracking(): void {
-    const locationService = this.getService('LocationService');
+    const locationService = this.getSiblingService('LocationService');
     if (locationService) {
       locationService.startLocationTracking();
     }
@@ -626,7 +620,7 @@ export class RunTrackingService extends BaseService {
    * Stop GPS tracking
    */
   private stopGPSTracking(): void {
-    const locationService = this.getService('LocationService');
+    const locationService = this.getSiblingService('LocationService');
     if (locationService) {
       locationService.stopLocationTracking();
     }
@@ -691,7 +685,7 @@ export class RunTrackingService extends BaseService {
    */
   private saveRun(run: RunSession): void {
     try {
-      const preferenceService = this.getService('PreferenceService');
+      const preferenceService = this.getSiblingService('PreferenceService');
       if (preferenceService) {
         const runData = JSON.stringify(run);
         preferenceService.saveLastRun(runData);
@@ -839,21 +833,10 @@ export class RunTrackingService extends BaseService {
     run.territoryEligible = meetsDistance && isLoop;
 
     if (run.territoryEligible) {
-      run.geohash = this.generateTerritoryGeohash(startPoint);
+      // Same territory-id helper as `checkTerritoryEligibility()` above
+      // — one source of truth lives in `utils/territory-id.ts`.
+      run.geohash = territoryIdFromCenter(startPoint.lat, startPoint.lng);
     }
-  }
-
-  /**
-   * Get service instance from global registry
-   */
-  private getService(serviceName: string): any {
-    // Access services through the global RunRealm registry
-    const services = (window as any).RunRealm?.services;
-    if (!services) {
-      console.warn(`Service registry not found. Cannot access ${serviceName}`);
-      return null;
-    }
-    return services[serviceName];
   }
 
   /**
@@ -861,7 +844,7 @@ export class RunTrackingService extends BaseService {
    */
   public getRunHistory(): Array<{ distance: number; duration: number }> {
     try {
-      const preferenceService = this.getService('PreferenceService');
+      const preferenceService = this.getSiblingService('PreferenceService');
       if (!preferenceService) {
         return [];
       }

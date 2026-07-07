@@ -11,6 +11,7 @@ A cross-chain fitness GameFi platform that transforms your runs into NFT territo
 - **Cross-Chain GameFi**: Territory claiming and REALM token rewards on ZetaChain
 - **Dual Platform**: Web app for analysis & management, mobile app for performance & play
 - **Geospatial NFTs**: Own and trade location-based territories
+- **Confidential Defence (roadmap)**: Encrypted activity-point state on Zama fhEVM, planned for the Builder-Track integration. The 9-phase roadmap is captured in [docs/roadmap.md](docs/roadmap.md).
 
 ## 🚀 Quick Start
 
@@ -29,9 +30,11 @@ cp .env.example .env
 
 ### Development
 ```bash
-npm run dev      # Start development server
-npm run build    # Build for production (shared packages + web app)
-npm run test     # Run tests
+npm run dev          # Start development server
+npm run build        # Build for production (shared packages + web app)
+npm run test         # Run tests
+npm run sync:rules   # Regenerate RealmRules.sol + ConfidentialRules.sol from game-rules.ts
+npm run sync:check   # CI hook: exit 1 if generated .sol siblings are out of sync
 ```
 
 ## 📚 Documentation
@@ -40,7 +43,14 @@ npm run test     # Run tests
 - [Architecture](docs/architecture.md) - System architecture, platform design, and smart contracts.
 - [Features](docs/features.md) - Detailed look at key features like Ghost Runners and the User Dashboard.
 - [Guides](docs/guides.md) - Implementation guides, mobile development, and testing strategies.
+- [Roadmap](docs/roadmap.md) - The 9-phase consolidation → Zama fhEVM integration plan (Phases 1-2 shipped; 3-9 in flight).
 - [Mobile UX](MOBILE_UX.md) - Mobile experience enhancement (widget redirect to dashboard, responsive layouts).
+
+## 🚧 Project Status (June 2026)
+
+- ✅ **Phase 1 — Consolidation audit** complete. Removed duplicate geohash helpers, deprecated methods, and TODO comments. Quarantined legacy widget stubs into `internal/_legacy-widget/`. Hoisted `(window as any).RunRealm?.services` lookups onto `BaseService.getSiblingService` / `BaseService.getWalletSnapshot`. Production-only `setInterval` simulator pulled out of `CrossChainService` into `__stubs__/zeta-mock.ts` with a `NODE_ENV === 'production'` throw.
+- ✅ **Phase 2 — DRY foundation** complete. `packages/shared-core/config/game-rules.ts` is now the single source of truth for activity / rewards / territory / H3 constants. `scripts/build/sync-game-rules.mjs` regenerates `contracts/generated/RealmRules.sol` and `contracts/zama/generated/ConfidentialRules.sol` from the TS source — `npm run sync:check` is wired into CI to fail builds on drift. `RealmToken.sol` and `reward-system-ui.ts` consume the canonical source. `GameLogic.sol` keeps its inline constants under a `// MIRROR of RealmRules` docblock (a real import would shift the IPFS metadata hash on the bytecode-frozen ZetaChain Athens deploy).
+- 🟡 **Phase 3+** — see [docs/roadmap.md](docs/roadmap.md) for the ZetaChain honesty pass, Zama `ConfidentialTerritoryDefense` scaffold, confidential UI (`EncryptedShield` / `FogOfWarMap` / `ContestModal`), the cross-chain anchor, performance polish, and gameplay fun-factor work.
 
 ## 🏗️ Architecture
 

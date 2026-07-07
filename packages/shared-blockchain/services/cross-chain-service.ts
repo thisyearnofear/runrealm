@@ -1,5 +1,6 @@
 import { BaseService } from '@runrealm/shared-core/core/base-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
+import { attachMockOrFail } from '../__stubs__/zeta-mock';
 import { ContractService } from './contract-service';
 
 // Type declaration for ZetaChainClient (external library)
@@ -43,8 +44,8 @@ export class CrossChainService extends BaseService {
 
   protected async onInitialize(): Promise<void> {
     // Wait for dependent services
-    this.web3Service = this.getService('Web3Service') as Web3Service | null;
-    this.contractService = this.getService('ContractService') as ContractService | null;
+    this.web3Service = this.getSiblingService('Web3Service') as Web3Service | null;
+    this.contractService = this.getSiblingService('ContractService') as ContractService | null;
 
     if (!this.web3Service || !this.contractService) {
       console.warn('CrossChainService: Required services not available');
@@ -104,7 +105,11 @@ export class CrossChainService extends BaseService {
       throw new Error('ZetaChain connector not initialized');
     }
 
-    if (!this.web3Service?.isConnected()) {
+    // DRY payoff: the new BaseService `getWalletSnapshot()` enforces
+    // that an actual wallet exists, not just that Web3Service is
+    // constructed. Tightens a latent edge case where `isConnected()`
+    // could return true with no wallet reference.
+    if (!this.getWalletSnapshot()?.connected) {
       throw new Error('Wallet not connected');
     }
 
@@ -179,38 +184,18 @@ export class CrossChainService extends BaseService {
   }
 
   /**
-   * Set up mock message listener for demonstration
+   * Set up mock message listener for demonstration.
+   *
+   * The interval timer itself lives in
+   * `packages/shared-blockchain/__stubs__/zeta-mock.ts`; production
+   * paths throw there, so a real ZetaChain client is required to take
+   * this off the mock path.
    */
   private setupMockMessageListener(): void {
-    // This simulates receiving cross-chain messages
-    // In a real implementation, ZetaChain would automatically call the onCall method
-    // of our Universal Contract when a cross-chain message arrives
-
-    console.log('CrossChainService: Setting up mock message listener');
-
-    // For demonstration purposes, we'll emit a mock message every 30 seconds
-    // In a real app, this would be triggered by actual cross-chain events
-    setInterval(() => {
-      // Randomly decide whether to simulate a message (20% chance)
-      if (Math.random() < 0.2) {
-        const mockMessage: CrossChainEvent = {
-          messageId: `mock_msg_${Date.now()}`,
-          sourceChainId: this.getRandomSupportedChain(),
-          targetChainId: 7001, // ZetaChain testnet
-          sender: `0x${Math.random().toString(16).substring(2, 12)}`,
-          receiver: this.contractService?.getContractAddresses().universal || '',
-          data: JSON.stringify({
-            type: 'territoryUpdate',
-            territoryId: Math.floor(Math.random() * 1000),
-            action: 'claimed',
-          }),
-          timestamp: Date.now(),
-        };
-
-        console.log('CrossChainService: Simulating incoming cross-chain message', mockMessage);
-        this.handleIncomingCrossChainMessage(mockMessage);
-      }
-    }, 30000); // Check every 30 seconds
+    attachMockOrFail(
+      (event) => this.handleIncomingCrossChainMessage(event),
+      () => this.contractService?.getContractAddresses().universal || ''
+    );
   }
 
   /**
@@ -398,19 +383,6 @@ export class CrossChainService extends BaseService {
     };
 
     return chainNames[chainId] || `Unknown Chain (${chainId})`;
-  }
-
-  /**
-   * Get service instance from global registry
-   */
-  private getService(serviceName: string): object | null {
-    const services = (window as { RunRealm?: { services?: Record<string, object> } }).RunRealm
-      ?.services;
-    if (!services) {
-      console.warn(`Service registry not found. Cannot access ${serviceName}`);
-      return null;
-    }
-    return services[serviceName];
   }
 
   /**

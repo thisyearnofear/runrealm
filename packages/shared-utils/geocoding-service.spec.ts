@@ -18,7 +18,7 @@ describe('GeocodingService', () => {
     expect(res).toEqual([]);
   });
 
-  it('builds url and normalizes features', async (done) => {
+  it('builds url and normalizes features', (done) => {
     const svc = new GeocodingService(token);
     (global as any).fetch = (url: string) => {
       expect(url).toContain('https://api.mapbox.com/geocoding/v5/mapbox.places/Seattle.json');
@@ -39,18 +39,20 @@ describe('GeocodingService', () => {
       });
     };
 
-    const res = await svc.searchPlaces('Seattle');
-    expect(res.length).toBe(1);
-    expect(res[0].name).toBe('Seattle, Washington, United States');
-    expect(res[0].center).toEqual([-122.335167, 47.608013]);
-    done();
+    svc.searchPlaces('Seattle').then((res) => {
+      expect(res.length).toBe(1);
+      expect(res[0].name).toBe('Seattle, Washington, United States');
+      expect(res[0].center).toEqual([-122.335167, 47.608013]);
+      done();
+    });
   });
 
-  it('handles non-ok responses gracefully', async (done) => {
+  it('handles non-ok responses gracefully', (done) => {
     const svc = new GeocodingService(token);
     (global as any).fetch = () => Promise.resolve({ ok: false, status: 500 });
-    const res = await svc.searchPlaces('X');
-    expect(res).toEqual([]);
-    done();
+    svc.searchPlaces('X').then((res) => {
+      expect(res).toEqual([]);
+      done();
+    });
   });
 });

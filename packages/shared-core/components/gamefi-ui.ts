@@ -96,22 +96,6 @@ export class GameFiUI extends BaseService {
   }
 
   /**
-   * Enable GameFi mode UI
-   */
-  // DEPRECATED: MainUI controls GameFi mode and widget rendering
-  public enableGameFiMode(): void {
-    /* no-op */
-  }
-
-  /**
-   * Disable GameFi mode UI
-   */
-  // DEPRECATED: MainUI controls GameFi mode and widget rendering
-  public disableGameFiMode(): void {
-    /* no-op */
-  }
-
-  /**
    * Update player statistics display
    */
   public updatePlayerStats(stats: Partial<PlayerStats>): void {
@@ -229,9 +213,11 @@ export class GameFiUI extends BaseService {
   }
 
   // Event handlers
+
   /**
-   * @deprecated Territory claiming is now handled by TerritoryService
-   * This method is kept for backward compatibility
+   * Cancel the animation loop, clear cached HUD element lookups, and
+   * remove any `gamefi-mode` class on the body before delegating to
+   * the base lifecycle teardown. Called by `BaseService.cleanup()`.
    */
   public cleanup(): void {
     if (this.animationFrameId) {

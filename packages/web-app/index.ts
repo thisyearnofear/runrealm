@@ -247,21 +247,6 @@ async function initializeApp(): Promise<void> {
         return null;
       };
 
-      // TODO: Import widget debug utility when available
-      // import('./utils/widget-debug').then(() => {
-      //   console.log('🔧 Widget debug utility available: WidgetDebug');
-      //   console.log('🔧 Debug widgets with: debugWidgets()');
-      // });
-
-      // TODO: Import widget test utility when available
-      // import('./utils/widget-test').then(() => {
-      //   console.log('🧪 Widget test utility loaded');
-      //   // Auto-run tests after a short delay to let everything initialize
-      //   setTimeout(() => {
-      //     (window as any).WidgetTest?.runAllTests();
-      //   }, 3000);
-      // });
-
       // Only show debug panel if explicitly requested (URL param)
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('debug') === 'true') {
@@ -327,9 +312,15 @@ async function initializeApp(): Promise<void> {
           // 4. Simulate cross-chain territory claim
           console.log('\n📍 Simulating cross-chain territory claim...');
 
-          // Create mock territory data
+          // Create mock territory data. The geohash is generated
+          // through the shared territory-id helper so demo fixtures
+          // stay in lockstep with the source of truth used by
+          // TerritoryService and RunTrackingService.
+          const { territoryIdFromCenter } = await import(
+            '@runrealm/shared-core/utils/territory-id'
+          );
           const mockTerritory = {
-            geohash: 'u4pruydqqvj',
+            geohash: territoryIdFromCenter(40.785091, -73.968285),
             difficulty: 75,
             distance: 5000,
             landmarks: ['Central Park', 'Fountain'],

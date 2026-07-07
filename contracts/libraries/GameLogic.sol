@@ -10,12 +10,31 @@ import "../interfaces/IRunRealmGame.sol";
  */
 library GameLogic {
 
-    // Game constants
-    uint256 private constant BASE_REWARD_RATE = 1e15; // 0.001 REALM per meter
-    uint256 private constant DIFFICULTY_MULTIPLIER = 10; // Multiplier for difficulty bonus
-    uint256 private constant LEVEL_DISTANCE_THRESHOLD = 10000; // 10km per level
-    uint256 private constant MIN_TERRITORY_DISTANCE = 100; // 100m minimum
-    uint256 private constant MAX_TERRITORY_DISTANCE = 50000; // 50km maximum
+    // ---------------------------------------------------------------------
+    // MIRRORED FROM RealmRules.
+    //
+    // GameLogic.sol is consumed by `RunRealmUniversal.sol` which is
+    // already deployed on ZetaChain Athens testnet (chainId 7001). The
+    // deployed bytecode is fixed; any change to GameLogic.sol's source
+    // would change the IPFS/Swarm metadata hash appended at the end of
+    // the compiled bytecode, breaking source-verification on the
+    // ZetaChain block explorer. TODAY these constants are mirrored by
+    // hand — DO NOT EDIT IN PLACE. Full DRY consolidation via
+    // `import { RealmRules } from '../generated/RealmRules.sol'` is
+    // scheduled for the next deploy cycle that picks up Phase 2
+    // changes end-to-end (see `packages/shared-core/config/game-rules.ts`
+    // header comment for the same rationale).
+    //
+    // canonical source: packages/shared-core/config/game-rules.ts
+    //                   contracts/generated/RealmRules.sol
+    // ---------------------------------------------------------------------
+
+    // Game constants (MIRROR — see header above)
+    uint256 private constant BASE_REWARD_RATE = 1e15; // 0.001 REALM per meter  ≡ RealmRules.BASE_REWARD_PER_METER_E15
+    uint256 private constant DIFFICULTY_MULTIPLIER = 10; //                   ≡ shake-out still needed
+    uint256 private constant LEVEL_DISTANCE_THRESHOLD = 10000; // 10km per level  ≡ RealmRules.LEVEL_DISTANCE_THRESHOLD_METERS
+    uint256 private constant MIN_TERRITORY_DISTANCE = 100; // 100m minimum      ≡ RealmRules.MIN_TERRITORY_DISTANCE_METERS
+    uint256 private constant MAX_TERRITORY_DISTANCE = 50000; // 50km maximum    ≡ RealmRules.MAX_TERRITORY_DISTANCE_METERS
     uint256 private constant TERRITORY_TIMEOUT = 30 days; // Territory inactivity timeout
 
     // Custom errors
