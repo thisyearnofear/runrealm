@@ -9,7 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MobileWalletState, MobileWeb3Adapter } from '../services/MobileWeb3Adapter';
 
-interface WalletButtonProps {
+export interface WalletButtonProps {
   web3Adapter: MobileWeb3Adapter;
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;

@@ -12,7 +12,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import MapView, { MapPressEvent, Polygon, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { MobileMapAdapter, MobileMapState } from '../services/MobileMapAdapter';
 
-interface TerritoryMapViewProps {
+export interface TerritoryMapViewProps {
   mapAdapter: MobileMapAdapter;
   onMapPress?: (coordinate: { latitude: number; longitude: number }) => void;
   onTerritoryPress?: (territoryId: string) => void;
@@ -52,7 +52,6 @@ const TerritoryMapView: React.FC<TerritoryMapViewProps> = React.memo(
             try {
               const currentLocation = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.Balanced,
-                maximumAge: 5000, // Use cached location if available (5 seconds)
               });
 
               const location = {

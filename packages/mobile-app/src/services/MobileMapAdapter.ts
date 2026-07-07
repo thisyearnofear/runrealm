@@ -20,21 +20,21 @@ export interface MobileMapState {
     coordinates: Array<{ latitude: number; longitude: number }>;
     fillColor: string;
     strokeColor: string;
-    metadata: TerritoryMetadata;
+    metadata: Partial<TerritoryMetadata> | Record<string, unknown>;
   }>;
   territoryPreviews: Array<{
     id: string;
     coordinates: Array<{ latitude: number; longitude: number }>;
     fillColor: string;
     strokeColor: string;
-    metadata: TerritoryMetadata;
+    metadata: Partial<TerritoryMetadata> | Record<string, unknown>;
   }>;
   territoryIntents: Array<{
     id: string;
     coordinates: Array<{ latitude: number; longitude: number }>;
     fillColor: string;
     strokeColor: string;
-    metadata: TerritoryMetadata;
+    metadata: Partial<TerritoryMetadata> | Record<string, unknown>;
   }>;
   selectedTerritoryId: string | null;
   suggestedRoute: Array<{ latitude: number; longitude: number }>;
@@ -300,10 +300,7 @@ export class MobileMapAdapter {
     this.mapService.drawSuggestedRoute(points);
 
     // Update mobile state
-    this.state.suggestedRoute = points.map((p) => ({
-      latitude: p.lat,
-      longitude: p.lng,
-    }));
+    this.state.suggestedRoute = points;
     this.notifyListeners();
   }
 

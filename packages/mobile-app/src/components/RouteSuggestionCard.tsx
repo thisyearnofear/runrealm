@@ -3,7 +3,7 @@
  * ENHANCEMENT FIRST: Uses existing AIService from shared-core
  */
 
-import { AIService } from '@runrealm/shared-core/services/ai-service';
+import { AIService, RouteOptimization } from '@runrealm/shared-core/services/ai-service';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -15,16 +15,21 @@ interface RouteSuggestionCardProps {
   }) => void;
 }
 
+interface SuggestedRouteView {
+  name: string;
+  coordinates: Array<[number, number]>;
+  distance: number;
+  estimatedTime: number;
+  difficulty: string;
+  description: string;
+  landmarks: string[];
+}
+
 export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
   currentLocation,
   onRouteSelected,
 }) => {
-  const [suggestedRoute, setSuggestedRoute] = useState<{
-    name: string;
-    distance: number;
-    estimatedTime: number;
-    landmarks: string[];
-  } | null>(null);
+  const [suggestedRoute, setSuggestedRoute] = useState<SuggestedRouteView | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +47,7 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
         await aiService.initializeService();
       }
 
-      const route = await aiService.suggestRoute(
+      const optimization = await aiService.suggestRoute(
         {
           lat: currentLocation.latitude,
           lng: currentLocation.longitude,
@@ -53,7 +58,16 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
         }
       );
 
-      setSuggestedRoute(route);
+      const route = optimization.suggestedRoute;
+      setSuggestedRoute({
+        name: 'AI Suggested Route',
+        coordinates: route.coordinates,
+        distance: route.distance,
+        estimatedTime: Math.round((route.distance / 1000) * 6), // ~6 min/km
+        difficulty: route.difficulty ? String(route.difficulty) : 'Medium',
+        description: route.reasoning || 'A route tuned for your location.',
+        landmarks: [],
+      });
     } catch (error) {
       console.error('Failed to load route suggestion:', error);
       setError('Route suggestions unavailable');
@@ -71,7 +85,7 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
   const handleUseRoute = () => {
     if (suggestedRoute && onRouteSelected) {
       onRouteSelected({
-        coordinates: suggestedRoute.coordinates || [],
+        coordinates: suggestedRoute.coordinates.map(([lng, lat]) => ({ lat, lng })),
         distance: suggestedRoute.distance || 5000,
       });
     }

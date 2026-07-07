@@ -24,7 +24,7 @@ import { BackgroundTrackingService } from '../services/BackgroundTrackingService
 import MobileRunTrackingService from '../services/MobileRunTrackingService';
 import { AICoachingWidget } from './AICoachingWidget';
 
-interface GPSTrackingProps {
+export interface GPSTrackingProps {
   onRunStart?: () => void;
   onRunStop?: (runData: RunSession) => void;
 }
@@ -155,14 +155,19 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
     pulseAnim.setValue(1);
   };
 
-  const checkTerritoryEligibility = (stats: { distance: number }) => {
+  const checkTerritoryEligibility = (stats: { distance?: number }) => {
     // Simple eligibility check - can be enhanced with real logic
-    const eligible = stats && stats.distance > 500; // Basic distance check
+    const eligible = stats && (stats.distance ?? 0) > 500; // Basic distance check
     setTerritoryEligible(eligible);
     return eligible;
   };
 
-  const updateRunStats = (stats: { distance?: number; duration?: number; pace?: number }) => {
+  const updateRunStats = (stats: {
+    distance?: number;
+    duration?: number;
+    pace?: number;
+    averageSpeed?: number;
+  }) => {
     if (stats) {
       setDistance(stats.distance || 0);
       setDuration(stats.duration || 0);
@@ -243,7 +248,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
   const handleStopRun = async () => {
     animateButtonPress();
     try {
-      const runData = mobileTrackingService.stopRun();
+      const runData = await mobileTrackingService.stopRun();
 
       setIsTracking(false);
       setCurrentRunId(null);

@@ -9,8 +9,11 @@ import { Web3Service } from '@runrealm/shared-core/services/web3-service';
 import type { ComponentType } from 'react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
+import type { GPSTrackingProps } from '../components/GPSTrackingComponent';
 import { RouteSuggestionCard } from '../components/RouteSuggestionCard';
 import { TerritoryClaimModal } from '../components/TerritoryClaimModal';
+import type { TerritoryMapViewProps } from '../components/TerritoryMapView';
+import type { WalletButtonProps } from '../components/WalletButton';
 import { MobileMapAdapter } from '../services/MobileMapAdapter';
 import { MobileWeb3Adapter } from '../services/MobileWeb3Adapter';
 import { saveRunToHistory } from './HistoryScreen';
@@ -24,15 +27,11 @@ interface MapScreenProps {
 
 const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _route }) => {
   const [_componentsLoaded, setComponentsLoaded] = useState(false);
-  const [TerritoryMapView, setTerritoryMapView] = useState<ComponentType<
-    Record<string, never>
-  > | null>(null);
-  const [GPSTrackingComponent, setGPSTrackingComponent] = useState<ComponentType<
-    Record<string, never>
-  > | null>(null);
-  const [WalletButton, setWalletButton] = useState<ComponentType<Record<string, never>> | null>(
-    null
-  );
+  const [TerritoryMapView, setTerritoryMapView] =
+    useState<ComponentType<TerritoryMapViewProps> | null>(null);
+  const [GPSTrackingComponent, setGPSTrackingComponent] =
+    useState<ComponentType<GPSTrackingProps> | null>(null);
+  const [WalletButton, setWalletButton] = useState<ComponentType<WalletButtonProps> | null>(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [completedRunData, setCompletedRunData] = useState<RunSession | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
@@ -100,7 +99,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
     console.log('Run started');
   };
 
-  const handleRunStop = async (runData: RunSession | null) => {
+  const handleRunStop = async (runData: RunSession) => {
     console.log('Run stopped:', runData);
 
     // Mark run as completed
@@ -174,9 +173,8 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
     // Draw suggested route on map
     if (mapAdapter) {
       const runPoints = route.coordinates.map((coord) => ({
-        lat: coord.lat,
-        lng: coord.lng,
-        timestamp: Date.now(),
+        latitude: coord.lat,
+        longitude: coord.lng,
       }));
       mapAdapter.drawSuggestedRoute(runPoints);
     }

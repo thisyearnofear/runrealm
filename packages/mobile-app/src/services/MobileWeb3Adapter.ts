@@ -7,7 +7,11 @@
  */
 
 import { BaseService } from '@runrealm/shared-core/core/base-service';
-import { WalletInfo, Web3Service } from '@runrealm/shared-core/services/web3-service';
+import {
+  TransactionRequest,
+  WalletInfo,
+  Web3Service,
+} from '@runrealm/shared-core/services/web3-service';
 
 /**
  * Mobile-specific wallet connection state
@@ -169,7 +173,7 @@ export class MobileWeb3Adapter extends BaseService {
   /**
    * Send transaction (delegates to Web3Service)
    */
-  public async sendTransaction(transaction: object): Promise<string> {
+  public async sendTransaction(transaction: TransactionRequest): Promise<string> {
     return this.web3Service.sendTransaction(transaction);
   }
 
