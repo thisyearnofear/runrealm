@@ -71,11 +71,10 @@ export interface Territory {
   crossChainClaimTxHash?: string;
   intentId?: string;
   /**
-   * Phase 3 — set at claim time to `true` when the wallet's chainId
+   * Phase 3/5 — set at claim time to `true` when the wallet's chainId
    * is in `GAME_RULES.zama.supportedChainIds` and the Zama fhEVM
-   * confidential shield is available. Defaults to undefined / false
-   * for every claim today (the list is empty until Zama publishes
-   * its mainnet/testnet chain IDs).
+   * confidential shield is available. Sepolia (11155111) is the public
+   * Zama Protocol FHEVM testnet and is listed in `supportedChainIds`.
    */
   confidentialShield?: boolean;
   // Activity staking system

@@ -141,6 +141,16 @@ export class Web3Service extends BaseService {
       blockExplorer: 'https://polygonscan.com',
       nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
     });
+
+    // Ethereum Sepolia — Zama Protocol FHEVM host chain for the
+    // confidential territory-defense layer.
+    this.supportedNetworks.set(11155111, {
+      chainId: 11155111,
+      name: 'Ethereum Sepolia',
+      rpcUrl: process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
+      blockExplorer: 'https://sepolia.etherscan.io',
+      nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+    });
   }
 
   private setupEventListeners(): void {

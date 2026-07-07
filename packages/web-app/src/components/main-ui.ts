@@ -312,8 +312,8 @@ export class MainUI extends BaseService {
     // Get the enhanced run controls service from global registry
     const services = (window as any).RunRealm?.services;
 
-    if (services?.EnhancedRunControls) {
-      services.EnhancedRunControls.initializeWidget();
+    if (services?.enhancedRunControls) {
+      services.enhancedRunControls.initializeWidget();
     } else {
       // Fallback: access directly from app instance
       const app = (window as any).runRealmApp;

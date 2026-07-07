@@ -442,7 +442,7 @@
   }
 
   /* Optimize map for printing */
-  #mapbox-container {
+  #maplibre-container {
     position: static;
     height: 400px;
     width: 100%;

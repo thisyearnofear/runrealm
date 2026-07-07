@@ -107,7 +107,7 @@
 /* ===== Z-INDEX SYSTEM APPLICATION ===== */
 
 /* Map Container */
-#mapbox-container {
+#maplibre-container {
   z-index: var(--z-map);
 }
 
