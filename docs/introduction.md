@@ -72,6 +72,14 @@ RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=0x243D95fE43777533aC3E81b5fB8251A282b17E3A
 SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 ```
 
+#### ZetaChain Boost Contract:
+
+The additive `RunRealmBoostV1` contract is deployed on **ZetaChain Athens Testnet** and burns REALM for a +100 activity-point boost. Set it in `.env`:
+
+```env
+RUNREALM_BOOST_ADDRESS=0x243D95fE43777533aC3E81b5fB8251A282b17E3A
+```
+
 #### Minimal `.env` file (to get started):
 
 ```env
