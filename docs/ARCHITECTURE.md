@@ -150,6 +150,79 @@ The sync script is idempotent. `npm run sync:rules` regenerates the two
 siblings; `npm run sync:check` exits non-zero if either is out of sync
 (CI hook).
 
+### Phase 3 — Additive Boost Contract
+
+The Phase 1+2 DRY foundation has a deliberate gap: the deployed
+`RunRealmUniversal.sol` is bytecode-frozen on ZetaChain Athens (chainId
+7001), so any new selector on it would shift the IPFS metadata hash
+and break explorer source verification. Phase 3 (Zeta Honesty Pass)
+adds the boost selector as a **parallel deployment** rather than
+mutating the frozen surface.
+
+```
+contracts/boost/RunRealmBoostV1.sol   (new, additive)
+   ├── constructor(realmTokenAddress)
+   ├── boostTerritoryActivity(tokenId)        // user calls directly
+   │     ├── per-address per-tokenId per-UTC-day rate limit
+   │     │     (lastBoostDay[player][tokenId] < block.timestamp / 1 days)
+   │     ├── IZRC20(realmToken).transferFrom(
+   │     │     player, 0x0000...dEaD, BOOST_COST)
+   │     └── emit TerritoryBoosted(player, tokenId, cost, day)
+   └── BOOST_COST = RealmRules.ACTIVITY_BOOST_COST_REALM_E18
+```
+
+`activityPoints` is intentionally **not** stored on-chain. The
+contract is a payment + rate-limit + event oracle; the off-chain
+`TerritoryService` listens for `TerritoryBoosted`, verifies the
+receipt (`receipt.status === 1`), and applies the `+100` mutation
+locally via `updateTerritoryActivity`. This keeps the volatile UI
+state out of the on-chain game-of-record and avoids the gas cost of
+`SSTORE` on every boost.
+
+The boost cost flows from `GAME_RULES.activity.boostCostRealmE18`
+(synced to `RealmRules.ACTIVITY_BOOST_COST_REALM_E18`) and is
+mirrored as a precomputed `boostCostRealmWei: 50n * 10n ** 18n`
+for the JS side. The two values are kept in lockstep by sitting
+side-by-side in the same `game-rules.ts` object literal.
+
+### Phase 3 — EncryptedShield Toggle (`chainSupportsZama`)
+
+The Zama fhEVM confidential layer (phase 4+) needs a runtime gate so
+the UI and the cross-chain service can branch on whether the
+connected wallet is on a Zama-supported chain. Phase 3 adds:
+
+- `game-rules.ts` gets a `zama: { supportedChainIds: [] as readonly number[] }`
+  block — empty today (Zama fhEVM mainnet / testnet are pre-publication),
+  so the EncryptedShield flag defaults to safe `false` for every chain.
+- New `packages/shared-blockchain/services/zama-support.ts` exposes
+  `chainSupportsZama(chainId)`, `getEncryptedShieldState(chainId)`
+  (`'enabled' | 'disabled' | 'unavailable'`), and emits
+  `web3:zamaUnsupported` for UI listeners.
+- `CrossChainService.encryptedShieldEnabled` updates reactively on
+  `web3:walletConnected` and `web3:networkChanged`. Exposed via
+  `isEncryptedShieldEnabled()` / `getEncryptedShieldState()`.
+- `Territory.confidentialShield` is set at claim time to reflect the
+  current wallet's chain. When Zama publishes its mainnet/testnet
+  chain IDs, add them to `game-rules.ts` and re-run `npm run sync:rules`
+  — the flag flips to `enabled` for those chains automatically. No
+  further code changes are required.
+
+### Phase 3 — Receipt-Gated `claimTerritory`
+
+The off-chain `TerritoryService.claimTerritory` used to mutate the
+local `Territory.status` to `'claimed'` immediately after the
+`mintTerritory` call returned a hash, before any on-chain
+confirmation. Phase 3 closes that gap: `ContractService.mintTerritory`
+now returns a structured `TerritoryMintReceipt` and `claimTerritory`
+gates the local mutation on both `receipt.status === 1` AND a
+non-null `tokenId` parsed from the `TerritoryCreated` event. The
+optimistic state mutation is gone; the wallet UI can now trust
+`success: true`.
+
+A `@deprecated mintTerritoryHash(...)` convenience alias on
+`ContractService` is kept for defensive backward compatibility with
+any external consumer that hasn't migrated to the new shape.
+
 ### Territory Defense & Activity System
 
 **Activity Staking Model**:

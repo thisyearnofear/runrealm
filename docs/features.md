@@ -206,6 +206,42 @@ The dashboard has been transformed from a centered overlay to a primary interfac
 - **Responsive**: The map automatically adjusts its size and position based on the dashboard's state.
 ## Changelog
 
+### Project Status (July 2026)
+- **Phase 3 — Zeta Honesty Pass** complete. Three coupled changes:
+  1. `boostTerritoryActivity` is now on-chain. The additive
+     `contracts/boost/RunRealmBoostV1.sol` is a parallel deployment
+     alongside the bytecode-frozen `RunRealmUniversal` — it owns the
+     boost selector (per-address per-tokenId per-UTC-day rate limit,
+     REALM burned to `0x...dEaD`, `TerritoryBoosted` event) without
+     touching the frozen surface. `activityPoints` stays off-chain
+     (volatile UI state, not game-of-record); the off-chain
+     `TerritoryService` listens for the event, verifies the receipt,
+     and applies the `+100` mutation locally.
+  2. `claimTerritory` is gated on a real receipt. `ContractService.mintTerritory`
+     now returns a structured `TerritoryMintReceipt`; the local
+     `status = 'claimed'` mutation happens only when
+     `receipt.status === 1` AND a `tokenId` was parsed from the
+     `TerritoryCreated` event. Optimistic state mutation is gone.
+  3. `chainSupportsZama(chainId)` + `encryptedShieldEnabled` toggle.
+     New `ZamaSupportService` keys the EncryptedShield flag off
+     `GAME_RULES.zama.supportedChainIds` (empty today, so the flag
+     defaults to safe `false` for every chain). `CrossChainService`
+     updates the flag reactively on wallet connect / network change.
+     `Territory.confidentialShield` is set at claim time.
+- `boostCostRealmWei: 50n * 10n ** 18n` added to `game-rules.ts` as a
+  precomputed bigint paired with `boostCostRealmE18: '50 * 10**18'`
+  (the Solidity-emitted string) so the JS side skips runtime
+  expression evaluation.
+- **Phase 2 latent sync-script bug fixed**: the previous
+  `emitConfidentialRules` had a duplicated `library ConfidentialRules
+  { ... }` block in its template literal — the generated
+  `ConfidentialRules.sol` was malformed. Both `.sol` siblings now have
+  exactly one library declaration. The `as <type>` regex was
+  broadened to handle `as const` / `as number` / `as readonly number[]`
+  / `as Generic<T>` uniformly.
+- See [docs/roadmap.md](roadmap.md) for the 9-phase plan; Phase 4
+  (Zama scaffolding) is now next.
+
 ### Project Status (June 2026)
 - **Phase 1 — Consolidation audit** complete. `BaseService.getSiblingService` and
   `BaseService.getWalletSnapshot` replace the per-service `getService()` boilerplate

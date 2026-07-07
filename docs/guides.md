@@ -162,6 +162,37 @@ imports `RealmRules` directly.
 
 ## Changelog
 
+### Project Status (July 2026)
+- **Phase 3 — Zeta Honesty Pass** complete. Three coupled changes:
+  1. `boostTerritoryActivity` is now on-chain via the additive
+     `contracts/boost/RunRealmBoostV1.sol` (per-address per-tokenId
+     per-UTC-day rate limit; REALM burned to `0x...dEaD` via
+     `IZRC20.transferFrom`; emits `TerritoryBoosted`). The deployed
+     `RunRealmUniversal` is untouched — the new contract is a
+     parallel deployment, not a mutation of frozen surface.
+  2. `claimTerritory` is now gated on a real `TerritoryMintReceipt`
+     (`status === 1` + parsed `tokenId`). Optimistic state mutation
+     is gone. A `@deprecated mintTerritoryHash(...)` alias on
+     `ContractService` is kept for defensive backward compatibility.
+  3. `chainSupportsZama(chainId)` + `encryptedShieldEnabled` toggle.
+     New `packages/shared-blockchain/services/zama-support.ts` keys
+     the flag off `GAME_RULES.zama.supportedChainIds` (empty today,
+     so the flag is safe `false` for every chain). `CrossChainService`
+     updates the flag reactively on wallet connect / network change;
+     `Territory.confidentialShield` is set at claim time.
+- `boostCostRealmWei: 50n * 10n ** 18n` added to `game-rules.ts` as
+  a precomputed bigint paired with the Solidity-emitted
+  `boostCostRealmE18` string. The two stay in lockstep by sitting
+  side-by-side in the same `game-rules.ts` object literal.
+- **Phase 2 latent sync-script bug fixed**: the previous
+  `emitConfidentialRules` had a duplicated `library ConfidentialRules { ... }`
+  block in its template literal — the generated `ConfidentialRules.sol`
+  was malformed. Both `.sol` siblings now have exactly one library
+  declaration each. The `as <type>` regex was broadened to handle
+  `as const` / `as number` / `as readonly number[]` / `as Generic<T>`
+  uniformly.
+- See [docs/roadmap.md](roadmap.md); Phase 4 (Zama scaffolding) is next.
+
 ### Project Status (June 2026)
 - **Phase 1 — Consolidation audit** complete. `BaseService.getSiblingService` /
   `getWalletSnapshot` replace the per-service `getService()` boilerplate; legacy

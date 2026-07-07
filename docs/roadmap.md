@@ -13,8 +13,8 @@ the deployed public chain.
 |---|---|---|---|
 | 1 | Consolidation audit | ✅ Complete | `BaseService.getSiblingService` / `getWalletSnapshot`; legacy stubs quarantined; production `setInterval` simulator fenced. |
 | 2 | DRY foundation | ✅ Complete | `game-rules.ts` regenerates `RealmRules.sol` + `ConfidentialRules.sol`; `RealmToken.sol` and `reward-system-ui.ts` consume the canonical source. |
-| 3 | ZetaChain honesty pass | 🟡 Next | `boostTerritoryActivity` actually calls on-chain `RealmToken.boostTerritory`; `claimTerritory` is receipt-gated; `EncryptedShield` toggles off `chainSupportsZama(chainId)`. |
-| 4 | Zama scaffolding | 🟡 Planned | `contracts/zama/ConfidentialTerritoryDefense.sol` (`euint32` mirror of activity-points + encrypted decay) + Mock-mode Hardhat tests + `IConfidentialTerritory` interface + Sepolia deploy script. |
+| 3 | ZetaChain honesty pass | ✅ Complete (Jul 2026) | Additive `RunRealmBoostV1` contract; `claimTerritory` is receipt-gated on `status === 1` + parsed `tokenId`; `chainSupportsZama(chainId)` + `encryptedShieldEnabled` toggle; `boostCostRealmWei` precomputed bigint; Phase 2 latent sync-script bug fixed. |
+| 4 | Zama scaffolding | 🟡 Next | `contracts/zama/ConfidentialTerritoryDefense.sol` (`euint32` mirror of activity-points + encrypted decay) + Mock-mode Hardhat tests + `IConfidentialTerritory` interface + Sepolia deploy script. |
 | 5 | Live Zama UX | 🟡 Planned | `EncryptedShield`, `ConfidentialDefensePanel`, `FogOfWarMap`, `ContestModal`. Reuses the existing widget system; feature-flagged via `VITE_ENABLE_ZAMA`. |
 | 6 | Cross-chain anchor | 🟡 Planned | `CrossChainAnchor` reads ZetaChain `TerritoryCreated` events and calls `ConfidentialTerritoryDefense.anchorFromZeta(tokenId, owner)`. This is the moment the two chains visibly work together. |
 | 7 | Performance & polish | 🟡 Planned | Encrypted-decay cadence animation; relayer SDK connection pooling; per-territory ciphertext cache (TTL 30 min). |
@@ -69,7 +69,9 @@ only see a glowing silhouette on the map until they win a contest.
 | `contracts/generated/RealmRules.sol` | Solidity mirror for ZetaChain (`uint256`). | 2 |
 | `contracts/zama/generated/ConfidentialRules.sol` | Solidity mirror for Zama fhEVM (`euint32`/`uint64`). | 2 |
 | `contracts/RealmToken.sol` | Consumes `RealmRules`; will host the on-chain `boostTerritory` call. | 3 |
+| `contracts/boost/RunRealmBoostV1.sol` | New (Phase 3): additive boost contract; per-address per-tokenId per-UTC-day rate limit; burns REALM to `0x...dEaD`; emits `TerritoryBoosted`. Deployed alongside, not replacing, the bytecode-frozen `RunRealmUniversal`. | 3 |
 | `contracts/libraries/GameLogic.sol` | Frozen deploy; constants mirrored with explicit `// MIRROR of RealmRules` docblock. | 2 |
+| `packages/shared-blockchain/services/zama-support.ts` | New (Phase 3): `ZamaSupportService` exposes `chainSupportsZama(chainId)` and `getEncryptedShieldState(chainId)`; emits `web3:zamaUnsupported` for UI listeners. | 3 |
 | `contracts/zama/ConfidentialTerritoryDefense.sol` | New: `euint32` activity-points + encrypted decay. | 4 |
 | `contracts/zama/CrossChainAnchor.sol` | New: reads ZetaChain events, anchors Zama defense state. | 6 |
 | `packages/shared-core/services/confidential-territory-service.ts` | New: `extends TerritoryService`; adds `boostEncrypted` / `contestEncrypted` / `myDefenseCipher`. | 4 |
