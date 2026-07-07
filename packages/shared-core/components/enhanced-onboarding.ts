@@ -79,7 +79,7 @@ export class EnhancedOnboarding extends BaseService {
         description:
           'Transform your runs into an epic Web3 adventure. Claim territories, earn rewards, and compete with runners worldwide.',
         position: 'center',
-        skippable: false,
+        skippable: true,
       },
       {
         id: 'location-setup',
@@ -250,14 +250,19 @@ export class EnhancedOnboarding extends BaseService {
             ${progress}
           </div>
           <div class="tooltip-footer">
-            ${
-              this.currentStep > 0
-                ? '<button class="tooltip-btn secondary" id="onboarding-prev">Previous</button>'
-                : ''
-            }
-            <button class="tooltip-btn primary" id="onboarding-next">
-              ${this.currentStep === this.steps.length - 1 ? 'Get Started!' : 'Next'}
+            <button class="tooltip-btn text" id="onboarding-skip-footer" type="button">
+              Skip tour
             </button>
+            <div class="tooltip-footer-actions">
+              ${
+                this.currentStep > 0
+                  ? '<button class="tooltip-btn secondary" id="onboarding-prev" type="button">Previous</button>'
+                  : ''
+              }
+              <button class="tooltip-btn primary" id="onboarding-next" type="button">
+                ${this.currentStep === this.steps.length - 1 ? 'Get Started!' : 'Next'}
+              </button>
+            </div>
           </div>
         </div>
       `,
@@ -331,9 +336,11 @@ export class EnhancedOnboarding extends BaseService {
     const prevBtn = this.tooltip.querySelector('#onboarding-prev');
     prevBtn?.addEventListener('click', () => this.previousStep());
 
-    // Skip button
+    // Skip buttons (header close or footer skip)
     const skipBtn = this.tooltip.querySelector('.tooltip-skip');
     skipBtn?.addEventListener('click', () => this.skipOnboarding());
+    const skipFooterBtn = this.tooltip.querySelector('#onboarding-skip-footer');
+    skipFooterBtn?.addEventListener('click', () => this.skipOnboarding());
 
     // Keyboard navigation
     document.addEventListener('keydown', this.handleKeydown.bind(this));
@@ -496,12 +503,10 @@ export class EnhancedOnboarding extends BaseService {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.8);
+          background: rgba(0, 0, 0, 0.7);
           backdrop-filter: blur(4px);
           z-index: 9999;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          pointer-events: none;
         }
 
         .onboarding-highlight {
@@ -537,6 +542,7 @@ export class EnhancedOnboarding extends BaseService {
           backdrop-filter: blur(20px);
           color: white;
           z-index: 10001;
+          pointer-events: auto;
         }
 
         .tooltip-content {
@@ -610,8 +616,15 @@ export class EnhancedOnboarding extends BaseService {
 
         .tooltip-footer {
           display: flex;
+          align-items: center;
+          justify-content: space-between;
           gap: 12px;
-          justify-content: flex-end;
+          margin-top: 8px;
+        }
+
+        .tooltip-footer-actions {
+          display: flex;
+          gap: 12px;
         }
 
         .tooltip-btn {
@@ -645,6 +658,19 @@ export class EnhancedOnboarding extends BaseService {
           background: rgba(255, 255, 255, 0.2);
         }
 
+        .tooltip-btn.text {
+          background: transparent;
+          color: rgba(255, 255, 255, 0.6);
+          padding: 8px 0;
+          min-width: auto;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
+
+        .tooltip-btn.text:hover {
+          color: white;
+        }
+
         /* Mobile responsiveness */
         @media (max-width: 768px) {
           .onboarding-tooltip {
@@ -676,14 +702,24 @@ export class EnhancedOnboarding extends BaseService {
 
           .tooltip-footer {
             flex-direction: column;
+            align-items: stretch;
             gap: 8px;
             margin-top: 16px;
+          }
+
+          .tooltip-footer-actions {
+            flex-direction: column;
+            gap: 8px;
           }
 
           .tooltip-btn {
             width: 100%;
             min-height: 48px;
             font-size: 16px;
+          }
+
+          .tooltip-btn.text {
+            text-align: center;
           }
 
           /* Better mobile overlay */
