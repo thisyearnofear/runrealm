@@ -21,6 +21,7 @@ export interface NetworkConfig {
     universal: ContractConfig;
     realmToken: ContractConfig;
     boost: ContractConfig;
+    confidentialTerritoryDefense: ContractConfig;
   };
 }
 
@@ -177,6 +178,143 @@ const BOOST_CONTRACT_ABI = [
   },
 ];
 
+/**
+ * Phase 4 (Zama scaffolding) — minimal ABI for
+ * `ConfidentialTerritoryDefense`. Mirrors the public surface of
+ * `IConfidentialTerritory` plus the contract's own view helpers
+ * (`isAnchored`, `getDefenseMetadata`, `applyEncryptedDecay`,
+ * `lastBoostDay`). When the real Zama lib is wired in, the ABI
+ * does not need to change — the contract surface stays the same.
+ */
+const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { internalType: 'address', name: 'owner', type: 'address' },
+    ],
+    name: 'anchorFromZeta',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { internalType: 'uint32', name: 'encryptedAmount', type: 'uint32' },
+      { internalType: 'bytes', name: 'proof', type: 'bytes' },
+    ],
+    name: 'boostEncrypted',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { internalType: 'uint32', name: 'encryptedAmount', type: 'uint32' },
+      { internalType: 'bytes', name: 'proof', type: 'bytes' },
+    ],
+    name: 'contestEncrypted',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'myDefenseCipher',
+    outputs: [{ internalType: 'uint32', name: '', type: 'uint32' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'applyEncryptedDecay',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'isAnchored',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'getDefenseMetadata',
+    outputs: [
+      {
+        components: [
+          { internalType: 'address', name: 'owner', type: 'address' },
+          { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+          { internalType: 'uint32', name: 'points', type: 'uint32' },
+          { internalType: 'uint64', name: 'lastDecayDay', type: 'uint64' },
+          { internalType: 'bool', name: 'anchored', type: 'bool' },
+        ],
+        internalType: 'struct IConfidentialTerritory.EncryptedDefense',
+        name: '',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'address', name: '', type: 'address' },
+      { internalType: 'uint256', name: '', type: 'uint256' },
+    ],
+    name: 'lastBoostDay',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { indexed: true, internalType: 'address', name: 'owner', type: 'address' },
+      { indexed: false, internalType: 'uint32', name: 'initialPoints', type: 'uint32' },
+    ],
+    name: 'TerritoryAnchored',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { indexed: true, internalType: 'address', name: 'player', type: 'address' },
+      { indexed: false, internalType: 'uint32', name: 'newPointsCipher', type: 'uint32' },
+      { indexed: false, internalType: 'uint32', name: 'currentDay', type: 'uint32' },
+    ],
+    name: 'EncryptedBoost',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { indexed: true, internalType: 'address', name: 'defender', type: 'address' },
+      { indexed: true, internalType: 'address', name: 'challenger', type: 'address' },
+      { indexed: false, internalType: 'uint32', name: 'defenderPointsRemaining', type: 'uint32' },
+      { indexed: false, internalType: 'uint32', name: 'challengerPointsRemaining', type: 'uint32' },
+    ],
+    name: 'EncryptedContest',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { indexed: false, internalType: 'uint32', name: 'newPointsCipher', type: 'uint32' },
+      { indexed: false, internalType: 'uint64', name: 'currentDay', type: 'uint64' },
+    ],
+    name: 'EncryptedDecayApplied',
+    type: 'event',
+  },
+];
+
 const REALM_TOKEN_ABI = [
   {
     inputs: [],
@@ -283,6 +421,22 @@ export function getCurrentNetworkConfig(): NetworkConfig {
             ?.RUNREALM_BOOST_ADDRESS || '0x0000000000000000000000000000000000000000',
         abi: BOOST_CONTRACT_ABI,
       },
+      confidentialTerritoryDefense: {
+        // Phase 4 (Zama scaffolding) — additive
+        // `ConfidentialTerritoryDefense` contract. Address is
+        // read from the RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS
+        // env var, with a zero-address placeholder until the
+        // deployment script publishes it. While Zama fhEVM is
+        // pre-publication, the contract is local-dev only; the
+        // off-chain `ConfidentialContractService` surfaces a
+        // clear "not deployed" error when the placeholder is in
+        // use (same pattern as `ContractService.isBoostReady`).
+        address:
+          (globalThis as { __ENV__?: { RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS?: string } }).__ENV__
+            ?.RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS ||
+          '0x0000000000000000000000000000000000000000',
+        abi: CONFIDENTIAL_TERRITORY_DEFENSE_ABI,
+      },
     },
   };
 }
@@ -290,7 +444,9 @@ export function getCurrentNetworkConfig(): NetworkConfig {
 /**
  * Get contract configuration by name
  */
-export function getContractConfig(contractName: 'universal' | 'realmToken' | 'boost'): ContractConfig {
+export function getContractConfig(
+  contractName: 'universal' | 'realmToken' | 'boost' | 'confidentialTerritoryDefense'
+): ContractConfig {
   const networkConfig = getCurrentNetworkConfig();
   return networkConfig.contracts[contractName];
 }
@@ -304,6 +460,7 @@ export function getContractAddresses() {
     universal: networkConfig.contracts.universal.address,
     realmToken: networkConfig.contracts.realmToken.address,
     boost: networkConfig.contracts.boost.address,
+    confidentialTerritoryDefense: networkConfig.contracts.confidentialTerritoryDefense.address,
   };
 }
 
@@ -358,6 +515,16 @@ export const CONTRACT_METHODS = {
     lastBoostDay: 'lastBoostDay',
     BOOST_COST: 'BOOST_COST',
   },
+  confidential: {
+    anchorFromZeta: 'anchorFromZeta',
+    boostEncrypted: 'boostEncrypted',
+    contestEncrypted: 'contestEncrypted',
+    myDefenseCipher: 'myDefenseCipher',
+    applyEncryptedDecay: 'applyEncryptedDecay',
+    isAnchored: 'isAnchored',
+    getDefenseMetadata: 'getDefenseMetadata',
+    lastBoostDay: 'lastBoostDay',
+  },
 } as const;
 
 /**
@@ -371,5 +538,11 @@ export const CONTRACT_EVENTS = {
   realmToken: {
     Transfer: 'Transfer',
     Approval: 'Approval',
+  },
+  confidential: {
+    TerritoryAnchored: 'TerritoryAnchored',
+    EncryptedBoost: 'EncryptedBoost',
+    EncryptedContest: 'EncryptedContest',
+    EncryptedDecayApplied: 'EncryptedDecayApplied',
   },
 } as const;

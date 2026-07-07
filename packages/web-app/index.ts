@@ -1,5 +1,8 @@
 // Clean, modular entry point for RunRealm
+import type { ConfidentialContractService } from '@runrealm/shared-blockchain/services/confidential-contract-service';
+import { ZamaSupportService } from '@runrealm/shared-blockchain/services/zama-support';
 import { RunRealmApp } from '@runrealm/shared-core/core/run-realm-app';
+import { ConfidentialTerritoryService } from '@runrealm/shared-core/services/confidential-territory-service';
 import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
 import { MainUI } from './src/components/main-ui';
 import UserDashboard from './src/components/user-dashboard';
@@ -171,6 +174,49 @@ async function initializeApp(): Promise<void> {
     });
 
     await app.initialize();
+
+    // Phase 4 (Zama scaffolding) — wire the
+    // `ConfidentialContractService` so the encrypted-side
+    // methods in `ConfidentialTerritoryService` (boost / contest
+    // / read) find it via `getSiblingService('ConfidentialContractService')`.
+    // The service's own `onInitialize` defers if the wallet
+    // isn't connected yet; re-initialization is triggered by the
+    // `web3:walletConnected` event listener the service
+    // registers inside `onInitialize`. This call is idempotent
+    // (BaseService guards against double-init) so it's safe to
+    // call before or after the wallet connects.
+    const confidentialContractService = (
+      window as { RunRealm?: { services?: { ConfidentialContractService?: ConfidentialContractService } } }
+    ).RunRealm?.services?.ConfidentialContractService;
+    if (confidentialContractService) {
+      await confidentialContractService.initialize();
+    }
+
+    // Phase 4 (Zama scaffolding) — wire `ZamaSupportService` into
+    // the `ConfidentialTerritoryService` so the chainId gate
+    // fires the preflight check (`chainSupportsZama(chainId)`)
+    // rather than the "Zama support not wired" toast. The gate
+    // is a no-op while `GAME_RULES.zama.supportedChainIds` is
+    // empty (Zama fhEVM mainnet/testnet pre-publication) but
+    // the wiring is still required so the methods proceed past
+    // the "Zama support not wired" check to the real chainId
+    // gate.
+    //
+    // `ConfidentialTerritoryService.getInstance()` resolves the
+    // parent `TerritoryService` from the registry populated by
+    // `app.initialize()`, so this must run after `app.initialize()`
+    // returns. The call is a no-op if the registry is missing
+    // (the service itself warns and returns null in that case).
+    //
+    // `setZamaSupport` is synchronous (it just stores the
+    // reference); the `await` is preserved for symmetry with the
+    // `confidentialContractService.initialize()` call above and
+    // to make a future async refactor of `setZamaSupport`
+    // (e.g. resolving the chain via an async provider) a
+    // transparent drop-in.
+    await ConfidentialTerritoryService.getInstance().setZamaSupport(
+      ZamaSupportService.getInstance()
+    );
 
     // Initialize User Dashboard (consolidated command center)
     const userDashboard = new UserDashboard();

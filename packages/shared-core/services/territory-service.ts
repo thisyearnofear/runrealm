@@ -126,8 +126,20 @@ export class TerritoryService extends BaseService {
   private territoryIntents: Map<string, TerritoryIntent> = new Map();
   private readonly INTENT_EXPIRY_HOURS = 24; // Territory intents expire after 24 hours
 
-  private constructor() {
+  protected constructor() {
     super();
+  }
+
+  /**
+   * Phase 4 — read-only accessor for subclasses. `ConfidentialTerritoryService`
+   * needs to resolve `territoryId` (synthetic `territory_<id>`) to a
+   * `Territory` to look up the on-chain `tokenId` before calling
+   * the encrypted side. The map is a `private` field for the
+   * general codebase, but a `protected` getter lets the subclass
+   * (and only the subclass) read it without the cast hack.
+   */
+  protected get claimedTerritoriesMap(): ReadonlyMap<string, Territory> {
+    return this.claimedTerritories;
   }
 
   static getInstance(): TerritoryService {

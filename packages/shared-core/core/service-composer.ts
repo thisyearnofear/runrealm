@@ -19,6 +19,7 @@
  */
 import { ContractService } from '@runrealm/shared-blockchain/services/contract-service';
 import { CrossChainService } from '@runrealm/shared-blockchain/services/cross-chain-service';
+import { ConfidentialContractService } from '@runrealm/shared-blockchain/services/confidential-contract-service';
 import { CrossChainDemoComponent } from '../components/cross-chain-demo';
 import { EnhancedRunControls } from '../components/enhanced-run-controls';
 import { GameFiUI } from '../components/gamefi-ui';
@@ -66,6 +67,7 @@ export interface Services {
   ai: AIService;
   game: GameService;
   contractService: ContractService;
+  confidentialContractService: ConfidentialContractService;
   territory: TerritoryService;
   territoryToggle: TerritoryToggle;
   runProgressFeedback: RunProgressFeedback;
@@ -101,6 +103,7 @@ export function createServices(): Services {
   const ai = AIService.getInstance();
   const game = new GameService();
   const contractService = new ContractService(web3);
+  const confidentialContractService = new ConfidentialContractService(web3);
   const territory = TerritoryService.getInstance();
   const territoryToggle = new TerritoryToggle();
   const runProgressFeedback = new RunProgressFeedback();
@@ -134,6 +137,7 @@ export function createServices(): Services {
     ai,
     game,
     contractService,
+    confidentialContractService,
     territory,
     territoryToggle,
     runProgressFeedback,
@@ -199,6 +203,12 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     progression: services.progression,
     game: services.game,
     contractService: services.contractService,
+    // Phase 4 (Zama scaffolding) — registered with PascalCase to
+    // match `ConfidentialTerritoryService.getSiblingService(
+    // 'ConfidentialContractService')`. The other services in this
+    // registry use camelCase keys; the PascalCase here is
+    // intentional and matches the consumer's lookup convention.
+    ConfidentialContractService: services.confidentialContractService,
     mapService: services.mapService,
   };
 }
