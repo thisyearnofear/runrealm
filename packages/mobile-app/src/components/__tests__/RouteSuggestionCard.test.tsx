@@ -15,14 +15,17 @@ describe('RouteSuggestionCard', () => {
   };
 
   const mockRoute = {
-    distance: 5000, // 5km
-    difficulty: 'Medium',
-    description: 'A scenic route through the park',
-    landmarks: ['Central Park', 'Museum', 'Fountain'],
-    coordinates: [
-      { lat: 37.7749, lng: -122.4194 },
-      { lat: 37.775, lng: -122.4195 },
-    ],
+    suggestedRoute: {
+      distance: 5000, // 5km
+      difficulty: 5,
+      reasoning: 'A scenic route through the park',
+      coordinates: [
+        [-122.4194, 37.7749],
+        [-122.4195, 37.775],
+      ] as [number, number][],
+    },
+    territories: { claimable: 1, strategic: 2 },
+    confidence: 0.85,
   };
 
   const mockAIService = {
@@ -56,11 +59,9 @@ describe('RouteSuggestionCard', () => {
     const { getByText } = render(<RouteSuggestionCard currentLocation={mockLocation} />);
 
     await waitFor(() => {
-      expect(getByText('5.0 km')).toBeTruthy();
+      expect(getByText(/5\.0\s*km/)).toBeTruthy();
       expect(getByText('Medium')).toBeTruthy();
       expect(getByText('A scenic route through the park')).toBeTruthy();
-      expect(getByText('📍 Landmarks')).toBeTruthy();
-      expect(getByText('• Central Park')).toBeTruthy();
     });
   });
 
@@ -75,8 +76,8 @@ describe('RouteSuggestionCard', () => {
     await waitFor(() => {
       fireEvent.press(getByText('Use This Route'));
       expect(onRouteSelected).toHaveBeenCalledWith({
-        coordinates: mockRoute.coordinates,
-        distance: mockRoute.distance,
+        coordinates: mockRoute.suggestedRoute.coordinates.map(([lng, lat]) => ({ lat, lng })),
+        distance: mockRoute.suggestedRoute.distance,
       });
     });
   });
@@ -99,7 +100,7 @@ describe('RouteSuggestionCard', () => {
     const { getByText } = render(<RouteSuggestionCard currentLocation={mockLocation} />);
 
     await waitFor(() => {
-      expect(getByText('5.0 km')).toBeTruthy();
+      expect(getByText(/5\.0\s*km/)).toBeTruthy();
     });
 
     fireEvent.press(getByText('↻'));

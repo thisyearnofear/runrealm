@@ -59,12 +59,20 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
       );
 
       const route = optimization.suggestedRoute;
+      const difficultyLabel =
+        typeof route.difficulty === 'number'
+          ? route.difficulty <= 3
+            ? 'Easy'
+            : route.difficulty <= 6
+              ? 'Medium'
+              : 'Hard'
+          : String(route.difficulty || 'Medium');
       setSuggestedRoute({
         name: 'AI Suggested Route',
         coordinates: route.coordinates,
         distance: route.distance,
         estimatedTime: Math.round((route.distance / 1000) * 6), // ~6 min/km
-        difficulty: route.difficulty ? String(route.difficulty) : 'Medium',
+        difficulty: difficultyLabel,
         description: route.reasoning || 'A route tuned for your location.',
         landmarks: [],
       });

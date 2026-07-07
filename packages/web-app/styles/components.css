@@ -1534,6 +1534,39 @@
     0 0 0 6px rgba(0, 255, 0, 0.2);
 }
 
+/* Global keyboard-focus fallback for buttons, links and inputs that
+ * don't opt into the widget-specific look above. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid rgba(0, 255, 0, 0.8);
+  outline-offset: 2px;
+}
+
+/* Disabled controls must look inert and not respond to hover/active. */
+button:disabled,
+.widget-button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Respect users who prefer less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ===== THEME VARIANTS ===== */
 
 .widget.theme-stats {
