@@ -31,7 +31,7 @@
   ],
   "dependencies": {
     "ethers": "^6.13.0",
-    "@zetachain/protocol-contracts": "^13.0.0",
+    "@zetachain/protocol-contracts": "^14.1.0",
     "@zetachain/toolkit": "^16.1.1",
     "@runrealm/shared-core": "^2.0.0"
   }
