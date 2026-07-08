@@ -15,4 +15,14 @@ declare module './ghost-button.js' {
   }
 }
 
+// Re-export declarations for consumers outside this directory (e.g. the
+// bootstrap entry point imports from ../shell/components/*.js).
+declare module '../shell/components/ghost-management.js' {
+  export { GhostManagement } from './ghost-management.js';
+}
+
+declare module '../shell/components/ghost-button.js' {
+  export { GhostButton } from './ghost-button.js';
+}
+
 

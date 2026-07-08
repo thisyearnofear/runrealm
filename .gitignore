@@ -63,15 +63,14 @@ packages/**/*.js.map
 !packages/**/*.config.cjs
 !packages/**/*.config.mjs
 !packages/mobile-app/jest.setup.js
-!packages/web-app/src/components/ghost-button.js
-!packages/web-app/src/components/ghost-management.js
+!apps/web/src/shell/components/ghost-button.js
+!apps/web/src/shell/components/ghost-management.js
 
 # Auto-generated JS files from compilation
 **/*.js.map
 public/*.js
 public/*.css
 public/*.html
-!public/index.html  # Keep the template file if it exists for build process
 
 packages/*/.expo/
 packages/*/.expo-shared/

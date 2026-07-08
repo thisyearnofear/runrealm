@@ -2,140 +2,15 @@
 import type { ConfidentialContractService } from '@runrealm/shared-blockchain/services/confidential-contract-service';
 import { RunRealmApp } from '@runrealm/shared-core/core/run-realm-app';
 import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
-import { MainUI } from '../legacy/components/main-ui';
-import UserDashboard from '../legacy/components/user-dashboard';
-import { WalletWidget } from '../legacy/components/wallet-widget';
+import { MainUI } from '../shell/components/main-ui';
+import UserDashboard from '../shell/components/user-dashboard';
+import { WalletWidget } from '../shell/components/wallet-widget';
+import { installRuntimeGuards } from './runtime-setup';
 
-// All bootstrap side effects are browser-only. Guard so the module stays
-// safe to import during Next.js static generation.
+// Browser-only runtime setup (env bridge, service worker, error handlers).
+// Guarded so the module stays safe to import during Next.js static generation.
 if (typeof window !== 'undefined') {
-  // The legacy app expected a webpack DefinePlugin `__ENV__` global.
-  // Next.js exposes public env vars through `NEXT_PUBLIC_*`, so map
-  // those onto the expected global shape before the rest of the app
-  // boots.
-  (window as any).__ENV__ = {
-    NODE_ENV: process.env.NODE_ENV || 'development',
-    API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
-    ENABLE_WEB3: process.env.NEXT_PUBLIC_ENABLE_WEB3 || 'true',
-    ENABLE_AI_FEATURES: process.env.NEXT_PUBLIC_ENABLE_AI_FEATURES || 'false',
-    ENABLE_CROSS_CHAIN: process.env.NEXT_PUBLIC_ENABLE_CROSS_CHAIN || 'true',
-    ENABLE_FITNESS: process.env.NEXT_PUBLIC_ENABLE_FITNESS || 'true',
-    ZETACHAIN_RPC_URL:
-      process.env.NEXT_PUBLIC_ZETACHAIN_RPC_URL ||
-      'https://zetachain-athens-evm.blockpi.network/v1/rpc/public',
-    TERRITORY_NFT_ADDRESS:
-      process.env.NEXT_PUBLIC_TERRITORY_NFT_ADDRESS || '0x0000000000000000000000000000000000000000',
-    REALM_TOKEN_ADDRESS:
-      process.env.NEXT_PUBLIC_REALM_TOKEN_ADDRESS || '0x18082d110113B40A24A41dF10b4b249Ee461D3eb',
-    TERRITORY_MANAGER_ADDRESS:
-      process.env.NEXT_PUBLIC_TERRITORY_MANAGER_ADDRESS ||
-      '0x7A52d845Dc37aC5213a546a59A43148308A88983',
-    ETHEREUM_RPC_URL:
-      process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
-    POLYGON_RPC_URL: process.env.NEXT_PUBLIC_POLYGON_RPC_URL || 'https://polygon-rpc.com',
-    AUTO_CONNECT_WALLET: process.env.NEXT_PUBLIC_AUTO_CONNECT_WALLET || 'false',
-    GOOGLE_GEMINI_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_GEMINI_API_KEY || '',
-  };
-
-  // Register service worker for offline support
-  if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then(() => console.log('SW registered'))
-      .catch(() => console.log('SW registration failed'));
-  }
-
-  // Handle script loading errors (cache busting)
-  window.addEventListener(
-    'error',
-    (event) => {
-      // biome-ignore lint/suspicious/noExplicitAny: ErrorEvent target is EventTarget, not Element; narrow to HTMLScriptElement on next line
-      if (event.target && (event.target as any).tagName === 'SCRIPT') {
-        const script = event.target as HTMLScriptElement;
-        if (script.src?.includes('.js')) {
-          console.warn('Script failed to load:', script.src);
-
-          // If it's a main app script and we're in production, try cache bust
-          if (script.src.includes('/app.') && process.env.NODE_ENV === 'production') {
-            console.log('Attempting cache bust reload...');
-            // Force reload without cache
-            window.location.reload();
-          }
-        }
-      }
-    },
-    true
-  );
-
-  // Filter out noisy browser extension errors and token exposure in production
-  if (process.env.NODE_ENV === 'production') {
-    const originalError = console.error;
-    const originalLog = console.log;
-    const originalWarn = console.warn;
-
-    // Helper function to check if message contains sensitive tokens
-    const containsToken = (message: string) => {
-      return message.includes('access_token=') || message.includes('AIzaSy'); // Google API key prefix
-    };
-
-    // Helper function to sanitize messages with tokens
-    const sanitizeMessage = (message: string) => {
-      return message
-        .replace(/access_token=[^&\s]*/g, 'access_token=[REDACTED]')
-        .replace(/AIzaSy[A-Za-z0-9._-]*/g, 'AIzaSy[REDACTED]');
-    };
-
-    console.error = (...args) => {
-      const message = args.join(' ');
-      // Filter out known browser extension noise
-      if (
-        message.includes("Backpack couldn't override") ||
-        message.includes('Could not establish connection') ||
-        message.includes('Receiving end does not exist')
-      ) {
-        return; // Suppress these errors
-      }
-
-      // Sanitize token exposure in error messages
-      if (containsToken(message)) {
-        const sanitizedArgs = args.map((arg) =>
-          typeof arg === 'string' ? sanitizeMessage(arg) : arg
-        );
-        originalError.apply(console, sanitizedArgs);
-        return;
-      }
-
-      originalError.apply(console, args);
-    };
-
-    console.log = (...args) => {
-      const message = args.join(' ');
-      // Sanitize token exposure in log messages
-      if (containsToken(message)) {
-        const sanitizedArgs = args.map((arg) =>
-          typeof arg === 'string' ? sanitizeMessage(arg) : arg
-        );
-        originalLog.apply(console, sanitizedArgs);
-        return;
-      }
-
-      originalLog.apply(console, args);
-    };
-
-    console.warn = (...args) => {
-      const message = args.join(' ');
-      // Sanitize token exposure in warning messages
-      if (containsToken(message)) {
-        const sanitizedArgs = args.map((arg) =>
-          typeof arg === 'string' ? sanitizeMessage(arg) : arg
-        );
-        originalWarn.apply(console, sanitizedArgs);
-        return;
-      }
-
-      originalWarn.apply(console, args);
-    };
-  }
+  installRuntimeGuards();
 }
 
 // Initialize the application
@@ -176,8 +51,8 @@ export async function initializeApp(): Promise<void> {
     let ghostManagement: { initialize(container: HTMLElement): void | Promise<void> } | undefined;
     let ghostButton: { initialize(container: HTMLElement): void } | undefined;
     try {
-      const { GhostManagement } = await import('../legacy/components/ghost-management.js');
-      const { GhostButton } = await import('../legacy/components/ghost-button.js');
+      const { GhostManagement } = await import('../shell/components/ghost-management.js');
+      const { GhostButton } = await import('../shell/components/ghost-button.js');
       ghostManagement = new GhostManagement();
       ghostButton = new GhostButton(ghostManagement);
     } catch (err) {
@@ -257,8 +132,8 @@ export async function initializeApp(): Promise<void> {
     // modal. Suppress the legacy modal so only the React one shows.
     const { createRoot } = await import('react-dom/client');
     const { createElement } = await import('react');
-    const { WalletRoot } = await import('../components/WalletRoot');
-    const { useWallet } = await import('../components/useWallet');
+    const { WalletRoot } = await import('../shell/wallet/WalletRoot');
+    const { useWallet } = await import('../shell/wallet/useWallet');
     const eventBus = app.getEventBus();
     const walletForReact = {
       eventBus,
