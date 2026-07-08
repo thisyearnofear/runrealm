@@ -13,7 +13,8 @@
 [build.environment]
   # Only install dependencies needed for web build
   NETLIFY_USE_YARN = "false"
-  NODE_VERSION = "18"
+  # Next.js 16 requires Node >= 20.9.0
+  NODE_VERSION = "20"
   # Install devDependencies for build
   NPM_FLAGS = "--include=dev"
 
