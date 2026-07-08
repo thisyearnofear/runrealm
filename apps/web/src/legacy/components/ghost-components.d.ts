@@ -15,11 +15,4 @@ declare module './ghost-button.js' {
   }
 }
 
-// Also declare for imports from index.ts root
-declare module '../src/components/ghost-management.js' {
-  export { GhostManagement } from './ghost-management.js';
-}
 
-declare module '../src/components/ghost-button.js' {
-  export { GhostButton } from './ghost-button.js';
-}

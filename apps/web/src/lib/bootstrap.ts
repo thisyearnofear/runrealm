@@ -9,6 +9,34 @@ import { WalletWidget } from '../legacy/components/wallet-widget';
 // All bootstrap side effects are browser-only. Guard so the module stays
 // safe to import during Next.js static generation.
 if (typeof window !== 'undefined') {
+  // The legacy app expected a webpack DefinePlugin `__ENV__` global.
+  // Next.js exposes public env vars through `NEXT_PUBLIC_*`, so map
+  // those onto the expected global shape before the rest of the app
+  // boots.
+  (window as any).__ENV__ = {
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
+    ENABLE_WEB3: process.env.NEXT_PUBLIC_ENABLE_WEB3 || 'true',
+    ENABLE_AI_FEATURES: process.env.NEXT_PUBLIC_ENABLE_AI_FEATURES || 'false',
+    ENABLE_CROSS_CHAIN: process.env.NEXT_PUBLIC_ENABLE_CROSS_CHAIN || 'true',
+    ENABLE_FITNESS: process.env.NEXT_PUBLIC_ENABLE_FITNESS || 'true',
+    ZETACHAIN_RPC_URL:
+      process.env.NEXT_PUBLIC_ZETACHAIN_RPC_URL ||
+      'https://zetachain-athens-evm.blockpi.network/v1/rpc/public',
+    TERRITORY_NFT_ADDRESS:
+      process.env.NEXT_PUBLIC_TERRITORY_NFT_ADDRESS || '0x0000000000000000000000000000000000000000',
+    REALM_TOKEN_ADDRESS:
+      process.env.NEXT_PUBLIC_REALM_TOKEN_ADDRESS || '0x18082d110113B40A24A41dF10b4b249Ee461D3eb',
+    TERRITORY_MANAGER_ADDRESS:
+      process.env.NEXT_PUBLIC_TERRITORY_MANAGER_ADDRESS ||
+      '0x7A52d845Dc37aC5213a546a59A43148308A88983',
+    ETHEREUM_RPC_URL:
+      process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
+    POLYGON_RPC_URL: process.env.NEXT_PUBLIC_POLYGON_RPC_URL || 'https://polygon-rpc.com',
+    AUTO_CONNECT_WALLET: process.env.NEXT_PUBLIC_AUTO_CONNECT_WALLET || 'false',
+    GOOGLE_GEMINI_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_GEMINI_API_KEY || '',
+  };
+
   // Register service worker for offline support
   if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
     navigator.serviceWorker
@@ -148,10 +176,8 @@ export async function initializeApp(): Promise<void> {
     let ghostManagement: { initialize(container: HTMLElement): void | Promise<void> } | undefined;
     let ghostButton: { initialize(container: HTMLElement): void } | undefined;
     try {
-      // @ts-expect-error - legacy JS module without type declarations
-      const { GhostManagement } = await import('./src/components/ghost-management.js');
-      // @ts-expect-error - legacy JS module without type declarations
-      const { GhostButton } = await import('./src/components/ghost-button.js');
+      const { GhostManagement } = await import('../legacy/components/ghost-management.js');
+      const { GhostButton } = await import('../legacy/components/ghost-button.js');
       ghostManagement = new GhostManagement();
       ghostButton = new GhostButton(ghostManagement);
     } catch (err) {

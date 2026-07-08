@@ -7,10 +7,12 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   trailingSlash: true,
-  turbopack: {
-    resolveAlias: {
-      '@zetachain/client': './src/lib/zetachain-client-stub.ts',
-    },
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      '@zetachain/client': false,
+    };
+    return config;
   },
 };
 
