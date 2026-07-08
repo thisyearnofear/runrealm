@@ -2,8 +2,8 @@
 # Minimal deployment config following Core Principles: ENHANCEMENT FIRST, DRY, CLEAN
 
 [build]
-  # Build the Next.js web app from the apps/web workspace.
-  command = "npm run build:web"
+  # Build shared packages first, then the Next.js web app (apps/web/dist).
+  command = "npm run build"
   # Next.js static export outputs to apps/web/dist
   publish = "apps/web/dist"
   # Skip builds for non-functional changes
