@@ -1123,6 +1123,78 @@
   text-shadow: 0 0 4px rgba(0, 255, 136, 0.3);
 }
 
+/* Confidential Shield Widget Form */
+.widget-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0;
+}
+
+.widget-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.widget-input {
+  width: 100%;
+  padding: var(--space-sm);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  box-sizing: border-box;
+}
+
+.widget-input:focus {
+  outline: none;
+  border-color: #00ff88;
+  box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2);
+}
+
+.widget-output {
+  margin-top: var(--space-sm);
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  min-height: 1.5em;
+}
+
+.widget-output--info {
+  background: rgba(0, 123, 255, 0.15);
+  border: 1px solid rgba(0, 123, 255, 0.4);
+  color: #aaddff;
+}
+
+.widget-output--success {
+  background: rgba(0, 255, 136, 0.15);
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  color: #00ff88;
+}
+
+.widget-output--warning {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  color: #ffd166;
+}
+
+.widget-output--error {
+  background: rgba(255, 71, 87, 0.15);
+  border: 1px solid rgba(255, 71, 87, 0.4);
+  color: #ff6b7a;
+}
+
+.widget-help-text {
+  font-size: var(--font-size-sm);
+  color: #aaa;
+  margin-top: var(--space-sm);
+  line-height: 1.4;
+}
+
 /* Enhanced Progress Bars */
 .widget-progress {
   margin: var(--space-sm) 0;

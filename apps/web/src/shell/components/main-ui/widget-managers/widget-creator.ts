@@ -3,6 +3,7 @@ import { ConfigService } from '@runrealm/shared-core/core/app-config';
 import { VisibilityService } from '@runrealm/shared-core/internal/_legacy-widget/visibility-service';
 import { LocationService } from '@runrealm/shared-core/services/location-service';
 import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
+import { ConfidentialShieldWidget } from '../../confidential-shield-widget';
 import { WalletWidget } from '../../wallet-widget';
 
 export interface TerritoryData {
@@ -135,6 +136,17 @@ export class WidgetCreator {
       priority: 9,
       content: this.walletWidget.getWidgetContent(),
     });
+
+    // Confidential Shield Widget (bottom-right) — Phase 5 Zama FHEVM demo surface
+    this.createConfidentialShieldWidget();
+  }
+
+  /**
+   * Create the Zama confidential-shield demo widget.
+   */
+  createConfidentialShieldWidget(): void {
+    const shield = new ConfidentialShieldWidget(this.widgetSystem);
+    shield.register();
   }
 
   /**

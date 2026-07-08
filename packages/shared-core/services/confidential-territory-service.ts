@@ -33,7 +33,7 @@
  * already imports `ZamaSupportService` from `shared-blockchain`,
  * and `ZamaSupportService` is a singleton without a wallet binding).
  */
-import { BrowserProvider, type Signer } from 'ethers';
+import type { Signer } from 'ethers';
 import { getConfidentialNetworkConfig } from '../config/contracts';
 import { BaseService } from '../core/base-service';
 import { type Territory, TerritoryService } from './territory-service';
@@ -408,6 +408,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
       return null;
     }
     await this.zamaRelayer.init(provider);
+    const { BrowserProvider } = await import('ethers');
     const signer = await new BrowserProvider(provider as Eip1193).getSigner();
 
     const confidentialAddress = getConfidentialNetworkConfig().contract.address;

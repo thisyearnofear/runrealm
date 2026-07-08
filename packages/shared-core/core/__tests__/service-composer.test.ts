@@ -76,6 +76,8 @@ describe('service-composer', () => {
       'game',
       'contractService',
       'confidentialContractService',
+      'zamaSupport',
+      'confidentialTerritory',
       'territory',
       'territoryToggle',
       'runProgressFeedback',

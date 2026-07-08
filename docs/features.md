@@ -1,5 +1,10 @@
 # RunRealm Features
 
+> **Zama Builder Track.** RunRealm's confidential territory-defense demo
+> (Zama FHEVM on Sepolia) is documented in
+> [docs/zama-builder-track.md](zama-builder-track.md) — deploy state, demo
+> flow, and submission assets.
+
 > **Status note (June 2026).** Phases 1 and 2 of the
 > [roadmap](roadmap.md) are complete: the codebase has been consolidated
 > and game-rule constants now flow from a single TypeScript source into

@@ -21,6 +21,7 @@
 import { ConfidentialContractService } from '@runrealm/shared-blockchain/services/confidential-contract-service';
 import { ContractService } from '@runrealm/shared-blockchain/services/contract-service';
 import { CrossChainService } from '@runrealm/shared-blockchain/services/cross-chain-service';
+import { ZamaSupportService } from '@runrealm/shared-blockchain/services/zama-support';
 import { CrossChainDemoComponent } from '../components/cross-chain-demo';
 import { EnhancedRunControls } from '../components/enhanced-run-controls';
 import { GameFiUI } from '../components/gamefi-ui';
@@ -30,6 +31,7 @@ import { TerritoryToggle } from '../components/territory-toggle';
 import { AIOrchestrator } from '../services/ai-orchestrator';
 import { AIService } from '../services/ai-service';
 import { AnimationService } from '../services/animation-service';
+import { ConfidentialTerritoryService } from '../services/confidential-territory-service';
 import { DOMService } from '../services/dom-service';
 import { ExternalFitnessService } from '../services/external-fitness-service';
 import { GameService } from '../services/game-service';
@@ -69,6 +71,8 @@ export interface Services {
   game: GameService;
   contractService: ContractService;
   confidentialContractService: ConfidentialContractService;
+  zamaSupport: ZamaSupportService;
+  confidentialTerritory: ConfidentialTerritoryService;
   territory: TerritoryService;
   territoryToggle: TerritoryToggle;
   runProgressFeedback: RunProgressFeedback;
@@ -105,6 +109,9 @@ export function createServices(): Services {
   const game = new GameService();
   const contractService = new ContractService(web3);
   const confidentialContractService = new ConfidentialContractService(web3);
+  const zamaSupport = ZamaSupportService.getInstance();
+  const confidentialTerritory = ConfidentialTerritoryService.getInstance();
+  confidentialTerritory.setZamaSupport(zamaSupport);
   const territory = TerritoryService.getInstance();
   const territoryToggle = new TerritoryToggle();
   const runProgressFeedback = new RunProgressFeedback();
@@ -139,6 +146,8 @@ export function createServices(): Services {
     game,
     contractService,
     confidentialContractService,
+    zamaSupport,
+    confidentialTerritory,
     territory,
     territoryToggle,
     runProgressFeedback,
@@ -210,6 +219,8 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     // registry use camelCase keys; the PascalCase here is
     // intentional and matches the consumer's lookup convention.
     ConfidentialContractService: services.confidentialContractService,
+    zamaSupport: services.zamaSupport,
+    confidentialTerritory: services.confidentialTerritory,
     mapService: services.mapService,
   };
 }

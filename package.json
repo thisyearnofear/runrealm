@@ -23,7 +23,8 @@
     "install:all": "npm install && npm run install --workspaces",
     "sync:rules": "node scripts/build/sync-game-rules.mjs",
     "sync:check": "node scripts/build/sync-game-rules.mjs --check",
-    "ci:rules-drift": "npm run sync:check"
+    "ci:rules-drift": "npm run sync:check",
+    "deploy:confidential": "hardhat run scripts/deployment/deploy-confidential-territory-defense.js --network sepolia"
   },
   "workspaces": [
     "apps/*",

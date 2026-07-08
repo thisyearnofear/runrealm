@@ -49,17 +49,17 @@ RunRealm is a cross-chain fitness GameFi platform built with TypeScript, featuri
 ### Project Structure
 ```
 RunRealm/
+├── apps/
+│   └── web/                  # Next.js App Router web app (shell/, lib/)
 ├── packages/
-│   ├── shared-core/          # Domain models, business logic
+│   ├── shared-core/          # Domain models, business logic, services
 │   ├── shared-types/         # TypeScript interfaces
 │   ├── shared-utils/         # Shared utilities
-│   ├── shared-blockchain/    # Web3 services, contract bindings
-│   ├── web-app/              # Web-specific UI and features
-│   ├── mobile-app/           # Mobile-specific UI and features  
-│   └── api-gateway/          # Backend services
-├── contracts/                # Smart contracts
-├── infrastructure/           # IaC, deployment configs
-└── scripts/                  # Build, test, deployment scripts
+│   ├── shared-blockchain/    # Web3 services, contract bindings, zama-support
+│   └── mobile-app/           # React Native mobile app
+├── contracts/                # Smart contracts (zama/, boost/, crosschain/)
+├── scripts/                  # Build, sync, deployment scripts
+└── docs/                     # Architecture, features, submission guide
 ```
 
 ### Architecture Layers
