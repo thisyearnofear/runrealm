@@ -1195,6 +1195,60 @@
   line-height: 1.4;
 }
 
+/* Confidential Shield — decrypt reveal (Phase A hero spike)
+     Consumes --rr-* design tokens; single visual language with the app. */
+.shield-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--rr-s-2);
+  padding: var(--rr-s-4) var(--rr-s-2);
+  text-align: center;
+}
+
+.shield-reveal__lock {
+  font-size: var(--rr-text-3xl);
+  line-height: 1;
+  filter: drop-shadow(0 0 10px rgba(200, 255, 61, 0.25));
+}
+
+.shield-reveal__score {
+  font-family: var(--rr-font-display);
+  font-size: var(--rr-text-4xl);
+  font-weight: var(--rr-w-bold);
+  color: var(--rr-accent);
+  letter-spacing: var(--rr-track-tight);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+
+.shield-reveal__glyph {
+  font-size: var(--rr-text-3xl);
+  line-height: 1;
+}
+
+.shield-reveal__title {
+  font-family: var(--rr-font-display);
+  font-size: var(--rr-text-xl);
+  font-weight: var(--rr-w-semibold);
+  color: var(--rr-text-1);
+}
+
+.shield-reveal__caption {
+  margin: 0;
+  font-size: var(--rr-text-2xs);
+  color: var(--rr-text-2);
+  line-height: var(--rr-lead-snug);
+}
+
+.shield-reveal.is-unlocked .shield-reveal__caption {
+  color: var(--rr-success);
+}
+
+.shield-reveal.is-unlocked .shield-reveal__score {
+  text-shadow: 0 0 18px rgba(200, 255, 61, 0.35);
+}
+
 /* Enhanced Progress Bars */
 .widget-progress {
   margin: var(--space-sm) 0;

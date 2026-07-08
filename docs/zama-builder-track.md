@@ -37,6 +37,9 @@ and `contest` math homomorphically.
 - **UI:** `apps/web/src/shell/components/confidential-shield-widget.ts` — a
   widget exposing **Read Defense**, **Boost**, and **Contest** inside the live
   app, gated to Sepolia.
+- **Reveal animation:** `apps/web/src/shell/components/confidential-shield-reveal.ts`
+  — GSAP-powered lock-spin → count-up unlock for decrypt; lime pulse for
+  boost/contest. Lazy-imported (code-split).
 
 ## Deployed addresses
 
@@ -61,6 +64,13 @@ npm run deploy:confidential
 #    → export RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=<new address>   (local, for contracts.ts)
 #    → set NEXT_PUBLIC_RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=<new address> in Netlify
 #    → npm run build:shared   # so contracts.ts picks up the address
+```
+
+## Build & lint
+
+```bash
+npm run lint:errors   # passes
+npm run build:web     # static export → apps/web/dist
 ```
 
 ## Deploy the demo site (Netlify)

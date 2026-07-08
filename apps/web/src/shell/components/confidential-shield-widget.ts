@@ -4,8 +4,11 @@
  * Exposes the encrypted territory defense flow inside the existing widget
  * system: read your private defense score, boost it, or contest another
  * territory. All FHE work is delegated to `ConfidentialTerritoryService`
- * and `ZamaRelayer`.
+ * and `ZamaRelayer`. The "decrypt reveal" motion lives in
+ * `confidential-shield-reveal.ts` (single source for shield choreography).
  */
+
+import { revealAction, revealDecryptScore } from './confidential-shield-reveal';
 
 interface ShieldServices {
   zamaSupport?: {
@@ -149,16 +152,17 @@ export class ConfidentialShieldWidget {
   private async readDefense(): Promise<void> {
     const input = this.getInputValues();
     if (!input) return;
+    const output = document.getElementById('shield-output');
+    if (!output) return;
 
-    this.showOutput('Decrypting defense score…', 'info');
+    const services = getShieldServices();
     try {
-      const services = getShieldServices();
-      const score = await services.confidentialTerritory?.myDefenseCipher(input.territoryId);
-      if (score === null || score === undefined) {
+      const value = await services.confidentialTerritory?.myDefenseCipher(input.territoryId);
+      if (value === null || value === undefined) {
         this.showOutput('No encrypted defense found for this territory.', 'warning');
         return;
       }
-      this.showOutput(`Encrypted defense score: ${score.toString()}`, 'success');
+      await revealDecryptScore(output, value);
     } catch (err: any) {
       this.showOutput(`Read failed: ${err?.message || String(err)}`, 'error');
     }
@@ -167,12 +171,17 @@ export class ConfidentialShieldWidget {
   private async boost(): Promise<void> {
     const input = this.getInputValues();
     if (!input) return;
+    const output = document.getElementById('shield-output');
+    if (!output) return;
 
-    this.showOutput('Encrypting and sending boost…', 'info');
     try {
       const services = getShieldServices();
       await services.confidentialTerritory?.boostEncrypted(input.territoryId, input.amount);
-      this.showOutput('Boost transaction submitted.', 'success');
+      await revealAction(output, {
+        glyph: '🚀',
+        title: 'Boost submitted',
+        caption: 'Encrypted points added on Zama FHE · pending confirmation',
+      });
     } catch (err: any) {
       this.showOutput(`Boost failed: ${err?.message || String(err)}`, 'error');
     }
@@ -181,12 +190,17 @@ export class ConfidentialShieldWidget {
   private async contest(): Promise<void> {
     const input = this.getInputValues();
     if (!input) return;
+    const output = document.getElementById('shield-output');
+    if (!output) return;
 
-    this.showOutput('Encrypting and sending contest…', 'info');
     try {
       const services = getShieldServices();
       await services.confidentialTerritory?.contestEncrypted(input.territoryId, input.amount);
-      this.showOutput('Contest transaction submitted.', 'success');
+      await revealAction(output, {
+        glyph: '⚔️',
+        title: 'Contest submitted',
+        caption: 'Encrypted strike sent on Zama FHE · pending confirmation',
+      });
     } catch (err: any) {
       this.showOutput(`Contest failed: ${err?.message || String(err)}`, 'error');
     }
