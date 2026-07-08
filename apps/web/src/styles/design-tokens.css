@@ -1,0 +1,129 @@
+/* RunRealm Design Tokens
+ * Tactical sports-utilitarian aesthetic. Avoids crypto-cliché.
+ * Use these for new components. Legacy --color-* / --space-* tokens
+ * in core-system.css remain for back-compat with the 4604-line
+ * existing CSS surface.
+ */
+
+:root {
+  /* Color — surfaces */
+  --rr-bg-0: #0b0d10; /* app background */
+  --rr-bg-1: #13171c; /* panel */
+  --rr-bg-2: #1b2128; /* raised */
+  --rr-bg-3: #252c36; /* hover */
+  --rr-border: #2a323d;
+  --rr-border-strong: #3a4554;
+
+  /* Color — text */
+  --rr-text-1: #eceff4; /* primary */
+  --rr-text-2: #a3acba; /* secondary */
+  --rr-text-3: #6b7480; /* muted */
+  --rr-text-4: #4a525e; /* disabled */
+
+  /* Color — accents */
+  --rr-accent: #c8ff3d; /* electric lime — primary action */
+  --rr-accent-ink: #0b0d10; /* text on accent */
+  --rr-accent-hover: #b5e835;
+  --rr-signal: #ff5c4a; /* error / disconnect */
+  --rr-signal-ink: #ffffff;
+  --rr-info: #5bb8ff; /* informational */
+  --rr-warn: #ffb347; /* warning */
+  --rr-success: #4ade80; /* success */
+
+  /* Color — territory status (matches map H3 cell states) */
+  --rr-terr-owned: #4ade80;
+  --rr-terr-contested: #ffb347;
+  --rr-terr-claimable: #5bb8ff;
+  --rr-terr-locked: #4a525e;
+
+  /* Type — families */
+  --rr-font-display: "Fraunces", "Iowan Old Style", "Apple Garamond", Georgia, serif;
+  --rr-font-body: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --rr-font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Type — scale (modular, 1.25 ratio anchored at 14px) */
+  --rr-text-3xs: 0.6875rem; /* 11px — micro labels */
+  --rr-text-2xs: 0.75rem; /* 12px — captions */
+  --rr-text-xs: 0.8125rem; /* 13px — secondary */
+  --rr-text-sm: 0.875rem; /* 14px — body */
+  --rr-text-md: 1rem; /* 16px — emphasized body */
+  --rr-text-lg: 1.125rem; /* 18px — small heading */
+  --rr-text-xl: 1.375rem; /* 22px — heading */
+  --rr-text-2xl: 1.75rem; /* 28px — display */
+  --rr-text-3xl: 2.25rem; /* 36px — big display */
+  --rr-text-4xl: 3rem; /* 48px — hero number */
+  --rr-text-5xl: 4rem; /* 64px — rare, hero stats */
+
+  /* Type — weight */
+  --rr-w-regular: 400;
+  --rr-w-medium: 500;
+  --rr-w-semibold: 600;
+  --rr-w-bold: 700;
+
+  /* Type — tracking */
+  --rr-track-tight: -0.02em; /* display headings */
+  --rr-track-normal: 0;
+  --rr-track-wide: 0.04em; /* small caps */
+  --rr-track-caps: 0.12em; /* ALL CAPS labels */
+
+  /* Type — leading */
+  --rr-lead-tight: 1.05;
+  --rr-lead-snug: 1.2;
+  --rr-lead-normal: 1.45;
+  --rr-lead-relaxed: 1.6;
+
+  /* Space (4px base) */
+  --rr-s-0: 0;
+  --rr-s-1: 4px;
+  --rr-s-2: 8px;
+  --rr-s-3: 12px;
+  --rr-s-4: 16px;
+  --rr-s-5: 20px;
+  --rr-s-6: 24px;
+  --rr-s-8: 32px;
+  --rr-s-10: 40px;
+  --rr-s-12: 48px;
+  --rr-s-16: 64px;
+  --rr-s-20: 80px;
+
+  /* Radius */
+  --rr-r-0: 0;
+  --rr-r-1: 2px; /* sharp — tags, chips */
+  --rr-r-2: 4px; /* small — buttons, inputs */
+  --rr-r-3: 8px; /* medium — cards */
+  --rr-r-4: 12px; /* large — modals, sheets */
+  --rr-r-5: 16px; /* xl */
+  --rr-r-pill: 999px; /* pills, status indicators */
+
+  /* Border */
+  --rr-b-1: 1px solid var(--rr-border);
+  --rr-b-1-strong: 1px solid var(--rr-border-strong);
+
+  /* Shadow — quiet, no glow */
+  --rr-sh-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --rr-sh-2: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --rr-sh-3: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --rr-sh-focus: 0 0 0 2px var(--rr-bg-0), 0 0 0 4px var(--rr-accent);
+
+  /* Motion — easing */
+  --rr-ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --rr-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --rr-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --rr-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Motion — duration */
+  --rr-d-1: 80ms; /* micro */
+  --rr-d-2: 160ms; /* quick */
+  --rr-d-3: 240ms; /* base */
+  --rr-d-4: 360ms; /* deliberate */
+  --rr-d-5: 520ms; /* cinematic */
+
+  /* Z — runs above existing --z-* scale */
+  --rr-z-sheet: 2400;
+  --rr-z-sheet-backdrop: 2399;
+  --rr-z-toast: 2500;
+
+  /* Layout */
+  --rr-w-sheet-max: 420px;
+  --rr-w-prose: 64ch;
+}

@@ -48,6 +48,9 @@ access_token*
 packages/*/dist/
 packages/*/build/
 packages/*/*.tsbuildinfo
+apps/*/dist/
+apps/*/build/
+apps/*/*.tsbuildinfo
 tsconfig.tsbuildinfo
 # Recursively ignore compiled artifacts emitted by tsc next to sources
 packages/**/*.js

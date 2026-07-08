@@ -2,10 +2,10 @@
 # Minimal deployment config following Core Principles: ENHANCEMENT FIRST, DRY, CLEAN
 
 [build]
-  # Use specific web build command to avoid mobile app dependencies
+  # Build the Next.js web app from the apps/web workspace.
   command = "npm run build:web"
-  # Webpack outputs to public/ directory
-  publish = "public"
+  # Next.js static export outputs to apps/web/dist
+  publish = "apps/web/dist"
   # Skip builds for non-functional changes
   ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF || exit 1"
 

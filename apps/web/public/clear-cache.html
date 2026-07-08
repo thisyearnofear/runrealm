@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Cache - RunRealm</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #2a2a2a;
+            padding: 40px;
+            border-radius: 12px;
+        }
+        button {
+            background: #00bd00;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            background: #00aa00;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 16px;
+            border-radius: 8px;
+            background: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 RunRealm Cache Cleaner</h1>
+        <p>If RunRealm is stuck loading or showing script errors, use this tool to clear your browser cache.</p>
+        
+        <div class="status" id="status">
+            Ready to clear cache...
+        </div>
+        
+        <button onclick="clearAllCaches()">Clear All Caches</button>
+        <button onclick="forceReload()">Force Reload RunRealm</button>
+        
+        <h3>Manual Steps (if needed):</h3>
+        <ol style="text-align: left;">
+            <li><strong>Chrome/Brave:</strong> Press Ctrl+Shift+R (or Cmd+Shift+R on Mac)</li>
+            <li><strong>Clear Storage:</strong> F12 → Application → Storage → Clear site data</li>
+            <li><strong>Disable Cache:</strong> F12 → Network → Disable cache (while DevTools open)</li>
+        </ol>
+    </div>
+
+    <script>
+        function updateStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.style.background = isError ? '#aa0000' : '#006600';
+        }
+
+        async function clearAllCaches() {
+            updateStatus('Clearing caches...');
+            
+            try {
+                // Clear localStorage
+                localStorage.clear();
+                updateStatus('✓ LocalStorage cleared');
+                
+                // Clear sessionStorage
+                sessionStorage.clear();
+                updateStatus('✓ SessionStorage cleared');
+                
+                // Clear service worker caches
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames.map(cacheName => caches.delete(cacheName))
+                    );
+                    updateStatus('✓ Service Worker caches cleared');
+                }
+                
+                // Unregister service workers
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(
+                        registrations.map(registration => registration.unregister())
+                    );
+                    updateStatus('✓ Service Workers unregistered');
+                }
+                
+                updateStatus('✅ All caches cleared! You can now reload RunRealm.');
+                
+            } catch (error) {
+                updateStatus('❌ Error clearing caches: ' + error.message, true);
+            }
+        }
+
+        function forceReload() {
+            updateStatus('Redirecting to RunRealm with cache bust...');
+            window.location.href = '/?force_reload=' + Date.now() + '&cache_cleared=true';
+        }
+
+        // Auto-clear on load if requested
+        if (window.location.search.includes('auto_clear')) {
+            clearAllCaches();
+        }
+    </script>
+</body>
+</html>
