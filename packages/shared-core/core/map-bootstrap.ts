@@ -70,9 +70,26 @@ export async function createMap(
     style: style as string,
   });
 
-  return new Promise((resolve, reject) => {
-    map.on('load', () => resolve(map));
-    map.on('error', (err: unknown) => reject(err));
+  // Resolve on `load`. A single tile/style `error` (e.g. a flaky
+  // basemap tile or a control quirk) must NOT abort the whole app —
+  // the map is still usable. We log it and let init continue. A hard
+  // timeout guarantees the promise always settles so the loading
+  // overlay is always removed even if `load` never fires.
+  return new Promise<MaplibreMap>((resolve) => {
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      resolve(map);
+    };
+
+    map.on('load', settle);
+    map.on('error', (err: unknown) => {
+      console.warn('MapLibre non-fatal error (continuing):', err);
+    });
+
+    // Safety net: don't let a missing `load` event hang the boot.
+    setTimeout(settle, 8000);
   });
 }
 

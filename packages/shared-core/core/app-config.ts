@@ -233,7 +233,19 @@ export class ConfigService {
   }> {
     try {
       // Use API base URL from environment or default
-      const apiUrl = `${__ENV__?.API_BASE_URL || 'http://localhost:3000'}/api/tokens`;
+      const baseUrl = __ENV__?.API_BASE_URL || 'http://localhost:3000';
+
+      // On static hosts (Netlify/Vercel) there is no backend serving
+      // /api/tokens, so the default localhost URL would always fail
+      // (and spam the console). Skip the request unless a real API
+      // base URL is configured; tokens then come from public env vars
+      // or user storage instead.
+      if (!baseUrl || baseUrl.includes('localhost')) {
+        console.debug('No runtime token backend configured; skipping /api/tokens fetch');
+        return {};
+      }
+
+      const apiUrl = `${baseUrl}/api/tokens`;
 
       console.debug(`Fetching tokens from: ${apiUrl}`);
       const response = await fetch(apiUrl);
