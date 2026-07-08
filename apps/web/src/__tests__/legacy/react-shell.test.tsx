@@ -9,10 +9,10 @@
  */
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { BottomSheet } from '../react/BottomSheet';
-import { GameHUD } from '../react/GameHUD';
-import type { InspectorTerritory } from '../react/Inspector';
-import { Inspector } from '../react/Inspector';
+import { BottomSheet } from '../../components/BottomSheet';
+import { GameHUD } from '../../components/GameHUD';
+import type { InspectorTerritory } from '../../components/Inspector';
+import { Inspector } from '../../components/Inspector';
 
 describe('React shell', () => {
   describe('GameHUD', () => {

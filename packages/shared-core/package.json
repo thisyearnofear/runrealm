@@ -43,6 +43,16 @@
       "import": "./dist/utils/*.js",
       "require": "./dist/utils/*.js",
       "types": "./dist/utils/*.d.ts"
+    },
+    "./ui/*": {
+      "import": "./dist/ui/*.js",
+      "require": "./dist/ui/*.js",
+      "types": "./dist/ui/*.d.ts"
+    },
+    "./config/*": {
+      "import": "./dist/config/*.js",
+      "require": "./dist/config/*.js",
+      "types": "./dist/config/*.d.ts"
     }
   },
   "files": [

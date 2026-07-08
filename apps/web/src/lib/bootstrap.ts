@@ -1,123 +1,117 @@
 // Clean, modular entry point for RunRealm
 import type { ConfidentialContractService } from '@runrealm/shared-blockchain/services/confidential-contract-service';
-import { ZamaSupportService } from '@runrealm/shared-blockchain/services/zama-support';
 import { RunRealmApp } from '@runrealm/shared-core/core/run-realm-app';
-import { ConfidentialTerritoryService } from '@runrealm/shared-core/services/confidential-territory-service';
 import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
-import { MainUI } from './src/components/main-ui';
-import UserDashboard from './src/components/user-dashboard';
-import { WalletWidget } from './src/components/wallet-widget';
-// CONSOLIDATED CSS - Following AGGRESSIVE CONSOLIDATION principle
-import './styles/core-system.css'; // Variables, z-index, animations, utilities
-import './styles/components.css'; // Widgets, GameFi UI, controls, rewards
-import './styles/interfaces.css'; // Modals, location, wallet, cross-chain
-import './styles/responsive.css'; // Mobile-first responsive design
-import './styles/external-fitness.css'; // External fitness integration
-import './styles/design-tokens.css'; // New design system tokens (--rr-*)
-import './styles/wallet-sheet.css'; // Polished wallet connect flow
+import { MainUI } from '../legacy/components/main-ui';
+import UserDashboard from '../legacy/components/user-dashboard';
+import { WalletWidget } from '../legacy/components/wallet-widget';
 
-// Register service worker for offline support
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-  navigator.serviceWorker
-    .register('/sw.js')
-    .then(() => console.log('SW registered'))
-    .catch(() => console.log('SW registration failed'));
-}
+// All bootstrap side effects are browser-only. Guard so the module stays
+// safe to import during Next.js static generation.
+if (typeof window !== 'undefined') {
+  // Register service worker for offline support
+  if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(() => console.log('SW registration failed'));
+  }
 
-// Handle script loading errors (cache busting)
-window.addEventListener(
-  'error',
-  (event) => {
-    // biome-ignore lint/suspicious/noExplicitAny: ErrorEvent target is EventTarget, not Element; narrow to HTMLScriptElement on next line
-    if (event.target && (event.target as any).tagName === 'SCRIPT') {
-      const script = event.target as HTMLScriptElement;
-      if (script.src?.includes('.js')) {
-        console.warn('Script failed to load:', script.src);
+  // Handle script loading errors (cache busting)
+  window.addEventListener(
+    'error',
+    (event) => {
+      // biome-ignore lint/suspicious/noExplicitAny: ErrorEvent target is EventTarget, not Element; narrow to HTMLScriptElement on next line
+      if (event.target && (event.target as any).tagName === 'SCRIPT') {
+        const script = event.target as HTMLScriptElement;
+        if (script.src?.includes('.js')) {
+          console.warn('Script failed to load:', script.src);
 
-        // If it's a main app script and we're in production, try cache bust
-        if (script.src.includes('/app.') && process.env.NODE_ENV === 'production') {
-          console.log('Attempting cache bust reload...');
-          // Force reload without cache
-          window.location.reload();
+          // If it's a main app script and we're in production, try cache bust
+          if (script.src.includes('/app.') && process.env.NODE_ENV === 'production') {
+            console.log('Attempting cache bust reload...');
+            // Force reload without cache
+            window.location.reload();
+          }
         }
       }
-    }
-  },
-  true
-);
+    },
+    true
+  );
 
-// Filter out noisy browser extension errors and token exposure in production
-if (process.env.NODE_ENV === 'production') {
-  const originalError = console.error;
-  const originalLog = console.log;
-  const originalWarn = console.warn;
+  // Filter out noisy browser extension errors and token exposure in production
+  if (process.env.NODE_ENV === 'production') {
+    const originalError = console.error;
+    const originalLog = console.log;
+    const originalWarn = console.warn;
 
-  // Helper function to check if message contains sensitive tokens
-  const containsToken = (message: string) => {
-    return message.includes('access_token=') || message.includes('AIzaSy'); // Google API key prefix
-  };
+    // Helper function to check if message contains sensitive tokens
+    const containsToken = (message: string) => {
+      return message.includes('access_token=') || message.includes('AIzaSy'); // Google API key prefix
+    };
 
-  // Helper function to sanitize messages with tokens
-  const sanitizeMessage = (message: string) => {
-    return message
-      .replace(/access_token=[^&\s]*/g, 'access_token=[REDACTED]')
-      .replace(/AIzaSy[A-Za-z0-9._-]*/g, 'AIzaSy[REDACTED]');
-  };
+    // Helper function to sanitize messages with tokens
+    const sanitizeMessage = (message: string) => {
+      return message
+        .replace(/access_token=[^&\s]*/g, 'access_token=[REDACTED]')
+        .replace(/AIzaSy[A-Za-z0-9._-]*/g, 'AIzaSy[REDACTED]');
+    };
 
-  console.error = (...args) => {
-    const message = args.join(' ');
-    // Filter out known browser extension noise
-    if (
-      message.includes("Backpack couldn't override") ||
-      message.includes('Could not establish connection') ||
-      message.includes('Receiving end does not exist')
-    ) {
-      return; // Suppress these errors
-    }
+    console.error = (...args) => {
+      const message = args.join(' ');
+      // Filter out known browser extension noise
+      if (
+        message.includes("Backpack couldn't override") ||
+        message.includes('Could not establish connection') ||
+        message.includes('Receiving end does not exist')
+      ) {
+        return; // Suppress these errors
+      }
 
-    // Sanitize token exposure in error messages
-    if (containsToken(message)) {
-      const sanitizedArgs = args.map((arg) =>
-        typeof arg === 'string' ? sanitizeMessage(arg) : arg
-      );
-      originalError.apply(console, sanitizedArgs);
-      return;
-    }
+      // Sanitize token exposure in error messages
+      if (containsToken(message)) {
+        const sanitizedArgs = args.map((arg) =>
+          typeof arg === 'string' ? sanitizeMessage(arg) : arg
+        );
+        originalError.apply(console, sanitizedArgs);
+        return;
+      }
 
-    originalError.apply(console, args);
-  };
+      originalError.apply(console, args);
+    };
 
-  console.log = (...args) => {
-    const message = args.join(' ');
-    // Sanitize token exposure in log messages
-    if (containsToken(message)) {
-      const sanitizedArgs = args.map((arg) =>
-        typeof arg === 'string' ? sanitizeMessage(arg) : arg
-      );
-      originalLog.apply(console, sanitizedArgs);
-      return;
-    }
+    console.log = (...args) => {
+      const message = args.join(' ');
+      // Sanitize token exposure in log messages
+      if (containsToken(message)) {
+        const sanitizedArgs = args.map((arg) =>
+          typeof arg === 'string' ? sanitizeMessage(arg) : arg
+        );
+        originalLog.apply(console, sanitizedArgs);
+        return;
+      }
 
-    originalLog.apply(console, args);
-  };
+      originalLog.apply(console, args);
+    };
 
-  console.warn = (...args) => {
-    const message = args.join(' ');
-    // Sanitize token exposure in warning messages
-    if (containsToken(message)) {
-      const sanitizedArgs = args.map((arg) =>
-        typeof arg === 'string' ? sanitizeMessage(arg) : arg
-      );
-      originalWarn.apply(console, sanitizedArgs);
-      return;
-    }
+    console.warn = (...args) => {
+      const message = args.join(' ');
+      // Sanitize token exposure in warning messages
+      if (containsToken(message)) {
+        const sanitizedArgs = args.map((arg) =>
+          typeof arg === 'string' ? sanitizeMessage(arg) : arg
+        );
+        originalWarn.apply(console, sanitizedArgs);
+        return;
+      }
 
-    originalWarn.apply(console, args);
-  };
+      originalWarn.apply(console, args);
+    };
+  }
 }
 
 // Initialize the application
-async function initializeApp(): Promise<void> {
+export async function initializeApp(): Promise<void> {
   try {
     const app = RunRealmApp.getInstance();
 
@@ -215,6 +209,12 @@ async function initializeApp(): Promise<void> {
     // to make a future async refactor of `setZamaSupport`
     // (e.g. resolving the chain via an async provider) a
     // transparent drop-in.
+    // Lazy-load the Zama services so the Next.js bundler does not
+    // eagerly pull in the heavy WASM/runtime dependencies.
+    const [{ ConfidentialTerritoryService }, { ZamaSupportService }] = await Promise.all([
+      import('@runrealm/shared-core/services/confidential-territory-service'),
+      import('@runrealm/shared-blockchain/services/zama-support'),
+    ]);
     await ConfidentialTerritoryService.getInstance().setZamaSupport(
       ZamaSupportService.getInstance()
     );
@@ -231,8 +231,8 @@ async function initializeApp(): Promise<void> {
     // modal. Suppress the legacy modal so only the React one shows.
     const { createRoot } = await import('react-dom/client');
     const { createElement } = await import('react');
-    const { WalletRoot } = await import('./src/components/react/WalletRoot');
-    const { useWallet } = await import('./src/components/react/useWallet');
+    const { WalletRoot } = await import('../components/WalletRoot');
+    const { useWallet } = await import('../components/useWallet');
     const eventBus = app.getEventBus();
     const walletForReact = {
       eventBus,

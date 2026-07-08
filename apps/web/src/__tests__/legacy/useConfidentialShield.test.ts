@@ -2,7 +2,7 @@
  * Unit tests for useConfidentialShield
  */
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { useConfidentialShield } from '../react/useConfidentialShield';
+import { useConfidentialShield } from '../../components/useConfidentialShield';
 
 const createOptions = (overrides = {}) => ({
   eventBus: { on: jest.fn(), off: jest.fn(), emit: jest.fn() } as unknown as Parameters<

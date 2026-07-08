@@ -15,10 +15,10 @@
 import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useEffect, useMemo } from 'react';
-import { ConnectButton } from '../react/ConnectButton';
-import { type UseWalletResult, useWallet } from '../react/useWallet';
-import { WalletRoot } from '../react/WalletRoot';
-import { WalletSheet } from '../react/WalletSheet';
+import { ConnectButton } from '../../components/ConnectButton';
+import { type UseWalletResult, useWallet } from '../../components/useWallet';
+import { WalletRoot } from '../../components/WalletRoot';
+import { WalletSheet } from '../../components/WalletSheet';
 
 class StubEventBus {
   private handlers = new Map<string, Set<(data: unknown) => void>>();
