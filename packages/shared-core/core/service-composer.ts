@@ -41,6 +41,7 @@ import { HapticsService } from '../services/haptics-service';
 import { LocationService } from '../services/location-service';
 import { MapService } from '../services/map-service';
 import { NavigationService } from '../services/navigation-service';
+import { NotificationService } from '../services/notification-service';
 import { OnboardingService } from '../services/onboarding-service';
 import { PreferenceService } from '../services/preference-service';
 import { ProgressionService } from '../services/progression-service';
@@ -48,6 +49,7 @@ import { ReplayService } from '../services/replay-service';
 import { RunTrackingService } from '../services/run-tracking-service';
 import { SoundService } from '../services/sound-service';
 import { TerritoryService } from '../services/territory-service';
+import { TerritoryWalkService } from '../services/territory-walk-service';
 import { UIService } from '../services/ui-service';
 import { Web3Service } from '../services/web3-service';
 import {
@@ -91,6 +93,8 @@ export interface Services {
   gamefiUI: GameFiUI;
   haptics: HapticsService;
   replay: ReplayService;
+  notificationService: NotificationService;
+  territoryWalkService: TerritoryWalkService;
 }
 
 export interface TokenDependentServices {
@@ -132,6 +136,8 @@ export function createServices(): Services {
   const gamefiUI = GameFiUI.getInstance();
   const haptics = HapticsService.getInstance();
   const replay = ReplayService.getInstance();
+  const notificationService = NotificationService.getInstance();
+  const territoryWalkService = TerritoryWalkService.getInstance();
 
   return {
     config,
@@ -166,6 +172,8 @@ export function createServices(): Services {
     gamefiUI,
     haptics,
     replay,
+    notificationService,
+    territoryWalkService,
   };
 }
 
@@ -222,5 +230,7 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     zamaSupport: services.zamaSupport,
     confidentialTerritory: services.confidentialTerritory,
     mapService: services.mapService,
+    notificationService: services.notificationService,
+    territoryWalkService: services.territoryWalkService,
   };
 }

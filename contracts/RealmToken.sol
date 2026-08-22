@@ -30,6 +30,11 @@ contract RealmToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     // Reward rates (tokens per meter)
     uint256 public constant BASE_REWARD_RATE = RealmRules.BASE_REWARD_PER_METER_E15;
     uint256 public constant DIFFICULTY_BONUS_MAX = RealmRules.DIFFICULTY_BONUS_MAX_E18;
+    // MIRROR of GameLogic.DIFFICULTY_MULTIPLIER (= 10). GameLogic keeps
+    // this constant inline (bytecode-frozen ZetaChain deploy), so it is
+    // mirrored here rather than imported. Used to align
+    // `distributeRunningReward` with `GameLogic.calculateTerritoryReward`.
+    uint256 private constant DIFFICULTY_MULTIPLIER = 10;
 
     // Staking parameters
     uint256 public constant MIN_STAKE_PERIOD = RealmRules.STAKING_MIN_PERIOD_DAYS * 1 days;
@@ -100,11 +105,18 @@ contract RealmToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Distribute rewards for running activity
-     * @param user Address to reward
-     * @param distance Distance covered in meters
-     * @param difficulty Territory difficulty (0-100)
-     * @param activityId Unique identifier for the activity
+     * @dev Distribute rewards for running activity.
+     *
+     * Phase 5 fix: difficulty bonus formula aligned with
+     * `GameLogic.calculateTerritoryReward` to prevent payout
+     * inconsistency between territory creation and running rewards.
+     *
+     * Old (inconsistent): `DIFFICULTY_BONUS_MAX * difficulty / 100`
+     * New (aligned):      `baseReward * difficulty * DIFFICULTY_MULTIPLIER / 10000`
+     *
+     * DIFFICULTY_MULTIPLIER is a local MIRROR of GameLogic's inline
+     * constant; BASE_REWARD_RATE comes from RealmRules. See the constant
+     * declaration above for why it isn't imported.
      */
     function distributeRunningReward(
         address user,
@@ -119,11 +131,11 @@ contract RealmToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
         // Check daily limits
         require(canClaimReward(user), "RealmToken: Daily limit exceeded");
 
-        // Calculate base reward
+        // Calculate base reward (same as GameLogic)
         uint256 baseReward = distance * BASE_REWARD_RATE;
 
-        // Calculate difficulty bonus (scaled by difficulty/100)
-        uint256 difficultyBonus = DIFFICULTY_BONUS_MAX * difficulty / 100;
+        // Calculate difficulty bonus — aligned with GameLogic formula
+        uint256 difficultyBonus = (baseReward * difficulty * DIFFICULTY_MULTIPLIER) / 10000;
 
         uint256 totalReward = baseReward + difficultyBonus;
 

@@ -153,7 +153,8 @@ contract RunRealmUniversal is UniversalContract, ERC721, AccessControl, Reentran
             sourceChainId: sourceChainId,
             createdAt: block.timestamp,
             totalRewards: 0,
-            isActive: true
+            isActive: true,
+            lastActivity: block.timestamp // Phase 5 fix: seed with creation time
         });
 
         // Update mappings
@@ -384,6 +385,32 @@ contract RunRealmUniversal is UniversalContract, ERC721, AccessControl, Reentran
     function setTerritoryActive(uint256 tokenId, bool active) external override onlyRole(GAME_MASTER_ROLE) {
         require(_exists(tokenId), "Territory does not exist");
         _territories[tokenId].isActive = active;
+    }
+
+    /**
+     * @dev Directly claim time-based rewards for a territory.
+     *
+     * Phase 5 fix: the original `_handleRewardClaim` was only
+     * invocable via the `onCall` cross-chain dispatcher (operation
+     * type 3). This means the web UI on a regular EVM chain could
+     * never earn time-based rewards. The direct method uses the same
+     * ownership check + reward calculation but skips the cross-chain
+     * indirection.
+     */
+    function claimTimeBasedRewards(uint256 tokenId) external nonReentrant {
+        require(_exists(tokenId), "Territory does not exist");
+        require(ownerOf(tokenId) == msg.sender, "Not territory owner");
+
+        Territory storage territory = _territories[tokenId];
+        uint256 timeReward = GameLogic.calculateTimeBasedReward(territory);
+
+        if (timeReward > 0) {
+            territory.totalRewards += timeReward;
+            _distributeRewards(msg.sender, timeReward, tokenId, "Time-based Reward");
+
+            // Refresh lastActivity so the timeout window resets
+            territory.lastActivity = block.timestamp;
+        }
     }
 
     /**

@@ -17,3 +17,39 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((response) => response || fetch(event.request))
   );
 });
+
+// Push notifications: territory decay alerts, ghost race results.
+// Payload shape: { title, body, tag? } (JSON string).
+self.addEventListener('push', (event) => {
+  let payload = { title: 'RunRealm', body: 'Your territories await.' };
+  try {
+    if (event.data) {
+      payload = { ...payload, ...event.data.json() };
+    }
+  } catch (err) {
+    // Non-JSON push — fall back to defaults.
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      tag: payload.tag,
+      icon: '/apple-touch-icon-180x180.png',
+      badge: '/apple-touch-icon-180x180.png',
+    })
+  );
+});
+
+// Clicking a notification focuses the app (dashboard opens via app code).
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('/');
+      }
+    })
+  );
+});

@@ -60,6 +60,14 @@ export async function initializeApp(): Promise<void> {
       // Continue without ghost features
     }
 
+    // Shareable ghost race result card (listens on the event bus).
+    try {
+      const { GhostRaceResult } = await import('../shell/components/ghost-race-result');
+      new GhostRaceResult().initialize(document.body);
+    } catch (err) {
+      console.warn('Ghost race result card not available:', err);
+    }
+
     // Initialize platform UI with all components
     app.initializePlatformUI({
       mainUI,

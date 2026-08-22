@@ -1,10 +1,15 @@
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { BaseService } from '../core/base-service';
-import { cellToPolygon, type TerritoryCell } from '../utils/h3-territory';
+import {
+  cellToPolygon,
+  coordsToCell,
+  type TerritoryCell,
+  type TerritoryCellPolygon,
+} from '../utils/h3-territory';
 import { makeEaseToThrottle, makeMapThrottle, type ThrottledFn } from '../utils/map-throttle';
 import { ReplayService } from './replay-service';
 import { RunPoint } from './run-tracking-service';
-import { TerritoryIntent, TerritoryPreview } from './territory-service';
+import type { Territory, TerritoryIntent, TerritoryPreview } from './territory-service';
 
 const TRAIL_SOURCE_ID = 'run-trail-source';
 const TRAIL_LAYER_ID = 'run-trail-layer';
@@ -26,6 +31,25 @@ const H3_CELLS_BORDER_LAYER_ID = 'h3-cells-border-layer';
 const CONTESTED_CELLS_SOURCE_ID = 'contested-cells-source';
 const CONTESTED_CELLS_LAYER_ID = 'contested-cells-layer';
 const CONTESTED_CELLS_BORDER_LAYER_ID = 'contested-cells-border-layer';
+// Owned-territory defense layer: one fill + border pair colored by the
+// territory's `defenseStatus` so the core loop (claim → decay → defend)
+// is visible at a glance on the map instead of buried in dashboard panels.
+const OWNED_TERRITORY_SOURCE_ID = 'owned-territory-source';
+const OWNED_TERRITORY_LAYER_ID = 'owned-territory-layer';
+const OWNED_TERRITORY_BORDER_LAYER_ID = 'owned-territory-border-layer';
+// One-shot reveal animation played at a claim location while the claim
+// transaction is in flight ("one-tap claim" UX).
+const CLAIM_REVEAL_SOURCE_ID = 'claim-reveal-source';
+const CLAIM_REVEAL_FILL_LAYER_ID = 'claim-reveal-fill-layer';
+const CLAIM_REVEAL_BORDER_LAYER_ID = 'claim-reveal-border-layer';
+
+/** Fill colors keyed by defense status — green strong → red claimable. */
+export const DEFENSE_STATUS_COLORS: Record<string, string> = {
+  strong: '#00ff88',
+  moderate: '#f1c40f',
+  vulnerable: '#ff3366',
+  claimable: '#7f8c8d',
+};
 
 export interface TerritoryMapOptions {
   showPreviews?: boolean;
@@ -62,6 +86,8 @@ export class MapService extends BaseService {
   // Step 7: contested-border pulse animation handle
   private contestedPulseRafId: number | null = null;
   private contestedPulseStartMs: number = 0;
+  // One-tap claim reveal animation handle
+  private claimRevealRafId: number | null = null;
 
   /**
    * Initialize map layers for territory preview functionality
@@ -861,5 +887,240 @@ export class MapService extends BaseService {
     if (this.map.getSource(CONTESTED_CELLS_SOURCE_ID)) {
       this.map.removeSource(CONTESTED_CELLS_SOURCE_ID);
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Owned-territory defense layer + one-tap claim reveal
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Render the user's owned territories, color-coded by defense status:
+   * green (strong ≥700), amber (moderate ≥300), red (vulnerable ≥100),
+   * grey fading (claimable <100). Border width scales with urgency so a
+   * glance at the map communicates the whole core loop.
+   */
+  public renderOwnedTerritories(territories: Territory[]): void {
+    if (!this.map) return;
+
+    const features = territories.flatMap((territory) => {
+      const polygons = this.territoryPolygons(territory);
+      if (polygons.length === 0) return [];
+      const status = territory.defenseStatus ?? 'moderate';
+      // Multi-cell territories render as a multipolygon so all cells
+      // share one feature/property set.
+      const geometry:
+        | TerritoryCellPolygon
+        | {
+            type: 'MultiPolygon';
+            coordinates: number[][][][];
+          } =
+        polygons.length === 1
+          ? polygons[0]
+          : {
+              type: 'MultiPolygon',
+              coordinates: polygons.map((p) => p.coordinates),
+            };
+      return [
+        {
+          type: 'Feature' as const,
+          properties: {
+            id: territory.id,
+            geohash: territory.geohash,
+            defenseStatus: status,
+            activityPoints: territory.activityPoints ?? 500,
+          },
+          geometry,
+        },
+      ];
+    });
+
+    if (!this.map.getSource(OWNED_TERRITORY_SOURCE_ID)) {
+      this.map.addSource(OWNED_TERRITORY_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features },
+      });
+      this.map.addLayer({
+        id: OWNED_TERRITORY_LAYER_ID,
+        type: 'fill',
+        source: OWNED_TERRITORY_SOURCE_ID,
+        paint: {
+          'fill-color': [
+            'match',
+            ['get', 'defenseStatus'],
+            'strong',
+            DEFENSE_STATUS_COLORS.strong,
+            'moderate',
+            DEFENSE_STATUS_COLORS.moderate,
+            'vulnerable',
+            DEFENSE_STATUS_COLORS.vulnerable,
+            DEFENSE_STATUS_COLORS.claimable,
+          ],
+          'fill-opacity': ['match', ['get', 'defenseStatus'], 'strong', 0.25, 0.18],
+        },
+      });
+      this.map.addLayer({
+        id: OWNED_TERRITORY_BORDER_LAYER_ID,
+        type: 'line',
+        source: OWNED_TERRITORY_SOURCE_ID,
+        paint: {
+          'line-color': [
+            'match',
+            ['get', 'defenseStatus'],
+            'strong',
+            DEFENSE_STATUS_COLORS.strong,
+            'moderate',
+            DEFENSE_STATUS_COLORS.moderate,
+            'vulnerable',
+            DEFENSE_STATUS_COLORS.vulnerable,
+            DEFENSE_STATUS_COLORS.claimable,
+          ],
+          'line-width': [
+            'match',
+            ['get', 'defenseStatus'],
+            'strong',
+            1.5,
+            'moderate',
+            2,
+            'vulnerable',
+            3,
+            2,
+          ],
+          'line-opacity': 0.85,
+        },
+      });
+      return;
+    }
+
+    const source = this.map.getSource(OWNED_TERRITORY_SOURCE_ID) as any;
+    source?.setData({ type: 'FeatureCollection', features });
+  }
+
+  public clearOwnedTerritories(): void {
+    if (!this.map) return;
+    if (this.map.getLayer(OWNED_TERRITORY_BORDER_LAYER_ID)) {
+      this.map.removeLayer(OWNED_TERRITORY_BORDER_LAYER_ID);
+    }
+    if (this.map.getLayer(OWNED_TERRITORY_LAYER_ID)) {
+      this.map.removeLayer(OWNED_TERRITORY_LAYER_ID);
+    }
+    if (this.map.getSource(OWNED_TERRITORY_SOURCE_ID)) {
+      this.map.removeSource(OWNED_TERRITORY_SOURCE_ID);
+    }
+  }
+
+  /**
+   * One-shot "claiming…" reveal at the territory location: a green glow
+   * that pulses in while the transaction is in flight, then fades out.
+   * Lets the user see WHERE the claim is happening without waiting on a
+   * modal or receipt — the map is the feedback surface.
+   */
+  public playClaimReveal(territory: Pick<Territory, 'geohash' | 'h3Cells'>): void {
+    if (!this.map || typeof (globalThis as any).requestAnimationFrame !== 'function') return;
+
+    const polygons = this.territoryPolygons(territory as Territory);
+    if (polygons.length === 0) return;
+
+    const features = polygons.map((geometry, i) => ({
+      type: 'Feature' as const,
+      properties: { idx: i },
+      geometry,
+    }));
+
+    if (!this.map.getSource(CLAIM_REVEAL_SOURCE_ID)) {
+      this.map.addSource(CLAIM_REVEAL_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features },
+      });
+      this.map.addLayer({
+        id: CLAIM_REVEAL_FILL_LAYER_ID,
+        type: 'fill',
+        source: CLAIM_REVEAL_SOURCE_ID,
+        paint: { 'fill-color': '#00ff88', 'fill-opacity': 0.4 },
+      });
+      this.map.addLayer({
+        id: CLAIM_REVEAL_BORDER_LAYER_ID,
+        type: 'line',
+        source: CLAIM_REVEAL_SOURCE_ID,
+        paint: { 'line-color': '#00ff88', 'line-width': 3, 'line-opacity': 0.9 },
+      });
+    } else {
+      (this.map.getSource(CLAIM_REVEAL_SOURCE_ID) as any)?.setData({
+        type: 'FeatureCollection',
+        features,
+      });
+    }
+
+    // ~2.4s pulse-in/pulse-out then cleanup.
+    if (this.claimRevealRafId !== null) {
+      // biome-ignore lint/suspicious/noExplicitAny: rAF signature
+      (globalThis as any).cancelAnimationFrame?.(this.claimRevealRafId);
+      this.claimRevealRafId = null;
+    }
+    const startMs = performance.now();
+    const tick = () => {
+      if (!this.map) return;
+      const t = (performance.now() - startMs) / 2400; // 0..1
+      if (t >= 1) {
+        this.stopClaimReveal();
+        return;
+      }
+      // Sin envelope: rises to peak at t=0.35, decays to 0 by t=1.
+      const envelope = Math.max(0, Math.sin(Math.min(t / 0.35, 1) * (Math.PI / 2))) * (1 - t);
+      if (this.map.getLayer(CLAIM_REVEAL_FILL_LAYER_ID)) {
+        this.map.setPaintProperty(CLAIM_REVEAL_FILL_LAYER_ID, 'fill-opacity', 0.45 * envelope);
+      }
+      if (this.map.getLayer(CLAIM_REVEAL_BORDER_LAYER_ID)) {
+        this.map.setPaintProperty(CLAIM_REVEAL_BORDER_LAYER_ID, 'line-width', 1 + 4 * envelope);
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: rAF signature
+      this.claimRevealRafId = (globalThis as any).requestAnimationFrame(tick);
+    };
+    // biome-ignore lint/suspicious/noExplicitAny: rAF signature
+    this.claimRevealRafId = (globalThis as any).requestAnimationFrame(tick);
+  }
+
+  public stopClaimReveal(): void {
+    if (this.claimRevealRafId !== null) {
+      // biome-ignore lint/suspicious/noExplicitAny: rAF signature
+      (globalThis as any).cancelAnimationFrame?.(this.claimRevealRafId);
+      this.claimRevealRafId = null;
+    }
+    if (!this.map) return;
+    if (this.map.getLayer(CLAIM_REVEAL_FILL_LAYER_ID)) {
+      this.map.removeLayer(CLAIM_REVEAL_FILL_LAYER_ID);
+    }
+    if (this.map.getLayer(CLAIM_REVEAL_BORDER_LAYER_ID)) {
+      this.map.removeLayer(CLAIM_REVEAL_BORDER_LAYER_ID);
+    }
+  }
+
+  /**
+   * GeoJSON polygon(s) for a territory. Prefers stored H3 cells; falls
+   * back to the cell containing the synthetic `{lat}_{lng}` geohash
+   * center used by the on-chain identifier.
+   */
+  private territoryPolygons(territory: Territory): TerritoryCellPolygon[] {
+    try {
+      if (territory.h3Cells && territory.h3Cells.length > 0) {
+        return territory.h3Cells.map((cell) => cellToPolygon(cell.h3Index));
+      }
+      const parsed = this.parseGeohashCenter(territory.geohash);
+      if (parsed) {
+        const cell = coordsToCell(parsed.lat, parsed.lng);
+        return [cellToPolygon(cell.h3Index)];
+      }
+    } catch (error) {
+      console.warn('MapService: could not resolve territory polygon:', error);
+    }
+    return [];
+  }
+
+  private parseGeohashCenter(geohash: string): { lat: number; lng: number } | null {
+    const parts = geohash.split('_');
+    if (parts.length !== 2) return null;
+    const lat = Number.parseFloat(parts[0]);
+    const lng = Number.parseFloat(parts[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
   }
 }

@@ -29,12 +29,31 @@ export interface GhostRun {
   result: 'completed' | 'failed';
 }
 
+/**
+ * Head-to-head race outcome: a deployed ghost defends its territory
+ * against the owner's recent form. Both scores live on the same 0-1000
+ * activity-point scale as territory defense so results read consistently.
+ */
+export interface GhostRaceResult {
+  raceId: string;
+  ghostId: string;
+  ghostName: string;
+  avatar?: string;
+  territoryId: string;
+  territoryName?: string;
+  ghostScore: number;
+  userScore: number;
+  winner: 'ghost' | 'user';
+  completedAt: number;
+}
+
 export class GhostRunnerService extends BaseService {
   private static instance: GhostRunnerService;
   private aiService: AIService;
   private runTrackingService: RunTrackingService;
   private ghosts: Map<string, GhostRunnerNFT> = new Map();
   private ghostRuns: GhostRun[] = [];
+  private raceHistory: GhostRaceResult[] = [];
   private userRealmBalance: number = 0;
 
   private constructor() {
@@ -124,6 +143,48 @@ export class GhostRunnerService extends BaseService {
     return this.userRealmBalance;
   }
 
+  getRaceHistory(): GhostRaceResult[] {
+    return [...this.raceHistory];
+  }
+
+  /**
+   * Resolve a head-to-head result for a ghost deployment. The ghost's
+   * score derives from its pace and level; the user's score from their
+   * recent run history (average pace + volume). Deterministic per
+   * deployment — no hidden randomness the user can't reason about.
+   */
+  private resolveRaceResult(ghost: GhostRunnerNFT, territoryId: string): GhostRaceResult {
+    const stats = this.getUserStats();
+    const levelBonus = (ghost.level - 1) * 60;
+
+    // Ghost: base fitness from pace (lower seconds/meter is better),
+    // scaled to the 0-1000 defense-point scale.
+    const ghostScore = Math.round(
+      Math.min(1000, Math.max(50, 600 - ghost.pace * 800 + levelBonus))
+    );
+
+    // User: average pace relative to a 6:00/km benchmark plus a volume
+    // nudge; falls back to a neutral 400 when no history exists yet.
+    let userScore = 400;
+    if (stats && Number.isFinite(stats.averagePace) && stats.averagePace > 0) {
+      const paceScore = 900 - stats.averagePace * 120;
+      const volumeScore = Math.min(150, stats.totalDistance / 500);
+      userScore = Math.round(Math.min(1000, Math.max(50, paceScore + volumeScore)));
+    }
+
+    return {
+      raceId: `race_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      ghostId: ghost.id,
+      ghostName: ghost.name,
+      avatar: ghost.avatar,
+      territoryId,
+      ghostScore,
+      userScore,
+      winner: userScore >= ghostScore ? 'user' : 'ghost',
+      completedAt: Date.now(),
+    };
+  }
+
   async unlockGhost(
     type: 'sprinter' | 'endurance' | 'hill' | 'allrounder',
     reason: string
@@ -185,6 +246,14 @@ export class GhostRunnerService extends BaseService {
     await this.saveGhosts();
     this.ghostRuns.push(ghostRun);
 
+    // Head-to-head race result: ghost's simulated run vs the owner's
+    // recent form. Emitted so the UI can surface a shareable result card.
+    const race = this.resolveRaceResult(ghost, territoryId);
+    this.raceHistory.push(race);
+    if (this.raceHistory.length > 50) {
+      this.raceHistory = this.raceHistory.slice(-50);
+    }
+
     this.safeEmit('ghost:deployed', { ghost, territoryId });
     this.safeEmit('ghost:completed', {
       ghostRun: {
@@ -192,6 +261,15 @@ export class GhostRunnerService extends BaseService {
         runId: ghostRun.territoryId,
         completedAt: ghostRun.startTime.getTime(),
       },
+    });
+    this.safeEmit('ghost:raceCompleted', {
+      ghostId: race.ghostId,
+      ghostName: race.ghostName,
+      avatar: race.avatar,
+      territoryId: race.territoryId,
+      ghostScore: race.ghostScore,
+      userScore: race.userScore,
+      winner: race.winner,
     });
 
     return ghostRun;

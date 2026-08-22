@@ -284,6 +284,19 @@ export class UserDashboard {
         break;
       }
 
+      case 'territory-walk': {
+        const territoryId = target.getAttribute('data-territory-id');
+        if (!territoryId) break;
+        // biome-ignore lint/suspicious/noExplicitAny: global service registry
+        const walkService = (window as any).RunRealm?.services?.territoryWalkService;
+        if (walkService) {
+          void walkService.startWalk(territoryId);
+        } else {
+          this.eventBus.emit('territoryWalk:startRequested', { territoryId });
+        }
+        break;
+      }
+
       case 'claim-challenge': {
         const challengeId = target.getAttribute('data-challenge-id');
         if (challengeId) {
@@ -576,6 +589,13 @@ export class UserDashboard {
             <label>Boost Activity</label>
             <button class="action-btn secondary" data-action="boost-territory-activity" data-territory-id="${territory.geohash}">
               +100 Points (50 $REALM)
+            </button>
+          </div>
+
+          <div class="action-group">
+            <label>Territory Walk</label>
+            <button class="action-btn secondary" data-action="territory-walk" data-territory-id="${territory.id}" title="Visit this territory in person to verify with GPS">
+              🚶 Visit &amp; Collect (+150 pts)
             </button>
           </div>
         </div>

@@ -96,6 +96,8 @@ describe('service-composer', () => {
       'gamefiUI',
       'haptics',
       'replay',
+      'notificationService',
+      'territoryWalkService',
     ];
     for (const key of expectedKeys) {
       expect((services as unknown as Record<string, unknown>)[key]).toBeDefined();

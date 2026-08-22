@@ -19,6 +19,7 @@ interface IRunRealmGame {
         uint256 createdAt;       // Block timestamp of creation
         uint256 totalRewards;    // Total REALM tokens earned from this territory
         bool isActive;           // Territory status
+        uint256 lastActivity;    // Last activity timestamp — updated on boost/claim (Phase 5 fix)
     }
 
     // Player statistics structure

@@ -36,6 +36,11 @@ export async function initializeGameFi(opts: GameFiBootstrapOptions): Promise<vo
     await services.gamefiUI.initialize();
     await services.ghostRunnerService.initialize();
 
+    // UX loop services: OS notifications for decay/race results and
+    // GPS-verified Territory Walk visits. Both degrade gracefully.
+    await services.notificationService.initialize();
+    await services.territoryWalkService.initialize();
+
     if (platformUI.ghostManagement?.initialize) {
       await platformUI.ghostManagement.initialize(document.body);
     }

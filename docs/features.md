@@ -211,6 +211,40 @@ The dashboard has been transformed from a centered overlay to a primary interfac
 - **Responsive**: The map automatically adjusts its size and position based on the dashboard's state.
 ## Changelog
 
+### Core Loop Repair + Player Experience Loop (August 2026)
+
+**Game-logic fixes (requires next deploy cycle):**
+1. Completed runs now auto-create and auto-claim territories. The
+   `run:completed` handler in `TerritoryService` was dead code (log-only);
+   eligible runs now flow through `createTerritoryFromRun` → `claimTerritory`
+   with a run-ID → territory-ID link so `findTerritoryByRunId` resolves.
+2. Territory deactivation keys off a new `Territory.lastActivity` field
+   instead of `createdAt`, so actively defended territories never
+   permanently expire. Falls back to `createdAt` for pre-migration claims.
+3. New direct `claimTimeBasedRewards(uint256)` on `RunRealmUniversal` —
+   time-based rewards no longer require the cross-chain `onCall` path.
+4. The redundant off-chain `isGeohashClaimed` pre-check was collapsed into
+   gas estimation; the contract's own validation is the single source of truth.
+5. `RealmToken.distributeRunningReward` difficulty bonus now uses the same
+   formula as `GameLogic.calculateTerritoryReward`
+   (`baseReward * difficulty * 10 / 10000`).
+
+**Player experience:**
+- Owned territories render on the map color-coded by defense status
+  (green strong / amber moderate / red vulnerable / grey claimable) via
+  `MapService.renderOwnedTerritories`; vulnerable cells pulse red.
+- Claims play an in-flight map reveal (`playClaimReveal`) plus an instant
+  "Claiming territory at …" toast — no more silent pending modal.
+- New `NotificationService`: OS notifications for vulnerable territories,
+  claims, ghost races, and walk verifications, plus a once-daily decay
+  summary. `sw.js` handles `push` and `notificationclick`.
+- Ghost deployments resolve head-to-head race results
+  (`ghost:raceCompleted`) rendered as a shareable result card
+  (`ghost-race-result.ts`, Web Share API with clipboard fallback).
+- **Territory Walk**: GPS-verified visits to owned territories
+  (≤150m from center, ≤50m accuracy) award +150 defense points, one
+  reward per territory per day (`territory-walk-service.ts`, dashboard button).
+
 ### Project Status (July 2026)
 - **Phase 3 — Zeta Honesty Pass** complete. Three coupled changes:
   1. `boostTerritoryActivity` is now on-chain. The additive

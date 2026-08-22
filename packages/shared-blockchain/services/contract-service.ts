@@ -208,24 +208,27 @@ export class ContractService extends BaseService {
     try {
       console.log('ContractService: Minting territory on blockchain...', territoryData);
 
-      // Check if geohash is already claimed
-      const isClaimed = await this.universalContract[CONTRACT_METHODS.universal.isGeohashClaimed](
-        territoryData.geohash
-      );
-
-      if (isClaimed) {
-        throw new Error('Territory already claimed by another player');
+      // Gas estimation (still pre-checks for a user-friendly error before signing)
+      let gasEstimate: number;
+      try {
+        gasEstimate = await this.universalContract[
+          CONTRACT_METHODS.universal.mintTerritory
+        ].estimateGas(
+          territoryData.geohash,
+          territoryData.difficulty,
+          territoryData.distance,
+          territoryData.landmarks
+        );
+      } catch (estError) {
+        // If gas estimation reverts, the contract's own validation
+        // caught the issue — surface a clean error instead of letting
+        // the user sign a transaction that will definitely fail.
+        const msg = (estError as Error).message ?? 'Gas estimation failed';
+        if (msg.includes('already claimed') || msg.includes('TerritoryValidationFailed')) {
+          throw new Error('Territory already claimed by another player');
+        }
+        throw estError;
       }
-
-      // Estimate gas for the transaction
-      const gasEstimate = await this.universalContract[
-        CONTRACT_METHODS.universal.mintTerritory
-      ].estimateGas(
-        territoryData.geohash,
-        territoryData.difficulty,
-        territoryData.distance,
-        territoryData.landmarks
-      );
 
       // Add 20% buffer to gas estimate
       const gasLimit = Math.ceil(Number(gasEstimate) * 1.2);

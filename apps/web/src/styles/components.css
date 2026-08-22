@@ -2152,3 +2152,121 @@ button:disabled,
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ─── Ghost race result card (shareable) ─────────────────────── */
+.ghost-race-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 12000;
+}
+
+.ghost-race-card {
+  width: min(360px, calc(100vw - 40px));
+  padding: 20px;
+  border-radius: 16px;
+  background: #10141c;
+  border: 1px solid rgba(0, 255, 136, 0.35);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+  animation: ghost-race-pop 240ms ease-out;
+}
+
+.ghost-race-card.lost {
+  border-color: rgba(255, 51, 102, 0.45);
+}
+
+@keyframes ghost-race-pop {
+  from {
+    transform: scale(0.9) translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.ghost-race-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ghost-race-avatar {
+  font-size: 2rem;
+}
+
+.ghost-race-title {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #00ff88;
+}
+
+.ghost-race-card.lost .ghost-race-title {
+  color: #ff3366;
+}
+
+.ghost-race-sub {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+
+.ghost-race-scores {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 10px;
+  margin-bottom: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+}
+
+.ghost-race-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.ghost-race-score .score-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ghost-race-score .score-value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+.ghost-race-score.you .score-value {
+  color: #00ff88;
+}
+
+.ghost-race-score.ghost .score-value {
+  color: #9b59b6;
+}
+
+.ghost-race-vs {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.ghost-race-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

@@ -7,6 +7,7 @@
  * original exactly; no new subscriptions added, none removed.
  */
 
+import { coordsToCell } from '../utils/h3-territory';
 import { fitMapToRoute, type MaplibreHandles } from './map-bootstrap';
 import type { Services } from './service-composer';
 
@@ -187,6 +188,72 @@ export function wireEvents(opts: EventWiringOptions): void {
   });
   services.eventBus.on('run:completed', () => {
     services.haptics.trigger('heavy');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Owned-territory defense layer + one-tap claim UX.
+  // The map is the game surface: owned territories are color-coded by
+  // defense status, a claim plays an in-flight reveal at its location,
+  // and vulnerable territories pulse red until re-defended.
+  // ─────────────────────────────────────────────────────────────
+
+  const renderOwnedTerritories = () => {
+    try {
+      const territories = services.territory.getClaimedTerritories();
+      if (territories.length > 0) {
+        services.mapService.renderOwnedTerritories(territories);
+      }
+    } catch (error) {
+      console.warn('event-wiring: failed to render owned territories:', error);
+    }
+  };
+
+  // Initial paint once TerritoryService has loaded persisted claims,
+  // then keep the layer in sync with every lifecycle event.
+  services.eventBus.on('service:initialized', (data) => {
+    if ((data as { service?: string }).service === 'TerritoryService') {
+      renderOwnedTerritories();
+    }
+  });
+  services.eventBus.on('territory:activityUpdated', renderOwnedTerritories);
+  services.eventBus.on('territory:claimed', renderOwnedTerritories);
+
+  services.eventBus.on('territory:claimStarted', (data) => {
+    services.ui.showToast(`Claiming territory at ${data.territoryName}…`, {
+      type: 'info',
+      duration: 4000,
+    });
+    try {
+      // territoryId carries the geohash for the auto-claim flow.
+      services.mapService.playClaimReveal({ geohash: data.territoryId });
+    } catch (error) {
+      console.warn('event-wiring: claim reveal failed:', error);
+    }
+  });
+
+  services.eventBus.on('territory:vulnerable', (data) => {
+    renderOwnedTerritories();
+    const territory = (
+      data as {
+        territory?: { h3Cells?: import('../utils/h3-territory').TerritoryCell[]; geohash?: string };
+      }
+    ).territory;
+    try {
+      let cells = territory?.h3Cells;
+      if ((!cells || cells.length === 0) && territory?.geohash) {
+        const parts = territory.geohash.split('_');
+        const lat = Number.parseFloat(parts[0] ?? '');
+        const lng = Number.parseFloat(parts[1] ?? '');
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          cells = [coordsToCell(lat, lng)];
+        }
+      }
+      if (cells && cells.length > 0) {
+        services.mapService.startContestedPulse(cells);
+      }
+    } catch (error) {
+      console.warn('event-wiring: vulnerable pulse failed:', error);
+    }
   });
 
   // Forward map click → orchestrator

@@ -124,6 +124,9 @@ export class TerritoryService extends BaseService {
   // New: Territory intent management
   private territoryIntents: Map<string, TerritoryIntent> = new Map();
   private readonly INTENT_EXPIRY_HOURS = 24; // Territory intents expire after 24 hours
+  // Run → territory link so `findTerritoryByRunId` works. Key = run
+  // ID, value = territory ID stored in `claimedTerritories`.
+  private runToTerritory: Map<string, string> = new Map();
 
   protected constructor() {
     super();
@@ -159,12 +162,37 @@ export class TerritoryService extends BaseService {
   }
 
   private setupEventListeners(): void {
-    // Listen for completed runs
+    // Listen for completed runs — create territory if eligible
     this.subscribe(
       'run:completed',
-      (data: { distance: number; duration: number; points: any[] }) => {
-        // For now, we'll just log this - we need to implement territory eligibility logic
-        console.log('Run completed, checking territory eligibility', data);
+      async (data: { run?: RunSession; distance: number; duration: number; points: any[] }) => {
+        const run = data.run as RunSession | undefined;
+        if (!run || !run.territoryEligible || !run.geohash) {
+          console.log('Run completed but not territory-eligible');
+          return;
+        }
+        try {
+          // One-tap claim UX: announce immediately so the map can play
+          // the reveal animation and the UI can show "Claiming…" while
+          // the transaction is in flight.
+          this.safeEmit('territory:claimStarted', {
+            territoryId: run.geohash,
+            territoryName: run.geohash,
+          });
+          const territory = await this.createTerritoryFromRun(run);
+          const result = await this.claimTerritory(territory);
+          if (result.success && result.territory) {
+            // Wire run ID → territory ID for downstream subscribers
+            this.runToTerritory.set(run.id, result.territory.id);
+          }
+        } catch (error) {
+          console.error('TerritoryService: Failed to auto-claim territory after run:', error);
+          this.safeEmit('territory:claimFailed', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            territory: {} as Territory,
+            runId: run.id,
+          });
+        }
       }
     );
 
@@ -841,6 +869,7 @@ export class TerritoryService extends BaseService {
         territory.status = 'claimable';
         territory.isCrossChain = true;
         territory.sourceChainId = wallet.chainId;
+        this.seedDefenseState(territory);
 
         // Initialize cross-chain history if not exists
         if (!territory.crossChainHistory) {
@@ -914,6 +943,10 @@ export class TerritoryService extends BaseService {
         if (crossChainService && typeof crossChainService.isEncryptedShieldEnabled === 'function') {
           territory.confidentialShield = crossChainService.isEncryptedShieldEnabled();
         }
+
+        // Seed the defense state so the map layer + dashboard show a
+        // fresh claim as "moderate" from the first render.
+        this.seedDefenseState(territory);
 
         // Store locally
         this.claimedTerritories.set(territory.id, territory);
@@ -1033,11 +1066,27 @@ export class TerritoryService extends BaseService {
   }
 
   /**
-   * Find territory by run ID
+   * Find territory by run ID.
+   *
+   * Phase 5 fix: the `claimTerritory` method now records a
+   * `runId → territoryId` link in `this.runToTerritory`. The
+   * `Territory` object itself carries `intentId` for the intent-based
+   * flow; both are consulted here so that auto-claimed territories
+   * (via the `run:completed` handler) and manually-claimed ones both
+   * resolve.
    */
-  private findTerritoryByRunId(_runId: string): Territory | null {
-    // This would need to be implemented based on how territories are linked to runs
-    // For now, return null
+  private findTerritoryByRunId(runId: string): Territory | null {
+    const territoryId = this.runToTerritory.get(runId);
+    if (territoryId) {
+      return this.claimedTerritories.get(territoryId) ?? null;
+    }
+    // Also scan for intent-based territories whose intent was created
+    // from a run (the run ID was stored as intentId).
+    for (const [_id, territory] of this.claimedTerritories) {
+      if (territory.intentId === runId) {
+        return territory;
+      }
+    }
     return null;
   }
 
@@ -1075,6 +1124,18 @@ export class TerritoryService extends BaseService {
    */
   private generateTerritoryId(): string {
     return `territory_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Seed the activity-point defense state on a freshly claimed
+   * territory: 500 points ("moderate") starting from claim time.
+   */
+  private seedDefenseState(territory: Territory): void {
+    if (territory.activityPoints === undefined) {
+      territory.activityPoints = 500;
+      territory.lastActivityUpdate = Date.now();
+      territory.defenseStatus = this.calculateDefenseStatus(territory.activityPoints);
+    }
   }
 
   /**

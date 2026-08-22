@@ -445,6 +445,28 @@ export interface AppEvents extends Web3Events {
   'ghost:completed': { ghostRun: { ghostId: string; runId: string; completedAt: number } };
   'ghost:upgraded': { ghost: GhostRunner };
   'ghost:unlockAvailable': { message: string; types: string[] };
+  // Ghost head-to-head race result (ghost defends a territory vs the
+  // owner's recent form). Scores are 0-1000 activity-point scale so the
+  // result card reads like the rest of the defense system.
+  'ghost:raceCompleted': {
+    ghostId: string;
+    ghostName: string;
+    avatar?: string;
+    territoryId: string;
+    ghostScore: number;
+    userScore: number;
+    winner: 'ghost' | 'user';
+  };
+  // Territory Walk — GPS-verified visit to an owned territory
+  'territoryWalk:startRequested': { territoryId: string };
+  'territoryWalk:started': { territoryId: string };
+  'territoryWalk:completed': {
+    territoryId: string;
+    pointsAwarded: number;
+    distanceMeters: number;
+    accuracyMeters: number;
+  };
+  'territoryWalk:failed': { territoryId: string | null; reason: string };
   // Realm token events
   'realm:earned': { amount: number; reason: string };
   // Territory activity events

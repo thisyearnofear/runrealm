@@ -216,9 +216,12 @@ library GameLogic {
     }
 
     /**
-     * @dev Calculates time-based rewards for territory ownership
-     * @param territory Territory information
-     * @return timeReward Reward based on ownership time
+     * @dev Calculates time-based rewards for territory ownership.
+     *
+     * Phase 5 fix: the decay window is derived from `lastActivity`
+     * (updated on boost/claim), not from `createdAt`, so an
+     * actively defended territory accrues rewards continuously.
+     * Falls back to `createdAt` for pre-migration territories.
      */
     function calculateTimeBasedReward(
         IRunRealmGame.Territory memory territory
@@ -227,7 +230,8 @@ library GameLogic {
             return 0;
         }
 
-        uint256 timeHeld = block.timestamp - territory.createdAt;
+        uint256 last = territory.lastActivity > 0 ? territory.lastActivity : territory.createdAt;
+        uint256 timeHeld = block.timestamp - last;
         uint256 baseReward = territory.distance * territory.difficulty * BASE_REWARD_RATE / 100;
 
         // Annual yield calculation (5% of territory value per year)
@@ -238,9 +242,13 @@ library GameLogic {
     }
 
     /**
-     * @dev Determines if territory should be marked inactive due to timeout
-     * @param territory Territory to check
-     * @return shouldDeactivate Whether territory should be deactivated
+     * @dev Determines if territory should be marked inactive due to timeout.
+     *
+     * Phase 5 fix: uses `lastActivity` instead of `createdAt` so that
+     * boosts, contests, and any player action refresh the activity
+     * window. A territory that is actively defended never times out.
+     * When `lastActivity == 0` (pre-migration contracts) falls back
+     * to `createdAt` for backward compatibility.
      */
     function shouldDeactivateTerritory(
         IRunRealmGame.Territory memory territory
@@ -249,8 +257,11 @@ library GameLogic {
             return false;
         }
 
-        uint256 timeSinceCreation = block.timestamp - territory.createdAt;
-        return timeSinceCreation > TERRITORY_TIMEOUT;
+        // Use lastActivity when available; fall back to createdAt
+        // for territories created before the lastActivity field.
+        uint256 last = territory.lastActivity > 0 ? territory.lastActivity : territory.createdAt;
+        uint256 timeSinceLastActivity = block.timestamp - last;
+        return timeSinceLastActivity > TERRITORY_TIMEOUT;
     }
 
     /**

@@ -20,6 +20,8 @@ the deployed public chain.
 | 7 | Performance & polish | 🟡 Planned | Encrypted-decay cadence animation; relayer SDK connection pooling; per-territory ciphertext cache (TTL 30 min). |
 | 8 | Tests & CI | 🟡 Planned | Unit tests for `ConfidentialTerritoryService`; `ci:rules-drift` step in `ci.yml`; lefthook pre-commit hook re-runs `sync:rules`. |
 | 9 | Gameplay fun-factor | 🟡 Planned | Encrypted bounty contests; cipher ghost race; anti-grind boost rate-limit (one per territory per day); shield-metaphor UI. |
+| 10 | Core loop repair | ✅ Complete (Aug 2026) | Six game-logic bugs fixed: `run:completed` auto-claim wiring; `Territory.lastActivity` drives deactivation (actively defended territories never expire); direct `claimTimeBasedRewards(uint256)`; mint TOCTOU collapsed into gas estimation; `RealmToken` difficulty bonus aligned with `GameLogic`. Requires next deploy cycle. |
+| 11 | Player experience loop | ✅ Complete (Aug 2026) | Defense-status map layer (color-coded owned territories + vulnerable pulse); one-tap claim reveal animation; `NotificationService` + service-worker push for decay/race/walk events; shareable ghost race result cards; GPS-verified Territory Walk (+150 pts/day). |
 
 ## Why this order
 
@@ -77,6 +79,10 @@ only see a glowing silhouette on the map until they win a contest.
 | `packages/shared-core/services/confidential-territory-service.ts` | Real FHE wiring: `boostEncrypted` / `contestEncrypted` / `myDefenseCipher` using `@zama-fhe/relayer-sdk`. | 4-5 |
 | `packages/shared-core/services/zama-relayer.ts` | New: lazy-loaded `@zama-fhe/relayer-sdk/web` — `initSDK`, `createInstance`, `createEncryptedInput(...).add32().encrypt()`, `userDecrypt`, `publicDecrypt`. | 4-5 |
 | `packages/shared-blockchain/services/confidential-contract-service.ts` | New: ethers wrapper for `ConfidentialTerritoryDefense` on Sepolia (chainId 11155111). | 4 |
+| `packages/shared-core/services/notification-service.ts` | New (Phase 11): OS notifications for decay/race/walk events; once-daily decay summary; SW push fallback to toasts. | 11 |
+| `packages/shared-core/services/territory-walk-service.ts` | New (Phase 11): GPS-verified visits to owned territories (≤150m, ≤50m accuracy); +150 defense points, one reward per territory per day. | 11 |
+| `packages/shared-core/services/map-service.ts` | Phase 11 additions: `renderOwnedTerritories` defense-status layer, `playClaimReveal` one-tap claim animation, `DEFENSE_STATUS_COLORS`. | 11 |
+| `apps/web/src/shell/components/ghost-race-result.ts` | New (Phase 11): shareable ghost head-to-head result card (Web Share API → clipboard fallback). | 11 |
 | `packages/web-app/src/components/react/EncryptedShield.tsx` | New: HUD shield badge; status: ready / busy / unsupported / error. | 5 |
 | `packages/web-app/src/components/react/ConfidentialDefensePanel.tsx` | New: inspector card for encrypted defense + boost presets. | 5 |
 | `packages/web-app/src/components/react/FogOfWarMap.tsx` | New: map overlay that dims non-anchored territories when shield is active. | 5 |
