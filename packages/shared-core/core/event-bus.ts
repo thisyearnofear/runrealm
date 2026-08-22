@@ -467,6 +467,15 @@ export interface AppEvents extends Web3Events {
     accuracyMeters: number;
   };
   'territoryWalk:failed': { territoryId: string | null; reason: string };
+  // Cross-chain anchor relayer (Phase 6) — ZetaChain → Zama bridge
+  'anchor:territoryAnchored': {
+    tokenId: string;
+    owner: string;
+    zetaTxHash: string;
+    logIndex: number;
+    txHash?: string;
+  };
+  'anchor:relayFailed': { tokenId: string; owner: string; reason: string };
   // Realm token events
   'realm:earned': { amount: number; reason: string };
   // Territory activity events

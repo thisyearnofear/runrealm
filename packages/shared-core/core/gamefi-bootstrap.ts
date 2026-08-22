@@ -41,6 +41,14 @@ export async function initializeGameFi(opts: GameFiBootstrapOptions): Promise<vo
     await services.notificationService.initialize();
     await services.territoryWalkService.initialize();
 
+    // Phase 6: cross-chain anchor relayer. Degrades to a no-op unless
+    // RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS is configured; start() only
+    // begins polling when configured (operator/relayer context).
+    await services.crossChainAnchorService.initialize();
+    if (services.crossChainAnchorService.isConfigured()) {
+      services.crossChainAnchorService.start();
+    }
+
     if (platformUI.ghostManagement?.initialize) {
       await platformUI.ghostManagement.initialize(document.body);
     }

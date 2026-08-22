@@ -98,6 +98,7 @@ describe('service-composer', () => {
       'replay',
       'notificationService',
       'territoryWalkService',
+      'crossChainAnchorService',
     ];
     for (const key of expectedKeys) {
       expect((services as unknown as Record<string, unknown>)[key]).toBeDefined();

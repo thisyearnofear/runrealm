@@ -211,6 +211,52 @@ The dashboard has been transformed from a centered overlay to a primary interfac
 - **Responsive**: The map automatically adjusts its size and position based on the dashboard's state.
 ## Changelog
 
+### Phase 6 Cross-Chain Anchor + Test Suite Repair (August 2026)
+
+**Cross-chain anchor (Phase 6 complete):**
+- New `contracts/zama/CrossChainAnchor.sol` on Sepolia: the relayer
+  calls `anchor(tokenId, owner, zetaTxHash, logIndex)` after observing a
+  ZetaChain `TerritoryCreated` log; the contract enforces RELAYER_ROLE
+  authorization, per-log replay protection, and batch catch-up, then
+  forwards to `ConfidentialTerritoryDefense.anchorFromZeta` (sticky /
+  idempotent downstream).
+- New off-chain relayer service
+  (`packages/shared-blockchain/services/cross-chain-anchor-service.ts`)
+  polls ZetaChain for fresh territory-creation logs every 15s and
+  forwards them. Degrades to observation-only (or full no-op) without
+  `RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS` / `RUNREALM_RELAYER_PRIVATE_KEY`.
+- New deploy script `scripts/deployment/deploy-cross-chain-anchor.js`
+  (reuses the existing defense contract or deploys a fresh one).
+- 11 Hardhat tests covering gating, replay rejection, batch anchoring,
+  and end-to-end forwarding into the FHEVM mock coprocessor.
+
+**Contract test suite repaired — 61 passing, 0 failing:**
+- The `RunRealmUniversal` suite was stale (proxy-era fixture, missing
+  `MockContract` artifact, wrong constructor/role APIs). Rewritten
+  against the current contract surface with proper `GameLogic` library
+  linking and REALM funding fixtures.
+- The rewrite surfaced three real contract bugs, now fixed:
+  1. `mintTerritory` never emitted `TerritoryCreated` — the claim flow's
+     receipt parser keys off this event to resolve the minted tokenId.
+  2. `_createTerritory` pushed tokenId into `_playerTerritories` AND the
+     `_update` override pushed again during `_safeMint`, duplicating
+     entries.
+  3. `territoriesOwned` double-counted (balance write in `_update` plus
+     a `+1` in `updatePlayerStats`). Stats are now computed before the
+     mint so the authoritative balance write lands last.
+- `_distributeRewards` now uses a low-level transfer call so ANY token
+  failure surfaces as the typed `InsufficientRewards` error instead of
+  leaking the token's internal revert.
+
+**UX gap fixes:**
+- Notification permission is now requested once, riding the user gesture
+  of the first successful claim (localStorage-guarded; an explicit deny
+  is never re-prompted).
+- Dashboard territory actions (boost, ghost deploy, Territory Walk) now
+  pass `territory.id`; they previously passed `geohash` while
+  `TerritoryService` keys its map by `id`, making "+100 Points" a silent
+  no-op.
+
 ### Core Loop Repair + Player Experience Loop (August 2026)
 
 **Game-logic fixes (requires next deploy cycle):**

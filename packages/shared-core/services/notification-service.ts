@@ -52,6 +52,24 @@ export class NotificationService extends BaseService {
     this.permission = Notification.permission;
   }
 
+  private static readonly PROMPTED_KEY = 'runrealm_notif_prompted';
+
+  /**
+   * Ask for notification permission exactly once, on the first claim.
+   * The claim click supplies the required user gesture; the
+   * localStorage guard means an explicit deny is never re-prompted.
+   */
+  private async maybePromptOnceAfterClaim(): Promise<void> {
+    if (this.permission !== 'default') return;
+    try {
+      if (localStorage.getItem(NotificationService.PROMPTED_KEY)) return;
+      localStorage.setItem(NotificationService.PROMPTED_KEY, '1');
+    } catch {
+      return; // storage unavailable — skip the prompt rather than nag
+    }
+    await this.requestPermission();
+  }
+
   getPermission(): NotificationPermission | 'unsupported' {
     return this.permission;
   }
@@ -103,6 +121,15 @@ export class NotificationService extends BaseService {
   }
 
   private setupEventListeners(): void {
+    // One-time permission prompt: the first successful claim is a
+    // high-intent moment ("this game talks to me"), and browsers
+    // require the request to ride a user gesture — which a claim
+    // always is. Only asked once, ever (localStorage guard), and only
+    // while still in 'default' (never re-nags after an explicit deny).
+    this.subscribe('territory:claimed', () => {
+      void this.maybePromptOnceAfterClaim();
+    });
+
     this.subscribe(
       'territory:vulnerable',
       (data: { territory: TerritoryLike & { name?: string } }) => {

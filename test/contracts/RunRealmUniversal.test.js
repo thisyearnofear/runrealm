@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { ethers, upgrades } = require('hardhat');
+const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 
 /**
@@ -9,64 +9,69 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
  * - MODULAR: Independent, composable test cases
  * - PERFORMANT: Efficient test execution with fixtures
  * - DRY: Reusable test utilities and fixtures
+ *
+ * NOTE: the fixture matches the CURRENT contract surface:
+ * - `RunRealmUniversal(realmTokenAddress)` plain constructor (no proxy,
+ *   no gateway/router args — those live in ZetaChain infra, not here)
+ * - `AccessControl` roles (DEFAULT_ADMIN_ROLE / GAME_MASTER_ROLE), not Ownable
+ * - `RealmToken` uses `authorizedMinters`/`rewardDistributors` mappings
+ *   (owner must be added as authorized minter for `mint()` in tests)
+ * - Reward distribution transfers from the universal contract's REALM
+ *   balance, so the default fixture funds it; an unfunded fixture
+ *   covers the InsufficientRewards path.
  */
+
+const FUNDING_AMOUNT = ethers.parseEther('1000000'); // 1M REALM to the contract
 
 describe('RunRealmUniversal', () => {
   // MODULAR: Test fixtures for clean setup
-  async function deployRunRealmFixture() {
+  async function deployRunRealmUnfundedFixture() {
     const [owner, player1, player2, gameMaster] = await ethers.getSigners();
 
-    // Mock gateway and router for testing
-    const MockGateway = await ethers.getContractFactory('MockContract');
-    const gateway = await MockGateway.deploy();
-    await gateway.waitForDeployment();
-
-    const MockRouter = await ethers.getContractFactory('MockContract');
-    const router = await MockRouter.deploy();
-    await router.waitForDeployment();
-
-    // Deploy RealmToken first
+    // Deploy RealmToken (mints INITIAL_SUPPLY to deployer/owner)
     const RealmToken = await ethers.getContractFactory('RealmToken');
-    const realmToken = await RealmToken.deploy(31337, 0); // Local testnet
+    const realmToken = await RealmToken.deploy();
     await realmToken.waitForDeployment();
 
-    // Deploy Universal Contract with proxy
-    const RunRealmUniversal = await ethers.getContractFactory('RunRealmUniversal');
+    // Allow owner to mint extra tokens for tests
+    await realmToken.addAuthorizedMinter(owner.address);
 
-    const universal = await upgrades.deployProxy(
-      RunRealmUniversal,
-      [
-        owner.address,
-        'RunRealm Territory',
-        'TERRITORY',
-        await gateway.getAddress(),
-        500000,
-        await router.getAddress(),
-        await realmToken.getAddress(),
-      ],
-      { initializer: 'initialize' }
-    );
+    // Deploy the GameLogic library and link it (mirrors
+    // scripts/deployment/deploy-universal.js)
+    const GameLogic = await ethers.getContractFactory('GameLogic');
+    const gameLogic = await GameLogic.deploy();
+    await gameLogic.waitForDeployment();
 
+    // Deploy Universal Contract (plain constructor — not upgradeable)
+    const RunRealmUniversal = await ethers.getContractFactory('RunRealmUniversal', {
+      libraries: { GameLogic: await gameLogic.getAddress() },
+    });
+    const universal = await RunRealmUniversal.deploy(await realmToken.getAddress());
     await universal.waitForDeployment();
 
-    // Setup roles and permissions
-    const MINTER_ROLE = await realmToken.MINTER_ROLE();
+    // Setup roles
     const GAME_MASTER_ROLE = await universal.GAME_MASTER_ROLE();
-
-    await realmToken.grantRole(MINTER_ROLE, await universal.getAddress());
-    await realmToken.addRewardDistributor(await universal.getAddress());
     await universal.grantRole(GAME_MASTER_ROLE, gameMaster.address);
 
     return {
       universal,
       realmToken,
-      gateway,
-      router,
       owner,
       player1,
       player2,
       gameMaster,
     };
+  }
+
+  async function deployRunRealmFixture() {
+    const base = await deployRunRealmUnfundedFixture();
+
+    // Fund the universal contract so reward distribution succeeds
+    await base.realmToken
+      .connect(base.owner)
+      .transfer(await base.universal.getAddress(), FUNDING_AMOUNT);
+
+    return base;
   }
 
   // DRY: Reusable test data
@@ -122,9 +127,11 @@ describe('RunRealmUniversal', () => {
     it('Should deploy with correct initial configuration', async () => {
       const { universal, realmToken, owner } = await loadFixture(deployRunRealmFixture);
 
+      const DEFAULT_ADMIN_ROLE = await universal.DEFAULT_ADMIN_ROLE();
+
       expect(await universal.name()).to.equal('RunRealm Territory');
       expect(await universal.symbol()).to.equal('TERRITORY');
-      expect(await universal.owner()).to.equal(owner.address);
+      expect(await universal.hasRole(DEFAULT_ADMIN_ROLE, owner.address)).to.be.true;
       expect(await universal.realmTokenAddress()).to.equal(await realmToken.getAddress());
     });
 
@@ -345,10 +352,10 @@ describe('RunRealmUniversal', () => {
 
       // Base: 2500 * 0.001 = 2.5 REALM
       // Difficulty bonus: 2.5 * 75 * 10 / 10000 = 0.1875 REALM
-      // Distance bonus (5km+): 2.5 * 0.1 = 0.25 REALM
-      // Total: ~2.9375 REALM
-      const expectedMin = ethers.parseEther('2.9');
-      const expectedMax = ethers.parseEther('3.0');
+      // Distance bonus: none (2.5km < 5km threshold)
+      // Total: 2.6875 REALM
+      const expectedMin = ethers.parseEther('2.68');
+      const expectedMax = ethers.parseEther('2.69');
 
       expect(reward).to.be.gte(expectedMin);
       expect(reward).to.be.lte(expectedMax);
@@ -569,21 +576,12 @@ describe('RunRealmUniversal', () => {
       expect(stats.level).to.equal(0);
     });
 
-    it('Should handle contract paused state', async () => {
-      const { universal, owner, player1 } = await loadFixture(deployRunRealmFixture);
-
-      await universal.connect(owner).pause();
-
-      await expect(
-        universal
-          .connect(player1)
-          .mintTerritory(
-            testTerritories.valid.geohash,
-            testTerritories.valid.difficulty,
-            testTerritories.valid.distance,
-            testTerritories.valid.landmarks
-          )
-      ).to.be.revertedWithCustomError(universal, 'EnforcedPause');
+    it('Should handle contract without pause functionality', async () => {
+      // RunRealmUniversal deliberately has no pause feature — territory
+      // game state must stay available. This test documents that
+      // contract surface instead of testing a removed feature.
+      const { universal } = await loadFixture(deployRunRealmFixture);
+      expect(universal.pause).to.equal(undefined);
     });
   });
 
@@ -617,9 +615,9 @@ describe('RunRealmUniversal', () => {
     });
 
     it('Should handle insufficient REALM balance gracefully', async () => {
-      const { universal, player1 } = await loadFixture(deployRunRealmFixture);
+      const { universal, player1 } = await loadFixture(deployRunRealmUnfundedFixture);
 
-      // Don't mint any REALM to the contract
+      // Don't fund the contract with REALM
       await expect(
         universal
           .connect(player1)

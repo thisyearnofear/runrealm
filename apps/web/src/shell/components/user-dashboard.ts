@@ -561,7 +561,7 @@ export class UserDashboard {
               ? `
             <div class="action-group">
               <label>Deploy Ghost</label>
-              <select class="ghost-select" data-territory-id="${territory.geohash}">
+              <select class="ghost-select" data-territory-id="${territory.id}">
                 <option value="">Select ghost...</option>
                 ${availableGhosts
                   .map(
@@ -571,8 +571,8 @@ export class UserDashboard {
                   )
                   .join('')}
               </select>
-              <button class="action-btn" data-action="deploy-ghost-to-territory" 
-                      data-territory-id="${territory.geohash}" 
+              <button class="action-btn" data-action="deploy-ghost-to-territory"
+                      data-territory-id="${territory.id}"
                       data-ghost-id="">
                 Deploy Selected
               </button>
@@ -587,7 +587,9 @@ export class UserDashboard {
           
           <div class="action-group">
             <label>Boost Activity</label>
-            <button class="action-btn secondary" data-action="boost-territory-activity" data-territory-id="${territory.geohash}">
+            <!-- data-territory-id uses territory.id — TerritoryService's
+                 claimedTerritories map is keyed by id, not geohash -->
+            <button class="action-btn secondary" data-action="boost-territory-activity" data-territory-id="${territory.id}">
               +100 Points (50 $REALM)
             </button>
           </div>

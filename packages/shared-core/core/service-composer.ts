@@ -20,6 +20,7 @@
 
 import { ConfidentialContractService } from '@runrealm/shared-blockchain/services/confidential-contract-service';
 import { ContractService } from '@runrealm/shared-blockchain/services/contract-service';
+import { CrossChainAnchorService } from '@runrealm/shared-blockchain/services/cross-chain-anchor-service';
 import { CrossChainService } from '@runrealm/shared-blockchain/services/cross-chain-service';
 import { ZamaSupportService } from '@runrealm/shared-blockchain/services/zama-support';
 import { CrossChainDemoComponent } from '../components/cross-chain-demo';
@@ -95,6 +96,7 @@ export interface Services {
   replay: ReplayService;
   notificationService: NotificationService;
   territoryWalkService: TerritoryWalkService;
+  crossChainAnchorService: CrossChainAnchorService;
 }
 
 export interface TokenDependentServices {
@@ -138,6 +140,7 @@ export function createServices(): Services {
   const replay = ReplayService.getInstance();
   const notificationService = NotificationService.getInstance();
   const territoryWalkService = TerritoryWalkService.getInstance();
+  const crossChainAnchorService = CrossChainAnchorService.getInstance();
 
   return {
     config,
@@ -174,6 +177,7 @@ export function createServices(): Services {
     replay,
     notificationService,
     territoryWalkService,
+    crossChainAnchorService,
   };
 }
 
@@ -232,5 +236,6 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     mapService: services.mapService,
     notificationService: services.notificationService,
     territoryWalkService: services.territoryWalkService,
+    crossChainAnchorService: services.crossChainAnchorService,
   };
 }

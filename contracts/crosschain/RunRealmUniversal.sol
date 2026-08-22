@@ -2,7 +2,6 @@
 pragma solidity ^0.8.26;
 
 import "@zetachain/protocol-contracts/contracts/zevm/interfaces/UniversalContract.sol";
-import "@zetachain/protocol-contracts/contracts/zevm/interfaces/IZRC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -158,13 +157,16 @@ contract RunRealmUniversal is UniversalContract, ERC721, AccessControl, Reentran
         });
 
         // Update mappings
+        // NOTE: `_playerTerritories[creator]` is intentionally NOT pushed
+        // here — the `_update` override fires during `_safeMint` below and
+        // owns territory-array bookkeeping for both mints and transfers.
+        // Pushing here as well produced duplicate entries.
         _geohashToTokenId[geohash] = tokenId;
-        _playerTerritories[creator].push(tokenId);
 
-        // Mint NFT
-        _safeMint(creator, tokenId);
-
-        // Update player stats using library
+        // Update player stats using library BEFORE minting so the
+        // `_update` override's `territoriesOwned = balanceOf(...)` write
+        // lands last and reflects the true post-mint count (the library's
+        // `+1` would otherwise double-count against the balance write).
         (PlayerStats memory newStats, bool leveledUp) = GameLogic.updatePlayerStats(
             _playerStats[creator],
             distance,
@@ -172,6 +174,9 @@ contract RunRealmUniversal is UniversalContract, ERC721, AccessControl, Reentran
         );
 
         _playerStats[creator] = newStats;
+
+        // Mint NFT (also maintains territory arrays + owned counts)
+        _safeMint(creator, tokenId);
 
         if (leveledUp) {
             emit PlayerLevelUp(creator, newStats.level - 1, newStats.level, newStats.totalDistance);
@@ -240,8 +245,14 @@ contract RunRealmUniversal is UniversalContract, ERC721, AccessControl, Reentran
         string memory reason
     ) internal {
         if (amount > 0 && realmTokenAddress != address(0)) {
-            // Transfer actual REALM tokens (ZRC-20)
-            bool success = IZRC20(realmTokenAddress).transfer(player, amount);
+            // Low-level transfer call so ANY token-side failure (ZRC-20
+            // returning false, or a standard ERC20 reverting on
+            // insufficient balance) surfaces as our typed
+            // `InsufficientRewards` error instead of leaking the
+            // token's internal revert.
+            (bool success, ) = realmTokenAddress.call(
+                abi.encodeWithSignature("transfer(address,uint256)", player, amount)
+            );
             if (!success) {
                 revert InsufficientRewards();
             }
@@ -285,6 +296,11 @@ contract RunRealmUniversal is UniversalContract, ERC721, AccessControl, Reentran
 
         uint256 rewardAmount = GameLogic.calculateTerritoryReward(difficulty, distance);
         _distributeRewards(msg.sender, rewardAmount, tokenId, "Direct Territory Creation");
+
+        // Emit the same event the cross-chain path emits — off-chain
+        // indexing (ContractService's TerritoryMintReceipt parser) keys
+        // off `TerritoryCreated` to resolve the minted tokenId.
+        emit TerritoryCreated(tokenId, msg.sender, geohash, difficulty, distance, block.chainid);
     }
 
     // CLEAN: Explicit interface implementation

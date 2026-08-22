@@ -16,7 +16,7 @@ the deployed public chain.
 | 3 | ZetaChain honesty pass | ✅ Complete (Jul 2026) | Additive `RunRealmBoostV1` contract; `claimTerritory` is receipt-gated on `status === 1` + parsed `tokenId`; `chainSupportsZama(chainId)` + `encryptedShieldEnabled` toggle; `boostCostRealmWei` precomputed bigint; Phase 2 latent sync-script bug fixed. |
 | 4 | Zama scaffolding | ✅ Complete (Jul 2026) | `contracts/zama/ConfidentialTerritoryDefense.sol` rewritten with real `euint32` FHE (`@fhevm/solidity`); `IConfidentialTerritory` interface; 18 Hardhat tests via `@fhevm/hardhat-plugin` mock coprocessor; Sepolia deploy script. Mock `Mocks.sol` removed. |
 | 5 | Live Zama UX | ✅ Complete | `EncryptedShield`, `ConfidentialDefensePanel`, `FogOfWarMap`, `ContestModal`, `useConfidentialShield`; wired into `AppShell`; real `@zama-fhe/relayer-sdk` encrypt / user-decrypt / public-decrypt. |
-| 6 | Cross-chain anchor | 🟡 Planned | `CrossChainAnchor` reads ZetaChain `TerritoryCreated` events and calls `ConfidentialTerritoryDefense.anchorFromZeta(tokenId, owner)`. This is the moment the two chains visibly work together. |
+| 6 | Cross-chain anchor | ✅ Complete (Aug 2026) | `contracts/zama/CrossChainAnchor.sol` (Sepolia): RELAYER_ROLE-gated forwarder with per-log replay protection → `ConfidentialTerritoryDefense.anchorFromZeta(tokenId, owner)`. Off-chain relayer (`cross-chain-anchor-service.ts`) polls ZetaChain `TerritoryCreated` logs and calls `anchor()`. Deploy script + 11 Hardhat tests. |
 | 7 | Performance & polish | 🟡 Planned | Encrypted-decay cadence animation; relayer SDK connection pooling; per-territory ciphertext cache (TTL 30 min). |
 | 8 | Tests & CI | 🟡 Planned | Unit tests for `ConfidentialTerritoryService`; `ci:rules-drift` step in `ci.yml`; lefthook pre-commit hook re-runs `sync:rules`. |
 | 9 | Gameplay fun-factor | 🟡 Planned | Encrypted bounty contests; cipher ghost race; anti-grind boost rate-limit (one per territory per day); shield-metaphor UI. |
@@ -76,6 +76,8 @@ only see a glowing silhouette on the map until they win a contest.
 | `packages/shared-blockchain/services/zama-support.ts` | New (Phase 3): `ZamaSupportService` exposes `chainSupportsZama(chainId)` and `getEncryptedShieldState(chainId)`; emits `web3:zamaUnsupported` for UI listeners. | 3 |
 | `contracts/zama/ConfidentialTerritoryDefense.sol` | New: `euint32` activity-points + encrypted decay. | 4 |
 | `contracts/zama/CrossChainAnchor.sol` | New: reads ZetaChain events, anchors Zama defense state. | 6 |
+| `packages/shared-blockchain/services/cross-chain-anchor-service.ts` | New (Phase 6): off-chain relayer — polls ZetaChain `TerritoryCreated` logs, forwards through the anchor contract. Degrades to a no-op without `RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS` + `RUNREALM_RELAYER_PRIVATE_KEY`. | 6 |
+| `scripts/deployment/deploy-cross-chain-anchor.js` | New (Phase 6): Sepolia deploy for the anchor (reuses or deploys the defense contract; writes `deployments/<network>/CrossChainAnchor.json`). | 6 |
 | `packages/shared-core/services/confidential-territory-service.ts` | Real FHE wiring: `boostEncrypted` / `contestEncrypted` / `myDefenseCipher` using `@zama-fhe/relayer-sdk`. | 4-5 |
 | `packages/shared-core/services/zama-relayer.ts` | New: lazy-loaded `@zama-fhe/relayer-sdk/web` — `initSDK`, `createInstance`, `createEncryptedInput(...).add32().encrypt()`, `userDecrypt`, `publicDecrypt`. | 4-5 |
 | `packages/shared-blockchain/services/confidential-contract-service.ts` | New: ethers wrapper for `ConfidentialTerritoryDefense` on Sepolia (chainId 11155111). | 4 |

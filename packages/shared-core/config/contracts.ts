@@ -22,6 +22,7 @@ export interface NetworkConfig {
     realmToken: ContractConfig;
     boost: ContractConfig;
     confidentialTerritoryDefense: ContractConfig;
+    crossChainAnchor: ContractConfig;
   };
 }
 
@@ -330,6 +331,71 @@ const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
   },
 ];
 
+/**
+ * Phase 6 — ABI for `CrossChainAnchor` (Sepolia). The off-chain
+ * relayer (`cross-chain-anchor-service.ts`) calls `anchor()` after
+ * observing a ZetaChain `TerritoryCreated` log; the contract forwards
+ * to `ConfidentialTerritoryDefense.anchorFromZeta`.
+ */
+const CROSS_CHAIN_ANCHOR_ABI = [
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { internalType: 'address', name: 'owner', type: 'address' },
+      { internalType: 'bytes32', name: 'zetaTxHash', type: 'bytes32' },
+      { internalType: 'uint256', name: 'logIndex', type: 'uint256' },
+    ],
+    name: 'anchor',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'address', name: 'relayer', type: 'address' },
+      { internalType: 'bool', name: 'active', type: 'bool' },
+    ],
+    name: 'setRelayer',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    name: 'anchoredTokens',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'totalAnchored',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'isAnchored',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { indexed: true, internalType: 'address', name: 'owner', type: 'address' },
+      { indexed: true, internalType: 'bytes32', name: 'logId', type: 'bytes32' },
+      { indexed: false, internalType: 'uint256', name: 'sourceChainId', type: 'uint256' },
+      { indexed: false, internalType: 'bytes32', name: 'zetaTxHash', type: 'bytes32' },
+      { indexed: false, internalType: 'uint256', name: 'logIndex', type: 'uint256' },
+    ],
+    name: 'TerritoryObserved',
+    type: 'event',
+  },
+];
+
 const REALM_TOKEN_ABI = [
   {
     inputs: [],
@@ -450,6 +516,17 @@ export function getCurrentNetworkConfig(): NetworkConfig {
             ?.RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS || '0x0000000000000000000000000000000000000000',
         abi: CONFIDENTIAL_TERRITORY_DEFENSE_ABI,
       },
+      crossChainAnchor: {
+        // Phase 6: `CrossChainAnchor` lives on Sepolia next to the
+        // confidential defense contract; the off-chain relayer service
+        // forwards observed ZetaChain `TerritoryCreated` logs through
+        // it. Zero-address placeholder until
+        // scripts/deployment/deploy-cross-chain-anchor.js publishes it.
+        address:
+          (globalThis as { __ENV__?: { RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS?: string } }).__ENV__
+            ?.RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS || '0x0000000000000000000000000000000000000000',
+        abi: CROSS_CHAIN_ANCHOR_ABI,
+      },
     },
   };
 }
@@ -489,7 +566,12 @@ export function getConfidentialNetworkConfig() {
  * Get contract configuration by name
  */
 export function getContractConfig(
-  contractName: 'universal' | 'realmToken' | 'boost' | 'confidentialTerritoryDefense'
+  contractName:
+    | 'universal'
+    | 'realmToken'
+    | 'boost'
+    | 'confidentialTerritoryDefense'
+    | 'crossChainAnchor'
 ): ContractConfig {
   const networkConfig = getCurrentNetworkConfig();
   return networkConfig.contracts[contractName];
@@ -505,6 +587,7 @@ export function getContractAddresses() {
     realmToken: networkConfig.contracts.realmToken.address,
     boost: networkConfig.contracts.boost.address,
     confidentialTerritoryDefense: networkConfig.contracts.confidentialTerritoryDefense.address,
+    crossChainAnchor: networkConfig.contracts.crossChainAnchor.address,
   };
 }
 
