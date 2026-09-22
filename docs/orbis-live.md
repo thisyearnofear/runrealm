@@ -70,6 +70,22 @@ key is never exposed through `NEXT_PUBLIC_*`, `__ENV__`, or the client bundle.
   the world threat level. Off by default.
 - **Keyboard conductor** — `Space` plays the guided sequence, `1`–`7` fire
   individual steps, `R` resets.
+- **First-run arc** — a first-time visitor (no `orbis-live:intro-done` in
+  local storage) gets an intro card plus one auto-played guided sequence;
+  the conductor console reveals when the sequence settles. Returning
+  visitors, "Skip to the console", and any keyboard conductor action go
+  straight to the controls. Motion-safe devices only for the autoplay.
+- **Status sentence** — `describeWorld` compresses the `WorldSnapshot` plus
+  current chunk into one human line ("Recording the run · sector cell-a1 ·
+  Fast pace · the ghost pulls ahead · threat critical · chunk 3") overlaid on
+  the stage, so a visitor parses one sentence instead of five machine labels.
+- **Stalled-stream recovery** — a ready live session that has produced no
+  chunk for 12 seconds shows a "Stream stalled" chip with a Reconnect button
+  (reset + re-dispatch when the session still answers, fresh placement
+  otherwise).
+- **Debug telemetry** — session status, world/territory/ghost/chunk readouts
+  are folded into a collapsed `<details>` disclosure so the console stays
+  readable for non-engineers.
 
 ## Operational notes
 

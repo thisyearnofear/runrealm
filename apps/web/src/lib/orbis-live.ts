@@ -1,3 +1,5 @@
+import type { WorldSnapshot } from '@runrealm/shared-core/types/world-state';
+
 /**
  * Reactor token resolution and small helpers for the Orbis challenge route.
  *
@@ -120,4 +122,56 @@ export function formatWorldLabel(value: string): string {
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+/**
+ * Compose a single human-readable status sentence from the world snapshot so
+ * visitors parse one line instead of four machine labels. Deliberately pure —
+ * the canvas stays the visual, this stays the caption.
+ */
+export function describeWorld(
+  snapshot: Pick<
+    WorldSnapshot,
+    'runStatus' | 'paceBand' | 'territoryStatus' | 'ghostPresence' | 'threatLevel' | 'currentCell'
+  >,
+  chunk: string | number | null = null
+): string {
+  const phase: Record<typeof snapshot.runStatus, string> = {
+    idle: 'the atlas holds its breath',
+    recording: 'recording the run',
+    paused: 'the run catches its breath',
+    completed: 'the realm settles',
+    cancelled: 'the frame goes dark',
+  };
+  const ghosts: Record<typeof snapshot.ghostPresence, string | null> = {
+    none: null,
+    nearby: 'a ghost waits nearby',
+    racing: 'the ghost pulls ahead',
+    defending: 'a ghost defends the block',
+  };
+  const threat =
+    snapshot.threatLevel >= 0.85
+      ? 'overexposure burning'
+      : snapshot.threatLevel >= 0.6
+        ? 'threat critical'
+        : snapshot.threatLevel >= 0.25
+          ? 'threat rising'
+          : 'threat calm';
+
+  const parts = [phase[snapshot.runStatus]];
+  if (snapshot.currentCell) parts.push(`sector ${snapshot.currentCell.slice(0, 7)}`);
+  if (
+    snapshot.runStatus !== 'idle' &&
+    snapshot.runStatus !== 'cancelled' &&
+    snapshot.paceBand !== 'unknown'
+  ) {
+    parts.push(`${formatWorldLabel(snapshot.paceBand)} pace`);
+  }
+  const ghost = ghosts[snapshot.ghostPresence];
+  if (ghost) parts.push(ghost);
+  parts.push(threat);
+  if (chunk !== null) parts.push(`chunk ${chunk}`);
+
+  const sentence = parts.join(' · ');
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }

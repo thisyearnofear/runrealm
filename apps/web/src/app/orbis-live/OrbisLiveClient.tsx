@@ -20,9 +20,9 @@ import {
   type OrbisDemoStepId,
 } from '@runrealm/shared-core/utils/orbis-demo';
 import { createInitialWorldSnapshot } from '@runrealm/shared-core/utils/sunprint-atlas';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createEnvGlobal } from '../../lib/env';
-import { createReactorTokenResolver, formatWorldLabel } from '../../lib/orbis-live';
+import { createReactorTokenResolver, describeWorld, formatWorldLabel } from '../../lib/orbis-live';
 import { OrbisStageCanvas } from './OrbisStageCanvas';
 
 type DemoMode = 'live' | 'offline';
@@ -75,6 +75,41 @@ const ORBIS_ACTS: Record<OrbisDemoStepId, { act: string; title: string; line: st
   },
 };
 
+const INTRO_STORAGE_KEY = 'orbis-live:intro-done';
+
+// Tiny external store so the first-run flag hydrates via useSyncExternalStore
+// (server snapshot: not done) instead of setState-in-effect.
+const introListeners = new Set<() => void>();
+
+function getIntroDone(): boolean {
+  try {
+    return window.localStorage.getItem(INTRO_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function subscribeIntroDone(listener: () => void): () => void {
+  introListeners.add(listener);
+  const onStorage = () => listener();
+  window.addEventListener('storage', onStorage);
+  return () => {
+    introListeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
+  };
+}
+
+function markIntroDoneStore(): void {
+  try {
+    window.localStorage.setItem(INTRO_STORAGE_KEY, '1');
+  } catch {
+    // Private browsing — the intro simply replays next visit.
+  }
+  introListeners.forEach((listener) => {
+    listener();
+  });
+}
+
 function timelineEntry(intent: OrbisPromptIntent, status: TimelineStatus): TimelineEntry {
   return { id: `${intent.reason}-${intent.createdAt}`, status, intent };
 }
@@ -119,12 +154,16 @@ function OrbisLiveExperience() {
   const [priming, setPriming] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [sequenceRunning, setSequenceRunning] = useState(false);
+  const introDone = useSyncExternalStore(subscribeIntroDone, getIntroDone, () => false);
+  const [lastActivityAt, setLastActivityAt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const [ambienceOn, setAmbienceOn] = useState(false);
   const audioRef = useRef<{ ctx: AudioContext; filter: BiquadFilterNode; gain: GainNode } | null>(
     null
   );
 
   const reactorRef = useRef(reactor);
+  const modeRef = useRef<DemoMode>('live');
   const modelStateRef = useRef<ViskoOrbisDynamicStateMessage | null>(null);
   const directorRef = useRef<OrbisDirector | null>(null);
   const timersRef = useRef<number[]>([]);
@@ -132,7 +171,8 @@ function OrbisLiveExperience() {
   useEffect(() => {
     reactorRef.current = reactor;
     modelStateRef.current = modelState;
-  }, [reactor, modelState]);
+    modeRef.current = mode;
+  }, [reactor, modelState, mode]);
 
   useViskoOrbisDynamicState((message) => setModelState(message));
   useViskoOrbisDynamicCommandError((message) =>
@@ -140,6 +180,7 @@ function OrbisLiveExperience() {
   );
   useViskoOrbisDynamicGenerationStarted(() => setPriming(true));
   useViskoOrbisDynamicChunkComplete((message) => {
+    setLastActivityAt(Date.now());
     if (message.frames_emitted > 0) setPriming(false);
   });
 
@@ -244,6 +285,8 @@ function OrbisLiveExperience() {
   const emitStep = useCallback(
     (stepId: OrbisDemoStepId) => {
       setActiveStep(stepId);
+      // Starting a run opens a grace window before stall detection applies.
+      if (stepId === 'run-started') setLastActivityAt(Date.now());
       emitOrbisDemoStep(stepId, bus);
     },
     [bus]
@@ -276,6 +319,24 @@ function OrbisLiveExperience() {
     setMode('offline');
     emitStep('run-started');
   }, [emitStep]);
+
+  // Stalled-stream recovery: reuse the session when it still answers, otherwise
+  // place a fresh one — then re-run step one so chunks resume flowing.
+  const reconnect = useCallback(async () => {
+    setCommandError(null);
+    setConnectionError(null);
+    try {
+      if (reactorRef.current.status === 'ready') {
+        await reactorRef.current.reset();
+      } else {
+        await connectLive();
+      }
+    } catch (error) {
+      setCommandError(error instanceof Error ? error.message : String(error));
+      return;
+    }
+    emitStep('run-started');
+  }, [connectLive, emitStep]);
 
   const playGuidedSequence = useCallback(async () => {
     clearSequence();
@@ -349,6 +410,32 @@ function OrbisLiveExperience() {
     audio.filter.frequency.setTargetAtTime(target, audio.ctx.currentTime, 0.4);
   }, [worldSnapshot.threatLevel]);
 
+  // ── First-run arc: the panel stays hidden until one full sequence has been
+  // witnessed. Returning visitors skip straight to the conductor controls.
+  const markIntroDone = useCallback(() => {
+    markIntroDoneStore();
+  }, []);
+
+  // Reveal the panel the moment the first guided sequence settles.
+  const prevSequenceRunningRef = useRef(false);
+  useEffect(() => {
+    const wasRunning = prevSequenceRunningRef.current;
+    prevSequenceRunningRef.current = sequenceRunning;
+    if (wasRunning && !sequenceRunning && !introDone) markIntroDone();
+  }, [sequenceRunning, introDone, markIntroDone]);
+
+  // Autoplay the storyboard once for first-time visitors (motion-safe only).
+  useEffect(() => {
+    if (introDone) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setTimeout(() => {
+      setMode('offline');
+      modeRef.current = 'offline';
+      playGuidedSequence();
+    }, 1400);
+    return () => window.clearTimeout(timer);
+  }, [introDone, playGuidedSequence]);
+
   // Keyboard conductor: space = guided sequence, R = reset, 1–7 = steps.
   useEffect(() => {
     const stepKeys = ORBIS_DEMO_STEPS.map((step) => step.id);
@@ -359,15 +446,33 @@ function OrbisLiveExperience() {
         event.preventDefault();
         void playGuidedSequence();
       } else if (event.key === 'r' || event.key === 'R') {
+        markIntroDone();
         void resetScene();
       } else if (/^[1-7]$/.test(event.key)) {
         const stepId = stepKeys[Number(event.key) - 1];
-        if (stepId) emitStep(stepId);
+        if (stepId) {
+          markIntroDone();
+          emitStep(stepId);
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [emitStep, playGuidedSequence, resetScene]);
+  }, [emitStep, playGuidedSequence, resetScene, markIntroDone]);
+
+  // Stalled-stream watchdog: a ready live session should keep emitting chunks,
+  // so tick while we're live and flag silence past twelve seconds.
+  useEffect(() => {
+    if (mode !== 'live' || reactor.status !== 'ready') return;
+    const interval = window.setInterval(() => setNow(Date.now()), 4_000);
+    return () => window.clearInterval(interval);
+  }, [mode, reactor.status]);
+
+  const streamStalled =
+    mode === 'live' &&
+    reactor.status === 'ready' &&
+    lastActivityAt > 0 &&
+    now - lastActivityAt > 12_000;
 
   const hasRunStarted =
     worldSnapshot.runStatus !== 'idle' && worldSnapshot.runStatus !== 'cancelled';
@@ -423,6 +528,10 @@ function OrbisLiveExperience() {
               </div>
             )}
 
+            <p className="orbis-sentence" aria-live="polite">
+              {describeWorld(worldSnapshot, liveModelState?.current_chunk ?? null)}
+            </p>
+
             {(mode === 'offline' || reactor.status !== 'ready' || showPriming) && (
               <div className="orbis-video-overlay">
                 <span>
@@ -438,10 +547,16 @@ function OrbisLiveExperience() {
           </div>
 
           <div className="orbis-model-readout">
-            <span>World: {formatWorldLabel(worldSnapshot.runStatus)}</span>
-            <span>Territory: {formatWorldLabel(worldSnapshot.territoryStatus)}</span>
-            <span>Ghost: {formatWorldLabel(worldSnapshot.ghostPresence)}</span>
-            <span>Chunk: {liveModelState?.current_chunk ?? '—'}</span>
+            <details className="orbis-debug">
+              <summary>Debug telemetry</summary>
+              <div className="orbis-debug__grid">
+                <span>Session: {statusLabel}</span>
+                <span>World: {formatWorldLabel(worldSnapshot.runStatus)}</span>
+                <span>Territory: {formatWorldLabel(worldSnapshot.territoryStatus)}</span>
+                <span>Ghost: {formatWorldLabel(worldSnapshot.ghostPresence)}</span>
+                <span>Chunk: {liveModelState?.current_chunk ?? '—'}</span>
+              </div>
+            </details>
             <span className="orbis-threat">
               <span className="orbis-threat__label">Threat</span>
               <progress
@@ -454,118 +569,155 @@ function OrbisLiveExperience() {
                 {Math.round(worldSnapshot.threatLevel * 100)}
               </span>
             </span>
+            {streamStalled && (
+              <output className="orbis-stalled">
+                Stream stalled
+                <button type="button" onClick={() => void reconnect()}>
+                  Reconnect
+                </button>
+              </output>
+            )}
           </div>
         </div>
 
-        <aside className="orbis-control-panel" aria-label="Orbis challenge controls">
-          <div className="orbis-panel-section">
-            <p className="orbis-panel-label">Session</p>
-            <div className="orbis-button-grid">
+        {!introDone ? (
+          <section className="orbis-intro" aria-label="First-run introduction">
+            <p className="orbis-panel-label">First visit</p>
+            <h2>The loop will show itself once.</h2>
+            <p>
+              A guided sequence walks all seven challenge steps across the atlas — expose a cell,
+              race the ghost, overexpose the frame, settle the realm — then this conductor console
+              unfolds. First-time visitors on motion-safe devices get it automatically.
+            </p>
+            <div className="orbis-intro-actions">
               <button
                 type="button"
                 className="orbis-button orbis-button--primary"
-                onClick={() => void startLiveRun()}
-                disabled={
-                  isConnecting ||
-                  (mode === 'live' && reactor.status === 'ready' && liveModelState?.started)
-                }
+                onClick={() => {
+                  setMode('offline');
+                  modeRef.current = 'offline';
+                  void playGuidedSequence();
+                }}
+                disabled={sequenceRunning}
               >
-                {isConnecting
-                  ? 'Connecting…'
-                  : liveModelState?.started
-                    ? 'Live run active'
-                    : 'Start live Orbis run'}
+                {sequenceRunning ? 'Sequence running…' : 'Play the guided sequence'}
               </button>
-              <button type="button" className="orbis-button" onClick={startOfflineRun}>
-                Play storyboard
+              <button type="button" className="orbis-link-button" onClick={markIntroDone}>
+                Skip to the console
               </button>
-              <button
-                type="button"
-                className="orbis-button"
-                onClick={() => void playGuidedSequence()}
-                disabled={sequenceRunning || isConnecting}
-              >
-                {sequenceRunning ? 'Sequence running…' : 'Guided sequence'}
-              </button>
-              <button
-                type="button"
-                className="orbis-button orbis-button--quiet"
-                onClick={() => void resetScene()}
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                className={`orbis-button orbis-button--quiet ${ambienceOn ? 'is-on' : ''}`}
-                onClick={() => setAmbienceOn((on) => !on)}
-                aria-pressed={ambienceOn}
-              >
-                {ambienceOn ? 'Ambience on' : 'Ambience off'}
-              </button>
-              <p className="orbis-shortcut-hint">
-                <kbd>Space</kbd> guided sequence · <kbd>1–7</kbd> steps · <kbd>R</kbd> reset
-              </p>
             </div>
-          </div>
-
-          {(connectionError || commandError) && (
-            <div className="orbis-error" role="alert">
-              <strong>
-                {connectionError ? 'Live connection unavailable' : 'Model command rejected'}
-              </strong>
-              <p>{connectionError ?? commandError}</p>
-              {connectionError && (
-                <button type="button" onClick={startOfflineRun}>
-                  Continue in storyboard mode
+          </section>
+        ) : (
+          <aside className="orbis-control-panel" aria-label="Orbis challenge controls">
+            <div className="orbis-panel-section">
+              <p className="orbis-panel-label">Session</p>
+              <div className="orbis-button-grid">
+                <button
+                  type="button"
+                  className="orbis-button orbis-button--primary"
+                  onClick={() => void startLiveRun()}
+                  disabled={
+                    isConnecting ||
+                    (mode === 'live' && reactor.status === 'ready' && liveModelState?.started)
+                  }
+                >
+                  {isConnecting
+                    ? 'Connecting…'
+                    : liveModelState?.started
+                      ? 'Live run active'
+                      : 'Start live Orbis run'}
                 </button>
+                <button type="button" className="orbis-button" onClick={startOfflineRun}>
+                  Play storyboard
+                </button>
+                <button
+                  type="button"
+                  className="orbis-button"
+                  onClick={() => void playGuidedSequence()}
+                  disabled={sequenceRunning || isConnecting}
+                >
+                  {sequenceRunning ? 'Sequence running…' : 'Guided sequence'}
+                </button>
+                <button
+                  type="button"
+                  className="orbis-button orbis-button--quiet"
+                  onClick={() => void resetScene()}
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  className={`orbis-button orbis-button--quiet ${ambienceOn ? 'is-on' : ''}`}
+                  onClick={() => setAmbienceOn((on) => !on)}
+                  aria-pressed={ambienceOn}
+                >
+                  {ambienceOn ? 'Ambience on' : 'Ambience off'}
+                </button>
+                <p className="orbis-shortcut-hint">
+                  <kbd>Space</kbd> guided sequence · <kbd>1–7</kbd> steps · <kbd>R</kbd> reset
+                </p>
+              </div>
+            </div>
+
+            {(connectionError || commandError) && (
+              <div className="orbis-error" role="alert">
+                <strong>
+                  {connectionError ? 'Live connection unavailable' : 'Model command rejected'}
+                </strong>
+                <p>{connectionError ?? commandError}</p>
+                {connectionError && (
+                  <button type="button" onClick={startOfflineRun}>
+                    Continue in storyboard mode
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="orbis-panel-section">
+              <p className="orbis-panel-label">Challenge loop</p>
+              <div className="orbis-step-list">
+                {ORBIS_DEMO_STEPS.map((step, index) => {
+                  const disabled = step.id !== 'run-started' && !canAdvance;
+                  return (
+                    <button
+                      type="button"
+                      key={step.id}
+                      className={`orbis-step ${activeStep === step.id ? 'is-active' : ''}`}
+                      disabled={disabled || sequenceRunning}
+                      onClick={() => {
+                        if (step.id === 'run-started' && mode === 'live') {
+                          void startLiveRun();
+                        } else {
+                          emitStep(step.id);
+                        }
+                      }}
+                    >
+                      <span>{String(index + 1).padStart(2, '0')}</span>
+                      <strong>{step.label}</strong>
+                      <small>{step.description}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="orbis-panel-section">
+              <p className="orbis-panel-label">Prompt timeline</p>
+              {timeline.length === 0 ? (
+                <p className="orbis-empty">Start the loop to compile a Sunprint prompt.</p>
+              ) : (
+                <ol className="orbis-timeline">
+                  {timeline.map((entry) => (
+                    <li key={entry.id} className={`is-${entry.status}`}>
+                      <span>{formatWorldLabel(entry.intent.reason)}</span>
+                      <p>{entry.intent.prompt}</p>
+                    </li>
+                  ))}
+                </ol>
               )}
             </div>
-          )}
-
-          <div className="orbis-panel-section">
-            <p className="orbis-panel-label">Challenge loop</p>
-            <div className="orbis-step-list">
-              {ORBIS_DEMO_STEPS.map((step, index) => {
-                const disabled = step.id !== 'run-started' && !canAdvance;
-                return (
-                  <button
-                    type="button"
-                    key={step.id}
-                    className={`orbis-step ${activeStep === step.id ? 'is-active' : ''}`}
-                    disabled={disabled || sequenceRunning}
-                    onClick={() => {
-                      if (step.id === 'run-started' && mode === 'live') {
-                        void startLiveRun();
-                      } else {
-                        emitStep(step.id);
-                      }
-                    }}
-                  >
-                    <span>{String(index + 1).padStart(2, '0')}</span>
-                    <strong>{step.label}</strong>
-                    <small>{step.description}</small>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="orbis-panel-section">
-            <p className="orbis-panel-label">Prompt timeline</p>
-            {timeline.length === 0 ? (
-              <p className="orbis-empty">Start the loop to compile a Sunprint prompt.</p>
-            ) : (
-              <ol className="orbis-timeline">
-                {timeline.map((entry) => (
-                  <li key={entry.id} className={`is-${entry.status}`}>
-                    <span>{formatWorldLabel(entry.intent.reason)}</span>
-                    <p>{entry.intent.prompt}</p>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-        </aside>
+          </aside>
+        )}
       </section>
 
       <section className="orbis-proof-grid" aria-label="Implementation details">

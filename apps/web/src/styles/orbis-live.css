@@ -779,3 +779,156 @@ body.orbis-live-route #maplibre-container {
   background: rgba(248, 244, 232, 0.06);
   font-family: var(--rr-font-mono);
 }
+
+/* ─── Pass A — first-run arc, status sentence, recovery, telemetry ────── */
+
+.orbis-sentence {
+  position: absolute;
+  right: clamp(12px, 2vw, 24px);
+  bottom: clamp(12px, 2vw, 24px);
+  left: clamp(12px, 2vw, 24px);
+  z-index: 3;
+  margin: 0;
+  padding: var(--rr-s-2) var(--rr-s-3);
+  border: 1px solid rgba(248, 244, 232, 0.14);
+  border-radius: var(--rr-r-2);
+  background: rgba(7, 26, 39, 0.78);
+  backdrop-filter: blur(6px);
+  color: var(--rr-text-2);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-xs);
+  letter-spacing: 0.02em;
+}
+
+.orbis-stalled {
+  display: inline-flex;
+  gap: var(--rr-s-2);
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid rgba(242, 165, 65, 0.55);
+  border-radius: 999px;
+  background: rgba(242, 165, 65, 0.12);
+  color: var(--rr-accent);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-3xs);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+}
+
+.orbis-stalled button {
+  padding: 1px 8px;
+  border: 1px solid rgba(248, 244, 232, 0.35);
+  border-radius: 999px;
+  background: rgba(248, 244, 232, 0.1);
+  color: var(--rr-text-1);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.orbis-stalled button:hover {
+  background: rgba(248, 244, 232, 0.22);
+}
+
+.orbis-debug {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.orbis-debug summary {
+  color: var(--rr-text-3);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-3xs);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.orbis-debug summary::before {
+  content: "▸ ";
+}
+
+.orbis-debug[open] summary::before {
+  content: "▾ ";
+}
+
+.orbis-debug__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rr-s-2) var(--rr-s-3);
+  margin-top: var(--rr-s-2);
+}
+
+.orbis-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rr-s-3);
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid rgba(99, 179, 200, 0.32);
+  border-radius: var(--rr-r-3);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(99, 179, 200, 0.14), transparent 60%),
+    rgba(7, 26, 39, 0.72);
+  animation: orbis-intro-rise 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.orbis-intro h2 {
+  margin: 0;
+  font-family: var(--rr-font-display);
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+}
+
+.orbis-intro p {
+  margin: 0;
+  color: var(--rr-text-2);
+  font-size: var(--rr-text-sm);
+  line-height: 1.6;
+}
+
+.orbis-intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rr-s-3);
+  align-items: center;
+}
+
+.orbis-link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--rr-sky, #63b3c8);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.orbis-control-panel {
+  animation: orbis-intro-rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes orbis-intro-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .orbis-sentence {
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbis-intro,
+  .orbis-control-panel {
+    animation: none;
+  }
+}

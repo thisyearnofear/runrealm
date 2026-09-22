@@ -1,4 +1,4 @@
-import { createReactorTokenResolver, getReactorTokenEndpoints } from '../orbis-live';
+import { createReactorTokenResolver, describeWorld, getReactorTokenEndpoints } from '../orbis-live';
 
 // jsdom does not ship the fetch Response class; provide a minimal stub.
 class MinimalResponse {
@@ -104,5 +104,47 @@ describe('Reactor token resolver', () => {
     });
 
     await expect(resolve()).rejects.toThrow('No Reactor token endpoint is available');
+  });
+});
+
+describe('describeWorld', () => {
+  const base = {
+    runStatus: 'idle',
+    paceBand: 'steady',
+    territoryStatus: 'claimable',
+    ghostPresence: 'none',
+    threatLevel: 0.1,
+    currentCell: null,
+  } as const;
+
+  it('opens with the phase and a calm threat for an idle world', () => {
+    const sentence = describeWorld(base);
+    expect(sentence).toBe('The atlas holds its breath · threat calm');
+  });
+
+  it('includes sector, pace, ghost, and threat once a run is recording', () => {
+    const sentence = describeWorld(
+      {
+        ...base,
+        runStatus: 'recording',
+        paceBand: 'fast',
+        ghostPresence: 'racing',
+        threatLevel: 0.7,
+        currentCell: 'cell-a1b2c3d4-rest',
+      },
+      3
+    );
+    expect(sentence).toContain('Recording the run');
+    expect(sentence).toContain('sector cell-a1');
+    expect(sentence).toContain('Fast pace');
+    expect(sentence).toContain('the ghost pulls ahead');
+    expect(sentence).toContain('threat critical');
+    expect(sentence).toContain('chunk 3');
+  });
+
+  it('flags overexposure at the top of the threat band and omits chunk when absent', () => {
+    const sentence = describeWorld({ ...base, runStatus: 'recording', threatLevel: 0.9 });
+    expect(sentence).toContain('overexposure burning');
+    expect(sentence).not.toContain('chunk');
   });
 });
