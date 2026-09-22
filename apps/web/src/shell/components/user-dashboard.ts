@@ -24,6 +24,9 @@ export class UserDashboard {
   private unsubscribeDataUpdates: (() => void) | null = null;
   private unsubscribeVisibilityChanges: (() => void) | null = null;
   private expandedTerritoryId: string | null = null;
+  // Stored so render()'s re-init can remove the previous handler
+  // instead of stacking anonymous listeners (perf pass).
+  private containerClickHandler: ((e: Event) => void) | null = null;
   private activeTab: 'overview' | 'territories' | 'ghosts' | 'challenges' = 'overview';
 
   constructor() {
@@ -92,8 +95,16 @@ export class UserDashboard {
   private setupEventListeners(): void {
     if (!this.container) return;
 
-    // Use event delegation since buttons are rendered dynamically
-    this.container.addEventListener('click', (e) => {
+    // Use event delegation since buttons are rendered dynamically.
+    // Perf/correctness: render() re-invokes this method after every
+    // full innerHTML rebuild — without the removal below, each render
+    // stacked ANOTHER anonymous click handler on the same container
+    // (N renders → N handlers firing per click, all against stale DOM
+    // state).
+    if (this.containerClickHandler) {
+      this.container.removeEventListener('click', this.containerClickHandler);
+    }
+    this.containerClickHandler = (e: Event) => {
       const target = e.target as HTMLElement;
       const action = target.getAttribute('data-action');
 
@@ -130,7 +141,8 @@ export class UserDashboard {
         this.handleFilter(filter, target);
         return;
       }
-    });
+    };
+    this.container.addEventListener('click', this.containerClickHandler);
   }
 
   private handleFilter(filter: string, target: HTMLElement): void {

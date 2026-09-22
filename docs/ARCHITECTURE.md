@@ -2,7 +2,27 @@
 
 ## System Overview
 
-RunRealm is a cross-chain fitness GameFi platform built with TypeScript, featuring AI-powered route optimization and geospatial NFT territories on ZetaChain. The platform follows a complementary platform approach where web and mobile serve distinct but interconnected purposes.
+RunRealm is a cross-chain fitness GameFi platform built with TypeScript, featuring AI-powered route optimization and geospatial NFT territories on ZetaChain. The current experience direction is **Sunprint Atlas**: runs expose a living map, routes become chalk/light traces, and claims develop territory into the realm. The canonical product-design contract is [docs/design-improvement-plan.md](design-improvement-plan.md).
+
+### Experience Architecture
+
+```text
+GPS / replay / territory / ghost / run events
+                    │
+                    ▼
+            WorldStateService
+       platform-neutral WorldSnapshot
+                    │
+       ┌────────────┴─────────────┐
+       ▼                          ▼
+Map renderer                  OrbisDirector
+MapLibre + deck.gl            state → Sunprint prompts
+authoritative geometry        generated atmosphere
+```
+
+- **Authoritative layer:** MapLibre owns camera, controls, basemap, and interaction. deck.gl is the target renderer for high-volume H3 cells, route traces, ghosts, and animated game layers. The existing MapLibre GeoJSON implementation remains the supported fallback until the deck.gl path is feature-flagged and tested.
+- **Atmosphere layer:** Orbis responds to coarse world-state transitions such as cell exposure, claim development, ghost presence, and vulnerability. It receives no raw coordinates and is never the source of truth for boundaries or contract state.
+- **Cross-platform consistency:** shared services own rules and state. Web and mobile may use different renderers, but must use the same `WorldSnapshot`, Sunprint semantics, and event vocabulary.
 
 ### Core Principles
 - **ENHANCEMENT FIRST**: Always prioritize enhancing existing components over creating new ones

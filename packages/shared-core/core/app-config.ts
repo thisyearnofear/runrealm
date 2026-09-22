@@ -19,6 +19,7 @@ declare const __ENV__: {
   REALM_TOKEN_ADDRESS?: string;
   TERRITORY_MANAGER_ADDRESS?: string;
   GOOGLE_GEMINI_API_KEY?: string;
+  ENABLE_ORBIS?: string;
 };
 
 export interface StravaConfig {
@@ -89,6 +90,11 @@ export interface AppConfig {
     enableKeyboardShortcuts: boolean;
     enableWeb3: boolean;
     enableFitness: boolean;
+  };
+  experience: {
+    visualIdentity: 'sunprint-atlas';
+    /** Public feature flag only. Reactor credentials stay server-side. */
+    orbisEnabled: boolean;
   };
   web3?: Web3Config;
   fitness?: ExternalFitnessConfig;
@@ -201,6 +207,10 @@ export class ConfigService {
         enableFitness:
           this.getEnvVar('ENABLE_FITNESS') !== 'false' &&
           StorageAdapter.getItemSync('runrealm_fitness_enabled') !== 'false',
+      },
+      experience: {
+        visualIdentity: 'sunprint-atlas',
+        orbisEnabled: this.getEnvVar('ENABLE_ORBIS') === 'true',
       },
       web3: this.loadWeb3Config(),
       fitness: this.loadFitnessConfig(),

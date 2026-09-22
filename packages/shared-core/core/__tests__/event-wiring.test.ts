@@ -18,64 +18,42 @@ const makeStubServices = (overrides: Partial<Services> = {}): Services => {
   const stub: Partial<Services> = {
     eventBus,
     preferenceService: {
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       saveUseMetric: jest.fn(),
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       getUseMetric: () => true,
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       saveCurrentFocus: jest.fn(),
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       getLastOrDefaultFocus: () => ({ lng: 0, lat: 0, zoom: 12 }),
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       getMapStyle: () => 'street',
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       getLastRun: () => null,
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       getShouldFollowRoads: () => true,
     } as never,
     ui: {
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       showToast: jest.fn(),
     } as never,
     sound: {
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       playSuccessSound: jest.fn(),
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       playNotificationSound: jest.fn(),
     } as never,
     territory: {} as never,
     runTracking: {
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       getCurrentRun: () => null,
     } as never,
     progression: {
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       addDistance: jest.fn(),
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       addTime: jest.fn(),
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       addTerritory: jest.fn(),
     } as never,
     animation: {
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       confetti: jest.fn(),
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       readdRunToMap: jest.fn(),
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       map: null,
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       clearAIRoute: jest.fn(),
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       setAIRoute: jest.fn(),
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       setAIWaypoints: jest.fn(),
     } as never,
     ai: {
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       refreshConfig: jest.fn().mockResolvedValue(undefined),
     } as never,
     haptics: {
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       trigger: jest.fn(),
     } as never,
     ...overrides,
@@ -85,9 +63,8 @@ const makeStubServices = (overrides: Partial<Services> = {}): Services => {
 
 const stubMap = (): MaplibreMap =>
   ({
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     flyTo: jest.fn(),
-    // biome-ignore lint/suspicious/noExplicitAny: stub
+    easeTo: jest.fn(),
     fitBounds: jest.fn(),
   }) as any;
 
@@ -96,19 +73,14 @@ const stubHandles = (): MaplibreHandles => {
   // calls .extend(coord) on it. The stub LngLatBounds returns itself from
   // extend so the reduce chain works without needing the real maplibre.
   class FakeLngLatBounds {
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     extend(_c: [number, number]) {
       return this;
     }
   }
   return {
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     maplibregl: { LngLatBounds: FakeLngLatBounds } as any,
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     Map: class {} as any,
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     NavigationControl: class {} as any,
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     GeolocateControl: class {} as any,
   };
 };
@@ -146,19 +118,27 @@ describe('event-wiring', () => {
     expect(services.sound.playSuccessSound).toHaveBeenCalled();
   });
 
-  it('location:changed flies to new coords + shows toast (when no active run)', () => {
+  it('location:changed recenters once (easeTo) and never toasts (perf pass)', () => {
     wireEvents({ services, handles: null, getMap: () => map, onMapClick: jest.fn() });
-    bus.emit('location:changed', {
+    const fix = {
       lat: -1.29,
       lng: 36.82,
       accuracy: 5,
-      source: 'gps',
+      source: 'gps' as const,
       timestamp: 1,
+    };
+    bus.emit('location:changed', fix);
+    // First fix: one-time recenter via easeTo (not the old 2s flyTo).
+    const easeArgs = (map.easeTo as jest.Mock).mock.calls[0][0];
+    expect(easeArgs.center).toEqual([36.82, -1.29]);
+    expect(easeArgs.zoom).toBe(14);
+    // Subsequent fixes outside a run: no further camera moves.
+    bus.emit('location:changed', { ...fix, timestamp: 2 });
+    expect(map.easeTo).toHaveBeenCalledTimes(1);
+    // No per-fix toast spam.
+    expect(services.ui.showToast).not.toHaveBeenCalledWith('Location updated', {
+      type: 'success',
     });
-    const flyArgs = (map.flyTo as jest.Mock).mock.calls[0][0];
-    expect(flyArgs.center).toEqual([36.82, -1.29]);
-    expect(flyArgs.zoom).toBe(14);
-    expect(services.ui.showToast).toHaveBeenCalledWith('Location updated', { type: 'success' });
   });
 
   it('ai:routeVisualize calls setAIRoute + fitMapToRoute', () => {

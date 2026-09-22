@@ -10,6 +10,8 @@
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
+    "@reactor-models/visko-orbis-dynamic": "^1.4.0",
+    "@reactor-team/js-sdk": "^3.0.2",
     "@runrealm/shared-blockchain": "^2.0.0",
     "@runrealm/shared-core": "^2.0.0",
     "@runrealm/shared-types": "^2.0.0",

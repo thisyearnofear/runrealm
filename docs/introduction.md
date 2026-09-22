@@ -5,11 +5,12 @@ Welcome to RunRealm! This guide will help you set up the project locally and und
 ## 📖 What is RunRealm?
 
 RunRealm is a **cross-chain fitness GameFi platform** that:
-- 🏃 Transforms your runs into NFT territories on ZetaChain
+- 🏃 Transforms runs into NFT territories on ZetaChain
+- 🗺️ Renders a living **Sunprint Atlas** with MapLibre, OpenFreeMap/ESRI basemaps, and H3 territory overlays
+- 🎞️ Uses Orbis/Reactor as an optional real-time generated-atmosphere layer
 - 🤖 Provides AI-powered coaching with Google Gemini
-- 🗺️ Uses Mapbox for interactive maps and route planning
-- 📱 Works on both web (analysis) and mobile (tracking)
-- 🔗 Integrates with Strava to import your running activities
+- 📱 Shares game rules and state between web and mobile
+- 🔗 Integrates with Strava to import running activities
 
 ## ✅ Prerequisites Check
 
@@ -42,19 +43,23 @@ cp config/environment/config.env.example .env
 
 Now edit `.env` with your own API keys:
 
-#### Required API Keys:
+#### API keys:
 
-1. **Mapbox Access Token** (for maps)
-   - Get one at: https://account.mapbox.com/access-tokens/
-   - Free tier: 50,000 map loads/month
-   - Add to `.env`: `MAPBOX_ACCESS_TOKEN=your_token_here`
+1. **Map tiles** — no key is required for the current OpenFreeMap/ESRI basemaps.
+   `MAPBOX_ACCESS_TOKEN` is now a legacy compatibility value used by the older
+   geocoding path, not a requirement for loading the map.
 
-2. **Google Gemini API Key** (for AI features)
+2. **Google Gemini API Key** (optional, for AI features)
    - Get one at: https://aistudio.google.com/app/apikey
-   - Free tier available
    - Add to `.env`: `GOOGLE_GEMINI_API_KEY=your_key_here`
 
-3. **Strava API** (optional, for importing runs)
+3. **Reactor API Key** (optional, for Orbis atmosphere)
+   - Keep it server-only as `REACTOR_API_KEY`.
+   - Enable the client feature with `ENABLE_ORBIS=true` only after the
+     server-side token endpoint is configured.
+   - Never expose it through `NEXT_PUBLIC_*`.
+
+4. **Strava API** (optional, for importing runs)
    - Create app at: https://www.strava.com/settings/api
    - Add to `.env`:
      ```
@@ -83,15 +88,16 @@ RUNREALM_BOOST_ADDRESS=0x243D95fE43777533aC3E81b5fB8251A282b17E3A
 #### Minimal `.env` file (to get started):
 
 ```env
-# Minimum required to run
-MAPBOX_ACCESS_TOKEN=your_mapbox_token_here
-GOOGLE_GEMINI_API_KEY=your_gemini_key_here
-
-# Optional but recommended
+# Minimum local configuration
 NODE_ENV=development
 PORT=3000
 ENABLE_WEB3=true
-ENABLE_AI_FEATURES=true
+ENABLE_AI_FEATURES=false
+ENABLE_ORBIS=false
+
+# Optional integrations
+GOOGLE_GEMINI_API_KEY=your_gemini_key_here
+REACTOR_API_KEY=your_reactor_key_here
 ```
 
 ### Step 3: Build Shared Packages
@@ -150,10 +156,10 @@ runrealm/
 
 ## 🎯 Key Features to Try
 
-### 1. Basic Map View
-- Open the app and you'll see a Mapbox map
+### 1. Sunprint Atlas Map View
+- Open the app and you'll see the tokenless MapLibre map
 - Pan and zoom to explore
-- Even without API keys, the map should load (if Mapbox token is set)
+- The basemap loads without a Mapbox token; custom Sunprint styling is introduced behind the renderer workstream
 
 ### 2. Route Planning (with AI)
 - Click "Plan Route" or similar button
@@ -231,13 +237,15 @@ npm run clean            # Remove build artifacts
 ## 📚 Next Steps
 
 1. **Explore the codebase**:
-   - Start with `packages/web-app/index.ts` to see the main entry point
+   - Start with `apps/web/src/lib/bootstrap.ts` to see the web entry point
+   - Read `docs/design-improvement-plan.md` before touching visual or map behavior
    - Check `packages/shared-core/services/` for core functionality
    - Look at `server.js` for backend API endpoints
 
 2. **Read the docs**:
+   - `docs/design-improvement-plan.md` - Canonical Sunprint Atlas design contract
    - `docs/architecture.md` - System architecture
-   - `docs/features.md` - Feature guides
+   - `docs/features.md` - Feature history and guides
    - `docs/guides.md` - Implementation details
 
 3. **Try the features**:

@@ -18,6 +18,9 @@ export interface LocationInfo {
   timestamp: number;
 }
 
+/** Min interval between synchronous localStorage focus writes (perf). */
+const LOCATION_FOCUS_SAVE_INTERVAL_MS = 30_000;
+
 export interface LocationSearchResult {
   name: string;
   lat: number;
@@ -33,6 +36,8 @@ export class LocationService extends BaseService {
   private domService: DOMService | null = null;
   private currentLocation: LocationInfo | null = null;
   private watchId: number | null = null;
+  // Throttle for the per-fix localStorage focus write (perf pass).
+  private lastFocusSaveMs = 0;
   private locationModal: HTMLElement | null = null;
 
   static getInstance(): LocationService {
@@ -859,8 +864,14 @@ export class LocationService extends BaseService {
   private setCurrentLocation(locationInfo: LocationInfo): void {
     this.currentLocation = locationInfo;
 
-    // Save to preferences
-    if (this.preferenceService) {
+    // Persist last-known position, but throttled: GPS fixes arrive
+    // ~1 Hz with enableHighAccuracy and this is a synchronous
+    // localStorage write (stringify + disk) — doing it per fix stalls
+    // the main thread on mobile for no benefit. 30s granularity is
+    // plenty for a "resume where you were" focus.
+    const now = Date.now();
+    if (now - this.lastFocusSaveMs >= LOCATION_FOCUS_SAVE_INTERVAL_MS && this.preferenceService) {
+      this.lastFocusSaveMs = now;
       this.preferenceService.saveCurrentFocus(
         {
           coords: {

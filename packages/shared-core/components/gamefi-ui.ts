@@ -35,7 +35,6 @@ export class GameFiUI extends BaseService {
   private dom: DOMService;
   private hudElements: Map<string, HTMLElement> = new Map();
   private currentStats: PlayerStats | null = null;
-  private animationFrameId: number | null = null;
 
   constructor() {
     super();
@@ -65,7 +64,10 @@ export class GameFiUI extends BaseService {
   protected async onInitialize(): Promise<void> {
     // Service-only mode: no direct HUD DOM creation; MainUI renders widgets
     this.setupEventHandlers();
-    this.startAnimationLoop();
+    // Perf note: the previous unconditional empty rAF loop
+    // (`startAnimationLoop`) was removed — it re-scheduled itself at 60
+    // fps for the whole session while doing nothing, a pure wake/battery
+    // cost. Real-time updates here are event-driven (`run:pointAdded`).
 
     console.log('GameFiUI initialized (service-only)');
   }
@@ -202,14 +204,6 @@ export class GameFiUI extends BaseService {
     }
   }
 
-  private startAnimationLoop(): void {
-    const animate = () => {
-      // Update any real-time animations here
-      this.animationFrameId = requestAnimationFrame(animate);
-    };
-    animate();
-  }
-
   private updateRewardEstimate(distance: number): void {
     // Calculate estimated $REALM reward based on distance and difficulty
     const baseReward = distance * 0.01; // 0.01 REALM per meter
@@ -229,10 +223,6 @@ export class GameFiUI extends BaseService {
    * the base lifecycle teardown. Called by `BaseService.cleanup()`.
    */
   public cleanup(): void {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-    }
-
     this.hudElements.clear();
     document.body.classList.remove('gamefi-mode');
 

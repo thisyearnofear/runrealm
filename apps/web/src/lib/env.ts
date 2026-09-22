@@ -22,6 +22,8 @@ export interface RunRealmEnv {
   POLYGON_RPC_URL: string;
   AUTO_CONNECT_WALLET: string;
   GOOGLE_GEMINI_API_KEY: string;
+  /** Public feature flag only; Reactor credentials stay server-side. */
+  ENABLE_ORBIS: string;
   // Zama Protocol FHEVM (confidential territory defense) — Sepolia
   SEPOLIA_RPC_URL: string;
   RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS: string;
@@ -42,6 +44,7 @@ const DEFAULT_ENV: RunRealmEnv = {
   POLYGON_RPC_URL: 'https://polygon-rpc.com',
   AUTO_CONNECT_WALLET: 'false',
   GOOGLE_GEMINI_API_KEY: '',
+  ENABLE_ORBIS: 'false',
   SEPOLIA_RPC_URL: 'https://ethereum-sepolia-rpc.publicnode.com',
   RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS: '0x243D95fE43777533aC3E81b5fB8251A282b17E3A',
 };
@@ -69,6 +72,7 @@ export function createEnvGlobal(): RunRealmEnv {
       process.env.NEXT_PUBLIC_AUTO_CONNECT_WALLET || DEFAULT_ENV.AUTO_CONNECT_WALLET,
     GOOGLE_GEMINI_API_KEY:
       process.env.NEXT_PUBLIC_GOOGLE_GEMINI_API_KEY || DEFAULT_ENV.GOOGLE_GEMINI_API_KEY,
+    ENABLE_ORBIS: process.env.NEXT_PUBLIC_ENABLE_ORBIS || DEFAULT_ENV.ENABLE_ORBIS,
     SEPOLIA_RPC_URL: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || DEFAULT_ENV.SEPOLIA_RPC_URL,
     RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS:
       process.env.NEXT_PUBLIC_RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS ||
@@ -76,7 +80,7 @@ export function createEnvGlobal(): RunRealmEnv {
   };
 
   if (typeof window !== 'undefined') {
-    (window as any).__ENV__ = env;
+    (window as Window & { __ENV__?: unknown }).__ENV__ = env;
   }
 
   return env;

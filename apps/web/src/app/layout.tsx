@@ -5,6 +5,7 @@ import '../styles/components.css';
 import '../styles/interfaces.css';
 import '../styles/wallet-sheet.css';
 import '../styles/external-fitness.css';
+import '../styles/orbis-live.css';
 import '../styles/responsive.css';
 
 export const metadata: Metadata = {

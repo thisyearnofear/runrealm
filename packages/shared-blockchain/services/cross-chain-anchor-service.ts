@@ -26,7 +26,11 @@
 
 import { getContractConfig, getCurrentNetworkConfig } from '@runrealm/shared-core/config/contracts';
 import { BaseService } from '@runrealm/shared-core/core/base-service';
-import { Contract, Interface, JsonRpcProvider, type Log, Wallet } from 'ethers';
+// Perf pass: type-only ethers imports (erased at build). The runtime
+// import is dynamic inside `onInitialize`, so the ~1 MB of ethers
+// chunks no longer land in the app's boot path for a service that is
+// a no-op unless the relayer env is configured.
+import type { Contract, Interface, JsonRpcProvider, Log, Wallet } from 'ethers';
 
 export interface AnchorRelayResult {
   tokenId: string;
@@ -106,6 +110,9 @@ export class CrossChainAnchorService extends BaseService {
     const zetaConfig = getCurrentNetworkConfig();
     const sepoliaRpc = readEnv('SEPOLIA_RPC_URL') || 'https://ethereum-sepolia-rpc.publicnode.com';
 
+    // Lazy ethers load (see import note above).
+    const { Contract, Interface, JsonRpcProvider, Wallet: EthersWallet } = await import('ethers');
+
     // ZetaChain side: read-only log observation.
     this.zetaProvider = new JsonRpcProvider(zetaConfig.rpcUrl);
     const territoryCreatedEvent = zetaConfig.contracts.universal.abi.find(
@@ -122,7 +129,7 @@ export class CrossChainAnchorService extends BaseService {
     // Sepolia side: sign + send anchor transactions.
     this.sepoliaProvider = new JsonRpcProvider(sepoliaRpc);
     if (relayerKey) {
-      this.relayerWallet = new Wallet(relayerKey, this.sepoliaProvider);
+      this.relayerWallet = new EthersWallet(relayerKey, this.sepoliaProvider);
     } else {
       console.warn(
         'CrossChainAnchorService: RUNREALM_RELAYER_PRIVATE_KEY not set — observation only, no forwarding'

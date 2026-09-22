@@ -9,6 +9,7 @@ import {
   TerritoryMetadata,
   TerritoryPreview,
 } from '../services/territory-service';
+import type { OrbisPromptIntent, WorldStateChange } from '../types/world-state';
 
 // Define route-related types
 interface RouteData {
@@ -228,6 +229,10 @@ export interface AppEvents extends Web3Events {
   'run:cancelled': { runId: string; timestamp: number };
   'run:statusChanged': { status: string };
   'run:statsUpdated': { distance: number; duration: number; speed: number };
+  'world:stateChanged': WorldStateChange;
+  'orbis:promptQueued': { intent: OrbisPromptIntent };
+  'orbis:promptDispatched': { intent: OrbisPromptIntent };
+  'orbis:promptFailed': { intent: OrbisPromptIntent; error: string };
   'ui:settingsOpened': Record<string, never>;
   'ui:settingsClosed': Record<string, never>;
   'ui:unitsToggled': { useMetric: boolean };

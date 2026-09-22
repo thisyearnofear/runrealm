@@ -11,6 +11,7 @@ A cross-chain fitness GameFi platform that transforms your runs into NFT territo
 - **Cross-Chain GameFi**: Territory claiming and REALM token rewards on ZetaChain
 - **Dual Platform**: Web app for analysis & management, mobile app for performance & play
 - **Geospatial NFTs**: Own and trade location-based territories
+- **Sunprint Atlas Experience**: Runs expose a living cyanotype-inspired atlas; routes trace it, claims develop H3 territory, and Orbis supplies reactive atmosphere without becoming the game-state source of truth. Experience the wallet-free **Orbis Live** challenge slice at `/orbis-live` — see [docs/orbis-live.md](docs/orbis-live.md).
 - **Confidential Defence (live on Sepolia)**: Encrypted `euint32` activity-point state on the Zama Protocol FHEVM (Ethereum Sepolia testnet). Territory owners decrypt their own defense score; rivals see only a dimmed silhouette until they win an encrypted contest. The full integration is in [docs/roadmap.md](docs/roadmap.md) and [docs/architecture.md](docs/architecture.md).
 
 ## 🚀 Quick Start
@@ -39,7 +40,9 @@ npm run sync:check   # CI hook: exit 1 if generated .sol siblings are out of syn
 
 ## 📚 Documentation
 
-- [Introduction](docs/introduction.md) - Complete guide to setup, installation, and deployment.
+- [Introduction](docs/introduction.md) - Current setup and development guide.
+- [Sunprint Atlas](docs/design-improvement-plan.md) - **Canonical visual, motion, map, and Orbis direction.**
+- [Orbis Live](docs/orbis-live.md) - Wallet-free real-time Orbis challenge slice: setup, token broker, and demo loop.
 - [Architecture](docs/architecture.md) - System architecture, platform design, and smart contracts.
 - [Features](docs/features.md) - Detailed look at key features like Ghost Runners and the User Dashboard.
 - [Guides](docs/guides.md) - Implementation guides, mobile development, and testing strategies.

@@ -370,8 +370,10 @@ export class RunTrackingService extends BaseService {
     this.stopGPSTracking();
     this.stopRealTimeUpdates();
 
-    // Calculate final stats
-    this.updateRunStats();
+    // Canonical final stats pass: incremental updates keep live stats
+    // O(1)-per-point; this one-time full recompute at completion guards
+    // against any accumulated drift.
+    this.recomputeFinalStats();
 
     // Check territory eligibility
     this.checkTerritoryEligibility();
@@ -493,8 +495,11 @@ export class RunTrackingService extends BaseService {
       this.currentRun.segments.push(segment);
       this.currentRun.points.push(smoothedPoint);
 
-      // Update stats
-      this.updateRunStats();
+      // Update stats incrementally (perf pass): the previous full
+      // recompute over all segments was O(n) per point — quadratic over
+      // a run's duration and it also spread `Math.max(...speeds)`,
+      // which blows the argument limit on very long runs.
+      this.accumulateSegmentStats(segment);
 
       this.lastPoint = smoothedPoint;
 
@@ -557,21 +562,45 @@ export class RunTrackingService extends BaseService {
   }
 
   /**
-   * Update run statistics
+   * Update run statistics incrementally from one new segment.
+   * O(1) per point instead of an O(n) full-segments recompute.
    */
-  private updateRunStats(): void {
-    if (!this.currentRun) return;
+  private accumulateSegmentStats(segment: RunSegment): void {
+    const run = this.currentRun;
+    if (!run) return;
 
-    this.currentRun.totalDistance = this.currentRun.segments.reduce(
-      (total, segment) => total + segment.distance,
-      0
-    );
+    run.totalDistance += segment.distance;
 
-    if (this.currentRun.segments.length > 0) {
-      const speeds = this.currentRun.segments.map((s) => s.averageSpeed);
-      this.currentRun.maxSpeed = Math.max(...speeds);
-      this.currentRun.averageSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
+    if (segment.averageSpeed > run.maxSpeed) {
+      run.maxSpeed = segment.averageSpeed;
     }
+    // Running mean: newAvg = oldAvg + (x - oldAvg) / (n + 1)
+    const n = run.segments.length;
+    run.averageSpeed =
+      n > 0
+        ? run.averageSpeed + (segment.averageSpeed - run.averageSpeed) / n
+        : segment.averageSpeed;
+  }
+
+  /**
+   * One-time full recompute of distance/speeds over all segments.
+   * Only called at run completion (never per GPS fix).
+   */
+  private recomputeFinalStats(): void {
+    const run = this.currentRun;
+    if (!run || run.segments.length === 0) return;
+
+    let totalDistance = 0;
+    let maxSpeed = 0;
+    let speedSum = 0;
+    for (const segment of run.segments) {
+      totalDistance += segment.distance;
+      if (segment.averageSpeed > maxSpeed) maxSpeed = segment.averageSpeed;
+      speedSum += segment.averageSpeed;
+    }
+    run.totalDistance = totalDistance;
+    run.maxSpeed = maxSpeed;
+    run.averageSpeed = speedSum / run.segments.length;
   }
 
   /**

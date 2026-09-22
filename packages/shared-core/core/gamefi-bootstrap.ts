@@ -22,6 +22,10 @@ export async function initializeGameFi(opts: GameFiBootstrapOptions): Promise<vo
     services.runTracking.setLocationService(services.location);
     await services.runTracking.initialize();
     await services.territory.initialize();
+    // Sunprint Atlas semantic layer. WorldState subscribes before Orbis so
+    // the director receives only canonical, privacy-preserving snapshots.
+    await services.worldState.initialize();
+    await services.orbisDirector.initialize();
     await services.enhancedRunControls.initialize();
 
     if (services.config.isWeb3Enabled()) {

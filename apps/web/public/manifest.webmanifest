@@ -30,8 +30,8 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/apple-touch-icon-1024x1024.png",
-      "sizes": "1024x1024",
+      "src": "/apple-touch-icon-512x512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },

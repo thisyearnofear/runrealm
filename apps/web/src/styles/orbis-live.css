@@ -1,0 +1,781 @@
+/* Orbis Live — Sunprint Atlas challenge slice */
+
+body.orbis-live-route {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(99, 179, 200, 0.16), transparent 34rem),
+    radial-gradient(circle at 84% 70%, rgba(242, 165, 65, 0.13), transparent 28rem),
+    linear-gradient(135deg, #071a27 0%, var(--rr-bg-0) 52%, #102f42 100%);
+  color: var(--rr-text-1);
+}
+
+body.orbis-live-route #maplibre-container {
+  display: none;
+}
+
+.orbis-live-page {
+  position: relative;
+  width: min(1440px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 56px);
+  font-family: var(--rr-font-body);
+}
+
+.orbis-live-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgba(248, 244, 232, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(248, 244, 232, 0.028) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at 50% 30%, black, transparent 78%);
+}
+
+.orbis-hero {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--rr-s-6);
+  align-items: end;
+  margin-bottom: var(--rr-s-6);
+}
+
+.orbis-kicker,
+.orbis-panel-label {
+  margin: 0 0 var(--rr-s-2);
+  color: var(--rr-accent);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-3xs);
+  font-weight: var(--rr-w-semibold);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+}
+
+.orbis-hero h1 {
+  max-width: 860px;
+  margin: 0;
+  color: var(--rr-text-1);
+  font-family: var(--rr-font-display);
+  font-size: clamp(2.5rem, 6vw, 5.8rem);
+  font-weight: var(--rr-w-semibold);
+  letter-spacing: var(--rr-track-tight);
+  line-height: 0.92;
+}
+
+.orbis-hero__copy > p:last-child {
+  max-width: 720px;
+  margin: var(--rr-s-5) 0 0;
+  color: var(--rr-text-2);
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  line-height: var(--rr-lead-relaxed);
+}
+
+.orbis-status-card {
+  display: flex;
+  gap: var(--rr-s-3);
+  align-items: center;
+  min-width: 240px;
+  padding: var(--rr-s-4);
+  border: 1px solid rgba(248, 244, 232, 0.16);
+  border-radius: var(--rr-r-4);
+  background: rgba(13, 43, 62, 0.72);
+  box-shadow: var(--rr-sh-2);
+}
+
+.orbis-status-card strong,
+.orbis-status-card span:last-child {
+  display: block;
+}
+
+.orbis-status-card span:last-child {
+  margin-top: 2px;
+  color: var(--rr-text-3);
+  font-size: var(--rr-text-2xs);
+}
+
+.orbis-status-dot {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--rr-text-4);
+  box-shadow: 0 0 0 5px rgba(96, 124, 134, 0.16);
+}
+
+.orbis-status-dot--ready {
+  background: var(--rr-success);
+  box-shadow: 0 0 0 5px rgba(79, 174, 139, 0.16);
+}
+
+.orbis-status-dot--connecting,
+.orbis-status-dot--waiting,
+.orbis-status-dot--offline {
+  background: var(--rr-accent);
+  box-shadow: 0 0 0 5px rgba(242, 165, 65, 0.16);
+}
+
+.orbis-stage-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.8fr);
+  gap: var(--rr-s-5);
+  align-items: stretch;
+}
+
+.orbis-video-panel,
+.orbis-control-panel,
+.orbis-proof-grid article {
+  border: 1px solid rgba(248, 244, 232, 0.15);
+  background:
+    linear-gradient(180deg, rgba(243, 234, 216, 0.045), transparent 38%), rgba(13, 43, 62, 0.78);
+  box-shadow: var(--rr-sh-3);
+  backdrop-filter: blur(14px);
+}
+
+.orbis-video-panel {
+  overflow: hidden;
+  border-radius: 24px;
+}
+
+.orbis-video-frame {
+  position: relative;
+  min-height: clamp(360px, 58vw, 720px);
+  overflow: hidden;
+  border-radius: 23px 23px 0 0;
+  background: #061521;
+}
+
+.orbis-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+}
+
+.orbis-video-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(243, 234, 216, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(243, 234, 216, 0.06) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mix-blend-mode: screen;
+  opacity: 0.2;
+}
+
+.orbis-video-overlay {
+  position: absolute;
+  inset: auto var(--rr-s-4) var(--rr-s-4) var(--rr-s-4);
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--rr-s-4);
+  align-items: center;
+  padding: var(--rr-s-3) var(--rr-s-4);
+  border: 1px solid rgba(248, 244, 232, 0.16);
+  border-radius: var(--rr-r-3);
+  background: rgba(16, 38, 51, 0.78);
+  color: var(--rr-text-2);
+}
+
+.orbis-video-overlay strong {
+  color: var(--rr-accent);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-2xs);
+  letter-spacing: var(--rr-track-wide);
+  text-transform: uppercase;
+}
+
+.orbis-model-readout {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  border-top: 1px solid rgba(248, 244, 232, 0.13);
+  background: rgba(248, 244, 232, 0.12);
+}
+
+.orbis-model-readout span {
+  padding: var(--rr-s-3);
+  background: rgba(13, 43, 62, 0.94);
+  color: var(--rr-text-3);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-3xs);
+  letter-spacing: var(--rr-track-wide);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.orbis-control-panel {
+  overflow: hidden;
+  border-radius: 24px;
+}
+
+.orbis-panel-section {
+  padding: var(--rr-s-5);
+  border-bottom: 1px solid rgba(248, 244, 232, 0.12);
+}
+
+.orbis-panel-section:last-child {
+  border-bottom: 0;
+}
+
+.orbis-button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--rr-s-2);
+}
+
+.orbis-button,
+.orbis-error button {
+  min-height: 44px;
+  border: 1px solid rgba(242, 165, 65, 0.38);
+  border-radius: var(--rr-r-2);
+  background: rgba(242, 165, 65, 0.08);
+  color: var(--rr-text-1);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--rr-text-xs);
+  font-weight: var(--rr-w-semibold);
+  transition:
+    border-color var(--rr-d-2) var(--rr-ease-out),
+    background var(--rr-d-2) var(--rr-ease-out),
+    transform var(--rr-d-2) var(--rr-ease-out);
+}
+
+.orbis-button:hover:not(:disabled),
+.orbis-error button:hover {
+  border-color: var(--rr-accent);
+  background: rgba(242, 165, 65, 0.16);
+  transform: translateY(-1px);
+}
+
+.orbis-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.orbis-button--primary {
+  grid-column: 1 / -1;
+  border-color: var(--rr-accent);
+  background: var(--rr-accent);
+  color: var(--rr-accent-ink);
+}
+
+.orbis-button--primary:hover:not(:disabled) {
+  background: var(--rr-accent-hover);
+}
+
+.orbis-button--quiet {
+  border-color: rgba(248, 244, 232, 0.16);
+  background: transparent;
+  color: var(--rr-text-3);
+}
+
+.orbis-error {
+  margin: var(--rr-s-4);
+  padding: var(--rr-s-4);
+  border: 1px solid rgba(232, 93, 93, 0.4);
+  border-radius: var(--rr-r-3);
+  background: rgba(232, 93, 93, 0.09);
+}
+
+.orbis-error strong {
+  color: var(--rr-signal);
+}
+
+.orbis-error p {
+  margin: var(--rr-s-2) 0 var(--rr-s-3);
+  color: var(--rr-text-2);
+  font-size: var(--rr-text-xs);
+  line-height: var(--rr-lead-normal);
+}
+
+.orbis-error button {
+  width: 100%;
+}
+
+.orbis-step-list {
+  display: grid;
+  gap: var(--rr-s-2);
+}
+
+.orbis-step {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 2px var(--rr-s-3);
+  width: 100%;
+  padding: var(--rr-s-3);
+  border: 1px solid rgba(248, 244, 232, 0.13);
+  border-radius: var(--rr-r-3);
+  background: rgba(16, 38, 51, 0.55);
+  color: var(--rr-text-1);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    border-color var(--rr-d-2) var(--rr-ease-out),
+    background var(--rr-d-2) var(--rr-ease-out);
+}
+
+.orbis-step:hover:not(:disabled),
+.orbis-step.is-active {
+  border-color: var(--rr-accent);
+  background: rgba(242, 165, 65, 0.1);
+}
+
+.orbis-step:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.orbis-step > span {
+  grid-row: span 2;
+  color: var(--rr-accent);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-2xs);
+}
+
+.orbis-step strong {
+  font-size: var(--rr-text-sm);
+}
+
+.orbis-step small {
+  color: var(--rr-text-3);
+  font-size: var(--rr-text-2xs);
+  line-height: var(--rr-lead-normal);
+}
+
+.orbis-empty {
+  margin: 0;
+  color: var(--rr-text-3);
+  font-size: var(--rr-text-sm);
+}
+
+.orbis-timeline {
+  display: grid;
+  max-height: 360px;
+  margin: 0;
+  padding: 0;
+  gap: var(--rr-s-3);
+  overflow-y: auto;
+  list-style: none;
+}
+
+.orbis-timeline li {
+  position: relative;
+  padding-left: var(--rr-s-5);
+}
+
+.orbis-timeline li::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--rr-text-4);
+}
+
+.orbis-timeline li.is-dispatched::before {
+  background: var(--rr-success);
+}
+
+.orbis-timeline li.is-failed::before {
+  background: var(--rr-signal);
+}
+
+.orbis-timeline span {
+  color: var(--rr-text-3);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-3xs);
+  letter-spacing: var(--rr-track-wide);
+  text-transform: uppercase;
+}
+
+.orbis-timeline p {
+  display: -webkit-box;
+  margin: 4px 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  color: var(--rr-text-2);
+  font-size: var(--rr-text-2xs);
+  line-height: var(--rr-lead-normal);
+}
+
+.orbis-storyboard {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 42% 44%, rgba(242, 165, 65, 0.12), transparent 20%),
+    linear-gradient(145deg, rgba(23, 61, 82, 0.95), rgba(8, 25, 36, 1));
+  transition: background var(--rr-d-5) var(--rr-ease-in-out);
+}
+
+.orbis-storyboard__grid {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.36;
+  background:
+    linear-gradient(30deg, transparent 49%, rgba(248, 244, 232, 0.09) 50%, transparent 51%),
+    linear-gradient(90deg, transparent 49%, rgba(248, 244, 232, 0.07) 50%, transparent 51%),
+    linear-gradient(150deg, transparent 49%, rgba(248, 244, 232, 0.09) 50%, transparent 51%);
+  background-size: 96px 96px;
+  transform: rotate(-4deg);
+}
+
+.orbis-storyboard__trace {
+  position: absolute;
+  top: 18%;
+  left: 10%;
+  width: 78%;
+  height: 54%;
+  border: 2px solid rgba(248, 244, 232, 0.58);
+  border-top-color: transparent;
+  border-left-color: rgba(248, 244, 232, 0.2);
+  border-radius: 48% 52% 44% 56%;
+  filter: drop-shadow(0 0 8px rgba(248, 244, 232, 0.16));
+  transform: rotate(-8deg);
+}
+
+.orbis-storyboard__trace::after {
+  content: "";
+  position: absolute;
+  right: 12%;
+  bottom: 4%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--rr-chalk, var(--rr-sunprint-chalk));
+  box-shadow: 0 0 24px rgba(248, 244, 232, 0.5);
+}
+
+.orbis-storyboard__cell {
+  position: absolute;
+  top: 26%;
+  left: 38%;
+  width: 28%;
+  aspect-ratio: 1;
+  clip-path: polygon(25% 4%, 75% 4%, 98% 50%, 75% 96%, 25% 96%, 2% 50%);
+  background: rgba(242, 165, 65, 0.08);
+  border: 2px solid rgba(242, 165, 65, 0.35);
+  transition:
+    background var(--rr-d-5) var(--rr-ease-in-out),
+    transform var(--rr-d-5) var(--rr-ease-in-out);
+}
+
+.orbis-storyboard__cell span {
+  position: absolute;
+  inset: 18%;
+  clip-path: inherit;
+  background: rgba(242, 165, 65, 0.15);
+}
+
+.orbis-storyboard--developed .orbis-storyboard__cell,
+.orbis-storyboard--developed .orbis-storyboard__cell span {
+  background: rgba(79, 174, 139, 0.2);
+}
+
+.orbis-storyboard--vulnerable .orbis-storyboard__cell,
+.orbis-storyboard--contested .orbis-storyboard__cell {
+  background: rgba(232, 93, 93, 0.18);
+  transform: scale(1.04);
+}
+
+.orbis-storyboard--ghost-racing .orbis-storyboard__trace::after,
+.orbis-storyboard--ghost-defending .orbis-storyboard__trace::after {
+  box-shadow:
+    -120px -80px 0 rgba(248, 244, 232, 0.72),
+    -120px -80px 22px rgba(248, 244, 232, 0.5),
+    0 0 24px rgba(248, 244, 232, 0.5);
+}
+
+.orbis-storyboard__caption {
+  position: absolute;
+  right: var(--rr-s-5);
+  bottom: var(--rr-s-5);
+  left: var(--rr-s-5);
+  max-width: 620px;
+  padding: var(--rr-s-4);
+  border-left: 2px solid var(--rr-accent);
+  background: linear-gradient(90deg, rgba(13, 43, 62, 0.78), transparent);
+}
+
+.orbis-storyboard__caption span {
+  color: var(--rr-accent);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-3xs);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+}
+
+.orbis-storyboard__caption p {
+  display: -webkit-box;
+  margin: var(--rr-s-2) 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  color: var(--rr-text-1);
+  font-family: var(--rr-font-display);
+  font-size: clamp(1.2rem, 2vw, 2rem);
+  line-height: var(--rr-lead-snug);
+}
+
+.orbis-proof-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--rr-s-4);
+  margin-top: var(--rr-s-5);
+}
+
+.orbis-proof-grid article {
+  padding: var(--rr-s-5);
+  border-radius: var(--rr-r-4);
+}
+
+.orbis-proof-grid span {
+  color: var(--rr-accent);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-2xs);
+}
+
+.orbis-proof-grid h2 {
+  margin: var(--rr-s-3) 0 var(--rr-s-2);
+  font-family: var(--rr-font-display);
+  font-size: var(--rr-text-xl);
+  line-height: var(--rr-lead-tight);
+}
+
+.orbis-proof-grid p {
+  margin: 0;
+  color: var(--rr-text-3);
+  font-size: var(--rr-text-xs);
+  line-height: var(--rr-lead-relaxed);
+}
+
+@media (max-width: 1100px) {
+  .orbis-stage-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .orbis-control-panel {
+    order: 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .orbis-live-page {
+    padding: var(--rr-s-4);
+  }
+
+  .orbis-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .orbis-status-card {
+    width: 100%;
+  }
+
+  .orbis-video-frame {
+    min-height: 420px;
+  }
+
+  .orbis-model-readout,
+  .orbis-proof-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .orbis-button-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .orbis-button--primary {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .orbis-model-readout,
+  .orbis-proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .orbis-video-overlay {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbis-button,
+  .orbis-step,
+  .orbis-storyboard,
+  .orbis-storyboard__cell {
+    transition: none;
+  }
+
+  .orbis-button:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .orbis-act,
+  .orbis-act strong,
+  .orbis-act p {
+    animation: none;
+  }
+}
+
+/* ─── World mirror canvas ─────────────────────────────────────────────── */
+
+.orbis-stage-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.orbis-video-frame .orbis-video {
+  position: relative;
+  z-index: 1;
+}
+
+.orbis-storyboard__caption {
+  z-index: 2;
+}
+
+/* ─── Cinematic act titles ────────────────────────────────────────────── */
+
+.orbis-act {
+  position: absolute;
+  top: var(--rr-s-5);
+  left: var(--rr-s-5);
+  z-index: 3;
+  max-width: 420px;
+  pointer-events: none;
+}
+
+.orbis-act span {
+  display: block;
+  color: var(--rr-accent);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-3xs);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+  animation: orbis-act-fade 0.6s ease both;
+}
+
+.orbis-act strong {
+  display: block;
+  margin: var(--rr-s-1) 0 0;
+  color: var(--rr-text-1);
+  font-family: var(--rr-font-display);
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+  line-height: var(--rr-lead-tight);
+  text-shadow: 0 2px 24px rgba(4, 14, 22, 0.8);
+  animation: orbis-act-fade 0.7s 0.12s ease both;
+}
+
+.orbis-act p {
+  margin: var(--rr-s-1) 0 0;
+  color: var(--rr-text-2);
+  font-size: var(--rr-text-xs);
+  font-style: italic;
+  animation: orbis-act-fade 0.7s 0.24s ease both;
+}
+
+@keyframes orbis-act-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Threat gauge ────────────────────────────────────────────────────── */
+
+.orbis-threat {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: var(--rr-s-2);
+  align-items: center;
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-3xs);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+}
+
+.orbis-threat__label {
+  color: var(--rr-text-3);
+}
+
+.orbis-threat__track {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1;
+  height: 6px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(248, 244, 232, 0.1);
+  overflow: hidden;
+}
+
+.orbis-threat__track::-webkit-progress-bar {
+  border-radius: 999px;
+  background: rgba(248, 244, 232, 0.1);
+}
+
+.orbis-threat__track::-webkit-progress-value {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4fae8b, #f2a541 55%, #e85d5d);
+  transition: width 0.5s ease;
+}
+
+.orbis-threat__track::-moz-progress-bar {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4fae8b, #f2a541 55%, #e85d5d);
+}
+
+.orbis-threat__value {
+  min-width: 2ch;
+  color: var(--rr-text-2);
+  text-align: right;
+}
+
+/* ─── Ambience + shortcut hints ───────────────────────────────────────── */
+
+.orbis-button.is-on {
+  border-color: rgba(242, 165, 65, 0.55);
+  color: var(--rr-accent);
+}
+
+.orbis-shortcut-hint {
+  margin: var(--rr-s-2) 0 0;
+  color: var(--rr-text-3);
+  font-size: var(--rr-text-3xs);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+}
+
+.orbis-shortcut-hint kbd {
+  padding: 1px 6px;
+  border: 1px solid rgba(248, 244, 232, 0.22);
+  border-radius: var(--rr-r-2);
+  background: rgba(248, 244, 232, 0.06);
+  font-family: var(--rr-font-mono);
+}

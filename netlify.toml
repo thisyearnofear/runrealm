@@ -20,6 +20,10 @@
 
 # Redirects are now handled by public/_redirects file
 
+[functions]
+  # Static export + serverless broker for the Orbis/Reactor scoped JWT.
+  directory = "netlify/functions"
+
 # Security & Performance Headers
 [[headers]]
   for = "/*"

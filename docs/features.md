@@ -1,5 +1,11 @@
 # RunRealm Features
 
+> **Canonical experience direction:** all new map, UI, motion, and generated-atmosphere
+> work follows [docs/design-improvement-plan.md](design-improvement-plan.md)
+> (**Sunprint Atlas**). This file is a feature-history reference, not a source of
+> current styling guidance.
+
+
 > **Zama Builder Track.** RunRealm's confidential territory-defense demo
 > (Zama FHEVM on Sepolia) is documented in
 > [docs/zama-builder-track.md](zama-builder-track.md) — deploy state, demo

@@ -31,6 +31,9 @@ const H3_CELLS_BORDER_LAYER_ID = 'h3-cells-border-layer';
 const CONTESTED_CELLS_SOURCE_ID = 'contested-cells-source';
 const CONTESTED_CELLS_LAYER_ID = 'contested-cells-layer';
 const CONTESTED_CELLS_BORDER_LAYER_ID = 'contested-cells-border-layer';
+// The vulnerable-cell pulse animates for 20s then stops — long enough
+// to register, short enough not to become a permanent 60 fps paint loop.
+const CONTESTED_PULSE_MAX_DURATION_MS = 20_000;
 // Owned-territory defense layer: one fill + border pair colored by the
 // territory's `defenseStatus` so the core loop (claim → decay → defend)
 // is visible at a glance on the map instead of buried in dashboard panels.
@@ -855,7 +858,19 @@ export class MapService extends BaseService {
     this.contestedPulseStartMs = performance.now();
     const tick = () => {
       if (!this.map || this.contestedPulseRafId === null) return;
-      const t = (performance.now() - this.contestedPulseStartMs) / 1000;
+
+      // Perf guard: the pulse is attention-grabbing, not informational
+      // (the owned-territory layer already shows red permanently), so
+      // it self-terminates instead of burning a 60 fps rAF loop with
+      // two setPaintProperty calls per frame for the rest of the
+      // session. Re-triggering `territory:vulnerable` restarts it.
+      const elapsedMs = performance.now() - this.contestedPulseStartMs;
+      if (elapsedMs >= CONTESTED_PULSE_MAX_DURATION_MS) {
+        this.stopContestedPulse();
+        return;
+      }
+
+      const t = elapsedMs / 1000;
       // Sinusoidal pulse: 0..1, period 1.4s
       const pulse = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * ((2 * Math.PI) / 1.4)));
       if (this.map.getLayer(CONTESTED_CELLS_LAYER_ID)) {

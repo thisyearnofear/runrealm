@@ -99,6 +99,8 @@ describe('service-composer', () => {
       'notificationService',
       'territoryWalkService',
       'crossChainAnchorService',
+      'worldState',
+      'orbisDirector',
     ];
     for (const key of expectedKeys) {
       expect((services as unknown as Record<string, unknown>)[key]).toBeDefined();
@@ -113,6 +115,8 @@ describe('service-composer', () => {
     expect(w.RunRealm?.services?.eventBus).toBe(services.eventBus);
     expect(w.RunRealm?.services?.config).toBe(services.config);
     expect(w.RunRealm?.services?.mapService).toBe(services.mapService);
+    expect(w.RunRealm?.services?.worldState).toBe(services.worldState);
+    expect(w.RunRealm?.services?.orbisDirector).toBe(services.orbisDirector);
   });
 
   it('registerGlobalServices is idempotent — second call preserves prior service refs', () => {

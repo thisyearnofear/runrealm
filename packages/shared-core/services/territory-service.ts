@@ -1,4 +1,3 @@
-import * as turf from '@turf/turf';
 import { GAME_RULES } from '../config/game-rules';
 import { BaseService } from '../core/base-service';
 import { calculateDistance } from '../utils/distance-formatter';
@@ -1044,7 +1043,15 @@ export class TerritoryService extends BaseService {
     from: { lat: number; lng: number },
     to: { lat: number; lng: number }
   ): string {
-    const bearing = turf.bearing(turf.point([from.lng, from.lat]), turf.point([to.lng, to.lat]));
+    // Inline bearing (perf pass): replaced `@turf/bearing` so the
+    // turf monolith stays out of the boot bundle.
+    const lat1 = (from.lat * Math.PI) / 180;
+    const lat2 = (to.lat * Math.PI) / 180;
+    const dLng = ((to.lng - from.lng) * Math.PI) / 180;
+
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    const bearing = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 
     const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
     const index = Math.round(bearing / 45) % 8;

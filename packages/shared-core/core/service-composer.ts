@@ -44,6 +44,7 @@ import { MapService } from '../services/map-service';
 import { NavigationService } from '../services/navigation-service';
 import { NotificationService } from '../services/notification-service';
 import { OnboardingService } from '../services/onboarding-service';
+import { OrbisDirector } from '../services/orbis-director';
 import { PreferenceService } from '../services/preference-service';
 import { ProgressionService } from '../services/progression-service';
 import { ReplayService } from '../services/replay-service';
@@ -53,6 +54,7 @@ import { TerritoryService } from '../services/territory-service';
 import { TerritoryWalkService } from '../services/territory-walk-service';
 import { UIService } from '../services/ui-service';
 import { Web3Service } from '../services/web3-service';
+import { WorldStateService } from '../services/world-state-service';
 import {
   MainUI as MainUIInterface,
   TerritoryDashboard as TerritoryDashboardInterface,
@@ -97,6 +99,8 @@ export interface Services {
   notificationService: NotificationService;
   territoryWalkService: TerritoryWalkService;
   crossChainAnchorService: CrossChainAnchorService;
+  worldState: WorldStateService;
+  orbisDirector: OrbisDirector;
 }
 
 export interface TokenDependentServices {
@@ -141,6 +145,8 @@ export function createServices(): Services {
   const notificationService = NotificationService.getInstance();
   const territoryWalkService = TerritoryWalkService.getInstance();
   const crossChainAnchorService = CrossChainAnchorService.getInstance();
+  const worldState = WorldStateService.getInstance();
+  const orbisDirector = OrbisDirector.getInstance();
 
   return {
     config,
@@ -178,6 +184,8 @@ export function createServices(): Services {
     notificationService,
     territoryWalkService,
     crossChainAnchorService,
+    worldState,
+    orbisDirector,
   };
 }
 
@@ -237,5 +245,7 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     notificationService: services.notificationService,
     territoryWalkService: services.territoryWalkService,
     crossChainAnchorService: services.crossChainAnchorService,
+    worldState: services.worldState,
+    orbisDirector: services.orbisDirector,
   };
 }

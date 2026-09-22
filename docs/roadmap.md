@@ -1,9 +1,11 @@
-# RunRealm Roadmap — Consolidation & Zama fhEVM Integration
+# RunRealm Roadmap — Sunprint Atlas, Zama fhEVM & GameFi
 
-This roadmap captures the active engineering program: a strict consolidation pass
-that pays back the technical debt currently in the codebase, followed by a
-parallel Zama fhEVM (Fully Homomorphic Encryption) layer that adds confidential
-territory defense on top of the existing ZetaChain GameFi surface.
+This roadmap captures the active engineering program: strict consolidation,
+the confidential Zama layer, and the **Sunprint Atlas** experience direction.
+Sunprint Atlas is now the canonical visual/interaction system: runs expose the
+world, routes trace it, claims develop territory, and Orbis supplies reactive
+atmosphere. The design contract lives in
+[docs/design-improvement-plan.md](design-improvement-plan.md).
 
 The two tracks are **independent and additive** — Zama does not replace ZetaChain;
 it adds a privacy-preserving layer for activity-point state without disturbing
@@ -22,6 +24,10 @@ the deployed public chain.
 | 9 | Gameplay fun-factor | 🟡 Planned | Encrypted bounty contests; cipher ghost race; anti-grind boost rate-limit (one per territory per day); shield-metaphor UI. |
 | 10 | Core loop repair | ✅ Complete (Aug 2026) | Six game-logic bugs fixed: `run:completed` auto-claim wiring; `Territory.lastActivity` drives deactivation (actively defended territories never expire); direct `claimTimeBasedRewards(uint256)`; mint TOCTOU collapsed into gas estimation; `RealmToken` difficulty bonus aligned with `GameLogic`. Requires next deploy cycle. |
 | 11 | Player experience loop | ✅ Complete (Aug 2026) | Defense-status map layer (color-coded owned territories + vulnerable pulse); one-tap claim reveal animation; `NotificationService` + service-worker push for decay/race/walk events; shareable ghost race result cards; GPS-verified Territory Walk (+150 pts/day). |
+| 12 | Sunprint Atlas foundation | 🟡 Active | Canonical design contract; shared world-state types; `WorldStateService`; `OrbisDirector`; public `ENABLE_ORBIS` flag; renderer-independent prompt grammar. |
+| 13 | Orbis challenge slice | ✅ Complete (Sep 2026) | `/orbis-live` wallet-free route: demo adapter → `WorldStateService` → `OrbisDirector` → Visko Orbis Dynamic live video with procedural world-mirror storyboard fallback; server-side scoped-JWT broker (Express + Netlify); cinematic act titles, threat-reactive ambience, keyboard conductor. |
+| 14 | Realm Atlas renderer | 🟡 Planned | Upgrade MapLibre; custom cyanotype style; deck.gl overlaid H3/route/ghost layers behind feature flags; existing MapLibre layers remain fallback. |
+| 15 | Cross-platform convergence | 🟡 Planned | Expo/React Native upgrade, MapLibre React Native, shared `WorldSnapshot` and Sunprint semantics across web and mobile. |
 
 ## Why this order
 

@@ -1,40 +1,53 @@
-/* RunRealm Design Tokens
- * Tactical sports-utilitarian aesthetic. Avoids crypto-cliché.
- * Use these for new components. Legacy --color-* / --space-* tokens
- * in core-system.css remain for back-compat with the 4604-line
- * existing CSS surface.
+/* RunRealm Design Tokens — Sunprint Atlas
+ * Canonical identity: cyanotype cartography, chalk light traces, amber
+ * exposure, verdigris developed territory, and coral overexposure.
+ * Use these for all new components. Legacy --color-* / --space-* tokens
+ * in core-system.css remain only for backward compatibility.
  */
 
 :root {
+  /* Sunprint Atlas primitives — mirror utils/sunprint-atlas.ts */
+  --rr-sunprint-blueprint: #0d2b3e;
+  --rr-sunprint-raised: #173d52;
+  --rr-sunprint-bone: #f3ead8;
+  --rr-sunprint-chalk: #f8f4e8;
+  --rr-sunprint-amber: #f2a541;
+  --rr-sunprint-amber-hover: #ffbd63;
+  --rr-sunprint-verdigris: #4fae8b;
+  --rr-sunprint-coral: #e85d5d;
+  --rr-sunprint-cyan: #63b3c8;
+  --rr-sunprint-ink: #102633;
+  --rr-sunprint-muted: #9fb8bf;
+
   /* Color — surfaces */
-  --rr-bg-0: #0b0d10; /* app background */
-  --rr-bg-1: #13171c; /* panel */
-  --rr-bg-2: #1b2128; /* raised */
-  --rr-bg-3: #252c36; /* hover */
-  --rr-border: #2a323d;
-  --rr-border-strong: #3a4554;
+  --rr-bg-0: var(--rr-sunprint-blueprint);
+  --rr-bg-1: var(--rr-sunprint-raised);
+  --rr-bg-2: #1d485f;
+  --rr-bg-3: #285a72;
+  --rr-border: #3d6b7e;
+  --rr-border-strong: #5b8798;
 
   /* Color — text */
-  --rr-text-1: #eceff4; /* primary */
-  --rr-text-2: #a3acba; /* secondary */
-  --rr-text-3: #6b7480; /* muted */
-  --rr-text-4: #4a525e; /* disabled */
+  --rr-text-1: var(--rr-sunprint-bone);
+  --rr-text-2: #b9cbd0;
+  --rr-text-3: var(--rr-sunprint-muted);
+  --rr-text-4: #607c86;
 
   /* Color — accents */
-  --rr-accent: #c8ff3d; /* electric lime — primary action */
-  --rr-accent-ink: #0b0d10; /* text on accent */
-  --rr-accent-hover: #b5e835;
-  --rr-signal: #ff5c4a; /* error / disconnect */
-  --rr-signal-ink: #ffffff;
-  --rr-info: #5bb8ff; /* informational */
-  --rr-warn: #ffb347; /* warning */
-  --rr-success: #4ade80; /* success */
+  --rr-accent: var(--rr-sunprint-amber);
+  --rr-accent-ink: var(--rr-sunprint-ink);
+  --rr-accent-hover: var(--rr-sunprint-amber-hover);
+  --rr-signal: var(--rr-sunprint-coral);
+  --rr-signal-ink: var(--rr-sunprint-chalk);
+  --rr-info: var(--rr-sunprint-cyan);
+  --rr-warn: var(--rr-sunprint-amber);
+  --rr-success: var(--rr-sunprint-verdigris);
 
-  /* Color — territory status (matches map H3 cell states) */
-  --rr-terr-owned: #4ade80;
-  --rr-terr-contested: #ffb347;
-  --rr-terr-claimable: #5bb8ff;
-  --rr-terr-locked: #4a525e;
+  /* Color — territory status (matches Sunprint H3 semantics) */
+  --rr-terr-owned: var(--rr-sunprint-verdigris);
+  --rr-terr-contested: var(--rr-sunprint-coral);
+  --rr-terr-claimable: var(--rr-sunprint-amber);
+  --rr-terr-locked: #607c86;
 
   /* Type — families */
   --rr-font-display: "Fraunces", "Iowan Old Style", "Apple Garamond", Georgia, serif;

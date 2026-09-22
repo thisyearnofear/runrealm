@@ -1,5 +1,11 @@
 # RunRealm Implementation Guides
 
+> **Canonical experience direction:** all new map, UI, motion, and generated-atmosphere
+> work follows [docs/design-improvement-plan.md](design-improvement-plan.md)
+> (**Sunprint Atlas**). Treat the historical implementation notes below as context;
+> do not copy obsolete styling or map-provider assumptions from them.
+
+
 ## User Dashboard Implementation Summary
 
 ### Overview

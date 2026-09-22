@@ -30,6 +30,7 @@ export * from './services/map-service';
 // Note: contract-service and cross-chain-service are in shared-blockchain package
 export * from './services/navigation-service';
 export * from './services/onboarding-service';
+export * from './services/orbis-director';
 export * from './services/preference-service';
 export * from './services/progression-service';
 export * from './services/route-state-service';
@@ -40,7 +41,11 @@ export * from './services/ui-service';
 export * from './services/user-context-service';
 export * from './services/user-dashboard-service';
 export * from './services/web3-service';
+export * from './services/world-state-service';
 // Note: status-indicator, transaction-status, visibility-service, widget-state-service removed (legacy/unused)
 
 // Export types
 export * from './types/ui-interfaces';
+export * from './types/world-state';
+export * from './utils/orbis-demo';
+export * from './utils/sunprint-atlas';

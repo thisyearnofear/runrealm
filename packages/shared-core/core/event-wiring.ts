@@ -69,26 +69,46 @@ export function wireEvents(opts: EventWiringOptions): void {
     }
   });
 
+  // Perf pass: GPS fixes arrive ~1 Hz while tracking. The previous
+  // handler ran a fresh 2s `flyTo` camera animation AND fired a
+  // "Location updated" toast on EVERY fix — constant renderer work and
+  // notification spam. Now: camera follows only during an active run
+  // (jump-cut via easeTo, throttled), and a one-time recenter on first
+  // fix. No toasts — the map marker already shows position.
+  let lastMapFollowMs = 0;
+  let didInitialRecenter = false;
   services.eventBus.on('location:changed', (locationInfo) => {
     if (!locationInfo) return;
     const map = getMap();
     if (!map) return;
     try {
-      map.flyTo({
-        center: [locationInfo.lng, locationInfo.lat],
-        zoom: 14,
-        duration: 2000,
-        essential: true,
-      });
-
       const currentRun = services.runTracking.getCurrentRun();
       const isDuringActiveRun = currentRun && currentRun.status === 'recording';
-      if (!isDuringActiveRun) {
-        services.ui.showToast('Location updated', { type: 'success' });
+
+      const now = performance.now();
+      if (isDuringActiveRun) {
+        // Follow mode while recording: gentle re-center at most every
+        // 5s so the animation isn't restarted every second.
+        if (now - lastMapFollowMs >= 5000) {
+          lastMapFollowMs = now;
+          map.easeTo({
+            center: [locationInfo.lng, locationInfo.lat],
+            duration: 1200,
+            essential: true,
+          });
+        }
+      } else if (!didInitialRecenter) {
+        // One-time recenter when tracking starts outside a run.
+        didInitialRecenter = true;
+        map.easeTo({
+          center: [locationInfo.lng, locationInfo.lat],
+          zoom: 14,
+          duration: 1200,
+          essential: true,
+        });
       }
     } catch (err) {
-      console.error('Failed to recenter map:', err);
-      services.ui.showToast('Failed to update map location', { type: 'error' });
+      console.error('Failed to update map location:', err);
     }
   });
 
