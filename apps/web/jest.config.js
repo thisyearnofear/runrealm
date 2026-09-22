@@ -15,6 +15,10 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    // Workspace packages ship ESM dist output that Jest cannot parse;
+    // map to TypeScript sources so ts-jest transforms them instead.
+    '^@runrealm/shared-core/(.*)$': '<rootDir>/../../packages/shared-core/$1',
+    '^@runrealm/shared-blockchain/(.*)$': '<rootDir>/../../packages/shared-blockchain/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 };

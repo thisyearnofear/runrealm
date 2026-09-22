@@ -1,4 +1,12 @@
-import { createReactorTokenResolver, describeWorld, getReactorTokenEndpoints } from '../orbis-live';
+import {
+  createReactorTokenResolver,
+  describeWorld,
+  getIntroDone,
+  getReactorTokenEndpoints,
+  isStreamStalled,
+  markIntroDone,
+  subscribeIntroDone,
+} from '../orbis-live';
 
 // jsdom does not ship the fetch Response class; provide a minimal stub.
 class MinimalResponse {
@@ -146,5 +154,88 @@ describe('describeWorld', () => {
     const sentence = describeWorld({ ...base, runStatus: 'recording', threatLevel: 0.9 });
     expect(sentence).toContain('overexposure burning');
     expect(sentence).not.toContain('chunk');
+  });
+});
+
+describe('intro first-run store', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    jest.restoreAllMocks();
+  });
+
+  it('starts not-done and flips to done once marked, notifying subscribers', () => {
+    const listener = jest.fn();
+    expect(getIntroDone()).toBe(false);
+
+    const unsubscribe = subscribeIntroDone(listener);
+    markIntroDone();
+
+    expect(getIntroDone()).toBe(true);
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    markIntroDone();
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('wakes subscribers on cross-tab storage events until unsubscribed', () => {
+    const listener = jest.fn();
+    const unsubscribe = subscribeIntroDone(listener);
+
+    window.dispatchEvent(new Event('storage'));
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    window.dispatchEvent(new Event('storage'));
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the intro replayable when storage writes are rejected', () => {
+    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    const listener = jest.fn();
+    const unsubscribe = subscribeIntroDone(listener);
+
+    expect(() => markIntroDone()).not.toThrow();
+    expect(getIntroDone()).toBe(false);
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('reports not-done when storage reads are rejected', () => {
+    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError');
+    });
+    expect(getIntroDone()).toBe(false);
+  });
+});
+
+describe('isStreamStalled', () => {
+  const base = {
+    mode: 'live' as const,
+    sessionStatus: 'ready',
+    lastActivityAt: 10_000,
+    now: 22_000,
+  };
+
+  it('does not flag silence exactly at the threshold', () => {
+    expect(isStreamStalled(base)).toBe(false);
+  });
+
+  it('flags silence one millisecond past the threshold', () => {
+    expect(isStreamStalled({ ...base, now: 22_001 })).toBe(true);
+  });
+
+  it('never flags before the session has produced activity', () => {
+    expect(isStreamStalled({ ...base, lastActivityAt: 0, now: 999_999 })).toBe(false);
+  });
+
+  it('never flags offline sessions', () => {
+    expect(isStreamStalled({ ...base, mode: 'offline', now: 999_999 })).toBe(false);
+  });
+
+  it('never flags sessions that are not ready', () => {
+    expect(isStreamStalled({ ...base, sessionStatus: 'connecting', now: 999_999 })).toBe(false);
   });
 });

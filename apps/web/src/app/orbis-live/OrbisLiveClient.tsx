@@ -22,7 +22,15 @@ import {
 import { createInitialWorldSnapshot } from '@runrealm/shared-core/utils/sunprint-atlas';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createEnvGlobal } from '../../lib/env';
-import { createReactorTokenResolver, describeWorld, formatWorldLabel } from '../../lib/orbis-live';
+import {
+  createReactorTokenResolver,
+  describeWorld,
+  formatWorldLabel,
+  getIntroDone,
+  isStreamStalled,
+  markIntroDone as markIntroDoneStore,
+  subscribeIntroDone,
+} from '../../lib/orbis-live';
 import { OrbisStageCanvas } from './OrbisStageCanvas';
 
 type DemoMode = 'live' | 'offline';
@@ -74,41 +82,6 @@ const ORBIS_ACTS: Record<OrbisDemoStepId, { act: string; title: string; line: st
     line: 'The realm remembers what the run revealed.',
   },
 };
-
-const INTRO_STORAGE_KEY = 'orbis-live:intro-done';
-
-// Tiny external store so the first-run flag hydrates via useSyncExternalStore
-// (server snapshot: not done) instead of setState-in-effect.
-const introListeners = new Set<() => void>();
-
-function getIntroDone(): boolean {
-  try {
-    return window.localStorage.getItem(INTRO_STORAGE_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function subscribeIntroDone(listener: () => void): () => void {
-  introListeners.add(listener);
-  const onStorage = () => listener();
-  window.addEventListener('storage', onStorage);
-  return () => {
-    introListeners.delete(listener);
-    window.removeEventListener('storage', onStorage);
-  };
-}
-
-function markIntroDoneStore(): void {
-  try {
-    window.localStorage.setItem(INTRO_STORAGE_KEY, '1');
-  } catch {
-    // Private browsing — the intro simply replays next visit.
-  }
-  introListeners.forEach((listener) => {
-    listener();
-  });
-}
 
 function timelineEntry(intent: OrbisPromptIntent, status: TimelineStatus): TimelineEntry {
   return { id: `${intent.reason}-${intent.createdAt}`, status, intent };
@@ -468,11 +441,12 @@ function OrbisLiveExperience() {
     return () => window.clearInterval(interval);
   }, [mode, reactor.status]);
 
-  const streamStalled =
-    mode === 'live' &&
-    reactor.status === 'ready' &&
-    lastActivityAt > 0 &&
-    now - lastActivityAt > 12_000;
+  const streamStalled = isStreamStalled({
+    mode,
+    sessionStatus: reactor.status,
+    lastActivityAt,
+    now,
+  });
 
   const hasRunStarted =
     worldSnapshot.runStatus !== 'idle' && worldSnapshot.runStatus !== 'cancelled';

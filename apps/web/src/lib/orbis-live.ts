@@ -175,3 +175,71 @@ export function describeWorld(
   const sentence = parts.join(' · ');
   return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
+
+// ── First-run intro flag ─────────────────────────────────────────────────────
+
+export const INTRO_STORAGE_KEY = 'orbis-live:intro-done';
+
+// Tiny external store so the first-run flag hydrates via useSyncExternalStore
+// (server snapshot: not done) instead of setState-in-effect.
+const introListeners = new Set<() => void>();
+
+export function getIntroDone(): boolean {
+  try {
+    return window.localStorage.getItem(INTRO_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function subscribeIntroDone(listener: () => void): () => void {
+  introListeners.add(listener);
+  const onStorage = () => listener();
+  window.addEventListener('storage', onStorage);
+  return () => {
+    introListeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
+  };
+}
+
+export function markIntroDone(): void {
+  try {
+    window.localStorage.setItem(INTRO_STORAGE_KEY, '1');
+  } catch {
+    // Private browsing — the intro simply replays next visit.
+  }
+  introListeners.forEach((listener) => {
+    listener();
+  });
+}
+
+// ── Stalled-stream watchdog ──────────────────────────────────────────────────
+
+/** A ready live session that has been silent for longer than this is stalled. */
+export const STALL_THRESHOLD_MS = 12_000;
+
+export interface StreamWatchdogInput {
+  mode: 'live' | 'offline';
+  sessionStatus: string;
+  /** Epoch ms of the last chunk/run activity, or 0 before any activity. */
+  lastActivityAt: number;
+  now: number;
+}
+
+/**
+ * Pure stall predicate behind the recovery chip: only a live, ready session
+ * that has actually started producing activity can be considered stalled.
+ */
+export function isStreamStalled({
+  mode,
+  sessionStatus,
+  lastActivityAt,
+  now,
+}: StreamWatchdogInput): boolean {
+  return (
+    mode === 'live' &&
+    sessionStatus === 'ready' &&
+    lastActivityAt > 0 &&
+    now - lastActivityAt > STALL_THRESHOLD_MS
+  );
+}
