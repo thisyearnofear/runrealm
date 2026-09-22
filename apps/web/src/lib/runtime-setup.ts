@@ -62,9 +62,8 @@ function installScriptErrorHandler(): void {
   window.addEventListener(
     'error',
     (event) => {
-      // biome-ignore lint/suspicious/noExplicitAny: ErrorEvent target is EventTarget, not Element; narrow to HTMLScriptElement on next line
-      if (event.target && (event.target as any).tagName === 'SCRIPT') {
-        const script = event.target as HTMLScriptElement;
+      if (event.target instanceof HTMLScriptElement) {
+        const script = event.target;
         if (script.src?.includes('.js')) {
           console.warn('Script failed to load:', script.src);
           if (script.src.includes('/app.') && process.env.NODE_ENV === 'production') {

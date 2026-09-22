@@ -2,10 +2,49 @@
 import type { ConfidentialContractService } from '@runrealm/shared-blockchain/services/confidential-contract-service';
 import { RunRealmApp } from '@runrealm/shared-core/core/run-realm-app';
 import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
+import type { Root } from 'react-dom/client';
 import { MainUI } from '../shell/components/main-ui';
 import UserDashboard from '../shell/components/user-dashboard';
-import { WalletWidget } from '../shell/components/wallet-widget';
+import { type WalletProvider, WalletWidget } from '../shell/components/wallet-widget';
+import type { UseWalletOptions } from '../shell/wallet/useWallet';
 import { installRuntimeGuards } from './runtime-setup';
+
+/**
+ * Runtime shape of the legacy `window.RunRealm` debug bag. The app instance
+ * is assigned to it during dev bootstrapping, and `RunRealmApp.exposeGlobals()`
+ * patches `mainUI` onto it at runtime — every member is therefore optional.
+ */
+type RunRealmDebugGlobal = {
+  services?: {
+    web3?: {
+      isConnected: () => boolean;
+      getCurrentWallet: () => { address: string; chainId: number };
+    };
+    crossChain?: {
+      getChainName: (chainId: number) => string;
+      demonstrateZetaChainAPI: () => void;
+    };
+    eventBus?: { emit: (event: string, payload: unknown) => void };
+  };
+  mainUI?: {
+    walletWidget?: { showWalletModal: () => void };
+  };
+};
+
+declare global {
+  interface Window {
+    /** Dev-only React root for the legacy wallet modal bridge. */
+    reactWalletRoot?: Root;
+    /** Dev-only app handle; also read by legacy widgets on unload. */
+    runRealmApp?: RunRealmApp;
+    /** Legacy debug bag (see RunRealmDebugGlobal). */
+    RunRealm?: RunRealmDebugGlobal;
+    /** Dev console helper (development only). */
+    debugWidgets?: () => unknown;
+    /** Buildathon demo helper (development only). */
+    demoCrossChainFunctionality?: () => Promise<void>;
+  }
+}
 
 // Browser-only runtime setup (env bridge, service worker, error handlers).
 // Guarded so the module stays safe to import during Next.js static generation.
@@ -143,10 +182,10 @@ export async function initializeApp(): Promise<void> {
     const { WalletRoot } = await import('../shell/wallet/WalletRoot');
     const { useWallet } = await import('../shell/wallet/useWallet');
     const eventBus = app.getEventBus();
-    const walletForReact = {
+    const walletForReact: UseWalletOptions = {
       eventBus,
       listProviders: () =>
-        walletWidget.getWalletProviders().map((p: any) => ({
+        walletWidget.getWalletProviders().map((p: WalletProvider) => ({
           id: p.id,
           name: p.name,
           installed: p.isInstalled(),
@@ -170,12 +209,11 @@ export async function initializeApp(): Promise<void> {
     reactRoot.render(
       createElement(() => {
         // Re-render hook by reading snapshot on each tick.
-        const wallet = useWallet(walletForReact as any);
-        return createElement(WalletRoot, { wallet: wallet as any, eventBus });
+        const wallet = useWallet(walletForReact);
+        return createElement(WalletRoot, { wallet, eventBus });
       })
     );
-    // biome-ignore lint/suspicious/noExplicitAny: dev-only debug export
-    (window as any).reactWalletRoot = reactRoot;
+    window.reactWalletRoot = reactRoot;
 
     // Remove loading indicator from template
     const loadingDiv = document.getElementById('loading');
@@ -185,16 +223,18 @@ export async function initializeApp(): Promise<void> {
 
     // Expose app instance globally for debugging (development only)
     if (process.env.NODE_ENV === 'development') {
-      // biome-ignore lint/suspicious/noExplicitAny: dev-only debug export; typed access via (window as any).runRealmApp
-      (window as any).runRealmApp = app;
-      // biome-ignore lint/suspicious/noExplicitAny: dev-only debug export
-      (window as any).RunRealm = app; // Also expose as RunRealm for consistency
+      window.runRealmApp = app;
+      // The app instance doubles as the legacy debug bag; exposeGlobals()
+      // patches mainUI onto it at runtime, so the cast reflects that shape.
+      window.RunRealm = app as unknown as RunRealmDebugGlobal;
 
       // Expose widget system debug utilities
-      // biome-ignore lint/suspicious/noExplicitAny: dev-only debug export
-      (window as any).debugWidgets = () => {
-        // biome-ignore lint/suspicious/noExplicitAny: dev-only debug export, accessing untyped mainUI
-        const mainUI = (app as any).mainUI;
+      window.debugWidgets = () => {
+        const mainUI = (
+          app as unknown as {
+            mainUI?: { widgetSystem?: { getDebugInfo: () => unknown } };
+          }
+        ).mainUI;
         if (mainUI?.widgetSystem) {
           console.log('Widget System Debug Info:', mainUI.widgetSystem.getDebugInfo());
           return mainUI.widgetSystem.getDebugInfo();
@@ -212,8 +252,7 @@ export async function initializeApp(): Promise<void> {
       }
 
       // Add cross-chain demo function for Google Buildathon judges
-      // biome-ignore lint/suspicious/noExplicitAny: dev-only debug export
-      (window as any).demoCrossChainFunctionality = async () => {
+      window.demoCrossChainFunctionality = async () => {
         console.log(
           '%c\n🌟 RunRealm Cross-Chain Demo Ready!',
           'color: #00ff88; font-size: 16px; font-weight: bold;'
@@ -224,8 +263,7 @@ export async function initializeApp(): Promise<void> {
         );
 
         // Get services
-        // biome-ignore lint/suspicious/noExplicitAny: dev-only debug access via global
-        const services = (window as any).RunRealm?.services;
+        const services = window.RunRealm?.services;
         if (!services) {
           console.error('❌ Services not available');
           return;
@@ -243,8 +281,7 @@ export async function initializeApp(): Promise<void> {
           if (!web3.isConnected()) {
             console.log('🟡 Please connect your wallet to demo cross-chain functionality');
             // Show wallet connection UI
-            // biome-ignore lint/suspicious/noExplicitAny: dev-only debug access via global
-            const walletWidget = (window as any).RunRealm?.mainUI?.walletWidget;
+            const walletWidget = window.RunRealm?.mainUI?.walletWidget;
             if (walletWidget) {
               walletWidget.showWalletModal();
             }
@@ -287,8 +324,7 @@ export async function initializeApp(): Promise<void> {
           console.log('🗺️ Territory data:', mockTerritory);
 
           // 5. Emit cross-chain claim event
-          // biome-ignore lint/suspicious/noExplicitAny: dev-only debug access via global
-          const eventBus = (window as any).RunRealm?.services?.eventBus;
+          const eventBus = window.RunRealm?.services?.eventBus;
           if (eventBus) {
             console.log('📤 Sending cross-chain territory claim request...');
             eventBus.emit('crosschain:territoryClaimRequested', {
@@ -425,8 +461,7 @@ export async function initializeApp(): Promise<void> {
 
 // Handle cleanup on page unload
 window.addEventListener('beforeunload', () => {
-  // biome-ignore lint/suspicious/noExplicitAny: dev-only debug access via global
-  const app = (window as any).runRealmApp;
+  const app = window.runRealmApp;
   if (app && typeof app.cleanup === 'function') {
     app.cleanup();
   }
