@@ -932,3 +932,43 @@ body.orbis-live-route #maplibre-container {
     animation: none;
   }
 }
+
+.orbis-fold {
+  padding: var(--rr-s-4) var(--rr-s-5);
+  border-bottom: 1px solid rgba(248, 244, 232, 0.12);
+}
+
+.orbis-fold:last-child {
+  border-bottom: 0;
+}
+
+.orbis-fold > summary {
+  color: var(--rr-text-3);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-3xs);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.orbis-fold > summary::before {
+  content: "▸ ";
+}
+
+.orbis-fold[open] > summary::before {
+  content: "▾ ";
+}
+
+.orbis-fold .orbis-button-grid,
+.orbis-fold .orbis-step-list,
+.orbis-fold .orbis-timeline,
+.orbis-fold .orbis-empty {
+  margin-top: var(--rr-s-3);
+}
+
+.orbis-saved {
+  margin: var(--rr-s-3) 0 0;
+  color: var(--rr-text-2);
+  font-size: var(--rr-text-xs);
+}

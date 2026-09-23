@@ -185,6 +185,7 @@ export const INTRO_STORAGE_KEY = 'orbis-live:intro-done';
 const introListeners = new Set<() => void>();
 
 export function getIntroDone(): boolean {
+  if (typeof window === 'undefined') return false;
   try {
     return window.localStorage.getItem(INTRO_STORAGE_KEY) === '1';
   } catch {
@@ -194,6 +195,11 @@ export function getIntroDone(): boolean {
 
 export function subscribeIntroDone(listener: () => void): () => void {
   introListeners.add(listener);
+  if (typeof window === 'undefined') {
+    return () => {
+      introListeners.delete(listener);
+    };
+  }
   const onStorage = () => listener();
   window.addEventListener('storage', onStorage);
   return () => {
@@ -203,10 +209,12 @@ export function subscribeIntroDone(listener: () => void): () => void {
 }
 
 export function markIntroDone(): void {
-  try {
-    window.localStorage.setItem(INTRO_STORAGE_KEY, '1');
-  } catch {
-    // Private browsing — the intro simply replays next visit.
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(INTRO_STORAGE_KEY, '1');
+    } catch {
+      // Private browsing — the intro simply replays next visit.
+    }
   }
   introListeners.forEach((listener) => {
     listener();

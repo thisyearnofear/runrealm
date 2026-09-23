@@ -13,6 +13,7 @@
  */
 
 import '@testing-library/jest-dom';
+import { TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { createElement, Fragment, type ReactNode } from 'react';
 import { INTRO_STORAGE_KEY } from '../../../lib/orbis-live';
@@ -119,6 +120,33 @@ describe('first-run intro gate', () => {
     expect(screen.getByRole('complementary', CONSOLE_REGION)).toBeInTheDocument();
     expect(screen.queryByRole('region', INTRO_REGION)).not.toBeInTheDocument();
     expect(window.localStorage.getItem(INTRO_STORAGE_KEY)).toBe('1');
+  });
+});
+
+describe('territory persistence', () => {
+  it('persists the Fix step outcome and shows the settled-territory proof', async () => {
+    // TerritoryService is a process-wide singleton whose map survives
+    // localStorage.clear(); reset it so this test starts from an empty store
+    // (e.g. the autoplay test above already persisted the same demo id).
+    (TerritoryService as unknown as { instance?: unknown }).instance = undefined;
+    // Returning visitor so the first-run autoplay cannot switch the mode.
+    window.localStorage.setItem(INTRO_STORAGE_KEY, '1');
+    mockReactor = makeMockReactor('ready');
+    render(<OrbisLiveClient />);
+
+    // Flush the async world + territory store initialization.
+    await act(async () => {});
+
+    // Step 1 opens the run (storyboard path emits synchronously), which
+    // enables the gated Fix step.
+    fireEvent.click(screen.getByRole('button', { name: 'Play storyboard' }));
+    fireEvent.click(screen.getByRole('button', { name: /Fix territory/ }));
+
+    expect(screen.getByText(/Settled in territory/)).toBeInTheDocument();
+    const stored = JSON.parse(
+      window.localStorage.getItem('runrealm_claimed_territories') ?? '[]'
+    ) as Array<{ id: string }>;
+    expect(stored.some((territory) => territory.id === 'orbis-demo-territory')).toBe(true);
   });
 });
 

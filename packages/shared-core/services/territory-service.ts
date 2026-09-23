@@ -1066,6 +1066,27 @@ export class TerritoryService extends BaseService {
   }
 
   /**
+   * Persist a wallet-free external claim (e.g. the Orbis demo slice for
+   * judges) without touching the chain. Idempotent by `territory.id`.
+   *
+   * Deliberately does NOT re-emit `territory:claimed` — callers persist the
+   * territory from that event's own payload, so emitting again would loop
+   * through world/notification subscribers.
+   */
+  public recordExternalClaim(territory: Territory): { stored: boolean; territory: Territory } {
+    const existing = this.claimedTerritories.get(territory.id);
+    if (existing) return { stored: false, territory: existing };
+    this.seedDefenseState(territory);
+    this.claimedTerritories.set(territory.id, territory);
+    try {
+      this.saveTerritoriesToStorage();
+    } catch {
+      // Storage (private browsing) failing must not break the demo loop.
+    }
+    return { stored: true, territory };
+  }
+
+  /**
    * Get nearby territories
    */
   public getNearbyTerritories(): NearbyTerritory[] {
