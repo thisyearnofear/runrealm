@@ -35,7 +35,7 @@ library GameLogic {
     uint256 private constant LEVEL_DISTANCE_THRESHOLD = 10000; // 10km per level  ≡ RealmRules.LEVEL_DISTANCE_THRESHOLD_METERS
     uint256 private constant MIN_TERRITORY_DISTANCE = 100; // 100m minimum      ≡ RealmRules.MIN_TERRITORY_DISTANCE_METERS
     uint256 private constant MAX_TERRITORY_DISTANCE = 50000; // 50km maximum    ≡ RealmRules.MAX_TERRITORY_DISTANCE_METERS
-    uint256 private constant TERRITORY_TIMEOUT = 30 days; // Territory inactivity timeout
+    uint256 private constant TERRITORY_TIMEOUT = 40 days; // MIRROR of RealmRules.ACTIVITY_TIMEOUT_MS (40 days = (500-100)/10). Source in lockstep; takes effect on next deploy cycle.
 
     // Custom errors
     error InvalidGeohash();

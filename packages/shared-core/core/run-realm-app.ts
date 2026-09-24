@@ -262,6 +262,13 @@ export class RunRealmApp {
     return this.services.eventBus;
   }
 
+  /** Direct service access for platform bootstrap code.
+   *  Prefer this over `window.RunRealm.services` — the window registry
+   *  remains only for legacy vanilla widgets and debug tooling. */
+  getServices(): Services {
+    return this.services;
+  }
+
   getOnboardingService() {
     return this.services.onboarding;
   }

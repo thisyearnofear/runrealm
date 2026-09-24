@@ -1,11 +1,11 @@
 {
   "name": "RunRealm",
   "short_name": "RunRealm",
-  "description": "Fitness GameFi app that turns running into territory conquest",
+  "description": "Run. Claim. Defend. Turn your runs into living territory.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#00ff00",
+  "background_color": "#0d2b3e",
+  "theme_color": "#0d2b3e",
   "orientation": "portrait-primary",
   "icons": [
     {

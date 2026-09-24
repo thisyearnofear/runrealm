@@ -86,7 +86,7 @@ export async function initializeApp(): Promise<void> {
     // registers inside `onInitialize`. This call is idempotent
     // (BaseService guards against double-init) so it's safe to
     // call before or after the wallet connects.
-    const confidentialContractService = window.RunRealm?.services?.ConfidentialContractService;
+    const confidentialContractService = app.getServices().confidentialContractService;
     if (confidentialContractService) {
       await confidentialContractService.initialize();
     }

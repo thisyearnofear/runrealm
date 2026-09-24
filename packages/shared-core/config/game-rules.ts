@@ -13,7 +13,7 @@
  * only path that keeps both worlds in lockstep. Editing either `.sol`
  * file by hand will silently drift.
  */
-export const GAME_RULES_VERSION = '1.0.0';
+export const GAME_RULES_VERSION = '1.1.0';
 
 export const GAME_RULES = {
   version: GAME_RULES_VERSION,
@@ -45,10 +45,15 @@ export const GAME_RULES = {
       moderateMin: 300,
       vulnerableMin: 100,
     },
-    /** 30 days of inactivity before a territory becomes claimable.
+    /** Days of inactivity before a territory becomes claimable.
+     *  Derived: (initialPoints 500 - claimable threshold 100) / decayPerDay 10
+     *  = 40 days. From max 1000 points: (1000-100)/10 = 90 days protection.
      *  Stored as milliseconds so the JS side can compare against
-     *  Date.now(); the Zama sibling reads it in days. */
-    timeoutMs: 30 * 24 * 60 * 60 * 1000,
+     *  Date.now(); the Zama sibling reads it in days. Mirrored in
+     *  GameLogic.TERRITORY_TIMEOUT (40 days) — takes effect on next
+     *  deploy cycle (frozen bytecode until then). */
+    timeoutMs: 40 * 24 * 60 * 60 * 1000,
+    timeoutDays: 40,
   },
 
   // ---------------------------------------------------------------------
@@ -61,14 +66,14 @@ export const GAME_RULES = {
     dailyCapE18: '1000 * 10**18',
     baseRewardPerMeterE15: '1 * 10**15',
     difficultyBonusMaxE18: '2 * 10**18',
-    /** On-chain staking reward rate (matches the existing
-     *  `RealmToken.STAKE_REWARD_RATE = 10 %`).
-     *  Matplotlib of decimal-percent: `10` means 10% APY. */
+    /** On-chain staking reward rate (matches
+     *  `RealmToken.STAKE_REWARD_RATE = 10%`).
+     *  Decimal-percent: `10` means 10% APY. UI must show this value —
+     *  never a separate marketing number. */
     stakingApyPercent: 10,
-    /** Marketing-floor APY shown in the wallet widget. Two values
-     *  intentionally: the on-chain base is 10% but UI says "12.5%" to
-     *  match pre-Phase 2 copy. Single number makes audits easier. */
-    stakingUiApyPercent: 12.5,
+    /** @deprecated UI must use stakingApyPercent. Kept only so old
+     *  bundles don't crash on import; equals base rate. */
+    stakingUiApyPercent: 10,
     stakingMinPeriodDays: 7,
     /** Dividers used by reward-system-ui.ts::showStakingModal preview
      *  math. Centralised so the daily-vs-monthly APY line is one
@@ -101,6 +106,74 @@ export const GAME_RULES = {
   // ---------------------------------------------------------------------
   h3: {
     resolution: 9,
+  },
+
+  // ---------------------------------------------------------------------
+  // Ghost runners — off-chain only (no Solidity sibling). Costs and caps
+  // live here so web, mobile, and tests share one tuning table.
+  // Difficulty is 0-100 scale (matches AIService.calculatePaceFromDifficulty).
+  // Cap 85: a ghost never spawns above 85 difficulty — no 90-95% best-pace
+  // snowball. Level bonus capped at +120 score (2 levels worth) and pace
+  // improvement capped at 8% total (0.98^4).
+  // ---------------------------------------------------------------------
+  ghosts: {
+    maxDifficulty: 85,
+    baseDifficulty: {
+      sprinter: 80,
+      endurance: 82,
+      hill: 78,
+      allrounder: 65,
+    },
+    deployCostRealm: {
+      sprinter: 50,
+      endurance: 100,
+      hill: 75,
+      allrounder: 25,
+    },
+    upgradeCostRealm: 200,
+    maxLevel: 5,
+    paceImprovementPerLevel: 0.02,
+    maxTotalPaceImprovement: 0.08,
+    maxLevelBonusScore: 120,
+    ghostScoreCap: 850,
+    cooldownHours: 24,
+    pointsPerGhostRun: 50,
+    /** Rubber-banding: trailing players get help, leaders get heat. */
+    rubberBand: {
+      lossesForHelp: 2,
+      helpPoints: 80,
+      winsForHeat: 3,
+      heatPoints: 50,
+    },
+  },
+
+  // ---------------------------------------------------------------------
+  // Economy sinks / anti-grind — off-chain mirrors of on-chain limits.
+  // REALM earned per run: floor(distance_m / 50) (~100 per 5K).
+  // Sinks: ghost deploy (25-100), ghost upgrade (200), boost burn (50).
+  // Rate limits: 1 boost + 1 walk per territory per day, 1 ghost deploy
+  // per ghost per 24h, daily REALM cap 1000.
+  // ---------------------------------------------------------------------
+  economy: {
+    realmPer50Meters: 50,
+    walkPoints: 150,
+    walkLimitPerDay: 1,
+    runPoints: 100,
+  },
+
+  // ---------------------------------------------------------------------
+  // Steal / contest — single spec for public + confidential paths.
+  //   claimable (<100 pts) + valid run proof → challenger may steal.
+  //   New owner starts at initialPoints (500), 7-day reclaim shield
+  //   blocks the previous owner from instant re-steal. Confidential
+  //   path (contestEncrypted) mirrors this with FHE.gt instead of a
+  //   plaintext comparison; dispute window 24h.
+  // ---------------------------------------------------------------------
+  contest: {
+    stealThresholdPoints: 100,
+    newOwnerStartPoints: 500,
+    reclaimShieldDays: 7,
+    disputeHours: 24,
   },
 
   // ---------------------------------------------------------------------

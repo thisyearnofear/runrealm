@@ -1156,11 +1156,11 @@ export class TerritoryService extends BaseService {
 
   /**
    * Seed the activity-point defense state on a freshly claimed
-   * territory: 500 points ("moderate") starting from claim time.
+   * territory: GAME_RULES.activity.initialPoints starting from claim time.
    */
   private seedDefenseState(territory: Territory): void {
     if (territory.activityPoints === undefined) {
-      territory.activityPoints = 500;
+      territory.activityPoints = GAME_RULES.activity.initialPoints;
       territory.lastActivityUpdate = Date.now();
       territory.defenseStatus = this.calculateDefenseStatus(territory.activityPoints);
     }
@@ -1173,8 +1173,11 @@ export class TerritoryService extends BaseService {
     const territory = this.claimedTerritories.get(territoryId);
     if (!territory) return;
 
-    const current = territory.activityPoints || 500; // Start with 500 on claim
-    territory.activityPoints = Math.min(1000, Math.max(0, current + points));
+    const current = territory.activityPoints ?? GAME_RULES.activity.initialPoints;
+    territory.activityPoints = Math.min(
+      GAME_RULES.activity.maxPoints,
+      Math.max(0, current + points)
+    );
     territory.lastActivityUpdate = Date.now();
     territory.defenseStatus = this.calculateDefenseStatus(territory.activityPoints);
 
@@ -1194,9 +1197,10 @@ export class TerritoryService extends BaseService {
   private calculateDefenseStatus(
     points: number
   ): 'strong' | 'moderate' | 'vulnerable' | 'claimable' {
-    if (points >= 700) return 'strong';
-    if (points >= 300) return 'moderate';
-    if (points >= 100) return 'vulnerable';
+    const t = GAME_RULES.activity.thresholds;
+    if (points >= t.strongMin) return 'strong';
+    if (points >= t.moderateMin) return 'moderate';
+    if (points >= t.vulnerableMin) return 'vulnerable';
     return 'claimable';
   }
 
@@ -1213,7 +1217,7 @@ export class TerritoryService extends BaseService {
       }
 
       const daysSinceUpdate = (now - territory.lastActivityUpdate) / dayMs;
-      const decayPoints = Math.floor(daysSinceUpdate * 10); // -10 points per day
+      const decayPoints = Math.floor(daysSinceUpdate * GAME_RULES.activity.decayPerDay);
 
       if (decayPoints > 0) {
         this.updateTerritoryActivity(id, -decayPoints);
@@ -1226,6 +1230,53 @@ export class TerritoryService extends BaseService {
    */
   getTerritoriesByStatus(status: 'strong' | 'moderate' | 'vulnerable' | 'claimable'): Territory[] {
     return Array.from(this.claimedTerritories.values()).filter((t) => t.defenseStatus === status);
+  }
+
+  /**
+   * Steal/contest guard — single spec for public + confidential paths.
+   * Steal requires: points < contest.stealThresholdPoints, challenger is
+   * not the owner, and any reclaim shield has expired. Returns a reason
+   * string when blocked, null when the steal may proceed to run-proof /
+   * FHE.gt verification.
+   */
+  canSteal(
+    territoryId: string,
+    challenger: string,
+    opts: { lastStolenAt?: number; lastPreviousOwner?: string; now?: number } = {}
+  ): { ok: boolean; reason?: string } {
+    const now = opts.now ?? Date.now();
+    const territory = this.claimedTerritories.get(territoryId);
+    if (!territory) return { ok: false, reason: 'Territory not found' };
+    const points = territory.activityPoints ?? GAME_RULES.activity.initialPoints;
+    if (points >= GAME_RULES.contest.stealThresholdPoints) {
+      return {
+        ok: false,
+        reason: `Defended (${points} pts) — steal needs <${GAME_RULES.contest.stealThresholdPoints}`,
+      };
+    }
+    if (territory.owner && territory.owner.toLowerCase() === challenger.toLowerCase()) {
+      return { ok: false, reason: 'Owner cannot steal own territory — use boost/walk/run' };
+    }
+    if (
+      opts.lastStolenAt !== undefined &&
+      opts.lastPreviousOwner !== undefined &&
+      opts.lastPreviousOwner.toLowerCase() === challenger.toLowerCase() &&
+      this.isInReclaimShield(opts.lastStolenAt, now)
+    ) {
+      return {
+        ok: false,
+        reason: `Reclaim shield active (${GAME_RULES.contest.reclaimShieldDays}d)`,
+      };
+    }
+    return { ok: true };
+  }
+
+  /**
+   * Whether a freshly stolen territory is still inside the reclaim shield
+   * (blocks previous-owner instant re-steal griefing).
+   */
+  isInReclaimShield(stolenAt: number, now: number = Date.now()): boolean {
+    return now - stolenAt < GAME_RULES.contest.reclaimShieldDays * 24 * 60 * 60 * 1000;
   }
 
   /**

@@ -1,3 +1,4 @@
+import { GAME_RULES } from '../config/game-rules';
 import { BaseService } from '../core/base-service';
 import { StorageAdapter } from '../utils/storage-adapter';
 import { AIService, GhostRunner } from './ai-service';
@@ -152,16 +153,30 @@ export class GhostRunnerService extends BaseService {
    * score derives from its pace and level; the user's score from their
    * recent run history (average pace + volume). Deterministic per
    * deployment — no hidden randomness the user can't reason about.
+   *
+   * Anti-snowball: ghost score capped at GAME_RULES.ghosts.ghostScoreCap
+   * (850), level bonus capped at maxLevelBonusScore (120), plus
+   * rubber-banding from recent race history (trailing players get help,
+   * leaders get heat).
    */
   private resolveRaceResult(ghost: GhostRunnerNFT, territoryId: string): GhostRaceResult {
     const stats = this.getUserStats();
-    const levelBonus = (ghost.level - 1) * 60;
+    const levelBonus = Math.min((ghost.level - 1) * 60, GAME_RULES.ghosts.maxLevelBonusScore);
 
     // Ghost: base fitness from pace (lower seconds/meter is better),
-    // scaled to the 0-1000 defense-point scale.
-    const ghostScore = Math.round(
-      Math.min(1000, Math.max(50, 600 - ghost.pace * 800 + levelBonus))
+    // scaled to the 0-1000 defense-point scale, hard-capped.
+    let ghostScore = Math.round(
+      Math.min(GAME_RULES.ghosts.ghostScoreCap, Math.max(50, 600 - ghost.pace * 800 + levelBonus))
     );
+
+    // Rubber-band: help trailing players, heat leaders.
+    const rb = GAME_RULES.ghosts.rubberBand;
+    const recent = this.raceHistory.slice(-Math.max(rb.lossesForHelp, rb.winsForHeat));
+    const recentLosses = recent.filter((r) => r.winner === 'ghost').length;
+    const recentWins = recent.filter((r) => r.winner === 'user').length;
+    if (recentLosses >= rb.lossesForHelp) ghostScore = Math.max(50, ghostScore - rb.helpPoints);
+    else if (recentWins >= rb.winsForHeat)
+      ghostScore = Math.min(GAME_RULES.ghosts.ghostScoreCap, ghostScore + rb.heatPoints);
 
     // User: average pace relative to a 6:00/km benchmark plus a volume
     // nudge; falls back to a neutral 400 when no history exists yet.
@@ -204,7 +219,7 @@ export class GhostRunnerService extends BaseService {
       winRate: 0,
       lastRunDate: null,
       deployCost: this.getDeployCost(type),
-      upgradeCost: 200,
+      upgradeCost: GAME_RULES.ghosts.upgradeCostRealm,
       cooldownUntil: null,
       lastDeployedTerritory: null,
     };
@@ -239,7 +254,7 @@ export class GhostRunnerService extends BaseService {
     ghost.totalRuns++;
     ghost.totalDistance += ghostRun.distance;
     ghost.lastRunDate = new Date();
-    ghost.cooldownUntil = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24hr cooldown
+    ghost.cooldownUntil = new Date(Date.now() + GAME_RULES.ghosts.cooldownHours * 60 * 60 * 1000);
     ghost.lastDeployedTerritory = territoryId;
 
     this.ghosts.set(ghostId, ghost);
@@ -278,7 +293,7 @@ export class GhostRunnerService extends BaseService {
   async upgradeGhost(ghostId: string): Promise<GhostRunnerNFT> {
     const ghost = this.ghosts.get(ghostId);
     if (!ghost) throw new Error('Ghost not found');
-    if (ghost.level >= 5) throw new Error('Ghost already max level');
+    if (ghost.level >= GAME_RULES.ghosts.maxLevel) throw new Error('Ghost already max level');
     if (this.userRealmBalance < ghost.upgradeCost) {
       throw new Error('Insufficient $REALM balance');
     }
@@ -287,7 +302,7 @@ export class GhostRunnerService extends BaseService {
     await this.saveRealmBalance();
 
     ghost.level++;
-    ghost.pace *= 0.98; // 2% faster per level
+    ghost.pace *= 1 - GAME_RULES.ghosts.paceImprovementPerLevel; // capped at 8% total by maxLevel
 
     this.ghosts.set(ghostId, ghost);
     await this.saveGhosts();
@@ -308,7 +323,7 @@ export class GhostRunnerService extends BaseService {
       duration,
       distance,
       pace: ghost.pace,
-      activityPointsEarned: 50, // Ghost runs worth 50% of real run
+      activityPointsEarned: GAME_RULES.ghosts.pointsPerGhostRun,
       realmCost: ghost.deployCost,
       result: 'completed',
     };
@@ -325,34 +340,36 @@ export class GhostRunnerService extends BaseService {
   }
 
   private getTypeBaseDifficulty(type: string): number {
+    const base = GAME_RULES.ghosts.baseDifficulty;
     switch (type) {
       case 'sprinter':
-        return 0.9;
+        return base.sprinter;
       case 'endurance':
-        return 0.85;
+        return base.endurance;
       case 'hill':
-        return 0.95;
+        return base.hill;
       default:
-        return 0.7;
+        return base.allrounder;
     }
   }
 
   private getDeployCost(type: string): number {
+    const costs = GAME_RULES.ghosts.deployCostRealm;
     switch (type) {
       case 'sprinter':
-        return 50;
+        return costs.sprinter;
       case 'endurance':
-        return 100;
+        return costs.endurance;
       case 'hill':
-        return 75;
+        return costs.hill;
       default:
-        return 25;
+        return costs.allrounder;
     }
   }
 
   private async onRunCompleted(data: any): Promise<void> {
-    // Award REALM tokens for completing runs
-    const realmEarned = Math.floor(data.distance / 50); // ~100 REALM for 5K
+    // Award REALM tokens for completing runs (~100 REALM per 5K)
+    const realmEarned = Math.floor(data.distance / GAME_RULES.economy.realmPer50Meters);
     this.userRealmBalance += realmEarned;
     await this.saveRealmBalance();
 

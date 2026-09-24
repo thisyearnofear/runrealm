@@ -462,7 +462,7 @@ export class RewardSystemUI extends BaseService {
             <div class="staking-info-box">
               <div class="info-item">
                 <span class="info-label">Current APY:</span>
-                <span class="info-value">12.5%</span>
+                <span class="info-value">${GAME_RULES.rewards.stakingApyPercent}%</span>
               </div>
               <div class="info-item">
                 <span class="info-label">Minimum Stake:</span>
@@ -517,16 +517,12 @@ export class RewardSystemUI extends BaseService {
 
     stakeInput?.addEventListener('input', () => {
       const amount = parseFloat(stakeInput.value) || 0;
-      // Single source of truth for the staking APY and daily-per-year
-      // divider lives in packages/shared-core/config/game-rules.ts. The
-      // on-chain base rate (10% from RealmRules) differs from this UI
-      // floor (12.5%) deliberately — a marketing invitation — so the
-      // sync-game-rules.ts source carries both as
-      // `stakingApyPercent` and `stakingUiApyPercent`.
+      // Single source of truth: GAME_RULES.rewards.stakingApyPercent
+      // (matches on-chain RealmRules.STAKING_BASE_APY_PERCENT).
       const dailyReward =
-        (amount * GAME_RULES.rewards.stakingUiApyPercent) / GAME_RULES.rewards.apyDaysPerYear;
+        (amount * GAME_RULES.rewards.stakingApyPercent) / 100 / GAME_RULES.rewards.apyDaysPerYear;
       const monthlyReward =
-        (amount * GAME_RULES.rewards.stakingUiApyPercent) / GAME_RULES.rewards.apyMonthsPerYear;
+        (amount * GAME_RULES.rewards.stakingApyPercent) / 100 / GAME_RULES.rewards.apyMonthsPerYear;
 
       if (dailyPreview) dailyPreview.textContent = `${this.formatTokenAmount(dailyReward)} REALM`;
       if (monthlyPreview)

@@ -885,7 +885,7 @@ export class LocationService extends BaseService {
 
     // Update location marker on map if AnimationService is available
     try {
-      const animationService = (window as any).RunRealm?.services?.animation;
+      const animationService = this.getSiblingService('animation');
       if (animationService && typeof animationService.updateUserLocationMarker === 'function') {
         animationService.updateUserLocationMarker(locationInfo.lng, locationInfo.lat);
       }

@@ -259,12 +259,14 @@ struct Territory {
 }
 ```
 
-**Activity Point Economics**:
+**Activity Point Economics** (source: `GAME_RULES.activity`):
 - Real run on territory: +100 points
 - Ghost run on territory: +50 points
-- Visiting territory: +10 points
+- Territory Walk (GPS-verified): +150 points (1x per territory per day)
+- Boost (burn 50 REALM): +100 points (1x per territory per day)
 - Decay rate: -10 points per day
-- Maximum: 1000 points (100 days protection)
+- Claim starts at 500 points → claimable (<100) in 40 days without activity
+- Maximum 1000 points → 90 days protection from max
 
 **Defense Status Thresholds**:
 - 700-1000 points: Strong 🛡️
@@ -272,11 +274,11 @@ struct Territory {
 - 100-299 points: Vulnerable 🔶
 - 0-99 points: Claimable 🚨
 
-**Claiming Mechanics**:
-- Territories with <100 activity points can be claimed
-- Claimer must provide valid run proof via oracle
-- New owner starts with 500 points (grace period)
-- No reclaim bonuses (fair competition)
+**Claiming Mechanics** (source: `GAME_RULES.contest`):
+- Steal requires: defense <100 pts + valid run proof (oracle-signed) + non-owner challenger
+- New owner starts at 500 pts; 7-day reclaim shield blocks the previous owner from instant re-steal
+- Public path: plaintext point comparison + `territory:claimed` event; confidential path: `contestEncrypted` with `FHE.gt`, result publicly decryptable
+- 24-hour dispute window on transfers; no reclaim bonuses
 
 ### Ghost Runner NFT System
 
@@ -296,15 +298,17 @@ struct GhostRunner {
 }
 ```
 
-**Ghost Types & Specialization**:
-- **Sprinter**: 400m-5K distances, 90% of owner's best 5K pace
-- **Endurance**: 10K+ distances, 85% of owner's best long run pace
-- **Hill Climber**: Elevation routes, 95% of owner's best hill run pace
-- **All-Rounder**: Universal, 70% of owner's average pace
+**Ghost Types & Specialization** (source: `GAME_RULES.ghosts`, cap 85):
+- **Sprinter**: 400m-5K distances, difficulty 80/100
+- **Endurance**: 10K+ distances, difficulty 82/100
+- **Hill Climber**: Elevation routes, difficulty 78/100
+- **All-Rounder**: Universal, difficulty 65/100
 
 **Ghost Performance**:
 - Performance based on current owner's run history (not original minter)
-- Upgradeable: +2-3% pace per level (max level 5)
+- Upgradeable: +2% pace per level, 8% total cap (max level 5)
+- Ghost race score capped at 850; level bonus capped at +120
+- Rubber-banding: −80 help after 2 losses, +50 heat after 3 wins
 - Tradeable as standard NFTs (ERC-721)
 
 **Ghost Deployment**:

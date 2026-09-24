@@ -24,7 +24,7 @@ library RealmRules {
   uint256 public constant ACTIVITY_STRONG_MIN              = 700;
   uint256 public constant ACTIVITY_MODERATE_MIN            = 300;
   uint256 public constant ACTIVITY_VULNERABLE_MIN          = 100;
-  uint256 public constant ACTIVITY_TIMEOUT_MS              = 2592000000;
+  uint256 public constant ACTIVITY_TIMEOUT_MS              = 3456000000;
 
   // REALM token rewards
   uint256 public constant REALM_INITIAL_SUPPLY_E18         = 1_000_000_000 * 10**18;

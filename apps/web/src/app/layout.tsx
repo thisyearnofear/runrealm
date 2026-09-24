@@ -11,11 +11,11 @@ import '../styles/responsive.css';
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://runrealm.example.com'),
   title: {
-    default: 'RunRealm — Confidential Territory Defense on Zama FHE',
+    default: 'RunRealm — Run. Claim. Defend.',
     template: '%s · RunRealm',
   },
   description:
-    'RunRealm turns real-world runs into NFT territories you claim, boost, and defend. Territory defense scores are kept private with Zama FHE (fully homomorphic encryption) on Ethereum Sepolia — boost and contest rivals without revealing your score.',
+    'RunRealm turns real-world runs into NFT territories you claim, boost, and defend. Connect Strava, run your streets, grow your realm — with optional private defense scores powered by Zama FHE.',
   applicationName: 'RunRealm',
   authors: [{ name: 'RunRealm' }],
   keywords: [
@@ -50,25 +50,23 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    title: 'RunRealm — Confidential Territory Defense on Zama FHE',
+    title: 'RunRealm — Run. Claim. Defend.',
     description:
-      'Claim, boost, and defend real-world running territories. Defense scores stay private with Zama FHE — boost and contest rivals without revealing your score.',
+      'Turn your runs into living territory. Claim streets, defend them by staying active, race ghost rivals — with optional private defense via Zama FHE.',
     siteName: 'RunRealm',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'RunRealm — Confidential Territory Defense on Zama FHE',
+    title: 'RunRealm — Run. Claim. Defend.',
     description:
-      'Claim, boost, and defend real-world running territories with Zama FHE private defense scores.',
+      'Turn your runs into living territory. Claim, defend, and race ghosts in your city.',
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#00ff88',
+  themeColor: '#0d2b3e',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
 };
 

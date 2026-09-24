@@ -94,27 +94,30 @@ We've implemented the core ghost runner functionality off-chain first, focusing 
 - Status indicators (ready/cooldown)
 - Gradient buttons
 
-### Ghost Types Implemented
+### Ghost Types Implemented (source: `GAME_RULES.ghosts`, cap 85)
 
 1. **All-Rounder** (Default)
-   - Pace: 70% of user's average
+   - Difficulty: 65/100, ghost score capped at 850
    - Cost: 25 $REALM per deployment
    - Unlocked: After first run
 
 2. **Sprinter**
-   - Pace: 90% of user's best 5K
+   - Difficulty: 80/100, ghost score capped at 850
    - Cost: 50 $REALM per deployment
    - Unlocked: After 10 runs (user choice)
 
 3. **Endurance**
-   - Pace: 85% of user's best long run
+   - Difficulty: 82/100, ghost score capped at 850
    - Cost: 100 $REALM per deployment
    - Unlocked: After 10 runs (user choice)
 
 4. **Hill Climber**
-   - Pace: 95% of user's best hill run
+   - Difficulty: 78/100, ghost score capped at 850
    - Cost: 75 $REALM per deployment
    - Unlocked: After 10 runs (user choice)
+
+Anti-snowball: level bonus capped at +120, pace gain capped at 8% total,
+rubber-banding −80 when trailing (2 losses) / +50 heat when leading (3 wins).
 
 ### Economic System
 
@@ -143,7 +146,7 @@ We've implemented the core ghost runner functionality off-chain first, focusing 
 
 #### Decay
 - -10 points per day
-- Max 1000 points = 100 days protection
+- Claim starts at 500 → claimable in 40 days idle; max 1000 → 90 days protection
 
 ### Defense Status
 - **Strong** (700-1000): 🛡️ Well defended
