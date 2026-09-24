@@ -49,6 +49,9 @@ jobs:
       - name: Run tests for ${{ matrix.package }}
         run: npm run test --workspace=@runrealm/${{ matrix.package }}
 
+      - name: Build shared packages first (web resolves them via dist/)
+        run: npm run build:shared
+
       - name: Build ${{ matrix.package }}
         run: npm run build --workspace=@runrealm/${{ matrix.package }}
 
