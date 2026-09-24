@@ -1,6 +1,7 @@
 import { GAME_RULES } from '../config/game-rules';
 import { BaseService } from '../core/base-service';
 import { StorageAdapter } from '../utils/storage-adapter';
+import { openVersioned, quarantineKey, writeVersioned } from '../utils/versioned-store';
 import { AIService, GhostRunner } from './ai-service';
 import { RunTrackingService } from './run-tracking-service';
 
@@ -56,6 +57,10 @@ export class GhostRunnerService extends BaseService {
   private ghostRuns: GhostRun[] = [];
   private raceHistory: GhostRaceResult[] = [];
   private userRealmBalance: number = 0;
+  // Set when a future-version save is on disk: degrade in memory and
+  // skip writes so a stale build never overwrites the good save.
+  private ghostsReadOnly = false;
+  private balanceReadOnly = false;
 
   private constructor() {
     super();
@@ -83,26 +88,48 @@ export class GhostRunnerService extends BaseService {
   }
 
   private async loadGhosts(): Promise<void> {
+    const key = 'runrealm_ghosts';
     try {
-      const stored = await StorageAdapter.getItem('runrealm_ghosts');
-      if (stored) {
-        const data = JSON.parse(stored);
-        data.forEach((g: GhostRunnerNFT) => {
-          g.lastRunDate = g.lastRunDate ? new Date(g.lastRunDate) : null;
-          g.cooldownUntil = g.cooldownUntil ? new Date(g.cooldownUntil) : null;
-          this.ghosts.set(g.id, g);
-        });
+      const raw = await StorageAdapter.getItem(key);
+      const opened = openVersioned<GhostRunnerNFT[]>(raw, {
+        floor: 1,
+        head: 1,
+        steps: [
+          {
+            toVersion: 1,
+            note: 'base ghost array',
+            migrate: (v) => v as GhostRunnerNFT[],
+            validate: (v) => {
+              if (!Array.isArray(v)) throw new RangeError('ghosts: expected an array');
+              return v as GhostRunnerNFT[];
+            },
+          },
+        ],
+        fresh: () => [],
+      });
+      if (opened.status !== 'ok' && opened.status !== 'fresh') {
+        console.warn(`GhostRunnerService: ghosts storage ${opened.status} (${opened.reason})`);
       }
+      if (opened.status === 'corrupt' && raw !== null) {
+        await StorageAdapter.setItem(quarantineKey(key), raw);
+      }
+      if (opened.readOnly) this.ghostsReadOnly = true;
+      opened.state.forEach((g: GhostRunnerNFT) => {
+        g.lastRunDate = g.lastRunDate ? new Date(g.lastRunDate) : null;
+        g.cooldownUntil = g.cooldownUntil ? new Date(g.cooldownUntil) : null;
+        this.ghosts.set(g.id, g);
+      });
     } catch (error) {
       console.error('Failed to load ghosts:', error);
     }
   }
 
   private async saveGhosts(): Promise<void> {
+    if (this.ghostsReadOnly) return;
     try {
       await StorageAdapter.setItem(
         'runrealm_ghosts',
-        JSON.stringify(Array.from(this.ghosts.values()))
+        writeVersioned(1, Array.from(this.ghosts.values()), Date.now())
       );
     } catch (error) {
       console.error('Failed to save ghosts:', error);
@@ -110,14 +137,36 @@ export class GhostRunnerService extends BaseService {
   }
 
   private async loadRealmBalance(): Promise<void> {
+    const key = 'runrealm_realm_balance';
     try {
-      const stored = await StorageAdapter.getItem('runrealm_realm_balance');
-      if (stored) {
-        const parsed = parseFloat(stored);
-        this.userRealmBalance = Number.isFinite(parsed) ? parsed : 0;
-      } else {
-        this.userRealmBalance = 0;
+      const raw = await StorageAdapter.getItem(key);
+      const opened = openVersioned<number>(raw, {
+        floor: 1,
+        head: 1,
+        steps: [
+          {
+            toVersion: 1,
+            note: 'base balance',
+            migrate: (v) => (typeof v === 'string' ? parseFloat(v) : (v as number)),
+            validate: (v) => {
+              const n = typeof v === 'string' ? parseFloat(v) : v;
+              if (typeof n !== 'number' || !Number.isFinite(n)) {
+                throw new RangeError('balance: expected a finite number');
+              }
+              return n;
+            },
+          },
+        ],
+        fresh: () => 0,
+      });
+      if (opened.status !== 'ok' && opened.status !== 'fresh') {
+        console.warn(`GhostRunnerService: balance storage ${opened.status} (${opened.reason})`);
       }
+      if (opened.status === 'corrupt' && raw !== null) {
+        await StorageAdapter.setItem(quarantineKey(key), raw);
+      }
+      if (opened.readOnly) this.balanceReadOnly = true;
+      this.userRealmBalance = opened.state;
     } catch (error) {
       console.error('Failed to load realm balance:', error);
       this.userRealmBalance = 0;
@@ -125,8 +174,12 @@ export class GhostRunnerService extends BaseService {
   }
 
   private async saveRealmBalance(): Promise<void> {
+    if (this.balanceReadOnly) return;
     try {
-      await StorageAdapter.setItem('runrealm_realm_balance', this.userRealmBalance.toString());
+      await StorageAdapter.setItem(
+        'runrealm_realm_balance',
+        writeVersioned(1, this.userRealmBalance, Date.now())
+      );
     } catch (error) {
       console.error('Failed to save realm balance:', error);
     }
@@ -158,8 +211,17 @@ export class GhostRunnerService extends BaseService {
    * (850), level bonus capped at maxLevelBonusScore (120), plus
    * rubber-banding from recent race history (trailing players get help,
    * leaders get heat).
+   *
+   * Determinism: pure Tier A math of (ghost, user stats, race history).
+   * The race ID derives from the ghost's persisted deployment counter
+   * and the clock arrives as `nowMs` from the action handler — no
+   * Math.random, no clock reads. Same history in, same result out.
    */
-  private resolveRaceResult(ghost: GhostRunnerNFT, territoryId: string): GhostRaceResult {
+  private resolveRaceResult(
+    ghost: GhostRunnerNFT,
+    territoryId: string,
+    nowMs: number = Date.now()
+  ): GhostRaceResult {
     const stats = this.getUserStats();
     const levelBonus = Math.min((ghost.level - 1) * 60, GAME_RULES.ghosts.maxLevelBonusScore);
 
@@ -188,7 +250,7 @@ export class GhostRunnerService extends BaseService {
     }
 
     return {
-      raceId: `race_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      raceId: `race_${ghost.id}_${ghost.totalRuns}`,
       ghostId: ghost.id,
       ghostName: ghost.name,
       avatar: ghost.avatar,
@@ -196,7 +258,7 @@ export class GhostRunnerService extends BaseService {
       ghostScore,
       userScore,
       winner: userScore >= ghostScore ? 'user' : 'ghost',
-      completedAt: Date.now(),
+      completedAt: nowMs,
     };
   }
 

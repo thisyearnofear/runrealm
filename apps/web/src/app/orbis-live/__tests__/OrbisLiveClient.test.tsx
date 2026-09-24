@@ -143,9 +143,14 @@ describe('territory persistence', () => {
     fireEvent.click(screen.getByRole('button', { name: /Fix territory/ }));
 
     expect(screen.getByText(/Settled in territory/)).toBeInTheDocument();
-    const stored = JSON.parse(
-      window.localStorage.getItem('runrealm_claimed_territories') ?? '[]'
-    ) as Array<{ id: string }>;
+    // Territories persist in a versioned envelope ({ v, t, n, c, d });
+    // unwrap it here so this test asserts the payload, not the envelope.
+    const raw = JSON.parse(window.localStorage.getItem('runrealm_claimed_territories') ?? '[]') as
+      | Array<{ id: string }>
+      | { d: string };
+    const stored = (Array.isArray(raw) ? raw : JSON.parse((raw as { d: string }).d)) as Array<{
+      id: string;
+    }>;
     expect(stored.some((territory) => territory.id === 'orbis-demo-territory')).toBe(true);
   });
 });

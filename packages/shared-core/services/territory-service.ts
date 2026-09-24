@@ -7,7 +7,9 @@ import {
   routeToCells,
   type TerritoryCell,
 } from '../utils/h3-territory';
+import { classifyAbsence, DAY_MS, decayCrossings } from '../utils/offline-catchup';
 import { territoryIdFromBounds } from '../utils/territory-id';
+import { openVersioned, quarantineKey, writeVersioned } from '../utils/versioned-store';
 import { RunSession } from './run-tracking-service';
 
 export interface TerritoryBounds {
@@ -126,6 +128,9 @@ export class TerritoryService extends BaseService {
   // Run → territory link so `findTerritoryByRunId` works. Key = run
   // ID, value = territory ID stored in `claimedTerritories`.
   private runToTerritory: Map<string, string> = new Map();
+  // Set when a future-version save is on disk: this build degrades in
+  // memory and must skip writes so it never overwrites the good save.
+  private storageReadOnly = false;
 
   protected constructor() {
     super();
@@ -1119,29 +1124,80 @@ export class TerritoryService extends BaseService {
   }
 
   /**
-   * Load claimed territories from storage
+   * Load claimed territories from storage through a versioned envelope.
+   * v1 = legacy shape (no defense-state guarantees); v2 backfills
+   * `lastActivityUpdate` / `activityPoints` / `defenseStatus` from the
+   * claim time so pre-migration territories decay correctly. A future
+   * save sets `storageReadOnly` — this build must not overwrite it.
    */
   private async loadClaimedTerritories(): Promise<void> {
+    const key = 'runrealm_claimed_territories';
     try {
-      const stored = localStorage.getItem('runrealm_claimed_territories');
-      if (stored) {
-        const territories: Territory[] = JSON.parse(stored);
-        territories.forEach((territory) => {
-          this.claimedTerritories.set(territory.id, territory);
-        });
+      const raw = localStorage.getItem(key);
+      const opened = openVersioned<Territory[]>(raw, {
+        floor: 1,
+        head: 2,
+        steps: [
+          {
+            toVersion: 1,
+            note: 'base territory array',
+            migrate: (v) => v as Territory[],
+            validate: (v) => {
+              if (!Array.isArray(v)) throw new RangeError('territories: expected an array');
+              return v as Territory[];
+            },
+          },
+          {
+            toVersion: 2,
+            note: 'backfill defense state (lastActivityUpdate, activityPoints)',
+            migrate: (v) =>
+              (v as Territory[]).map((t) => ({
+                ...t,
+                activityPoints: t.activityPoints ?? GAME_RULES.activity.initialPoints,
+                lastActivityUpdate: t.lastActivityUpdate ?? t.claimedAt ?? Date.now(),
+              })),
+            validate: (v) => {
+              if (!Array.isArray(v)) throw new RangeError('territories: expected an array');
+              return v as Territory[];
+            },
+          },
+        ],
+        fresh: () => [],
+      });
+      if (opened.status !== 'ok' && opened.status !== 'fresh') {
+        console.warn(`TerritoryService: storage ${opened.status} (${opened.reason})`);
       }
+      if (opened.status === 'corrupt' && raw !== null) {
+        try {
+          localStorage.setItem(quarantineKey(key), raw);
+        } catch {
+          // Quarantine is best-effort; the fresh state already protects the session.
+        }
+      }
+      if (opened.readOnly) this.storageReadOnly = true;
+      opened.state.forEach((territory) => {
+        territory.defenseStatus = this.calculateDefenseStatus(
+          territory.activityPoints ?? GAME_RULES.activity.initialPoints
+        );
+        this.claimedTerritories.set(territory.id, territory);
+      });
     } catch (error) {
       console.error('Failed to load claimed territories:', error);
     }
   }
 
   /**
-   * Save territories to storage
+   * Save territories to storage. Skipped while `storageReadOnly` (a
+   * future save is on disk) so a stale build never overwrites it.
    */
   private saveTerritoriesToStorage(): void {
+    if (this.storageReadOnly) return;
     try {
       const territories = Array.from(this.claimedTerritories.values());
-      localStorage.setItem('runrealm_claimed_territories', JSON.stringify(territories));
+      localStorage.setItem(
+        'runrealm_claimed_territories',
+        writeVersioned(2, territories, Date.now())
+      );
     } catch (error) {
       console.error('Failed to save territories:', error);
     }
@@ -1205,24 +1261,71 @@ export class TerritoryService extends BaseService {
   }
 
   /**
-   * Apply activity point decay for all territories
+   * Apply activity point decay for all territories.
+   *
+   * Time arrives as a parameter (default: wall clock at the call site,
+   * which owns the calendar). Before mutating, exact downward threshold
+   * crossings are computed in closed form so the UI can narrate the
+   * absence ("became vulnerable Tuesday evening") instead of just
+   * showing lower numbers. Decay applies in full — neglect loses
+   * territory, and full application is what removes any incentive to
+   * skip a vulnerable stretch by staying away.
    */
-  applyActivityDecay(): void {
-    const now = Date.now();
-    const dayMs = 24 * 60 * 60 * 1000;
+  applyActivityDecay(now: number = Date.now()): void {
+    const thresholds = [
+      GAME_RULES.activity.thresholds.strongMin,
+      GAME_RULES.activity.thresholds.moderateMin,
+      GAME_RULES.activity.thresholds.vulnerableMin,
+    ];
+    const crossings: Array<{ territoryId: string; threshold: number; atMs: number }> = [];
+    let longestAbsenceMs = 0;
 
     this.claimedTerritories.forEach((territory, id) => {
       if (!territory.lastActivityUpdate) {
         territory.lastActivityUpdate = territory.claimedAt || now;
       }
 
-      const daysSinceUpdate = (now - territory.lastActivityUpdate) / dayMs;
+      const absence = classifyAbsence(territory.lastActivityUpdate, now);
+      if (absence.kind === 'reanchor') {
+        // Clock jumped backwards past tolerance: keep stocks, move the
+        // anchor, credit nothing. Otherwise the economy freezes with a
+        // save that looks fine.
+        territory.lastActivityUpdate = now;
+        return;
+      }
+      longestAbsenceMs = Math.max(longestAbsenceMs, absence.absenceMs);
+
+      const points = territory.activityPoints ?? GAME_RULES.activity.initialPoints;
+      for (const c of decayCrossings(
+        points,
+        territory.lastActivityUpdate,
+        now,
+        GAME_RULES.activity.decayPerDay,
+        thresholds
+      )) {
+        crossings.push({ territoryId: id, threshold: c.threshold, atMs: c.atMs });
+      }
+
+      const daysSinceUpdate = absence.absenceMs / DAY_MS;
       const decayPoints = Math.floor(daysSinceUpdate * GAME_RULES.activity.decayPerDay);
 
       if (decayPoints > 0) {
         this.updateTerritoryActivity(id, -decayPoints);
       }
     });
+
+    crossings.sort((a, b) => a.atMs - b.atMs);
+    const capped = crossings.slice(0, GAME_RULES.offline.maxCrossingsPerCatchup);
+    if (
+      capped.length > 0 &&
+      longestAbsenceMs >= GAME_RULES.offline.summaryMinGapHours * 60 * 60 * 1000
+    ) {
+      this.safeEmit('offline:catchup', {
+        absenceMs: longestAbsenceMs,
+        crossings: capped,
+        truncated: crossings.length - capped.length,
+      });
+    }
   }
 
   /**

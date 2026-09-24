@@ -13,7 +13,7 @@
  * only path that keeps both worlds in lockstep. Editing either `.sol`
  * file by hand will silently drift.
  */
-export const GAME_RULES_VERSION = '1.1.0';
+export const GAME_RULES_VERSION = '1.2.0';
 
 export const GAME_RULES = {
   version: GAME_RULES_VERSION,
@@ -174,6 +174,20 @@ export const GAME_RULES = {
     newOwnerStartPoints: 500,
     reclaimShieldDays: 7,
     disputeHours: 24,
+  },
+
+  // ---------------------------------------------------------------------
+  // Offline catch-up — reporting rules for absences, not a softcap on
+  // decay. Decay applies in full (punishment-as-state: a territory that
+  // went claimable stays claimable), which is what removes the
+  // close-the-tab-to-skip-the-charge incentive. What IS bounded is the
+  // narration: a single `offline:catchup` event fires only after a real
+  // absence (>= summaryMinGapHours), carrying exact threshold crossings
+  // in the player's own clock, truncated at maxCrossingsPerCatchup.
+  // ---------------------------------------------------------------------
+  offline: {
+    summaryMinGapHours: 6,
+    maxCrossingsPerCatchup: 50,
   },
 
   // ---------------------------------------------------------------------

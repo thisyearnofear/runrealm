@@ -1,4 +1,5 @@
 import { BaseService } from '../core/base-service';
+import { openVersioned } from '../utils/versioned-store';
 
 const DECAY_SUMMARY_KEY = 'runrealm_last_decay_summary';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -184,9 +185,37 @@ export class NotificationService extends BaseService {
       const last = Number(localStorage.getItem(DECAY_SUMMARY_KEY) ?? 0);
       if (Date.now() - last < DAY_MS) return;
 
-      const stored = localStorage.getItem('runrealm_claimed_territories');
-      if (!stored) return;
-      const territories: Array<TerritoryLike & { name?: string }> = JSON.parse(stored);
+      const raw = localStorage.getItem('runrealm_claimed_territories');
+      if (!raw) return;
+      // Territories ship in a versioned envelope (v2); legacy bare
+      // arrays are adopted by the same open path. Anything degraded to
+      // fresh means there is nothing worth nagging about.
+      const opened = openVersioned<Array<TerritoryLike & { name?: string }>>(raw, {
+        floor: 1,
+        head: 2,
+        steps: [
+          {
+            toVersion: 1,
+            note: 'base territory array',
+            migrate: (v) => v as Array<TerritoryLike & { name?: string }>,
+            validate: (v) => {
+              if (!Array.isArray(v)) throw new RangeError('territories: expected an array');
+              return v as Array<TerritoryLike & { name?: string }>;
+            },
+          },
+          {
+            toVersion: 2,
+            note: 'defense-state backfill (pass-through for readers)',
+            migrate: (v) => v as Array<TerritoryLike & { name?: string }>,
+            validate: (v) => {
+              if (!Array.isArray(v)) throw new RangeError('territories: expected an array');
+              return v as Array<TerritoryLike & { name?: string }>;
+            },
+          },
+        ],
+        fresh: () => [],
+      });
+      const territories = opened.state;
       if (territories.length === 0) return;
 
       const weakest = territories.reduce((min, t) =>
