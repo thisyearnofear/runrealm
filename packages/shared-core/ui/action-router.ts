@@ -19,7 +19,7 @@ interface GhostPayload {
   difficulty?: number;
 }
 
-interface ActionPayload {
+export interface ActionPayload {
   coordinates?: number[][];
   distance?: number;
   goals?: string[];

@@ -1,5 +1,4 @@
 import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
-import { ConfigService } from '@runrealm/shared-core/core/app-config';
 import { VisibilityService } from '@runrealm/shared-core/internal/_legacy-widget/visibility-service';
 import { LocationService } from '@runrealm/shared-core/services/location-service';
 import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
@@ -46,8 +45,7 @@ export class WidgetCreator {
     walletWidget: WalletWidget,
     private userDashboardService: UserDashboardService,
     widgetSystem: WidgetSystem,
-    visibilityService: VisibilityService,
-    _configService: ConfigService
+    visibilityService: VisibilityService
   ) {
     this.locationService = locationService;
     this.walletWidget = walletWidget;
@@ -358,14 +356,12 @@ export class WidgetCreator {
   getSettingsContent(
     gameFiActive?: boolean,
     locationVisible?: boolean,
-    walletVisible?: boolean,
-    runControlsVisible?: boolean
+    walletVisible?: boolean
   ): string {
     // Provide default values if not passed
     gameFiActive = gameFiActive ?? false;
     locationVisible = locationVisible ?? true;
     walletVisible = walletVisible ?? true;
-    runControlsVisible = runControlsVisible ?? true;
     return `
       <div class="widget-section">
         <div class="widget-section-title">🎮 Game Features</div>

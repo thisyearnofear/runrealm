@@ -14,7 +14,7 @@
 
 import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { ConnectButton } from '../ConnectButton';
 import { type UseWalletResult, useWallet } from '../useWallet';
 import { WalletRoot } from '../WalletRoot';

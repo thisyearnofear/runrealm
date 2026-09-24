@@ -16,6 +16,18 @@ import {
   UserDashboardService,
 } from '@runrealm/shared-core/services/user-dashboard-service';
 
+/** Tabs the dashboard can render, in display order. */
+const DASHBOARD_TABS = ['overview', 'territories', 'ghosts', 'challenges'] as const;
+type DashboardTab = (typeof DASHBOARD_TABS)[number];
+
+/** Territory rows plus optional dashboard-only enrichment (absent at runtime). */
+type DashboardTerritory = DashboardData['territories'][number] & {
+  activityPoints?: number;
+  defenseStatus?: string;
+  lastActivityUpdate?: number;
+  deployedGhost?: { avatar?: string; name: string; cooldownUntil: Date | null };
+};
+
 export class UserDashboard {
   private container: HTMLElement | null = null;
   private dashboardService: UserDashboardService;
@@ -27,7 +39,7 @@ export class UserDashboard {
   // Stored so render()'s re-init can remove the previous handler
   // instead of stacking anonymous listeners (perf pass).
   private containerClickHandler: ((e: Event) => void) | null = null;
-  private activeTab: 'overview' | 'territories' | 'ghosts' | 'challenges' = 'overview';
+  private activeTab: DashboardTab = 'overview';
 
   constructor() {
     this.dashboardService = UserDashboardService.getInstance();
@@ -78,10 +90,11 @@ export class UserDashboard {
 
     // MOBILE UX: Listen for dashboard:open event from MainUI widget handler
     // This allows widgets to redirect to dashboard with auto-selected tab
-    this.eventBus.on('dashboard:open', (data: any) => {
+    this.eventBus.on('dashboard:open', (data) => {
       console.log('UserDashboard: Opening dashboard from widget redirect', data);
-      if (data.targetTab && data.targetTab !== this.activeTab) {
-        this.activeTab = data.targetTab as 'overview' | 'territories' | 'ghosts' | 'challenges';
+      const targetTab = DASHBOARD_TABS.find((tab) => tab === data.widgetId);
+      if (targetTab && targetTab !== this.activeTab) {
+        this.activeTab = targetTab;
         console.log(`UserDashboard: Auto-selecting tab: ${this.activeTab}`);
       }
       this.dashboardService.show();
@@ -299,8 +312,7 @@ export class UserDashboard {
       case 'territory-walk': {
         const territoryId = target.getAttribute('data-territory-id');
         if (!territoryId) break;
-        // biome-ignore lint/suspicious/noExplicitAny: global service registry
-        const walkService = (window as any).RunRealm?.services?.territoryWalkService;
+        const walkService = window.RunRealm?.services?.territoryWalkService;
         if (walkService) {
           void walkService.startWalk(territoryId);
         } else {
@@ -368,7 +380,7 @@ export class UserDashboard {
     }
   }
 
-  private renderPlayerStats(userStats: any): string {
+  private renderPlayerStats(userStats: DashboardData['userStats']): string {
     if (!userStats)
       return '<div class="dashboard-section"><h3>Player Stats</h3><p>No data available</p></div>';
 
@@ -397,7 +409,7 @@ export class UserDashboard {
     `;
   }
 
-  private renderCurrentRun(currentRun: any): string {
+  private renderCurrentRun(currentRun: DashboardData['currentRun']): string {
     if (!currentRun) return '';
 
     return `
@@ -422,7 +434,7 @@ export class UserDashboard {
     `;
   }
 
-  private renderTerritories(territories: any[]): string {
+  private renderTerritories(territories: DashboardData['territories']): string {
     if (!territories || territories.length === 0) {
       return `
         <div class="dashboard-section">
@@ -486,7 +498,7 @@ export class UserDashboard {
     `;
   }
 
-  private renderTerritoryCard(territory: any): string {
+  private renderTerritoryCard(territory: DashboardTerritory): string {
     const isExpanded = this.expandedTerritoryId === territory.geohash;
     const activityPoints = territory.activityPoints || 500;
     const defenseStatus = territory.defenseStatus || 'moderate';
@@ -517,14 +529,14 @@ export class UserDashboard {
   }
 
   private renderTerritoryDetails(
-    territory: any,
+    territory: DashboardTerritory,
     activityPoints: number,
     defenseStatus: string
   ): string {
     // Get available ghosts for deployment
     const data = this.dashboardService.getData();
     const availableGhosts = (data.ghosts || []).filter(
-      (g: any) => !g.cooldownUntil || new Date(g.cooldownUntil) < new Date()
+      (g) => !g.cooldownUntil || new Date(g.cooldownUntil) < new Date()
     );
 
     const activityPercentage = (activityPoints / 1000) * 100;
@@ -577,7 +589,7 @@ export class UserDashboard {
                 <option value="">Select ghost...</option>
                 ${availableGhosts
                   .map(
-                    (g: any) => `
+                    (g) => `
                   <option value="${g.id}">${g.avatar || '👻'} ${g.name} (Lvl ${g.level})</option>
                 `
                   )
@@ -639,7 +651,7 @@ export class UserDashboard {
     return `${hours}h remaining`;
   }
 
-  private renderWalletInfo(walletInfo: any): string {
+  private renderWalletInfo(walletInfo: DashboardData['walletInfo']): string {
     // MOBILE WEB3: Show prominent wallet connection UI
     // When disconnected: show connect button with provider options
     // When connected: show wallet details with balance
@@ -717,7 +729,7 @@ export class UserDashboard {
     `;
   }
 
-  private renderGhostRunners(ghosts: any[]): string {
+  private renderGhostRunners(ghosts: DashboardData['ghosts']): string {
     if (!ghosts || ghosts.length === 0) {
       return `
         <div class="dashboard-section">
@@ -766,7 +778,7 @@ export class UserDashboard {
     `;
   }
 
-  private renderChallenges(userStats: any): string {
+  private renderChallenges(userStats: DashboardData['userStats']): string {
     const challenges = userStats?.activeChallenges || [];
 
     if (challenges.length === 0) {
@@ -791,7 +803,7 @@ export class UserDashboard {
         </div>
         <div class="challenges-list">
           ${challenges
-            .map((c: any) => {
+            .map((c) => {
               const progress = Math.min((c.goal.current / c.goal.target) * 100, 100);
               return `
               <div class="challenge-item">
@@ -818,7 +830,7 @@ export class UserDashboard {
     `;
   }
 
-  private renderNotifications(notifications: any): string {
+  private renderNotifications(notifications: DashboardData['notifications']): string {
     if (!notifications) return '';
 
     const notificationItems = [];

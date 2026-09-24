@@ -1,10 +1,12 @@
 import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
-import { EventBus } from '@runrealm/shared-core/core/event-bus';
+import { type AppEvents, EventBus } from '@runrealm/shared-core/core/event-bus';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { LocationService } from '@runrealm/shared-core/services/location-service';
+import type { RouteData } from '@runrealm/shared-core/services/route-state-service';
 import { RouteStateService } from '@runrealm/shared-core/services/route-state-service';
 import { UIService } from '@runrealm/shared-core/services/ui-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
+import type { ActionPayload, UIAction } from '@runrealm/shared-core/ui/action-router';
 import { WalletWidget } from '../../wallet-widget';
 import { GPSPermissionModal } from '../modals/gps-permission-modal';
 import { WidgetCreator } from '../widget-managers/widget-creator';
@@ -21,7 +23,7 @@ export class EventHandler {
   private widgetCreator: WidgetCreator;
   private web3Service: Web3Service;
   private routeStateService: RouteStateService;
-  private eventCallbacks: Map<string, Array<(data?: any) => void>> = new Map();
+  private eventCallbacks: Map<string, Array<(data: never) => void>> = new Map();
 
   constructor(
     domService: DOMService,
@@ -47,19 +49,20 @@ export class EventHandler {
   }
 
   // Event system methods
-  subscribe(event: string, callback: (data?: any) => void): void {
+  subscribe<T = unknown>(event: string, callback: (data: T) => void): void {
     if (!this.eventCallbacks.has(event)) {
       this.eventCallbacks.set(event, []);
     }
-    this.eventCallbacks.get(event)?.push(callback);
+    // The map erases the payload type per key; safeEmit re-widens on dispatch.
+    this.eventCallbacks.get(event)?.push(callback as (data: never) => void);
   }
 
-  protected safeEmit(event: string, data?: any): void {
+  protected safeEmit(event: string, data?: unknown): void {
     const callbacks = this.eventCallbacks.get(event);
     if (callbacks) {
       callbacks.forEach((callback) => {
         try {
-          callback(data);
+          (callback as (data: unknown) => void)(data);
         } catch (error) {
           console.error(`Error in event handler for ${event}:`, error);
         }
@@ -126,10 +129,10 @@ export class EventHandler {
 
       const action = target.getAttribute('data-action');
       const payloadAttr = target.getAttribute('data-payload');
-      let payload: any;
+      let payload: ActionPayload | undefined;
       if (payloadAttr) {
         try {
-          payload = JSON.parse(payloadAttr);
+          payload = JSON.parse(payloadAttr) as ActionPayload;
         } catch {
           payload = undefined;
         }
@@ -147,7 +150,7 @@ export class EventHandler {
 
       try {
         const { ActionRouter } = await import('@runrealm/shared-core/ui/action-router');
-        ActionRouter.dispatch(action as any, payload);
+        ActionRouter.dispatch(action as UIAction, payload);
       } catch (err) {
         console.error('Failed to dispatch UI action', action, err);
         this.hideAILoadingState();
@@ -160,16 +163,16 @@ export class EventHandler {
     });
 
     // Listen for GPS status updates from actual location usage
-    this.subscribe('location:updated' as any, (_data: any) => {
+    this.subscribe('location:updated', () => {
       // This will be handled by the status manager
     });
 
-    this.subscribe('location:error' as any, () => {
+    this.subscribe('location:error', () => {
       // This will be handled by the status manager
     });
 
     // Check GPS status when it actually matters
-    this.subscribe('run:startRequested' as any, () => {
+    this.subscribe('run:startRequested', () => {
       // This will be handled by the status manager
     });
 
@@ -201,10 +204,13 @@ export class EventHandler {
       // Ensure GameFi widgets are present (idempotent if already created)
     });
 
-    this.subscribe('ui:territoryPreview', (data) => {
-      // Update territory-info widget with preview details
-      this.widgetCreator.updateTerritoryWidget(data);
-    });
+    this.subscribe(
+      'ui:territoryPreview',
+      (data: { point?: { lat: number; lng: number }; totalDistance?: number }) => {
+        // Update territory-info widget with preview details
+        this.widgetCreator.updateTerritoryWidget(data);
+      }
+    );
 
     this.subscribe('web3:walletDisconnected', () => {
       // This will be handled by the status manager
@@ -212,8 +218,14 @@ export class EventHandler {
 
     // AI route events -> render planned route and update widget
     this.subscribe('ai:routeReady', (data) => {
+      const routeData = data as {
+        waypoints?: Array<{ lng: number; lat: number }>;
+        totalDistance?: number;
+        estimatedTime?: number;
+        difficulty?: number;
+      };
       try {
-        const coordinates = data.waypoints?.map((p: any) => [p.lng, p.lat]) || [];
+        const coordinates = routeData.waypoints?.map((p) => [p.lng, p.lat]) || [];
         const geojson = {
           type: 'Feature',
           properties: {},
@@ -221,13 +233,15 @@ export class EventHandler {
         };
         this.safeEmit('run:plannedRouteChanged', { geojson });
 
-        const km = (data.totalDistance || 0) / 1000;
-        const etaMin = data.estimatedTime ? Math.round(data.estimatedTime / 60) : undefined;
+        const km = (routeData.totalDistance || 0) / 1000;
+        const etaMin = routeData.estimatedTime
+          ? Math.round(routeData.estimatedTime / 60)
+          : undefined;
         const diffLabel =
-          typeof data.difficulty === 'number'
-            ? data.difficulty < 33
+          typeof routeData.difficulty === 'number'
+            ? routeData.difficulty < 33
               ? 'Easy'
-              : data.difficulty < 67
+              : routeData.difficulty < 67
                 ? 'Medium'
                 : 'Hard'
             : '—';
@@ -294,14 +308,12 @@ export class EventHandler {
     });
 
     // Handle AI service events
-    this.subscribe(
-      'ai:ghostRunnerGenerated',
-      (data: { runner: any; difficulty: number; success?: boolean; fallback?: boolean }) => {
-        console.log('MainUI: Ghost runner generated:', data.runner.name);
-        const widget = this.widgetSystem.getWidget('ai-coach');
-        if (widget) {
-          const fallbackText = data.fallback ? ' (Fallback)' : '';
-          const successHtml = `
+    this.subscribe('ai:ghostRunnerGenerated', (data: AppEvents['ai:ghostRunnerGenerated']) => {
+      console.log('MainUI: Ghost runner generated:', data.runner.name);
+      const widget = this.widgetSystem.getWidget('ai-coach');
+      if (widget) {
+        const fallbackText = data.fallback ? ' (Fallback)' : '';
+        const successHtml = `
           <div class="widget-tip success animate-in">
             👻 ${data.runner.name}${fallbackText} is ready to race!
             <br><small>Difficulty: ${data.difficulty}% • ${data.runner.specialAbility}</small>
@@ -322,18 +334,17 @@ export class EventHandler {
             </button>
           </div>
         `;
-          this.widgetSystem.updateWidget('ai-coach', successHtml, {
-            success: true,
-          });
+        this.widgetSystem.updateWidget('ai-coach', successHtml, {
+          success: true,
+        });
 
-          // Add celebration effect
-          this.addCelebrationEffect();
-          this.triggerHapticFeedback('medium');
-        }
+        // Add celebration effect
+        this.addCelebrationEffect();
+        this.triggerHapticFeedback('medium');
       }
-    );
+    });
 
-    this.subscribe('ai:ghostRunnerFailed' as any, (data: { message: string }) => {
+    this.subscribe('ai:ghostRunnerFailed', (data: { message: string }) => {
       console.log('MainUI: Ghost runner generation failed:', data.message);
       this.hideAILoadingState();
       const widget = this.widgetSystem.getWidget('ai-coach');
@@ -357,27 +368,17 @@ export class EventHandler {
     });
 
     // Handle route generation success
-    this.subscribe(
-      'ai:routeReady' as any,
-      (data: {
-        route: any;
-        distance: number;
-        duration: number;
-        waypoints?: any[];
-        totalDistance?: number;
-        difficulty?: number;
-        estimatedTime?: number;
-      }) => {
-        console.log('MainUI: Route generated successfully:', data);
-        this.hideAILoadingState();
-        const widget = this.widgetSystem.getWidget('ai-coach');
-        if (widget) {
-          const waypointSummary =
-            data.waypoints && data.waypoints.length > 0
-              ? `${data.waypoints.length} strategic waypoints`
-              : `${data.waypoints ? data.waypoints.length : 0} waypoints`;
+    this.subscribe('ai:routeReady', (data: AppEvents['ai:routeReady']) => {
+      console.log('MainUI: Route generated successfully:', data);
+      this.hideAILoadingState();
+      const widget = this.widgetSystem.getWidget('ai-coach');
+      if (widget) {
+        const waypointSummary =
+          data.waypoints && data.waypoints.length > 0
+            ? `${data.waypoints.length} strategic waypoints`
+            : `${data.waypoints ? data.waypoints.length : 0} waypoints`;
 
-          const successHtml = `
+        const successHtml = `
           <div class="widget-tip success animate-in">
             📍 Perfect route found! ${waypointSummary}, ${Math.round(data.distance)}m
             <br><small>Difficulty: ${
@@ -400,16 +401,15 @@ export class EventHandler {
             </button>
           </div>
         `;
-          this.widgetSystem.updateWidget('ai-coach', successHtml, {
-            success: true,
-          });
+        this.widgetSystem.updateWidget('ai-coach', successHtml, {
+          success: true,
+        });
 
-          // Add celebration effect
-          this.addCelebrationEffect();
-          this.triggerHapticFeedback('medium');
-        }
+        // Add celebration effect
+        this.addCelebrationEffect();
+        this.triggerHapticFeedback('medium');
       }
-    );
+    });
 
     // Handle route generation failure
     this.subscribe('ai:routeFailed', (data: { message: string }) => {
@@ -475,7 +475,11 @@ export class EventHandler {
     // Listen for route state changes to update widgets
     this.subscribe(
       'route:stateChanged',
-      (data: { routeId: string; routeData: any; isActive: boolean }) => {
+      (data: {
+        routeId: string;
+        routeData: RouteData & { distance?: number };
+        isActive: boolean;
+      }) => {
         if (data.isActive) {
           // Update territory-info widget with route details
           const km = (data.routeData.totalDistance || data.routeData.distance || 0) / 1000;
@@ -620,7 +624,7 @@ export class EventHandler {
           target.checked ? 'true' : 'false'
         );
         // Notify rewards UI to react immediately
-        this.safeEmit('rewards:settingsChanged' as any, {});
+        this.safeEmit('rewards:settingsChanged', {});
         // Update settings widget to reflect any state change
         // this.widgetSystem.updateWidget("settings", this.getSettingsContent());
       }
@@ -697,7 +701,17 @@ export class EventHandler {
   }
 
   private showExternalFitnessIntegration(): void {
-    (this.uiService as any).showModal({
+    // Legacy modal surface: UIService doesn't expose a modal API yet, so the
+    // shape is asserted structurally. Switch to the real API when one lands.
+    type ModalHost = {
+      showModal?: (options: {
+        title: string;
+        content: string;
+        actions: Array<{ label: string; primary?: boolean; action: () => void }>;
+      }) => void;
+    };
+    const uiWithModal = this.uiService as unknown as ModalHost;
+    uiWithModal.showModal?.({
       title: '🌟 Connect Strava',
       content: `
         <div style="padding: 20px; text-align: center;">

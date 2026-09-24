@@ -335,6 +335,12 @@ export interface AppEvents extends Web3Events {
   'widget:stateReset': { widgetId: string };
   'widget:allStatesReset': Record<string, never>;
   'widget:toggled': { widgetId: string };
+  'widget:updateContent': {
+    widgetId: string;
+    content: string;
+    loading?: boolean;
+    success?: boolean;
+  };
   'mobile:swipeLeft': Record<string, never>;
   'mobile:swipeRight': Record<string, never>;
   'mobile:orientationChanged': { orientation: string; compactMode?: boolean };

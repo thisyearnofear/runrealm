@@ -1,7 +1,13 @@
 import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
 import { LocationService } from '@runrealm/shared-core/services/location-service';
+import type { WalletInfo } from '@runrealm/shared-core/services/web3-service';
 import { EventHandler } from '../event-handlers/ui-event-handler';
 import { WidgetCreator } from '../widget-managers/widget-creator';
+
+/** Speculative Network Information API shape (non-standard, browser-dependent). */
+interface NetworkInformationLike {
+  effectiveType?: string;
+}
 
 /**
  * StatusManager - Handles GPS, network, and other status-related functionality
@@ -109,7 +115,7 @@ export class StatusManager {
   /**
    * Update location widget display with current location and status
    */
-  updateLocationWidget(locationInfo?: any): void {
+  updateLocationWidget(locationInfo?: { accuracy?: number }): void {
     // Update GPS status if location info is provided
     if (locationInfo?.accuracy) {
       this.gpsStatus = {
@@ -132,7 +138,7 @@ export class StatusManager {
   /**
    * Update wallet widget display
    */
-  updateWalletWidget(walletInfo: any): void {
+  updateWalletWidget(walletInfo: WalletInfo | null): void {
     let content: string;
 
     if (walletInfo) {
@@ -189,10 +195,12 @@ export class StatusManager {
    * Get network connection type if available
    */
   private getConnectionType(): string {
-    const connection =
-      (navigator as any).connection ||
-      (navigator as any).mozConnection ||
-      (navigator as any).webkitConnection;
+    const nav = navigator as Navigator & {
+      connection?: NetworkInformationLike;
+      mozConnection?: NetworkInformationLike;
+      webkitConnection?: NetworkInformationLike;
+    };
+    const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
     return connection?.effectiveType || 'unknown';
   }
 

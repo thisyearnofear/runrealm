@@ -8,38 +8,19 @@
  * `confidential-shield-reveal.ts` (single source for shield choreography).
  */
 
+import type { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
+import type { RunRealmServiceRegistry } from '../../types/debug-globals';
 import { revealAction, revealDecryptScore } from './confidential-shield-reveal';
 
-interface ShieldServices {
-  zamaSupport?: {
-    chainSupportsZama(chainId: number): boolean;
-  };
-  confidentialTerritory?: {
-    boostEncrypted(territoryId: string, amount: number): Promise<unknown>;
-    contestEncrypted(territoryId: string, amount: number): Promise<unknown>;
-    myDefenseCipher(territoryId: string): Promise<bigint | null>;
-  };
-  web3?: {
-    getChainId(): Promise<number> | number;
-    getSigner(): unknown;
-  };
-}
-
-function getShieldServices(): ShieldServices {
+function getShieldServices(): RunRealmServiceRegistry {
   if (typeof window === 'undefined') return {};
-  const services = (window as any).RunRealm?.services;
-  if (!services) return {};
-  return {
-    zamaSupport: services.zamaSupport,
-    confidentialTerritory: services.confidentialTerritory,
-    web3: services.web3,
-  };
+  return window.RunRealm?.services ?? {};
 }
 
 export class ConfidentialShieldWidget {
-  private widgetSystem: any;
+  private widgetSystem: WidgetSystem;
 
-  constructor(widgetSystem: any) {
+  constructor(widgetSystem: WidgetSystem) {
     this.widgetSystem = widgetSystem;
   }
 
@@ -106,13 +87,13 @@ export class ConfidentialShieldWidget {
     `;
   }
 
-  private isZamaSupported(services: ShieldServices): boolean {
+  private isZamaSupported(services: RunRealmServiceRegistry): boolean {
     const chainId = this.getCurrentChainId(services);
     if (!chainId || !services.zamaSupport) return false;
     return services.zamaSupport.chainSupportsZama(chainId);
   }
 
-  private getCurrentChainId(services: ShieldServices): number | null {
+  private getCurrentChainId(services: RunRealmServiceRegistry): number | null {
     if (!services.web3) return null;
     const result = services.web3.getChainId();
     if (typeof result === 'number') return result;
@@ -163,8 +144,8 @@ export class ConfidentialShieldWidget {
         return;
       }
       await revealDecryptScore(output, value);
-    } catch (err: any) {
-      this.showOutput(`Read failed: ${err?.message || String(err)}`, 'error');
+    } catch (err) {
+      this.showOutput(`Read failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
     }
   }
 
@@ -182,8 +163,8 @@ export class ConfidentialShieldWidget {
         title: 'Boost submitted',
         caption: 'Encrypted points added on Zama FHE · pending confirmation',
       });
-    } catch (err: any) {
-      this.showOutput(`Boost failed: ${err?.message || String(err)}`, 'error');
+    } catch (err) {
+      this.showOutput(`Boost failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
     }
   }
 
@@ -201,8 +182,11 @@ export class ConfidentialShieldWidget {
         title: 'Contest submitted',
         caption: 'Encrypted strike sent on Zama FHE · pending confirmation',
       });
-    } catch (err: any) {
-      this.showOutput(`Contest failed: ${err?.message || String(err)}`, 'error');
+    } catch (err) {
+      this.showOutput(
+        `Contest failed: ${err instanceof Error ? err.message : String(err)}`,
+        'error'
+      );
     }
   }
 

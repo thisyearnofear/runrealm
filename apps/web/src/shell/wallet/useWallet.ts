@@ -14,7 +14,7 @@
  * queries that at open time, not at render time.
  */
 
-import type { EventBus } from '@runrealm/shared-core/core/event-bus';
+import type { AppEvents, EventBus } from '@runrealm/shared-core/core/event-bus';
 import { useCallback, useEffect, useState } from 'react';
 
 export type WalletStatus = 'disconnected' | 'connecting' | 'connected' | 'error' | 'switching';
@@ -57,33 +57,48 @@ export interface UseWalletResult extends WalletSnapshot {
 const EMPTY_SNAPSHOT: WalletSnapshot = { status: 'disconnected' };
 
 export function useWallet(options: UseWalletOptions): UseWalletResult {
+  const {
+    eventBus,
+    listProviders,
+    connect: connectToProvider,
+    disconnect: disconnectFromProvider,
+  } = options;
   const [snapshot, setSnapshot] = useState<WalletSnapshot>(EMPTY_SNAPSHOT);
-  const [providers, setProviders] = useState<WalletProviderInfo[]>(() => options.listProviders());
+  const [providers, setProviders] = useState<WalletProviderInfo[]>(() => listProviders());
 
   useEffect(() => {
-    const cb = (next: WalletSnapshot) => {
-      setSnapshot(next);
+    const onStateChange = (payload: AppEvents['wallet:stateChanged']) => {
+      // Flatten the event payload (`{ wallet: { address, … } }`) into the
+      // snapshot shape the components render against.
+      setSnapshot({
+        status: payload.status,
+        address: payload.wallet?.address,
+        chainId: payload.wallet?.chainId,
+        networkName: payload.wallet?.networkName,
+        balance: payload.wallet?.balance,
+        error: payload.error,
+      });
     };
-    options.eventBus.on('wallet:stateChanged' as never, cb as never);
+    eventBus.on('wallet:stateChanged', onStateChange);
     return () => {
-      options.eventBus.off('wallet:stateChanged' as never, cb as never);
+      eventBus.off('wallet:stateChanged', onStateChange);
     };
-  }, [options.eventBus]);
+  }, [eventBus]);
 
   const refresh = useCallback(() => {
-    setProviders(options.listProviders());
-  }, [options.listProviders]);
+    setProviders(listProviders());
+  }, [listProviders]);
 
   const connect = useCallback(
     async (providerId: string) => {
-      await options.connect(providerId);
+      await connectToProvider(providerId);
     },
-    [options]
+    [connectToProvider]
   );
 
   const disconnect = useCallback(async () => {
-    await options.disconnect();
-  }, [options]);
+    await disconnectFromProvider();
+  }, [disconnectFromProvider]);
 
   return {
     ...snapshot,

@@ -11,7 +11,6 @@ import { RewardSystemUI } from '@runrealm/shared-core/components/reward-system-u
 import { TouchGestureService } from '@runrealm/shared-core/components/touch-gesture-service';
 import { TransactionStatus } from '@runrealm/shared-core/components/transaction-status';
 import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
-import { ConfigService } from '@runrealm/shared-core/core/app-config';
 import { BaseService } from '@runrealm/shared-core/core/base-service';
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import { DragService } from '@runrealm/shared-core/internal/_legacy-widget/drag-service';
@@ -49,7 +48,6 @@ export class MainUI extends BaseService {
   private contractService!: ContractService;
   private gamefiUI: GameFiUI;
   private web3Service: Web3Service;
-  private configService: ConfigService;
   private routeStateService: RouteStateService;
 
   // Modular components
@@ -66,8 +64,7 @@ export class MainUI extends BaseService {
     walletWidget: WalletWidget,
     uiService: UIService,
     gamefiUI: GameFiUI,
-    web3Service: Web3Service,
-    configService: ConfigService
+    web3Service: Web3Service
   ) {
     super();
     this.domService = domService;
@@ -76,7 +73,6 @@ export class MainUI extends BaseService {
     this.uiService = uiService;
     this.gamefiUI = gamefiUI;
     this.web3Service = web3Service;
-    this.configService = configService;
     this.dragService = new DragService();
     this.visibilityService = new VisibilityService();
     this.animationService = new AnimationService();
@@ -132,8 +128,7 @@ export class MainUI extends BaseService {
       this.walletWidget,
       this.userDashboardService,
       this.widgetSystem,
-      this.visibilityService,
-      this.configService
+      this.visibilityService
     );
 
     // Now set the widgetCreator reference in the eventHandler
@@ -255,7 +250,7 @@ export class MainUI extends BaseService {
       // Update settings widget to reflect new state
       this.widgetSystem.updateWidget(
         'settings',
-        this.widgetCreator.getSettingsContent(data.enabled, true, true, true)
+        this.widgetCreator.getSettingsContent(data.enabled, true, true)
       );
     });
     console.log('MainUI: GameFi event listener registered');
@@ -310,18 +305,12 @@ export class MainUI extends BaseService {
    */
   private initializeRunTrackerWidget(): void {
     // Get the enhanced run controls service from global registry
-    const services = (window as any).RunRealm?.services;
+    const services = window.RunRealm?.services;
 
     if (services?.enhancedRunControls) {
       services.enhancedRunControls.initializeWidget();
     } else {
-      // Fallback: access directly from app instance
-      const app = (window as any).runRealmApp;
-      if (app?.enhancedRunControls) {
-        app.enhancedRunControls.initializeWidget();
-      } else {
-        console.error('MainUI: Could not find EnhancedRunControls service');
-      }
+      console.error('MainUI: Could not find EnhancedRunControls service');
     }
   }
 
@@ -332,8 +321,7 @@ export class MainUI extends BaseService {
     // Delegate to UI effects manager
     this.isGameFiMode = this.uiEffectsManager.toggleGameFiMode(
       this.isGameFiMode,
-      this.updateGameFiToggle.bind(this),
-      this.widgetCreator
+      this.updateGameFiToggle.bind(this)
     );
   }
 

@@ -6,6 +6,13 @@ import { AnimationService } from '@runrealm/shared-core/services/animation-servi
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { UIService } from '@runrealm/shared-core/services/ui-service';
 
+/** Shape of the welcome tooltips handed to the (stubbed) sequence runner. */
+interface WelcomeTooltip {
+  target: string;
+  message: string;
+  position: string;
+}
+
 /**
  * UIEffectsManager - Handles UI effects, animations, onboarding, and accessibility
  */
@@ -109,7 +116,7 @@ export class UIEffectsManager {
   /**
    * Show sequential tooltips without overlays
    */
-  private showTooltipSequence(_tooltips: any[]): void {
+  private showTooltipSequence(_tooltips: WelcomeTooltip[]): void {
     // Implementation for showing sequential tooltips
     // This would create and animate tooltip elements
   }
@@ -173,10 +180,10 @@ export class UIEffectsManager {
       }
 
       // iOS Safari haptic feedback (if available)
-      if ('hapticFeedback' in window) {
-        (window as any).hapticFeedback(type);
+      if (window.hapticFeedback) {
+        window.hapticFeedback(type);
       }
-    } catch (_error) {
+    } catch {
       // Haptic feedback not supported, silently continue
     }
   }
@@ -332,11 +339,7 @@ export class UIEffectsManager {
   /**
    * Toggle GameFi mode
    */
-  toggleGameFiMode(
-    isGameFiMode: boolean,
-    updateGameFiToggle: (enabled: boolean) => void,
-    _widgetCreator: any
-  ): boolean {
+  toggleGameFiMode(isGameFiMode: boolean, updateGameFiToggle: (enabled: boolean) => void): boolean {
     const newMode = !isGameFiMode;
     console.log(`UIEffectsManager: Toggling GameFi mode to: ${newMode}`);
 

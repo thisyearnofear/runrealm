@@ -4,6 +4,7 @@
  * Integrates cleanly with the widget system
  */
 
+import type { RewardSystemUI } from '@runrealm/shared-core/components/reward-system-ui';
 import { BaseService } from '@runrealm/shared-core/core/base-service';
 import { AnimationService } from '@runrealm/shared-core/services/animation-service';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
@@ -33,7 +34,7 @@ export class WalletWidget extends BaseService {
   private uiService: UIService;
   private animationService: AnimationService;
   private web3Service: Web3Service;
-  private rewardSystemUI: any = null; // RewardSystemUI reference (optional)
+  private rewardSystemUI: RewardSystemUI | null = null; // RewardSystemUI reference (optional)
 
   private walletState: WalletState = { status: 'disconnected' };
   private retryCount: number = 0;
@@ -49,8 +50,7 @@ export class WalletWidget extends BaseService {
       description: 'Most popular Ethereum wallet',
       downloadUrl: 'https://metamask.io/download/',
       popular: true,
-      isInstalled: () =>
-        typeof window !== 'undefined' && Boolean((window as any).ethereum?.isMetaMask),
+      isInstalled: () => typeof window !== 'undefined' && Boolean(window.ethereum?.isMetaMask),
       connect: () => this.connectMetaMask(),
     },
     {
@@ -69,7 +69,7 @@ export class WalletWidget extends BaseService {
       description: "Coinbase's self-custody wallet",
       downloadUrl: 'https://www.coinbase.com/wallet',
       isInstalled: () =>
-        typeof window !== 'undefined' && Boolean((window as any).ethereum?.isCoinbaseWallet),
+        typeof window !== 'undefined' && Boolean(window.ethereum?.isCoinbaseWallet),
       connect: () => this.connectCoinbase(),
     },
   ];
@@ -100,11 +100,11 @@ export class WalletWidget extends BaseService {
   /**
    * Set RewardSystemUI reference for rewards integration
    */
-  public setRewardSystemUI(rewardSystemUI: any): void {
+  public setRewardSystemUI(rewardSystemUI: RewardSystemUI | null): void {
     this.rewardSystemUI = rewardSystemUI;
     // Listen for rewards updates
     if (this.rewardSystemUI) {
-      this.subscribe('rewards:dataUpdated' as any, () => {
+      this.subscribe('rewards:dataUpdated', () => {
         this.updateWidgetContent();
       });
     }
@@ -208,7 +208,7 @@ export class WalletWidget extends BaseService {
     });
 
     // Listen for ActionRouter events
-    this.subscribe('wallet:connect', (payload: any) => {
+    this.subscribe('wallet:connect', (payload) => {
       if (payload?.provider) {
         this.connectWallet(payload.provider);
       } else {
@@ -252,7 +252,7 @@ export class WalletWidget extends BaseService {
     this.walletState = { ...this.walletState, ...newState };
 
     // Emit state change for other components
-    this.safeEmit('wallet:stateChanged' as any, this.walletState);
+    this.safeEmit('wallet:stateChanged', this.walletState);
 
     // Update widget content through the widget system
     this.updateWidgetContent();
@@ -263,7 +263,7 @@ export class WalletWidget extends BaseService {
    */
   private updateWidgetContent(): void {
     // Emit widget update event that the widget system listens for
-    this.safeEmit('widget:updateContent' as any, {
+    this.safeEmit('widget:updateContent', {
       widgetId: 'wallet-info',
       content: this.getWidgetContent(),
       loading: this.walletState.status === 'connecting' || this.walletState.status === 'switching',
@@ -516,16 +516,20 @@ export class WalletWidget extends BaseService {
     }
   }
 
-  private handleConnectionError(error: any, provider: WalletProvider): void {
+  private handleConnectionError(error: unknown, provider: WalletProvider): void {
+    const { code, message } =
+      typeof error === 'object' && error !== null
+        ? (error as { code?: number; message?: string })
+        : {};
     let errorMessage = 'Failed to connect wallet';
 
-    if (error.code === 4001) {
+    if (code === 4001) {
       errorMessage = 'Connection rejected by user';
-    } else if (error.code === -32002) {
+    } else if (code === -32002) {
       errorMessage = 'Connection request already pending';
-    } else if (error.message?.includes('network')) {
+    } else if (message?.includes('network')) {
       errorMessage = 'Network connection issue';
-    } else if (error.message?.includes('unauthorized')) {
+    } else if (message?.includes('unauthorized')) {
       errorMessage = 'Wallet authorization failed';
     }
 

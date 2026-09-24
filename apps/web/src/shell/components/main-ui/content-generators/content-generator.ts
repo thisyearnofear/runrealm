@@ -1,6 +1,17 @@
 /**
  * ContentGenerator - Generates content for various UI components
  */
+
+/** Territory fields the generated widget content renders. */
+export interface TerritoryContentData {
+  point?: { lat: number; lng: number };
+  totalDistance?: number;
+  difficulty?: number;
+  estimatedReward?: number;
+  rarity?: string;
+  landmarks?: string[];
+}
+
 export class ContentGenerator {
   /**
    * Create the main user interface
@@ -27,15 +38,14 @@ export class ContentGenerator {
   /**
    * Generate territory content based on territory data
    */
-  generateTerritoryContent(data: any): string {
+  generateTerritoryContent(data: TerritoryContentData = {}): string {
     const {
-      point,
       totalDistance,
       difficulty = 50,
       estimatedReward = Math.floor((totalDistance || 0) * 0.01 + Math.random() * 20),
       rarity = 'Common',
       landmarks = [],
-    } = data || {};
+    } = data;
 
     const difficultyLabel = difficulty < 33 ? 'Easy' : difficulty < 67 ? 'Medium' : 'Hard';
     const rarityClass = String(rarity).toLowerCase();
@@ -84,7 +94,7 @@ export class ContentGenerator {
   /**
    * Generate widget content for various contexts
    */
-  generateWidgetContent(widgetType: string, data?: any): string {
+  generateWidgetContent(widgetType: string, data?: TerritoryContentData): string {
     switch (widgetType) {
       case 'territory':
         return this.generateTerritoryContent(data);

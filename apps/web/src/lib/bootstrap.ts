@@ -1,51 +1,12 @@
 // Clean, modular entry point for RunRealm
-import type { ConfidentialContractService } from '@runrealm/shared-blockchain/services/confidential-contract-service';
 import { RunRealmApp } from '@runrealm/shared-core/core/run-realm-app';
 import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
-import type { Root } from 'react-dom/client';
 import { MainUI } from '../shell/components/main-ui';
 import UserDashboard from '../shell/components/user-dashboard';
 import { type WalletProvider, WalletWidget } from '../shell/components/wallet-widget';
 import type { UseWalletOptions } from '../shell/wallet/useWallet';
+import type { RunRealmDebugGlobal } from '../types/debug-globals';
 import { installRuntimeGuards } from './runtime-setup';
-
-/**
- * Runtime shape of the legacy `window.RunRealm` debug bag. The app instance
- * is assigned to it during dev bootstrapping, and `RunRealmApp.exposeGlobals()`
- * patches `mainUI` onto it at runtime — every member is therefore optional.
- */
-type RunRealmDebugGlobal = {
-  services?: {
-    web3?: {
-      isConnected: () => boolean;
-      getCurrentWallet: () => { address: string; chainId: number };
-    };
-    crossChain?: {
-      getChainName: (chainId: number) => string;
-      demonstrateZetaChainAPI: () => void;
-    };
-    eventBus?: { emit: (event: string, payload: unknown) => void };
-    ConfidentialContractService?: ConfidentialContractService;
-  };
-  mainUI?: {
-    walletWidget?: { showWalletModal: () => void };
-  };
-};
-
-declare global {
-  interface Window {
-    /** Dev-only React root for the legacy wallet modal bridge. */
-    reactWalletRoot?: Root;
-    /** Dev-only app handle; also read by legacy widgets on unload. */
-    runRealmApp?: RunRealmApp;
-    /** Legacy debug bag (see RunRealmDebugGlobal). */
-    RunRealm?: RunRealmDebugGlobal;
-    /** Dev console helper (development only). */
-    debugWidgets?: () => unknown;
-    /** Buildathon demo helper (development only). */
-    demoCrossChainFunctionality?: () => Promise<void>;
-  }
-}
 
 // Browser-only runtime setup (env bridge, service worker, error handlers).
 // Guarded so the module stays safe to import during Next.js static generation.
@@ -64,7 +25,6 @@ export async function initializeApp(): Promise<void> {
     const { UIService } = await import('@runrealm/shared-core/services/ui-service');
     const { GameFiUI } = await import('@runrealm/shared-core/components/gamefi-ui');
     const { Web3Service } = await import('@runrealm/shared-core/services/web3-service');
-    const { ConfigService } = await import('@runrealm/shared-core/core/app-config');
     const { AnimationService } = await import('@runrealm/shared-core/services/animation-service');
 
     const domService = new DOMService();
@@ -72,7 +32,6 @@ export async function initializeApp(): Promise<void> {
     const uiService = new UIService();
     const gamefiUI = new GameFiUI();
     const web3Service = Web3Service.getInstance();
-    const configService = ConfigService.getInstance();
     const animationService = AnimationService.getInstance();
 
     // Create MainUI with required dependencies
@@ -83,8 +42,7 @@ export async function initializeApp(): Promise<void> {
       walletWidget,
       uiService,
       gamefiUI,
-      web3Service,
-      configService
+      web3Service
     );
 
     // Import platform-specific ghost UI components
