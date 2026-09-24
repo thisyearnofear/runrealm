@@ -133,7 +133,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Build for staging
-        run: npm run build:web
+        run: npm run build
         env:
           NODE_ENV: staging
           MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
@@ -165,7 +165,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Build for production
-        run: npm run build:web
+        run: npm run build
         env:
           NODE_ENV: production
           MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
