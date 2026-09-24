@@ -202,7 +202,9 @@ logs/
 *.log
 
 # Generated files and directories
-packages/*/types/
+# NOTE: hand-written sources under packages/*/types/ (world-state.ts,
+# blockchain-types.ts, contract-types.ts) MUST stay tracked — CI builds
+# fail without them. Build output is covered by the dist/ rules above.
 
 # Zama FHEVM plugin temp artifacts
 fhevmTemp/
