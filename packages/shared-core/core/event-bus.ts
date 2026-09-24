@@ -492,6 +492,12 @@ export interface AppEvents extends Web3Events {
   // Territory activity events
   'territory:activityUpdated': { territory: any };
   'territory:vulnerable': { territory: any };
+  // Offline catch-up — exact threshold crossings narrating an absence
+  'offline:catchup': {
+    absenceMs: number;
+    crossings: Array<{ territoryId: string; threshold: number; atMs: number }>;
+    truncated: number;
+  };
   'territory:boostRequested': {
     territoryId: string;
     tokenId?: string;
