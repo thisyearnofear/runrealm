@@ -141,10 +141,15 @@ export class WidgetCreator {
 
   /**
    * Create the Zama confidential-shield demo widget.
+   * Failures must not abort the rest of MainUI boot.
    */
   createConfidentialShieldWidget(): void {
-    const shield = new ConfidentialShieldWidget(this.widgetSystem);
-    shield.register();
+    try {
+      const shield = new ConfidentialShieldWidget(this.widgetSystem);
+      shield.register();
+    } catch (error) {
+      console.warn('ConfidentialShieldWidget registration skipped:', error);
+    }
   }
 
   /**

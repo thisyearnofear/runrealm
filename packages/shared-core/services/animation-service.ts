@@ -17,6 +17,10 @@ export class AnimationService extends BaseService {
   private static instance: AnimationService;
   public map: MaplibreMap | null = null;
   private userLocationMarker: any = null;
+  private ghostAnimations = new Map<
+    string,
+    { marker: { remove(): void }; rafId: number; cancelled: boolean }
+  >();
 
   // Common easing functions
   private easingFunctions = {
@@ -841,68 +845,201 @@ export class AnimationService extends BaseService {
     // Implementation would go here
   }
 
-  public startGhostAnimation(ghost: GhostRunner): void {
+  /**
+   * Walk a ghost marker along `ghost.route`. Optional `emitProgress` defaults
+   * to true; demo callers pass false so WorldState/Orbis stay quiet.
+   */
+  public startGhostAnimation(
+    ghost: GhostRunner,
+    options: {
+      emitProgress?: boolean;
+      markerClassName?: string;
+      loop?: boolean;
+    } = {}
+  ): void {
+    const { emitProgress = true, markerClassName = 'ghost-marker', loop = false } = options;
+
     if (!this.map || !ghost.route || ghost.route.length < 2) {
       console.warn('AnimationService: Map not available or invalid route for ghost animation');
       return;
     }
 
+    this.stopGhostAnimation(ghost.id);
+
+    const maplibregl = this.getMaplibreGl();
+    if (!maplibregl?.Marker) {
+      console.warn('AnimationService: maplibregl.Marker unavailable');
+      return;
+    }
+
     const ghostMarkerElement = document.createElement('div');
-    ghostMarkerElement.className = 'ghost-marker'; // I'll need to add styles for this
+    ghostMarkerElement.className = markerClassName;
+    ghostMarkerElement.setAttribute('aria-hidden', 'true');
+    ghostMarkerElement.title = ghost.name || 'Ghost runner';
 
-    const ghostMarker = new (window as any).maplibregl.Marker({
+    type GhostMarker = {
+      setLngLat(lngLat: [number, number]): GhostMarker;
+      addTo(map: MaplibreMap): GhostMarker;
+      remove(): void;
+    };
+
+    const ghostMarker = new maplibregl.Marker({
       element: ghostMarkerElement,
-    })
-      .setLngLat([ghost.route[0].lng, ghost.route[0].lat])
-      .addTo(this.map);
+    }) as GhostMarker;
+    ghostMarker.setLngLat([ghost.route[0].lng, ghost.route[0].lat]).addTo(this.map);
 
-    const startTime = Date.now();
-    const runDuration = ghost.route[ghost.route.length - 1].timestamp - ghost.route[0].timestamp;
+    const route = ghost.route;
+    const runDuration = Math.max(1, route[route.length - 1].timestamp - route[0].timestamp);
+    const handle: { marker: GhostMarker; rafId: number; cancelled: boolean } = {
+      marker: ghostMarker,
+      rafId: 0,
+      cancelled: false,
+    };
+    this.ghostAnimations.set(ghost.id, handle);
 
-    const animate = () => {
-      const elapsedTime = Date.now() - startTime;
-      const progress = Math.min(elapsedTime / runDuration, 1);
+    const tick = (wallStart: number) => {
+      if (handle.cancelled || !ghost.route) return;
 
-      // Find the current segment
-      if (!ghost.route || ghost.route.length < 2) return;
+      const elapsedTime = Date.now() - wallStart;
+      let progress = elapsedTime / runDuration;
+
+      if (loop && progress >= 1) {
+        handle.rafId = requestAnimationFrame(() => tick(Date.now()));
+        return;
+      }
+
+      progress = Math.min(progress, 1);
+
       let currentSegmentIndex = -1;
-      for (let i = 0; i < ghost.route.length - 1; i++) {
-        if (
-          elapsedTime >= ghost.route[i].timestamp - ghost.route[0].timestamp &&
-          elapsedTime <= ghost.route[i + 1].timestamp - ghost.route[0].timestamp
-        ) {
+      for (let i = 0; i < route.length - 1; i++) {
+        const segStart = route[i].timestamp - route[0].timestamp;
+        const segEnd = route[i + 1].timestamp - route[0].timestamp;
+        if (elapsedTime >= segStart && elapsedTime <= segEnd) {
           currentSegmentIndex = i;
           break;
         }
       }
+      if (currentSegmentIndex === -1 && progress >= 1) {
+        currentSegmentIndex = route.length - 2;
+      }
 
       if (currentSegmentIndex !== -1) {
-        const segmentStart = ghost.route[currentSegmentIndex];
-        const segmentEnd = ghost.route[currentSegmentIndex + 1];
-        const segmentDuration = segmentEnd.timestamp - segmentStart.timestamp;
-        const timeIntoSegment = elapsedTime - (segmentStart.timestamp - ghost.route[0].timestamp);
-        const segmentProgress = timeIntoSegment / segmentDuration;
+        const segmentStart = route[currentSegmentIndex];
+        const segmentEnd = route[currentSegmentIndex + 1];
+        const segmentDuration = Math.max(1, segmentEnd.timestamp - segmentStart.timestamp);
+        const timeIntoSegment = elapsedTime - (segmentStart.timestamp - route[0].timestamp);
+        const segmentProgress = Math.min(1, Math.max(0, timeIntoSegment / segmentDuration));
 
         const lng = segmentStart.lng + (segmentEnd.lng - segmentStart.lng) * segmentProgress;
         const lat = segmentStart.lat + (segmentEnd.lat - segmentStart.lat) * segmentProgress;
 
         ghostMarker.setLngLat([lng, lat]);
 
-        this.safeEmit('ghost:progress', {
-          ghostId: ghost.id,
-          progress: progress * 100,
-          location: { lat, lng },
-        });
+        if (emitProgress) {
+          this.safeEmit('ghost:progress', {
+            ghostId: ghost.id,
+            progress: progress * 100,
+            location: { lat, lng },
+          });
+        }
       }
 
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        handle.rafId = requestAnimationFrame(() => tick(wallStart));
+      } else if (loop) {
+        handle.rafId = requestAnimationFrame(() => tick(Date.now()));
       } else {
         ghostMarker.remove();
+        this.ghostAnimations.delete(ghost.id);
       }
     };
 
-    requestAnimationFrame(animate);
+    handle.rafId = requestAnimationFrame(() => tick(Date.now()));
+  }
+
+  public stopGhostAnimation(ghostId?: string): void {
+    const stopOne = (
+      id: string,
+      handle: { marker: { remove(): void }; rafId: number; cancelled: boolean }
+    ) => {
+      handle.cancelled = true;
+      if (handle.rafId) cancelAnimationFrame(handle.rafId);
+      try {
+        handle.marker.remove();
+      } catch {
+        /* already removed */
+      }
+      this.ghostAnimations.delete(id);
+    };
+
+    if (ghostId) {
+      const handle = this.ghostAnimations.get(ghostId);
+      if (handle) stopOne(ghostId, handle);
+      return;
+    }
+
+    for (const [id, handle] of this.ghostAnimations) {
+      stopOne(id, handle);
+    }
+  }
+
+  private getMaplibreGl(): { Marker: new (opts: { element: HTMLElement }) => unknown } | null {
+    const fromWindow = (typeof window !== 'undefined' ? (window as any).maplibregl : null) as {
+      Marker?: unknown;
+    } | null;
+    if (fromWindow?.Marker)
+      return fromWindow as { Marker: new (opts: { element: HTMLElement }) => unknown };
+    return null;
+  }
+
+  /**
+   * Faint dashed trail for the first-land demo ghost (separate from AI routes).
+   */
+  public setDemoGhostRoute(
+    coordinates: [number, number][],
+    style: { color?: string; width?: number; opacity?: number; dashArray?: number[] } = {}
+  ): void {
+    if (!this.map || coordinates.length < 2) return;
+    this.clearDemoGhostRoute();
+
+    try {
+      this.map.addSource('demo-ghost-route-source', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: { source: 'demo-ghost' },
+          geometry: { type: 'LineString', coordinates },
+        },
+      });
+      this.map.addLayer({
+        id: 'demo-ghost-route-layer',
+        type: 'line',
+        source: 'demo-ghost-route-source',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': style.color || '#7a9e8e',
+          'line-width': style.width || 3,
+          'line-opacity': style.opacity ?? 0.55,
+          'line-dasharray': style.dashArray || [2, 2],
+        },
+      });
+    } catch (error) {
+      console.warn('AnimationService: Failed to draw demo ghost route', error);
+    }
+  }
+
+  public clearDemoGhostRoute(): void {
+    if (!this.map) return;
+    try {
+      if (this.map.getLayer('demo-ghost-route-layer')) {
+        this.map.removeLayer('demo-ghost-route-layer');
+      }
+      if (this.map.getSource('demo-ghost-route-source')) {
+        this.map.removeSource('demo-ghost-route-source');
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   /**

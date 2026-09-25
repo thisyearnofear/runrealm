@@ -7,6 +7,7 @@
  * original exactly; no new subscriptions added, none removed.
  */
 
+import { DemoGhostDirector } from '../services/demo-ghost-director';
 import { coordsToCell } from '../utils/h3-territory';
 import { fitMapToRoute, type MaplibreHandles } from './map-bootstrap';
 import type { Services } from './service-composer';
@@ -106,6 +107,26 @@ export function wireEvents(opts: EventWiringOptions): void {
           duration: 1200,
           essential: true,
         });
+        // After the camera settles, spawn the first-land demo ghost near
+        // the user. Skipped automatically if already seen.
+        const schedule =
+          typeof window !== 'undefined' ? window.setTimeout.bind(window) : setTimeout;
+        schedule(() => {
+          try {
+            if (!services.animation) {
+              services.eventBus.emit('demo:ghostsSettled', { reason: 'no-animation' });
+              return;
+            }
+            DemoGhostDirector.getInstance().maybeStart({
+              center: { lat: locationInfo.lat, lng: locationInfo.lng },
+              animation: services.animation,
+              runTracking: services.runTracking,
+            });
+          } catch (err) {
+            console.warn('Demo ghost start skipped:', err);
+            services.eventBus.emit('demo:ghostsSettled', { reason: 'error' });
+          }
+        }, 1400);
       }
     } catch (err) {
       console.error('Failed to update map location:', err);
@@ -275,6 +296,31 @@ export function wireEvents(opts: EventWiringOptions): void {
       console.warn('event-wiring: vulnerable pulse failed:', error);
     }
   });
+
+  // If GPS never arrives, still teach near last/default focus so the
+  // demo isn't GPS-gated for users who deny location.
+  const scheduleFallback =
+    typeof window !== 'undefined' ? window.setTimeout.bind(window) : setTimeout;
+  scheduleFallback(() => {
+    try {
+      const director = DemoGhostDirector.getInstance();
+      if (DemoGhostDirector.hasSeen() || director.isActive() || !services.animation) {
+        if (DemoGhostDirector.hasSeen()) {
+          services.eventBus.emit('demo:ghostsSettled', { reason: 'already-seen' });
+        }
+        return;
+      }
+      const focus = services.preferenceService.getLastOrDefaultFocus();
+      director.maybeStart({
+        center: { lat: focus.lat, lng: focus.lng },
+        animation: services.animation,
+        runTracking: services.runTracking,
+      });
+    } catch (err) {
+      console.warn('Demo ghost fallback skipped:', err);
+      services.eventBus.emit('demo:ghostsSettled', { reason: 'fallback-error' });
+    }
+  }, 4500);
 
   // Forward map click → orchestrator
   void opts.onMapClick;

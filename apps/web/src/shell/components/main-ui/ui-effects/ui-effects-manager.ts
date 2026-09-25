@@ -2,7 +2,12 @@ import { AccessibilityEnhancer } from '@runrealm/shared-core/components/accessib
 import { EnhancedOnboarding } from '@runrealm/shared-core/components/enhanced-onboarding';
 import { ExternalFitnessIntegration } from '@runrealm/shared-core/components/external-fitness-integration';
 import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
+import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import { AnimationService } from '@runrealm/shared-core/services/animation-service';
+import {
+  DEMO_GHOSTS_SEEN_KEY,
+  DemoGhostDirector,
+} from '@runrealm/shared-core/services/demo-ghost-director';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { UIService } from '@runrealm/shared-core/services/ui-service';
 
@@ -69,23 +74,56 @@ export class UIEffectsManager {
   }
 
   /**
-   * Show welcome experience for new users
+   * Show welcome experience for new users.
+   * Waits for the first-land demo ghost to settle so tooltip onboarding
+   * does not stack on top of the map theatre.
    */
   showWelcomeExperience(): void {
-    // Check if user is new or wants to see onboarding
     const isNewUser = !localStorage.getItem('runrealm_welcomed');
     const urlParams = new URLSearchParams(window.location.search);
     const forceOnboarding =
       urlParams.get('onboarding') === 'true' || urlParams.get('onboarding') === 'reset';
+    const forceDemo = urlParams.get('demo') === 'ghosts';
 
-    if (isNewUser || forceOnboarding) {
+    if (forceOnboarding || forceDemo) {
+      localStorage.removeItem(DEMO_GHOSTS_SEEN_KEY);
+      DemoGhostDirector.clearSeen();
+    }
+
+    if (!(isNewUser || forceOnboarding || forceDemo)) {
+      return;
+    }
+
+    const bus = EventBus.getInstance();
+    let started = false;
+
+    const startOnboarding = () => {
+      if (started) return;
+      started = true;
+      bus.off('demo:ghostsSettled', onSettled);
       setTimeout(() => {
         this.enhancedOnboarding.startOnboarding();
-        if (isNewUser) {
+        if (isNewUser || forceOnboarding) {
           localStorage.setItem('runrealm_welcomed', 'true');
         }
-      }, 1500);
+      }, 400);
+    };
+
+    const onSettled = () => {
+      startOnboarding();
+    };
+
+    // Demo already seen → keep prior timing (~1.5s).
+    if (DemoGhostDirector.hasSeen() && !forceDemo) {
+      setTimeout(startOnboarding, 1500);
+      return;
     }
+
+    bus.on('demo:ghostsSettled', onSettled);
+    // Absolute fallback so onboarding is never blocked if GPS never fires.
+    setTimeout(() => {
+      bus.emit('demo:ghostsSettled', { reason: 'timeout' });
+    }, 12000);
   }
 
   /**

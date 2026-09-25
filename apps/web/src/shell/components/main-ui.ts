@@ -260,6 +260,7 @@ export class MainUI extends BaseService {
     if (params.get('onboarding') === 'reset') {
       localStorage.removeItem('runrealm_onboarding_complete');
       localStorage.removeItem('runrealm_welcomed');
+      localStorage.removeItem('runrealm_demo_ghosts_seen');
     }
 
     // Initialize run tracker widget now that widget system is ready

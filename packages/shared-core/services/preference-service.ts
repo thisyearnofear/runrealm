@@ -17,6 +17,7 @@ export class PreferenceService {
     const lastFocus = localStorage.getItem(this.LAST_FOCUS_KEY);
     let initialPosition = lastFocus ? (JSON.parse(lastFocus) as MapFocus) : null;
     if (initialPosition === null) {
+      // Paint something immediately; boot GPS / GeolocateControl then recenter.
       initialPosition = {
         lng: -79.93775232392454,
         lat: 32.78183341484467,

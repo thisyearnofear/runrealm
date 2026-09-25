@@ -95,9 +95,15 @@ export class ConfidentialShieldWidget {
 
   private getCurrentChainId(services: RunRealmServiceRegistry): number | null {
     if (!services.web3) return null;
-    const result = services.web3.getChainId();
-    if (typeof result === 'number') return result;
-    return null;
+    // Web3Service exposes chain via the connected wallet snapshot — there is
+    // no getChainId(). When disconnected, treat as unsupported (null).
+    try {
+      const wallet = services.web3.getCurrentWallet?.();
+      const chainId = wallet?.chainId;
+      return typeof chainId === 'number' && Number.isFinite(chainId) ? chainId : null;
+    } catch {
+      return null;
+    }
   }
 
   private handleClick(e: Event): void {

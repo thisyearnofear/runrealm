@@ -511,6 +511,8 @@ export interface AppEvents extends Web3Events {
   // Wallet request events
   'wallet:connectRequested': { provider?: string };
   'wallet:disconnectRequested': Record<string, never>;
+  /** First-land demo ghost finished, skipped, or timed out — safe to show onboarding. */
+  'demo:ghostsSettled': { reason: string };
 }
 
 export class EventBus {

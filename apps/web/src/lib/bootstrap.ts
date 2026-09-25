@@ -14,8 +14,23 @@ if (typeof window !== 'undefined') {
   installRuntimeGuards();
 }
 
+/** Single-flight boot — page.tsx owns startup; do not auto-run on import. */
+let bootPromise: Promise<void> | null = null;
+
 // Initialize the application
 export async function initializeApp(): Promise<void> {
+  if (bootPromise) {
+    return bootPromise;
+  }
+
+  bootPromise = bootApp().catch((error) => {
+    bootPromise = null;
+    throw error;
+  });
+  return bootPromise;
+}
+
+async function bootApp(): Promise<void> {
   try {
     const app = RunRealmApp.getInstance();
 
@@ -244,6 +259,12 @@ export async function initializeApp(): Promise<void> {
           }
 
           const wallet = web3.getCurrentWallet();
+          if (!wallet) {
+            console.log(
+              '🟡 Wallet reported connected but no wallet snapshot — reconnect and retry'
+            );
+            return;
+          }
           console.log(`✅ Wallet connected: ${wallet.address} on chain ${wallet.chainId}`);
 
           // 2. Check if this is a cross-chain scenario
@@ -414,17 +435,15 @@ export async function initializeApp(): Promise<void> {
   }
 }
 
-// Handle cleanup on page unload
-window.addEventListener('beforeunload', () => {
-  const app = window.runRealmApp;
-  if (app && typeof app.cleanup === 'function') {
-    app.cleanup();
-  }
-});
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeApp);
-} else {
-  initializeApp();
+// Handle cleanup on page unload. Boot is started exclusively by
+// `apps/web/src/app/page.tsx` — auto-running here double-inits MapLibre
+// on the same `#maplibre-container` and surfaces
+// "Failed to initialize application".
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    const app = window.runRealmApp;
+    if (app && typeof app.cleanup === 'function') {
+      app.cleanup();
+    }
+  });
 }

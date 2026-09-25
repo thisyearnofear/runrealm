@@ -61,13 +61,31 @@ export class LocationService extends BaseService {
     this.createLocationUI();
     this.setupEventHandlers();
 
-    // Try to get last known location or default
+    // Prefer last-known camera so the map paints immediately, then
+    // ask the device for a real fix. Without this, production boots
+    // stuck on the saved/default focus (often a prior NYC pan) even
+    // after the user has granted geolocation permission.
     await this.loadLastKnownLocation();
+    void this.tryCenterOnDeviceGps();
 
     this.safeEmit('service:initialized', {
       service: 'LocationService',
       success: true,
     });
+  }
+
+  /**
+   * Soft GPS recenter used at boot. Skips permanently-denied browsers;
+   * otherwise requests a fix so `location:changed` can ease the map.
+   */
+  private async tryCenterOnDeviceGps(): Promise<void> {
+    try {
+      const permission = await this.checkLocationPermission();
+      if (permission === 'denied') return;
+      await this.getCurrentLocation(true, permission !== 'granted');
+    } catch (error) {
+      console.warn('LocationService: initial GPS recenter skipped:', error);
+    }
   }
 
   /**

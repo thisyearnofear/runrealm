@@ -48,6 +48,8 @@ export class RunRealmApp {
   private platformUI: PlatformUI = {};
   private useMetric!: boolean;
   private gameMode: boolean = true;
+  private initializing: Promise<void> | null = null;
+  private initialized = false;
 
   private constructor() {
     this.services = createServices();
@@ -79,6 +81,20 @@ export class RunRealmApp {
   }
 
   async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+    if (this.initializing) {
+      return this.initializing;
+    }
+
+    this.initializing = this.doInitialize().finally(() => {
+      this.initializing = null;
+    });
+    return this.initializing;
+  }
+
+  private async doInitialize(): Promise<void> {
     try {
       await this.services.config.initializeRuntimeTokens();
       const _tokenDeps = createTokenDependentServices(this.services.config);
@@ -128,9 +144,14 @@ export class RunRealmApp {
       this.initializeNavigation();
       this.initializeOnboarding();
       this.handOffAnimation();
+      this.initialized = true;
     } catch (error) {
       console.error('Failed to initialize RunRealm:', error);
-      this.services.ui.showToast('Failed to initialize application', { type: 'error' });
+      const detail = error instanceof Error ? error.message : String(error);
+      this.services.ui.showToast(`Failed to initialize application: ${detail}`, {
+        type: 'error',
+      });
+      throw error;
     }
   }
 

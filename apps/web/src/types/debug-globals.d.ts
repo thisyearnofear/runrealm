@@ -16,8 +16,7 @@ export interface RunRealmServiceRegistry {
   /** Wallet/chain access. */
   web3?: {
     isConnected(): boolean;
-    getCurrentWallet(): { address: string; chainId: number };
-    getChainId(): Promise<number> | number;
+    getCurrentWallet(): { address: string; chainId: number } | null;
     getSigner(): unknown;
   };
   /** ZetaChain cross-chain demo surface. */

@@ -2270,3 +2270,103 @@ button:disabled,
   gap: 8px;
   justify-content: flex-end;
 }
+
+/* —— First-land demo ghost —— */
+.ghost-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(155, 89, 182, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 4px rgba(155, 89, 182, 0.25);
+  pointer-events: none;
+}
+
+.ghost-marker--demo {
+  background: rgba(122, 158, 142, 0.75);
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 0 3px rgba(122, 158, 142, 0.3);
+  opacity: 0.9;
+}
+
+.demo-ghost-chip {
+  position: fixed;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom, 0px) + 16px);
+  transform: translateX(-50%) translateY(12px);
+  z-index: 1200;
+  max-width: min(360px, calc(100vw - 32px));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 280ms ease,
+    transform 280ms ease;
+}
+
+.demo-ghost-chip--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.demo-ghost-chip__body {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(13, 43, 62, 0.92);
+  border: 1px solid rgba(122, 158, 142, 0.35);
+  color: #f2f5f3;
+  backdrop-filter: blur(8px);
+}
+
+.demo-ghost-chip__label {
+  display: inline-block;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(122, 158, 142, 0.95);
+  margin-bottom: 6px;
+}
+
+.demo-ghost-chip__copy {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.demo-ghost-chip__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.demo-ghost-chip__cta,
+.demo-ghost-chip__dismiss {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.demo-ghost-chip__cta {
+  background: #7a9e8e;
+  color: #0d2b3e;
+  font-weight: 600;
+}
+
+.demo-ghost-chip__cta:hover {
+  filter: brightness(1.05);
+}
+
+.demo-ghost-chip__dismiss {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.demo-ghost-chip__dismiss:hover {
+  color: #fff;
+}
+

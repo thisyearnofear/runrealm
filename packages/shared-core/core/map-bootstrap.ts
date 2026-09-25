@@ -121,12 +121,26 @@ export function wireMapControls(opts: MapWiringOptions): void {
   }
 
   map.addControl(
-    new handles.GeolocateControl({
-      positionOptions: { enableHighAccuracy: true },
-      trackUserLocation: false,
-    }).on('geolocate', (position: GeolocationPosition) => {
-      preferenceService.saveCurrentFocus(position, map.getZoom());
-    }),
+    (() => {
+      const geolocate = new handles.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: false,
+      });
+      geolocate.on('geolocate', (position: GeolocationPosition) => {
+        preferenceService.saveCurrentFocus(position, map.getZoom());
+      });
+      // Auto-locate once the style is ready. Permission already granted
+      // → flies to the user; still prompting → browser shows the dialog.
+      // Manual click of the control still works afterwards.
+      map.once('load', () => {
+        try {
+          geolocate.trigger();
+        } catch (err) {
+          console.warn('Auto-geolocate skipped:', err);
+        }
+      });
+      return geolocate;
+    })(),
     'bottom-right'
   );
 

@@ -5,9 +5,12 @@
  * the right events. Each test posts a synthetic event and asserts
  * the side effect. We use real services where they're cheap
  * (PreferenceService) and minimal stubs where they aren't.
+ *
+ * @jest-environment jsdom
  */
 
 import type { Map as MaplibreMap } from 'maplibre-gl';
+import { DemoGhostDirector } from '../../services/demo-ghost-director';
 import { EventBus } from '../event-bus';
 import { wireEvents } from '../event-wiring';
 import type { MaplibreHandles } from '../map-bootstrap';
@@ -36,6 +39,7 @@ const makeStubServices = (overrides: Partial<Services> = {}): Services => {
     territory: {} as never,
     runTracking: {
       getCurrentRun: () => null,
+      startRun: jest.fn(),
     } as never,
     progression: {
       addDistance: jest.fn(),
@@ -49,6 +53,10 @@ const makeStubServices = (overrides: Partial<Services> = {}): Services => {
       clearAIRoute: jest.fn(),
       setAIRoute: jest.fn(),
       setAIWaypoints: jest.fn(),
+      setDemoGhostRoute: jest.fn(),
+      clearDemoGhostRoute: jest.fn(),
+      startGhostAnimation: jest.fn(),
+      stopGhostAnimation: jest.fn(),
     } as never,
     ai: {
       refreshConfig: jest.fn().mockResolvedValue(undefined),
@@ -91,10 +99,18 @@ describe('event-wiring', () => {
   let map: MaplibreMap;
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    DemoGhostDirector.resetInstance();
     bus = EventBus.getInstance();
     bus.clear();
     services = makeStubServices();
     map = stubMap();
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+    DemoGhostDirector.resetInstance();
   });
 
   it('ui:unitsToggled persists preference', () => {
@@ -139,6 +155,10 @@ describe('event-wiring', () => {
     expect(services.ui.showToast).not.toHaveBeenCalledWith('Location updated', {
       type: 'success',
     });
+
+    // After camera settle delay, demo ghost should try to start.
+    jest.advanceTimersByTime(1500);
+    expect(services.animation.startGhostAnimation).toHaveBeenCalled();
   });
 
   it('ai:routeVisualize calls setAIRoute + fitMapToRoute', () => {

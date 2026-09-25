@@ -570,6 +570,7 @@ export class EventHandler {
       // Restart onboarding
       localStorage.removeItem('runrealm_onboarding_complete');
       localStorage.removeItem('runrealm_welcomed');
+      localStorage.removeItem('runrealm_demo_ghosts_seen');
       window.location.reload();
     });
 
