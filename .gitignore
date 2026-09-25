@@ -209,3 +209,7 @@ logs/
 # Zama FHEVM plugin temp artifacts
 fhevmTemp/
 .deployer-address.txt
+
+# Netlify CLI local link/state (never commit)
+.netlify/
+apps/*/.netlify/
