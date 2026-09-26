@@ -672,7 +672,7 @@ export class WalletWidget extends BaseService {
 
         .wallet-balance {
           font-size: 11px;
-          color: #00ff88;
+          color: var(--rr-success);
           font-weight: 500;
         }
 
@@ -689,7 +689,7 @@ export class WalletWidget extends BaseService {
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
-          background: linear-gradient(135deg, #00ff88, #00cc6a);
+          background: linear-gradient(135deg, var(--rr-success), color-mix(in srgb, var(--rr-success), black 20%));
           color: #1a1a1a;
         }
 
@@ -707,7 +707,7 @@ export class WalletWidget extends BaseService {
           width: 16px;
           height: 16px;
           border: 2px solid rgba(255, 193, 7, 0.3);
-          border-top: 2px solid #ffc107;
+          border-top: 2px solid var(--rr-accent);
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
@@ -750,7 +750,7 @@ export class WalletWidget extends BaseService {
           margin: 0 0 8px 0;
           font-size: 24px;
           font-weight: 700;
-          color: #667eea;
+          color: var(--rr-accent);
         }
 
         .modal-header p {
@@ -797,7 +797,7 @@ export class WalletWidget extends BaseService {
 
         .wallet-provider-option:hover,
         .wallet-provider-option:focus {
-          border-color: #667eea;
+          border-color: var(--rr-accent);
           background: rgba(102, 126, 234, 0.1);
           transform: translateY(-2px);
         }
@@ -807,7 +807,7 @@ export class WalletWidget extends BaseService {
           position: absolute;
           top: -8px;
           right: 12px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, var(--rr-accent), color-mix(in srgb, var(--rr-accent), black 20%));
           color: white;
           font-size: 10px;
           padding: 4px 8px;
@@ -835,7 +835,7 @@ export class WalletWidget extends BaseService {
 
         .popular-badge {
           background: rgba(255, 193, 7, 0.2);
-          color: #ffc107;
+          color: var(--rr-accent);
           font-size: 10px;
           padding: 2px 6px;
           border-radius: 4px;
@@ -852,11 +852,11 @@ export class WalletWidget extends BaseService {
         }
 
         .status-installed {
-          color: #00ff88;
+          color: var(--rr-success);
         }
 
         .status-not-installed {
-          color: #ffc107;
+          color: var(--rr-accent);
         }
 
         .wallet-benefits {
@@ -867,7 +867,7 @@ export class WalletWidget extends BaseService {
         .wallet-benefits h4 {
           margin: 0 0 16px 0;
           font-size: 16px;
-          color: #667eea;
+          color: var(--rr-accent);
         }
 
         .benefits-grid {
@@ -903,7 +903,7 @@ export class WalletWidget extends BaseService {
           left: 50%;
           transform: translate(-50%, -50%);
           background: rgba(0, 0, 0, 0.95);
-          border: 2px solid #667eea;
+          border: 2px solid var(--rr-accent);
           border-radius: 16px;
           padding: 24px;
           z-index: 10000;
@@ -945,7 +945,7 @@ export class WalletWidget extends BaseService {
         }
 
         .install-btn.primary {
-          background: #667eea;
+          background: var(--rr-accent);
           color: white;
         }
 
@@ -1010,7 +1010,7 @@ export class WalletWidget extends BaseService {
         }
 
         .reward-value.highlight {
-          color: #ffd700;
+          color: var(--rr-accent);
           font-weight: 700;
         }
 
@@ -1023,7 +1023,7 @@ export class WalletWidget extends BaseService {
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
-          background: linear-gradient(135deg, #ffd700, #ffed4e);
+          background: linear-gradient(135deg, var(--rr-accent), color-mix(in srgb, var(--rr-accent), white 25%));
           color: #1a1a1a;
         }
 

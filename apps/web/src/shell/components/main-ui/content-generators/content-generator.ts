@@ -50,7 +50,12 @@ export class ContentGenerator {
     const difficultyLabel = difficulty < 33 ? 'Easy' : difficulty < 67 ? 'Medium' : 'Hard';
     const rarityClass = String(rarity).toLowerCase();
     const valueScore = this.calculateTerritoryValue(estimatedReward, difficulty, rarity);
-    const valueColor = valueScore > 70 ? '#00ff88' : valueScore > 40 ? '#ffaa00' : '#ff6b6b';
+    const valueColor =
+      valueScore > 70
+        ? 'var(--rr-success)'
+        : valueScore > 40
+          ? 'var(--rr-accent)'
+          : 'var(--rr-signal)';
 
     const landmarksHtml =
       Array.isArray(landmarks) && landmarks.length

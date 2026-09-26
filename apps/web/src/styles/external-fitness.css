@@ -301,7 +301,11 @@
   justify-content: center;
   gap: 8px;
   padding: 12px;
-  background: linear-gradient(135deg, var(--color-primary), #00cc6a);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    color-mix(in srgb, var(--rr-success), black 20%)
+  );
   border: none;
   border-radius: 8px;
   color: #000;

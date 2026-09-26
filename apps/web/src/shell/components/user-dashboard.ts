@@ -15,6 +15,18 @@ import {
   DashboardState,
   UserDashboardService,
 } from '@runrealm/shared-core/services/user-dashboard-service';
+import {
+  describeShield,
+  type ShieldDescription,
+} from '@runrealm/shared-core/utils/shield-presentation';
+
+/** Emoji per shield tier — text label always accompanies it (non-color encoding). */
+const SHIELD_TIER_EMOJI: Record<ShieldDescription['tier'], string> = {
+  fixed: '🛡️',
+  holding: '🛡️',
+  overexposing: '⚠️',
+  overexposed: '🚨',
+};
 
 /** Tabs the dashboard can render, in display order. */
 const DASHBOARD_TABS = ['overview', 'territories', 'ghosts', 'challenges'] as const;
@@ -551,6 +563,7 @@ export class UserDashboard {
     const dailyYield = (estReward * 0.15).toFixed(1);
     const defenseStatus = territory.defenseStatus || 'moderate';
     const geohashTag = (territory.geohash || 'H3RES9').slice(-6).toUpperCase();
+    const shield = describeShield(territory.activityPoints ?? 500);
 
     return `
       <div class="territory-deed-tile ${rarity}" data-territory-id="${territory.geohash}">
@@ -570,7 +583,7 @@ export class UserDashboard {
         <div class="deed-tile-info">
           <div class="deed-tile-name" title="${name}">${name}</div>
           <div class="deed-tile-meta">
-            <span class="tile-defense ${defenseStatus}">🛡️ ${defenseStatus}</span>
+            <span class="tile-defense ${defenseStatus}" title="${shield.headline}">${SHIELD_TIER_EMOJI[shield.tier]} ${shield.tierLabel} · ${shield.daysOfSafety}d</span>
             <span class="tile-reward">+${estReward} $REALM</span>
           </div>
         </div>
@@ -587,6 +600,7 @@ export class UserDashboard {
     const isExpanded = this.expandedTerritoryId === territory.geohash;
     const activityPoints = territory.activityPoints || 500;
     const defenseStatus = territory.defenseStatus || 'moderate';
+    const shield = describeShield(activityPoints);
 
     return `
       <div class="territory-item-compact ${(territory.rarity || 'common').toLowerCase()} ${isExpanded ? 'expanded' : ''}" 
@@ -597,7 +611,7 @@ export class UserDashboard {
             <div class="territory-meta">
               <span class="rarity-badge ${(territory.rarity || 'common').toLowerCase()}">${territory.rarity || 'Common'}</span>
               <span class="territory-reward">+${territory.estimatedReward || 0} $REALM</span>
-              <span class="defense-badge ${defenseStatus}">${defenseStatus}</span>
+              <span class="defense-badge ${defenseStatus}" title="${shield.headline}">${SHIELD_TIER_EMOJI[shield.tier]} ${shield.tierLabel}</span>
             </div>
           </div>
           <div class="territory-actions">
@@ -625,6 +639,7 @@ export class UserDashboard {
     );
 
     const activityPercentage = (activityPoints / 1000) * 100;
+    const shield = describeShield(activityPoints);
 
     return `
       <div class="territory-details">
@@ -635,6 +650,7 @@ export class UserDashboard {
               <div class="defense-fill ${defenseStatus}" style="width: ${activityPercentage}%"></div>
             </div>
             <span class="defense-value">${activityPoints} / 1000</span>
+            <span class="shield-headline">${shield.headline}</span>
           </div>
           
           <div class="territory-stat">

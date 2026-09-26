@@ -346,7 +346,7 @@ export class UIEffectsManager {
           position: absolute;
           width: 6px;
           height: 6px;
-          background: linear-gradient(45deg, #00ff00, #00aa00);
+          background: linear-gradient(45deg, var(--rr-success), color-mix(in srgb, var(--rr-success), black 20%));
           border-radius: 50%;
           pointer-events: none;
           z-index: 1000;

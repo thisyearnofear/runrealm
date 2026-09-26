@@ -1,4 +1,5 @@
 import { BaseService } from '../core/base-service';
+import { describeShield } from '../utils/shield-presentation';
 import { openVersioned } from '../utils/versioned-store';
 
 const DECAY_SUMMARY_KEY = 'runrealm_last_decay_summary';
@@ -227,9 +228,10 @@ export class NotificationService extends BaseService {
       if (points >= 300) return;
 
       const name = weakest.name ?? weakest.geohash ?? 'one of your territories';
+      const shield = describeShield(points);
       this.notify(
         '📉 Defenses fading',
-        `${name} is down to ${points} points. A short run restores it.`,
+        `${name} — ${shield.headline}. A short run restores it.`,
         'decay-summary'
       );
       localStorage.setItem(DECAY_SUMMARY_KEY, String(Date.now()));
