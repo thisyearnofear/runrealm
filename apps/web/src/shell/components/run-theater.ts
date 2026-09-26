@@ -21,6 +21,13 @@ import type { RunTrackingService } from '@runrealm/shared-core/services/run-trac
 import type { SoundService } from '@runrealm/shared-core/services/sound-service';
 import type { TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import {
+  type ArcMilestone,
+  actTitleFor,
+  arcSeen,
+  markArcSeen,
+  traceMilestoneCrossed,
+} from '@runrealm/shared-core/utils/run-arc';
+import {
   describeRun,
   formatDistance,
   formatDuration,
@@ -47,9 +54,12 @@ type RunTheaterEvent = Extract<
   | 'location:changed'
   | 'ghost:deployed'
   | 'ghost:completed'
+  | 'territory:vulnerable'
+  | 'territory:claimed'
 >;
 
 const REFRESH_MS = 1000;
+const ACT_DISPLAY_MS = 2800;
 const NUDGE_KEY = 'runrealm_pocket_nudge_seen';
 const NUDGE_AUTO_DISMISS_MS = 15000;
 const LOCATION_RENDER_THROTTLE_MS = 1000;
@@ -68,6 +78,14 @@ export class RunTheater {
   private inTheater = false;
   private pocketMode = false;
   private handlers: Array<{ event: RunTheaterEvent; handler: () => void }> = [];
+  private actEl: HTMLElement | null = null;
+  private introEl: HTMLElement | null = null;
+  private actQueue: ArcMilestone[] = [];
+  private actTimer: number | null = null;
+  private shownActs = new Set<ArcMilestone>();
+  private lastDistance = 0;
+  private lastSessionId: string | null = null;
+  private exitTimer: number | null = null;
 
   constructor(private readonly deps: RunTheaterDeps) {}
 
@@ -127,17 +145,45 @@ export class RunTheater {
       this.dismissNudge();
     });
 
+    this.actEl = document.createElement('div');
+    this.actEl.id = 'run-theater-act';
+    this.actEl.hidden = true;
+    container.appendChild(this.actEl);
+
+    this.introEl = document.createElement('div');
+    this.introEl.id = 'run-theater-intro';
+    this.introEl.hidden = true;
+    this.introEl.innerHTML = `
+      <div class="intro-card">
+        <div class="intro-act">First expedition</div>
+        <div class="intro-title">Every run exposes the world</div>
+        <p class="intro-body">Move to reveal the atlas. Claim ground to develop it.
+        Defend it — or rivals will take it while it overexposes.</p>
+        <button class="intro-begin" type="button">Begin</button>
+      </div>
+    `;
+    container.appendChild(this.introEl);
+    this.introEl.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('.intro-begin')) this.dismissIntro();
+    });
+
     this.on('run:started', () => this.enter());
     this.on('run:resumed', () => this.enter());
     this.on('run:paused', () => this.render());
-    this.on('run:completed', () => this.exit());
+    this.on('run:completed', () => this.finish());
     this.on('run:cancelled', () => this.exit());
-    this.on('ghost:deployed', () => this.refreshGhostPresence());
+    this.on('ghost:deployed', () => {
+      this.refreshGhostPresence();
+      this.showAct('ghost');
+    });
     this.on('ghost:completed', () => this.refreshGhostPresence());
+    this.on('territory:vulnerable', () => this.showAct('overexpose'));
+    this.on('territory:claimed', () => this.showAct('develop'));
     this.on('location:changed', () => {
       const now = Date.now();
       if (now - this.lastLocationRender < LOCATION_RENDER_THROTTLE_MS) return;
       this.lastLocationRender = now;
+      this.fireOnce('expose');
       this.render();
     });
 
@@ -154,10 +200,14 @@ export class RunTheater {
     }
     this.handlers = [];
     this.stopTimer();
+    this.clearExitTimer();
+    this.clearActState();
     this.clearNudgeTimer();
     this.root?.remove();
     this.veil?.remove();
     this.nudgeEl?.remove();
+    this.actEl?.remove();
+    this.introEl?.remove();
     document.body.classList.remove('run-theater', 'run-theater-reveal', 'pocket-mode');
   }
 
@@ -172,17 +222,89 @@ export class RunTheater {
       document.body.classList.add('run-theater');
       document.body.classList.remove('run-theater-reveal');
     }
+    this.clearExitTimer();
+    this.shownActs = new Set();
+    this.lastDistance = 0;
+    this.lastSessionId = null;
     this.startTimer();
     this.render();
     this.refreshGhostPresence();
+    this.maybeShowIntro();
     this.maybeShowNudge();
+  }
+
+  /** Completed runs settle cinematically: final act, then exit. */
+  private finish(): void {
+    this.showAct('settle');
+    this.clearExitTimer();
+    this.exitTimer = window.setTimeout(() => this.exit(), ACT_DISPLAY_MS + 400);
+  }
+
+  private clearExitTimer(): void {
+    if (this.exitTimer !== null) {
+      window.clearTimeout(this.exitTimer);
+      this.exitTimer = null;
+    }
+  }
+
+  private maybeShowIntro(): void {
+    if (!this.introEl || arcSeen()) return;
+    this.introEl.hidden = false;
+  }
+
+  private dismissIntro(): void {
+    if (this.introEl) this.introEl.hidden = true;
+    markArcSeen();
+  }
+
+  /** Queue an act title; each plays once per run (trace marks excepted). */
+  private showAct(milestone: ArcMilestone): void {
+    if (!this.inTheater || !this.actEl) return;
+    if (milestone !== 'trace' && this.shownActs.has(milestone)) return;
+    this.shownActs.add(milestone);
+    this.actQueue.push(milestone);
+    this.pumpActQueue();
+  }
+
+  private fireOnce(milestone: ArcMilestone): void {
+    this.showAct(milestone);
+  }
+
+  private pumpActQueue(): void {
+    if (this.actTimer !== null || this.actQueue.length === 0 || !this.actEl) return;
+    const milestone = this.actQueue.shift();
+    if (!milestone) return;
+    const { act, title, sub } = actTitleFor(milestone);
+    this.actEl.innerHTML = `
+      <div class="act-kicker">${act}</div>
+      <div class="act-title">${title}</div>
+      <div class="act-sub">${sub}</div>
+    `;
+    this.actEl.hidden = false;
+    this.actTimer = window.setTimeout(() => {
+      this.actTimer = null;
+      if (this.actEl) this.actEl.hidden = true;
+      this.pumpActQueue();
+    }, ACT_DISPLAY_MS);
+  }
+
+  private clearActState(): void {
+    if (this.actTimer !== null) {
+      window.clearTimeout(this.actTimer);
+      this.actTimer = null;
+    }
+    this.actQueue = [];
+    if (this.actEl) this.actEl.hidden = true;
   }
 
   private exit(): void {
     this.inTheater = false;
     this.stopTimer();
+    this.clearExitTimer();
+    this.clearActState();
     this.clearNudgeTimer();
     if (this.nudgeEl) this.nudgeEl.hidden = true;
+    if (this.introEl) this.introEl.hidden = true;
     try {
       this.deps.mapService.clearGhostMarkers();
     } catch {
@@ -299,6 +421,16 @@ export class RunTheater {
   private render(): void {
     if (!this.inTheater || !this.root) return;
     const session = this.deps.runTracking.getCurrentRun();
+    if (session && session.id !== this.lastSessionId) {
+      this.lastSessionId = session.id;
+      this.shownActs = new Set();
+      this.lastDistance = 0;
+    }
+    if (session && session.status === 'recording') {
+      const crossed = traceMilestoneCrossed(this.lastDistance, session.totalDistance);
+      this.lastDistance = session.totalDistance;
+      if (crossed !== null) this.showAct('trace');
+    }
     const sentence = describeRun(session, {
       sector: session?.geohash ?? null,
       ghostNote: this.resolveGhostNote(),

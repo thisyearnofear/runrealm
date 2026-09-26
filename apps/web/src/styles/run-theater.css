@@ -153,6 +153,129 @@ body.pocket-mode #run-theater-hud {
   display: none;
 }
 
+/* ---- milestone act titles ---- */
+
+#run-theater-act {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-widgets, 1000) + 35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+  text-align: center;
+  animation: act-fade 2.8s ease forwards;
+}
+
+#run-theater-act[hidden] {
+  display: none;
+}
+
+.act-kicker {
+  color: var(--rr-sunprint-cyan);
+  font-size: 0.75rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+}
+
+.act-title {
+  color: var(--rr-sunprint-bone);
+  font-family: Fraunces, Georgia, serif;
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.8);
+}
+
+.act-sub {
+  color: var(--rr-sunprint-muted);
+  font-size: 0.85rem;
+  max-width: min(88vw, 380px);
+}
+
+@keyframes act-fade {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---- first-expedition intro ---- */
+
+#run-theater-intro {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-widgets, 1000) + 45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 9, 13, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+#run-theater-intro[hidden] {
+  display: none;
+}
+
+.intro-card {
+  max-width: min(92vw, 400px);
+  padding: 28px 26px;
+  text-align: center;
+  background: var(--rr-sunprint-blueprint);
+  border: 1px solid var(--rr-sunprint-cyan);
+  border-radius: 16px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+
+.intro-act {
+  color: var(--rr-sunprint-cyan);
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.intro-title {
+  color: var(--rr-sunprint-bone);
+  font-family: Fraunces, Georgia, serif;
+  font-size: 1.6rem;
+  margin-bottom: 12px;
+}
+
+.intro-body {
+  color: var(--rr-sunprint-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.intro-begin {
+  background: var(--rr-sunprint-amber);
+  color: var(--rr-sunprint-ink);
+  border: none;
+  border-radius: 999px;
+  padding: 10px 34px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #run-theater-act {
+    animation: none;
+  }
+}
+
 /* ---- first-run pocket nudge ---- */
 
 #run-theater-nudge {

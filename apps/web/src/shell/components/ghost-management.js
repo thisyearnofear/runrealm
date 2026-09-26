@@ -81,8 +81,14 @@ export class GhostManagement extends BaseService {
     }
 
     listEl.innerHTML = ghosts
-      .map(
-        (g) => `
+      .map((g) => {
+        let rivalry = '';
+        try {
+          rivalry = this.ghostService.getRivalryRecord(g.id).line;
+        } catch {
+          rivalry = '';
+        }
+        return `
       <div class="ghost-card" data-ghost-id="${g.id}">
         <div class="ghost-avatar">${g.avatar || '👻'}</div>
         <div class="ghost-info">
@@ -92,13 +98,14 @@ export class GhostManagement extends BaseService {
             <span>⚡ ${this.formatPace(g.pace)}/km</span>
             <span>🏃 ${g.totalRuns} runs</span>
           </div>
+          ${rivalry ? `<div class="ghost-rivalry">⚔️ ${rivalry}</div>` : ''}
         </div>
         <div class="ghost-status">
           ${this.getGhostStatus(g)}
         </div>
       </div>
-    `
-      )
+    `;
+      })
       .join('');
 
     this.updateBalance();
@@ -137,6 +144,10 @@ export class GhostManagement extends BaseService {
           <div class="stat">
             <label>Win Rate</label>
             <value>${ghost.winRate}%</value>
+          </div>
+          <div class="stat">
+            <label>Rivalry</label>
+            <value>${this.getRivalryLine(ghost.id)}</value>
           </div>
         </div>
         
@@ -248,6 +259,14 @@ export class GhostManagement extends BaseService {
       return 'Ready';
     }
     return 'Cooldown';
+  }
+
+  getRivalryLine(ghostId) {
+    try {
+      return this.ghostService.getRivalryRecord(ghostId).line;
+    } catch {
+      return '';
+    }
   }
 
   getCooldownText(ghost) {

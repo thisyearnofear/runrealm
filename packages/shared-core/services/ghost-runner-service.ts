@@ -1,5 +1,6 @@
 import { GAME_RULES } from '../config/game-rules';
 import { BaseService } from '../core/base-service';
+import { type RivalryRecord, summarizeRivalry } from '../utils/ghost-rivalry';
 import { StorageAdapter } from '../utils/storage-adapter';
 import { openVersioned, quarantineKey, writeVersioned } from '../utils/versioned-store';
 import { AIService, GhostRunner } from './ai-service';
@@ -60,6 +61,7 @@ export class GhostRunnerService extends BaseService {
   // Set when a future-version save is on disk: degrade in memory and
   // skip writes so a stale build never overwrites the good save.
   private ghostsReadOnly = false;
+  private raceHistoryReadOnly = false;
   private balanceReadOnly = false;
 
   private constructor() {
@@ -79,6 +81,7 @@ export class GhostRunnerService extends BaseService {
     await super.initialize();
     await this.loadGhosts();
     await this.loadRealmBalance();
+    await this.loadRaceHistory();
     this.setupEventListeners();
   }
 
@@ -151,6 +154,51 @@ export class GhostRunnerService extends BaseService {
     }
   }
 
+  private async loadRaceHistory(): Promise<void> {
+    const key = 'runrealm_race_history';
+    try {
+      const raw = await StorageAdapter.getItem(key);
+      const opened = openVersioned<GhostRaceResult[]>(raw, {
+        floor: 1,
+        head: 1,
+        steps: [
+          {
+            toVersion: 1,
+            note: 'base race array',
+            migrate: (v) => v as GhostRaceResult[],
+            validate: (v) => {
+              if (!Array.isArray(v)) throw new RangeError('races: expected an array');
+              return v as GhostRaceResult[];
+            },
+          },
+        ],
+        fresh: () => [],
+      });
+      if (opened.status !== 'ok' && opened.status !== 'fresh') {
+        console.warn(`GhostRunnerService: race storage ${opened.status} (${opened.reason})`);
+      }
+      if (opened.status === 'corrupt' && raw !== null) {
+        await StorageAdapter.setItem(quarantineKey(key), raw);
+      }
+      if (opened.readOnly) this.raceHistoryReadOnly = true;
+      this.raceHistory = opened.state.slice(-50);
+    } catch (error) {
+      console.error('Failed to load race history:', error);
+    }
+  }
+
+  private async saveRaceHistory(): Promise<void> {
+    if (this.raceHistoryReadOnly) return;
+    try {
+      await StorageAdapter.setItem(
+        'runrealm_race_history',
+        writeVersioned(1, this.raceHistory, Date.now())
+      );
+    } catch (error) {
+      console.error('Failed to save race history:', error);
+    }
+  }
+
   private async loadRealmBalance(): Promise<void> {
     const key = 'runrealm_realm_balance';
     try {
@@ -214,6 +262,15 @@ export class GhostRunnerService extends BaseService {
 
   getRaceHistory(): GhostRaceResult[] {
     return [...this.raceHistory];
+  }
+
+  /**
+   * Career rivalry record for one ghost, derived from persisted race
+   * history (ghost vs owner form). Powers the rivalry line in the UI.
+   */
+  getRivalryRecord(ghostId: string): RivalryRecord {
+    const ghost = this.ghosts.get(ghostId);
+    return summarizeRivalry(this.raceHistory, ghostId, ghost?.name);
   }
 
   /**
@@ -345,6 +402,13 @@ export class GhostRunnerService extends BaseService {
     if (this.raceHistory.length > 50) {
       this.raceHistory = this.raceHistory.slice(-50);
     }
+    // Career record: win rate is a 0-100 percent derived from history.
+    const record = summarizeRivalry(this.raceHistory, ghost.id, ghost.name);
+    const total = record.wins + record.losses;
+    ghost.winRate = total > 0 ? Math.round((record.wins / total) * 100) : 0;
+    this.ghosts.set(ghostId, ghost);
+    await this.saveGhosts();
+    await this.saveRaceHistory();
 
     this.safeEmit('ghost:deployed', { ghost, territoryId });
     this.safeEmit('ghost:completed', {

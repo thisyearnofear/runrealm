@@ -84,6 +84,15 @@ export class ConfidentialShieldWidget {
       </div>
 
       <div class="widget-output" id="shield-output" aria-live="polite"></div>
+
+      <details class="shield-legend">
+        <summary>What rivals see</summary>
+        <ul>
+          <li>🛡️ <strong>Your shielded ground</strong> — exact defense visible only to you. Read it any time.</li>
+          <li>🌫️ <strong>Rival silhouettes</strong> — their scores stay encrypted. You see presence, never points.</li>
+          <li>⚔️ <strong>Contests reveal win/loss only</strong> — both sides' scores stay secret.</li>
+        </ul>
+      </details>
     `;
   }
 
