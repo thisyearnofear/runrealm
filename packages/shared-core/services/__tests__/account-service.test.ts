@@ -70,13 +70,18 @@ describe('AccountService', () => {
       await expect(service.authorize('claim')).resolves.toBe(true);
     });
 
-    it('denies actions outside the key scope', async () => {
+    it('denies actions no key covers', async () => {
+      // The app-held key covers play actions only; nothing covers spending.
       await service.issueSessionKey(['claim']);
-      await expect(service.authorize('boost')).resolves.toBe(false);
+      await expect(service.authorize('trade')).resolves.toBe(false);
     });
 
-    it('denies when no session key exists', async () => {
+    it('denies play actions only when every key is gone', async () => {
+      for (const k of service.getActiveSessionKeys()) await service.revokeSessionKey(k.id);
       await expect(service.authorize('claim')).resolves.toBe(false);
+      // Spending actions are denied even with the app-held key present.
+      await service.ensureGameSession();
+      await expect(service.authorize('trade')).resolves.toBe(false);
     });
 
     it('enforces the spend limit across calls', async () => {
@@ -100,15 +105,19 @@ describe('AccountService', () => {
     });
 
     it('expires keys after their TTL', async () => {
-      await service.issueSessionKey(['claim'], { ttlMs: -1 });
-      await expect(service.authorize('claim')).resolves.toBe(false);
-      expect(service.getActiveSessionKeys()).toHaveLength(0);
+      const key = await service.issueSessionKey(['stakeBounty'], {
+        ttlMs: -1,
+        spendLimitRealm: 10,
+      });
+      expect(service.getActiveSessionKeys().map((k) => k.id)).not.toContain(key.id);
+      await expect(service.authorize('stakeBounty', 1)).resolves.toBe(false);
     });
 
     it('revokes a key', async () => {
-      const key = await service.issueSessionKey(['claim']);
+      const key = await service.issueSessionKey(['stakeBounty'], { spendLimitRealm: 10 });
+      await expect(service.authorize('stakeBounty', 1)).resolves.toBe(true);
       await service.revokeSessionKey(key.id);
-      await expect(service.authorize('claim')).resolves.toBe(false);
+      await expect(service.authorize('stakeBounty', 1)).resolves.toBe(false);
     });
 
     it('persists keys and spend across instances', async () => {
@@ -126,12 +135,50 @@ describe('AccountService', () => {
       const handler = (data: { reason: string }) => reasons.push(data.reason);
       bus.on('session:authorizationDenied', handler);
 
+      for (const k of service.getActiveSessionKeys()) await service.revokeSessionKey(k.id);
       await service.authorize('claim'); // no session at all
       await service.issueSessionKey(['claim']);
-      await service.authorize('boost'); // session exists, wrong scope
+      await service.authorize('trade'); // sessions exist, no covering scope
 
       expect(reasons).toEqual(['no-session', 'scope-not-granted']);
       bus.off('session:authorizationDenied', handler);
+    });
+  });
+
+  describe('app-held game session (auto-claim without popups)', () => {
+    it('exists silently after initialize — claim/boost/deployGhost, no spending', async () => {
+      // No explicit issueSessionKey call: boot issued the app-held key.
+      await expect(service.authorize('claim')).resolves.toBe(true);
+      await expect(service.authorize('boost')).resolves.toBe(true);
+      await expect(service.authorize('deployGhost')).resolves.toBe(true);
+      await expect(service.authorize('stakeBounty')).resolves.toBe(false);
+      await expect(service.authorize('trade')).resolves.toBe(false);
+    });
+
+    it('cannot spend even when a cost is attached to a play action', async () => {
+      await expect(service.authorize('claim', 1)).resolves.toBe(false);
+    });
+
+    it('ensureGameSession returns the existing key instead of duplicating', async () => {
+      const before = service.getActiveSessionKeys().length;
+      const key = await service.ensureGameSession();
+      expect(service.getActiveSessionKeys().length).toBe(before);
+      expect(key.scopes).toEqual(expect.arrayContaining(['claim', 'boost', 'deployGhost']));
+    });
+
+    it('ensureGameSession re-issues after the app-held key is revoked', async () => {
+      const keys = service.getActiveSessionKeys();
+      for (const k of keys) await service.revokeSessionKey(k.id);
+      await expect(service.authorize('claim')).resolves.toBe(false);
+      await service.ensureGameSession();
+      await expect(service.authorize('claim')).resolves.toBe(true);
+    });
+
+    it('persists the app-held key across restarts', async () => {
+      const fresh = AccountService.createIsolated();
+      await fresh.initialize();
+      // Same account, key reloaded from storage — no new key needed.
+      await expect(fresh.authorize('claim')).resolves.toBe(true);
     });
   });
 

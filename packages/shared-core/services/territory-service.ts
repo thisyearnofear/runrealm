@@ -176,6 +176,24 @@ export class TerritoryService extends BaseService {
           return;
         }
         try {
+          // Accounts layer (protocol-vision Layer 2): the app-held
+          // session key authorizes auto-claim — no signature popup.
+          // When the account service isn't live yet (SSR, isolated
+          // tests), the trial flow proceeds as before.
+          const account = this.getSiblingService('account') as
+            | import('./account-service').AccountService
+            | null;
+          if (account && typeof account.authorize === 'function' && account.getAccount?.()) {
+            const authorized = await account.authorize('claim');
+            if (!authorized) {
+              this.safeEmit('territory:claimFailed', {
+                error: 'Session key does not authorize claims',
+                territory: {} as Territory,
+                runId: run.id,
+              });
+              return;
+            }
+          }
           // One-tap claim UX: announce immediately so the map can play
           // the reveal animation and the UI can show "Claiming…" while
           // the transaction is in flight.

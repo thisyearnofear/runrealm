@@ -244,6 +244,7 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     ConfidentialContractService: services.confidentialContractService,
     zamaSupport: services.zamaSupport,
     confidentialTerritory: services.confidentialTerritory,
+    account: services.accountService,
     mapService: services.mapService,
     notificationService: services.notificationService,
     territoryWalkService: services.territoryWalkService,

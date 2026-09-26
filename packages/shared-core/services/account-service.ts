@@ -64,6 +64,13 @@ interface AccountStore {
 const STORE_KEY = 'runrealm_account';
 const DEFAULT_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days ≈ the walletless window
 
+/**
+ * Scopes the app-held session key covers: play actions, never spending.
+ * Spending scopes (`stakeBounty`, `trade`) always require an explicit
+ * key with an explicit limit — the moment of value, not the moment of play.
+ */
+export const DEFAULT_GAME_SCOPES: GameAction[] = ['claim', 'boost', 'deployGhost'];
+
 export type AuthorizationDenial =
   | 'no-account'
   | 'no-session'
@@ -98,6 +105,32 @@ export class AccountService extends BaseService {
       this.safeEmit('account:created', { account: this.account });
     }
     this.pruneExpiredSessions();
+    // The app holds a session key scoped to game actions, so runs
+    // auto-claim without a signature popup every kilometer.
+    if (!this.findGameSession()) {
+      await this.issueSessionKeyInternal(DEFAULT_GAME_SCOPES);
+    }
+  }
+
+  /**
+   * The app-held game session: an active key covering
+   * `DEFAULT_GAME_SCOPES`, issued silently when none exists. Game flows
+   * never call this directly — they `authorize()` and the key is simply
+   * there. Spending actions are deliberately not covered.
+   */
+  async ensureGameSession(): Promise<SessionKey> {
+    this.ensureInitialized();
+    return this.findGameSession() ?? this.issueSessionKeyInternal(DEFAULT_GAME_SCOPES);
+  }
+
+  private findGameSession(): SessionKey | null {
+    const now = Date.now();
+    for (const key of this.sessionKeys.values()) {
+      if (key.expiresAt > now && DEFAULT_GAME_SCOPES.every((s) => key.scopes.includes(s))) {
+        return key;
+      }
+    }
+    return null;
   }
 
   /** The current account. Null only before initialize(). */
@@ -121,6 +154,13 @@ export class AccountService extends BaseService {
     opts: { ttlMs?: number; spendLimitRealm?: number } = {}
   ): Promise<SessionKey> {
     this.ensureInitialized();
+    return this.issueSessionKeyInternal(scopes, opts);
+  }
+
+  private async issueSessionKeyInternal(
+    scopes: GameAction[],
+    opts: { ttlMs?: number; spendLimitRealm?: number } = {}
+  ): Promise<SessionKey> {
     if (!this.account) throw new Error('account: none available');
     if (scopes.length === 0) throw new RangeError('session: at least one scope required');
     const spendLimitRealm = opts.spendLimitRealm ?? 0;
