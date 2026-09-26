@@ -10,6 +10,8 @@ import { buildOrbisPromptIntent } from '../utils/sunprint-atlas';
 
 export interface OrbisTransport {
   setPrompt(prompt: string): Promise<void> | void;
+  /** Optional: Orbis audio-track steering. Omit when the transport has no audio. */
+  setAudioPrompt?: (prompt: string) => Promise<void> | void;
 }
 
 export interface OrbisDirectorOptions {
@@ -95,6 +97,18 @@ export class OrbisDirector extends BaseService {
 
     try {
       await this.transport.setPrompt(intent.prompt);
+      // Audio prompt is best-effort: a deployment without an audio track
+      // rejects set_audio_prompt, and that must not fail the visual prompt.
+      if (intent.audioPrompt && this.transport.setAudioPrompt) {
+        try {
+          await this.transport.setAudioPrompt(intent.audioPrompt);
+        } catch (audioError) {
+          console.warn(
+            'OrbisDirector: audio prompt rejected (visual prompt still dispatched):',
+            audioError instanceof Error ? audioError.message : audioError
+          );
+        }
+      }
       this.lastDispatchAt = this.now();
       this.safeEmit('orbis:promptDispatched', { intent });
     } catch (error) {

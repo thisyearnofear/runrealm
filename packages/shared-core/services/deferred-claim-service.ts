@@ -42,13 +42,16 @@ export class DeferredClaimService extends BaseService {
 
   protected async onInitialize(): Promise<void> {
     // When a territory is claimed
-    this.subscribe('territory:claimed', (data: { territory: Territory; transactionHash?: string }) => {
-      // If claimed without on-chain tx or without connected wallet
-      const isConnected = this.web3Service?.isWalletConnected() ?? false;
-      if (!isConnected || !data.transactionHash) {
-        this.queueUnmintedDeed(data.territory);
+    this.subscribe(
+      'territory:claimed',
+      (data: { territory: Territory; transactionHash?: string }) => {
+        // If claimed without on-chain tx or without connected wallet
+        const isConnected = this.web3Service?.isWalletConnected() ?? false;
+        if (!isConnected || !data.transactionHash) {
+          this.queueUnmintedDeed(data.territory);
+        }
       }
-    });
+    );
 
     // When wallet connects, notify user if they have pending unminted ground
     this.subscribe('web3:walletConnected', () => {
@@ -63,7 +66,8 @@ export class DeferredClaimService extends BaseService {
    */
   public queueUnmintedDeed(territory: Territory): void {
     const id = territory.id || territory.geohash;
-    const name = territory.metadata?.name || `Sector ${territory.geohash?.substring(0, 6) || 'Alpha'}`;
+    const name =
+      territory.metadata?.name || `Sector ${territory.geohash?.substring(0, 6) || 'Alpha'}`;
     const rarity = territory.rarity || territory.metadata?.rarity || 'common';
     const rewardTokens = territory.estimatedReward || 50;
 
@@ -87,7 +91,10 @@ export class DeferredClaimService extends BaseService {
       duration: 6000,
     });
 
-    this.safeEmit('deferred:queueUpdated', { count: this.unmintedDeeds.size, deeds: this.getPendingDeeds() });
+    this.safeEmit('deferred:queueUpdated', {
+      count: this.unmintedDeeds.size,
+      deeds: this.getPendingDeeds(),
+    });
   }
 
   /**
@@ -135,7 +142,9 @@ export class DeferredClaimService extends BaseService {
       const data = localStorage.getItem(this.storageKey);
       if (data) {
         const parsed: UnmintedDeed[] = JSON.parse(data);
-        parsed.forEach((d) => this.unmintedDeeds.set(d.id, d));
+        parsed.forEach((d) => {
+          this.unmintedDeeds.set(d.id, d);
+        });
       }
     } catch (_e) {
       // Storage load error ignored

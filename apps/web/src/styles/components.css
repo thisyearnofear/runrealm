@@ -499,7 +499,9 @@
 
   .territory-deed-tile:hover {
     transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 15px var(--tile-glow, rgba(79, 174, 139, 0.3));
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.5),
+      0 0 15px var(--tile-glow, rgba(79, 174, 139, 0.3));
     border-color: var(--tile-stroke, #4fae8b);
   }
 
@@ -546,10 +548,22 @@
     text-transform: uppercase;
   }
 
-  .deed-tile-badge.legendary { background: rgba(242, 165, 65, 0.2); color: #f2a541; }
-  .deed-tile-badge.epic { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
-  .deed-tile-badge.rare { background: rgba(99, 179, 200, 0.2); color: #63b3c8; }
-  .deed-tile-badge.common { background: rgba(79, 174, 139, 0.2); color: #4fae8b; }
+  .deed-tile-badge.legendary {
+    background: rgba(242, 165, 65, 0.2);
+    color: #f2a541;
+  }
+  .deed-tile-badge.epic {
+    background: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+  }
+  .deed-tile-badge.rare {
+    background: rgba(99, 179, 200, 0.2);
+    color: #63b3c8;
+  }
+  .deed-tile-badge.common {
+    background: rgba(79, 174, 139, 0.2);
+    color: #4fae8b;
+  }
 
   .deed-tile-yield {
     font-size: 0.7rem;

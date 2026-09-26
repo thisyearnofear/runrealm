@@ -10,12 +10,14 @@ import {
   ViskoOrbisDynamicProvider,
   type ViskoOrbisDynamicStateMessage,
 } from '@reactor-models/visko-orbis-dynamic';
+import { SunprintDeedModal } from '@runrealm/shared-core/components/sunprint-deed-modal';
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import { OrbisDirector } from '@runrealm/shared-core/services/orbis-director';
 import { type Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import { WorldStateService } from '@runrealm/shared-core/services/world-state-service';
 import type { OrbisPromptIntent, WorldSnapshot } from '@runrealm/shared-core/types/world-state';
 import {
+  createOrbisDemoTerritory,
   emitOrbisDemoStep,
   ORBIS_DEMO_STEPS,
   type OrbisDemoStepId,
@@ -37,6 +39,9 @@ import {
   useGuidedSequencePlayer,
   useIntroReveal,
   useOrbisAmbience,
+  useOrbisFeedback,
+  useScrambledText,
+  useStageRecorder,
   useStreamStall,
 } from './useOrbisLiveHooks';
 
@@ -136,7 +141,12 @@ function OrbisLiveExperience() {
   const introDone = useSyncExternalStore(subscribeIntroDone, getIntroDone, () => false);
   const [lastActivityAt, setLastActivityAt] = useState(0);
   const [ambienceOn, setAmbienceOn] = useState(false);
+  const [cuesOn, setCuesOn] = useState(true);
   const [savedTerritoryName, setSavedTerritoryName] = useState<string | null>(null);
+
+  const stageRef = useRef<HTMLDivElement>(null);
+  const deedModalRef = useRef<SunprintDeedModal | null>(null);
+  const paceToggleRef = useRef(false);
 
   const reactorRef = useRef(reactor);
   const modeRef = useRef<DemoMode>('live');
@@ -250,6 +260,11 @@ function OrbisLiveExperience() {
           await reactorRef.current.setPrompt({ prompt });
           setActivePrompt(prompt);
         },
+        // Optional audio-track steering; no-op when the deployment has no
+        // audio track (the director swallows these failures).
+        setAudioPrompt: async (prompt: string) => {
+          await reactorRef.current.setAudioPrompt({ prompt });
+        },
       });
       return;
     }
@@ -291,6 +306,21 @@ function OrbisLiveExperience() {
       await connectLive();
     }
     if (reactorRef.current.status !== 'ready') return;
+
+    // Warm session settings before the first frame: deterministic seed for
+    // reproducible demo runs, model-generated audio on.
+    const model = reactorRef.current;
+    try {
+      await model.setSeed?.({ seed: 20260922 });
+    } catch {
+      // Seed is cosmetic; never block the run on it.
+    }
+    try {
+      await model.setAudioEnabled?.({ audio_enabled: true });
+    } catch {
+      // Deployments without an audio track reject this; carry on silently.
+    }
+
     emitStep('run-started');
   }, [connectLive, emitStep]);
 
@@ -337,6 +367,48 @@ function OrbisLiveExperience() {
   }, [bus, clearSequence]);
 
   useOrbisAmbience(ambienceOn, worldSnapshot.threatLevel);
+
+  // Local sound cues + haptics layered on top of any model audio.
+  useOrbisFeedback({ enabled: cuesOn, activeStep, snapshot: worldSnapshot });
+
+  // Judge-facing quick actions: drive the world state directly.
+  const pushPace = useCallback(() => {
+    paceToggleRef.current = !paceToggleRef.current;
+    const speed = paceToggleRef.current ? 4.6 : 2.0; // sprint ↔ easy
+    bus.emit('run:statsUpdated', { distance: 1200, duration: 360, speed });
+  }, [bus]);
+
+  // Deed reveal when the run settles: reuse the Sunprint Deed modal.
+  useEffect(() => {
+    const modal = new SunprintDeedModal(undefined, { autoShowOnClaim: false });
+    deedModalRef.current = modal;
+    void modal.initialize().catch(() => undefined);
+    return () => {
+      modal.closeDeed();
+      modal.cleanup();
+      // The modal appends straight to <body>; make sure no overlay survives
+      // a route change or test unmount.
+      document.querySelectorAll('.sunprint-deed-overlay').forEach((node) => {
+        node.remove();
+      });
+      deedModalRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (activeStep !== 'run-completed') return;
+    // Small beat so the final act title lands before the card pops.
+    const timer = window.setTimeout(() => {
+      deedModalRef.current?.showDeed({
+        territory: createOrbisDemoTerritory('strong'),
+        transactionHash: 'orbis-live-demo',
+      });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [activeStep]);
+
+  // Stage recorder for grabbing a demo clip (best-effort, browser-dependent).
+  const recorder = useStageRecorder(stageRef);
 
   // ── First-run arc: the panel stays hidden until one full sequence has been
   // witnessed. Returning visitors skip straight to the conductor controls.
@@ -385,6 +457,21 @@ function OrbisLiveExperience() {
   const statusLabel =
     mode === 'offline' ? 'Storyboard mode' : (STATUS_LABELS[reactor.status] ?? reactor.status);
 
+  const statusSentence = describeWorld(worldSnapshot, liveModelState?.current_chunk ?? null);
+  const displayedSentence = useScrambledText(statusSentence);
+
+  const frameGradeClass =
+    worldSnapshot.threatLevel >= 0.72
+      ? ' orbis-grade--critical'
+      : worldSnapshot.territoryStatus === 'vulnerable' ||
+          worldSnapshot.territoryStatus === 'contested'
+        ? ' orbis-grade--hot'
+        : worldSnapshot.territoryStatus === 'developed'
+          ? ' orbis-grade--calm'
+          : worldSnapshot.territoryStatus === 'none'
+            ? ''
+            : ' orbis-grade--warm';
+
   return (
     <main className="orbis-live-page" aria-labelledby="orbis-live-title">
       <section className="orbis-hero">
@@ -393,8 +480,9 @@ function OrbisLiveExperience() {
           <h1 id="orbis-live-title">A run that changes the world while it happens.</h1>
           <p>
             Canonical RunRealm events steer a continuous generated scene: expose a cell, race a
-            ghost, overexpose the frame, then fix the territory. No wallet, GPS, or chain access is
-            required for judges.
+            ghost, overexpose the frame, then fix the territory. Model-generated audio and local
+            sensory cues track every transition. No wallet, GPS, or chain access is required for
+            judges.
           </p>
         </div>
 
@@ -411,7 +499,7 @@ function OrbisLiveExperience() {
 
       <section className="orbis-stage-grid">
         <div className="orbis-video-panel">
-          <div className="orbis-video-frame">
+          <div ref={stageRef} className={`orbis-video-frame${frameGradeClass}`}>
             {mode === 'live' ? (
               <>
                 <OrbisStageCanvas snapshot={worldSnapshot} />
@@ -433,8 +521,20 @@ function OrbisLiveExperience() {
               </div>
             )}
 
+            {activeStep && (
+              <div key={`flash-${activeStep}`} className="orbis-flash" aria-hidden="true" />
+            )}
+            <div
+              className={`orbis-letterbox orbis-letterbox--top${hasRunStarted ? ' is-visible' : ''}`}
+              aria-hidden="true"
+            />
+            <div
+              className={`orbis-letterbox orbis-letterbox--bottom${hasRunStarted ? ' is-visible' : ''}`}
+              aria-hidden="true"
+            />
+
             <p className="orbis-sentence" aria-live="polite">
-              {describeWorld(worldSnapshot, liveModelState?.current_chunk ?? null)}
+              {displayedSentence}
             </p>
 
             {(mode === 'offline' || reactor.status !== 'ready' || showPriming) && (
@@ -447,6 +547,13 @@ function OrbisLiveExperience() {
                       : 'Live video waits for connection'}
                 </span>
                 <strong>{worldSnapshot.territoryStatus}</strong>
+              </div>
+            )}
+
+            {mode === 'live' && (isConnecting || showPriming) && (
+              <div className="orbis-primer" aria-hidden="true">
+                <div className="orbis-primer__ring" />
+                <span>{isConnecting ? 'Placing session' : 'Priming first chunk'}</span>
               </div>
             )}
           </div>
@@ -535,6 +642,37 @@ function OrbisLiveExperience() {
                 <button type="button" className="orbis-button" onClick={startOfflineRun}>
                   Play storyboard
                 </button>
+                <button
+                  type="button"
+                  className="orbis-button orbis-button--quiet"
+                  onClick={() => void connectLive()}
+                  disabled={isConnecting || (mode === 'live' && reactor.status === 'ready')}
+                >
+                  {isConnecting
+                    ? 'Warming session…'
+                    : mode === 'live' && reactor.status === 'ready'
+                      ? 'Live session warm'
+                      : 'Prewarm live session'}
+                </button>
+                {recorder.supported && (
+                  <button
+                    type="button"
+                    className={`orbis-button orbis-button--quiet ${recorder.recording ? 'is-on' : ''}`}
+                    onClick={() => (recorder.recording ? recorder.stop() : recorder.start(30_000))}
+                    disabled={mode === 'live' && reactor.status !== 'ready' && !recorder.recording}
+                  >
+                    {recorder.recording ? 'Stop capture' : 'Capture 30s clip'}
+                  </button>
+                )}
+                {recorder.clipUrl && !recorder.recording && (
+                  <a
+                    className="orbis-link-button"
+                    href={recorder.clipUrl}
+                    download="runrealm-orbis-clip.webm"
+                  >
+                    Download captured clip
+                  </a>
+                )}
               </div>
               {savedTerritoryName && (
                 <p className="orbis-saved" aria-live="polite">
@@ -567,11 +705,49 @@ function OrbisLiveExperience() {
                   >
                     {ambienceOn ? 'Ambience on' : 'Ambience off'}
                   </button>
+                  <button
+                    type="button"
+                    className={`orbis-button orbis-button--quiet ${cuesOn ? 'is-on' : ''}`}
+                    onClick={() => setCuesOn((on) => !on)}
+                    aria-pressed={cuesOn}
+                  >
+                    {cuesOn ? 'Cues on' : 'Cues off'}
+                  </button>
                   <p className="orbis-shortcut-hint">
                     <kbd>Space</kbd> guided sequence · <kbd>1–7</kbd> steps · <kbd>R</kbd> reset
                   </p>
                 </div>
               </details>
+            </div>
+
+            <div className="orbis-panel-section">
+              <p className="orbis-panel-label">Live direction</p>
+              <div className="orbis-button-grid orbis-button-grid--thirds">
+                <button
+                  type="button"
+                  className="orbis-button"
+                  onClick={() => emitStep('ghost-deployed')}
+                  disabled={!canAdvance || sequenceRunning}
+                >
+                  Deploy ghost
+                </button>
+                <button
+                  type="button"
+                  className="orbis-button"
+                  onClick={pushPace}
+                  disabled={!canAdvance || sequenceRunning}
+                >
+                  Push pace
+                </button>
+                <button
+                  type="button"
+                  className="orbis-button orbis-button--danger"
+                  onClick={() => emitStep('territory-overexposed')}
+                  disabled={!canAdvance || sequenceRunning}
+                >
+                  Contest claim
+                </button>
+              </div>
             </div>
 
             {(connectionError || commandError) && (

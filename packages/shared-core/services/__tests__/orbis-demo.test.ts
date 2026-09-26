@@ -89,7 +89,12 @@ describe('Orbis demo event adapter', () => {
     expect(dispatched).toHaveLength(2);
     for (const intent of dispatched) {
       expect(intent.prompt).not.toMatch(/-1\.2921|36\.8219/);
-      expect(intent.prompt).toContain('living cyanotype-inspired athletic atlas');
     }
+    // Only the initial prompt carries the full style anchor
+    expect(dispatched[0].initial).toBe(true);
+    expect(dispatched[0].prompt).toContain('living cyanotype-inspired athletic atlas');
+    // Subsequent prompts are delta descriptions
+    expect(dispatched[1].initial).toBe(false);
+    expect(dispatched[1].prompt).toContain('same unbroken scene');
   });
 });

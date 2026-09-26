@@ -66,6 +66,7 @@ export type OrbisTransitionReason = Extract<
   WorldTransitionReason,
   | 'run-started'
   | 'run-completed'
+  | 'pace-changed'
   | 'cell-exposed'
   | 'territory-developing'
   | 'territory-developed'
@@ -78,6 +79,13 @@ export interface OrbisPromptIntent {
   reason: OrbisTransitionReason;
   priority: number;
   prompt: string;
+  /**
+   * Sound description sent via Orbis' `set_audio_prompt` alongside the video
+   * prompt; `null` keeps whatever sound the model is currently generating.
+   */
+  audioPrompt: string | null;
+  /** True for the one world-building prompt that opens a run. */
+  initial: boolean;
   snapshot: WorldSnapshot;
   createdAt: number;
 }

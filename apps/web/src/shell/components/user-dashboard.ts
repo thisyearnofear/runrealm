@@ -170,7 +170,9 @@ export class UserDashboard {
     target.classList.add('active');
 
     // Filter territory items (both list and binder grid)
-    const territoryItems = this.container?.querySelectorAll('.territory-item-compact, .territory-deed-tile');
+    const territoryItems = this.container?.querySelectorAll(
+      '.territory-item-compact, .territory-deed-tile'
+    );
     territoryItems?.forEach((item) => {
       const itemElement = item as HTMLElement;
       if (filter === 'all') {
@@ -543,7 +545,8 @@ export class UserDashboard {
 
   private renderTerritoryDeedTile(territory: DashboardTerritory): string {
     const rarity = (territory.rarity || 'common').toLowerCase();
-    const name = territory.metadata?.name || `Sector ${territory.geohash?.substring(0, 6) || 'Alpha'}`;
+    const name =
+      territory.metadata?.name || `Sector ${territory.geohash?.substring(0, 6) || 'Alpha'}`;
     const estReward = territory.estimatedReward || 50;
     const dailyYield = (estReward * 0.15).toFixed(1);
     const defenseStatus = territory.defenseStatus || 'moderate';

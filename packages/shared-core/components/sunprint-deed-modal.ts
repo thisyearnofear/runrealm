@@ -17,41 +17,60 @@ export interface DeedData {
   isCrossChain?: boolean;
 }
 
+export interface SunprintDeedModalOptions {
+  /**
+   * When true (default), the modal automatically shows on `territory:claimed`
+   * events. Set to false when the caller wants manual control over when the
+   * reveal appears (e.g. only after run-completed).
+   */
+  autoShowOnClaim?: boolean;
+}
+
 export class SunprintDeedModal extends BaseService {
   private domService: DOMService;
   private soundService: SoundService;
   private activeModal: HTMLElement | null = null;
   private escKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private readonly autoShowOnClaim: boolean;
 
-  constructor(domService?: DOMService) {
+  constructor(domService?: DOMService, options?: SunprintDeedModalOptions) {
     super();
     this.domService = domService || new DOMService();
     this.soundService = SoundService.getInstance();
+    this.autoShowOnClaim = options?.autoShowOnClaim ?? true;
   }
 
   protected async onInitialize(): Promise<void> {
     this.injectStyles();
 
     // Listen for territory claim events to trigger the celebratory reveal
-    this.subscribe('territory:claimed', (data: { territory: Territory; transactionHash?: string; isCrossChain?: boolean }) => {
-      if (data && data.territory) {
-        this.showDeed({
-          territory: data.territory,
-          transactionHash: data.transactionHash,
-          isCrossChain: data.isCrossChain,
-        });
-      }
-    });
+    if (this.autoShowOnClaim) {
+      this.subscribe(
+        'territory:claimed',
+        (data: { territory: Territory; transactionHash?: string; isCrossChain?: boolean }) => {
+          if (data && data.territory) {
+            this.showDeed({
+              territory: data.territory,
+              transactionHash: data.transactionHash,
+              isCrossChain: data.isCrossChain,
+            });
+          }
+        }
+      );
+    }
 
     // Listen for direct UI inspection requests (e.g. from Dashboard binder)
-    this.subscribe('ui:showDeedModal', (data: { territory: Territory; transactionHash?: string }) => {
-      if (data && data.territory) {
-        this.showDeed({
-          territory: data.territory,
-          transactionHash: data.transactionHash,
-        });
+    this.subscribe(
+      'ui:showDeedModal',
+      (data: { territory: Territory; transactionHash?: string }) => {
+        if (data && data.territory) {
+          this.showDeed({
+            territory: data.territory,
+            transactionHash: data.transactionHash,
+          });
+        }
       }
-    });
+    );
 
     this.safeEmit('service:initialized', { service: 'SunprintDeedModal', success: true });
   }
@@ -64,6 +83,10 @@ export class SunprintDeedModal extends BaseService {
 
     // Remove any existing active deed modal
     this.closeDeed();
+
+    // Standalone callers may not have awaited initialize(), so keep styling
+    // idempotent but guaranteed at reveal time.
+    this.injectStyles();
 
     const territory = data.territory;
     const rarity = (territory.rarity || territory.metadata?.rarity || 'common').toLowerCase() as
@@ -126,11 +149,17 @@ export class SunprintDeedModal extends BaseService {
     }
   }
 
-  private renderModal(data: DeedData, rarity: 'common' | 'rare' | 'epic' | 'legendary'): HTMLElement {
+  private renderModal(
+    data: DeedData,
+    rarity: 'common' | 'rare' | 'epic' | 'legendary'
+  ): HTMLElement {
     const { territory, transactionHash } = data;
-    const name = territory.metadata?.name || `Sector ${territory.geohash?.substring(0, 7) || 'Alpha'}`;
+    const name =
+      territory.metadata?.name || `Sector ${territory.geohash?.substring(0, 7) || 'Alpha'}`;
     const h3Cell = territory.geohash || territory.id || '8928308280fffff';
-    const distanceKm = territory.runData?.distance ? (territory.runData.distance / 1000).toFixed(2) : '1.85';
+    const distanceKm = territory.runData?.distance
+      ? (territory.runData.distance / 1000).toFixed(2)
+      : '1.85';
     const estReward = territory.estimatedReward || territory.metadata?.estimatedReward || 50;
     const dailyYield = (estReward * 0.15).toFixed(1);
     const difficulty = territory.metadata?.difficulty || 45;
@@ -278,17 +307,25 @@ export class SunprintDeedModal extends BaseService {
     return modal;
   }
 
-  private handleShare(name: string, h3Cell: string, distanceKm: string, reward: number, rarity: string): void {
+  private handleShare(
+    name: string,
+    h3Cell: string,
+    distanceKm: string,
+    reward: number,
+    rarity: string
+  ): void {
     const text = `🏴 I just captured the ${rarity.toUpperCase()} territory "${name}" (${distanceKm}km) on @RunRealm! Unlocked +${reward} $REALM tokens. #RunRealm #GameFi #Solana #ZetaChain`;
 
     if (navigator.share) {
-      navigator.share({
-        title: `RunRealm Deed: ${name}`,
-        text: text,
-        url: window.location.origin,
-      }).catch(() => {
-        this.copyToClipboard(text);
-      });
+      navigator
+        .share({
+          title: `RunRealm Deed: ${name}`,
+          text: text,
+          url: window.location.origin,
+        })
+        .catch(() => {
+          this.copyToClipboard(text);
+        });
     } else {
       this.copyToClipboard(text);
     }

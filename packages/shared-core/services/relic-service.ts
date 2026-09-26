@@ -120,12 +120,16 @@ export class RelicService extends BaseService {
     const twoHours = 2 * 60 * 60 * 1000;
 
     relicTemplates.forEach((template, index) => {
-      const angle = (index * (360 / relicTemplates.length) + Math.random() * 40 - 20) * (Math.PI / 180);
-      const distM = template.distanceRange[0] + Math.random() * (template.distanceRange[1] - template.distanceRange[0]);
+      const angle =
+        (index * (360 / relicTemplates.length) + Math.random() * 40 - 20) * (Math.PI / 180);
+      const distM =
+        template.distanceRange[0] +
+        Math.random() * (template.distanceRange[1] - template.distanceRange[0]);
 
       // Roughly convert meters to lat/lng offsets
       const dLat = (distM * Math.cos(angle)) / 111320;
-      const dLng = (distM * Math.sin(angle)) / (40075000 * Math.cos((centerLat * Math.PI) / 180) / 360);
+      const dLng =
+        (distM * Math.sin(angle)) / ((40075000 * Math.cos((centerLat * Math.PI) / 180)) / 360);
 
       const relicId = `relic-${now}-${index}`;
       const relic: RealmRelic = {

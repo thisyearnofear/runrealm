@@ -972,3 +972,184 @@ body.orbis-live-route #maplibre-container {
   color: var(--rr-text-2);
   font-size: var(--rr-text-xs);
 }
+
+/* ─── Immersion pass: filmic grade, cuts, cue controls, capture ────────── */
+
+.orbis-video-frame {
+  transition: filter 650ms var(--rr-ease-in-out);
+}
+
+.orbis-video-frame.orbis-grade--warm {
+  filter: saturate(1.08) contrast(1.03);
+}
+
+.orbis-video-frame.orbis-grade--hot {
+  filter: saturate(1.24) contrast(1.1) hue-rotate(-8deg);
+}
+
+.orbis-video-frame.orbis-grade--critical {
+  filter: saturate(1.42) contrast(1.18) hue-rotate(-14deg);
+}
+
+.orbis-video-frame.orbis-grade--calm {
+  filter: saturate(0.98) hue-rotate(10deg) brightness(1.02);
+}
+
+.orbis-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    circle at 50% 42%,
+    rgba(248, 244, 232, 0.88),
+    rgba(248, 244, 232, 0) 68%
+  );
+  opacity: 0;
+  animation: orbis-flash 560ms ease-out forwards;
+}
+
+@keyframes orbis-flash {
+  0% {
+    opacity: 0;
+    transform: scale(1.035);
+  }
+  18% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.orbis-letterbox {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 3;
+  height: clamp(22px, 5.5vw, 52px);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    transform 650ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 320ms ease;
+}
+
+.orbis-letterbox--top {
+  top: 0;
+  background: linear-gradient(180deg, rgba(4, 10, 16, 0.92), rgba(4, 10, 16, 0.18));
+  transform: translateY(-100%);
+}
+
+.orbis-letterbox--bottom {
+  bottom: 0;
+  background: linear-gradient(0deg, rgba(4, 10, 16, 0.92), rgba(4, 10, 16, 0.18));
+  transform: translateY(100%);
+}
+
+.orbis-letterbox.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.orbis-sentence {
+  z-index: 5;
+}
+
+.orbis-primer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  justify-items: center;
+  gap: var(--rr-s-3);
+  background: rgba(6, 21, 33, 0.38);
+  color: var(--rr-text-2);
+  font-family: var(--rr-font-mono);
+  font-size: var(--rr-text-3xs);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+  backdrop-filter: blur(3px);
+}
+
+.orbis-primer__ring {
+  width: 58px;
+  height: 58px;
+  border: 3px solid rgba(248, 244, 232, 0.18);
+  border-top-color: var(--rr-accent);
+  border-radius: 999px;
+  animation: orbis-spin 0.9s linear infinite;
+}
+
+@keyframes orbis-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.orbis-button--danger {
+  border-color: rgba(232, 93, 93, 0.5);
+  background: rgba(232, 93, 93, 0.12);
+  color: #ffe2e2;
+}
+
+.orbis-button--danger:hover:not(:disabled) {
+  border-color: var(--rr-signal);
+  background: rgba(232, 93, 93, 0.22);
+}
+
+.orbis-button-grid--thirds {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.orbis-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 var(--rr-s-2);
+  border: 1px dashed rgba(248, 244, 232, 0.24);
+  border-radius: var(--rr-r-2);
+  color: var(--rr-text-2);
+  font-size: var(--rr-text-2xs);
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition:
+    border-color var(--rr-d-2) var(--rr-ease-out),
+    color var(--rr-d-2) var(--rr-ease-out);
+}
+
+.orbis-link-button:hover {
+  border-color: var(--rr-accent);
+  color: var(--rr-text-1);
+}
+
+@media (max-width: 900px) {
+  .orbis-button-grid--thirds {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbis-video-frame,
+  .orbis-letterbox,
+  .orbis-link-button {
+    transition: none;
+  }
+
+  .orbis-flash,
+  .orbis-primer__ring {
+    animation: none;
+  }
+
+  .orbis-flash {
+    opacity: 0;
+  }
+
+  .orbis-letterbox.is-visible {
+    transform: none;
+  }
+}
