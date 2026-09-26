@@ -28,6 +28,7 @@ export * from './services/external-fitness-service';
 export * from './services/game-service';
 // export * from './services/next-segment-service'; // Removed - legacy/unused in mobile
 export * from './services/geocoding-service';
+export * from './services/http-attestation-oracle';
 export * from './services/location-service';
 export * from './services/map-service';
 // Note: contract-service and cross-chain-service are in shared-blockchain package

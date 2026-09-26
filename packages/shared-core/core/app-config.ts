@@ -20,6 +20,7 @@ declare const __ENV__: {
   TERRITORY_MANAGER_ADDRESS?: string;
   GOOGLE_GEMINI_API_KEY?: string;
   ENABLE_ORBIS?: string;
+  RUNREALM_ATTESTATION_ORACLES?: string;
 };
 
 export interface StravaConfig {
@@ -380,6 +381,20 @@ export class ConfigService {
 
   getConfig(): AppConfig {
     return { ...this.config }; // Return copy to prevent mutation
+  }
+
+  /**
+   * Attestation oracle quorum endpoints (protocol-vision Layer 3).
+   * Comma-separated base URLs via RUNREALM_ATTESTATION_ORACLES; empty
+   * means the attestation service runs in honest `local` mode.
+   */
+  getAttestationOracleUrls(): string[] {
+    const raw = this.getEnvVar('RUNREALM_ATTESTATION_ORACLES');
+    if (!raw) return [];
+    return raw
+      .split(',')
+      .map((u) => u.trim())
+      .filter((u) => /^https?:\/\//.test(u));
   }
 
   updateConfig(updates: Partial<AppConfig>): void {

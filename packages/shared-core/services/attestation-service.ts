@@ -30,6 +30,7 @@ import { routeToCells } from '../utils/h3-territory';
 import { StorageAdapter } from '../utils/storage-adapter';
 import { openVersioned, writeVersioned } from '../utils/versioned-store';
 import type { AccountService } from './account-service';
+import { HttpAttestationOracle } from './http-attestation-oracle';
 import type { RunSession } from './run-tracking-service';
 
 /**
@@ -245,6 +246,7 @@ export class AttestationService extends BaseService {
 
   protected async onInitialize(): Promise<void> {
     await this.load();
+    this.configureOraclesFromConfig();
     this.sweepFinalizable();
 
     this.subscribe(
@@ -453,6 +455,26 @@ export class AttestationService extends BaseService {
     }
     if (finalized > 0) void this.save();
     return finalized;
+  }
+
+  /**
+   * Build the quorum from configured endpoints when no oracles were
+   * injected (tests inject fakes via createIsolated). Empty config
+   * leaves the service in honest `local` mode.
+   */
+  private configureOraclesFromConfig(): void {
+    if (this.oracles.length > 0) return;
+    try {
+      const urls =
+        (
+          this.config as { getAttestationOracleUrls?: () => string[] }
+        ).getAttestationOracleUrls?.() ?? [];
+      if (urls.length > 0) {
+        this.oracles = urls.map((url) => new HttpAttestationOracle(url));
+      }
+    } catch {
+      /* config unavailable — local mode */
+    }
   }
 
   private latestAttestation(): Attestation | null {
