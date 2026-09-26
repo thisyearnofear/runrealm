@@ -1,0 +1,240 @@
+/* RunRealm boot splash — first paint should already feel like the product. */
+
+.boot-splash {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-loading, 2300);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--rr-text-1, #f3ead8);
+  background: radial-gradient(
+    120% 90% at 50% 12%,
+    rgba(23, 61, 82, 0.95) 0%,
+    rgba(13, 43, 62, 0.98) 48%,
+    #071825 100%
+  );
+  transition:
+    opacity 520ms ease,
+    visibility 520ms ease;
+}
+
+.boot-splash.is-leaving {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boot-splash__aura {
+  position: absolute;
+  inset: -18%;
+  background:
+    radial-gradient(circle at 22% 28%, rgba(99, 179, 200, 0.14), transparent 34%),
+    radial-gradient(circle at 78% 22%, rgba(242, 165, 65, 0.12), transparent 30%),
+    radial-gradient(circle at 50% 78%, rgba(79, 174, 139, 0.1), transparent 36%);
+  filter: blur(2px);
+  animation: boot-splash-breathe 5.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.boot-splash__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(92vw, 560px);
+  padding: 24px;
+  text-align: center;
+}
+
+.boot-splash__hex {
+  width: clamp(84px, 12vw, 108px);
+  height: auto;
+  margin-bottom: 18px;
+  color: var(--rr-sunprint-amber, #f2a541);
+  filter: drop-shadow(0 0 22px rgba(242, 165, 65, 0.22));
+}
+
+.boot-splash__hex-fill {
+  fill: rgba(99, 179, 200, 0.08);
+  stroke: rgba(248, 244, 232, 0.22);
+  stroke-width: 1;
+  animation: boot-splash-pulse 2.8s ease-in-out infinite;
+}
+
+.boot-splash__hex-outline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 360;
+  stroke-dashoffset: 360;
+  animation: boot-splash-draw 1.45s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.boot-splash__kicker {
+  margin: 0;
+  font-family: var(--rr-font-mono, ui-monospace, monospace);
+  font-size: var(--rr-text-3xs, 11px);
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--rr-text-3, #9fb8bf);
+}
+
+.boot-splash__wordmark {
+  margin: 8px 0 0;
+  font-family: var(--rr-font-display, "Iowan Old Style", Georgia, serif);
+  font-size: clamp(2.4rem, 6vw, 3.8rem);
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: var(--rr-sunprint-bone, #f3ead8);
+  text-shadow: 0 0 32px rgba(99, 179, 200, 0.22);
+}
+
+.boot-splash__tagline {
+  margin: 10px 0 0;
+  font-size: var(--rr-text-xs, 13px);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rr-text-2, #b9cbd0);
+}
+
+.boot-splash__progress {
+  width: min(320px, 72vw);
+  height: 2px;
+  margin-top: 26px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(248, 244, 232, 0.14);
+}
+
+.boot-splash__progress-fill {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--rr-sunprint-amber, #f2a541),
+    rgba(248, 244, 232, 0.9),
+    transparent
+  );
+  animation: boot-splash-slide 1.35s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.boot-splash__phase {
+  margin: 12px 0 0;
+  min-height: 20px;
+  font-size: var(--rr-text-sm, 14px);
+  color: var(--rr-text-3, #9fb8bf);
+}
+
+.boot-splash--error .boot-splash__hex {
+  color: var(--rr-sunprint-coral, #e85d5d);
+  filter: drop-shadow(0 0 22px rgba(232, 93, 93, 0.25));
+}
+
+.boot-splash--error .boot-splash__progress {
+  display: none;
+}
+
+.boot-splash__error-text {
+  margin: 16px 0 0;
+  max-width: 42ch;
+  font-size: var(--rr-text-sm, 14px);
+  line-height: 1.5;
+  color: var(--rr-text-2, #b9cbd0);
+}
+
+.boot-splash__button {
+  margin-top: 18px;
+  min-height: 44px;
+  padding: 0 24px;
+  border: 1px solid rgba(248, 244, 232, 0.28);
+  border-radius: 999px;
+  background: rgba(248, 244, 232, 0.08);
+  color: var(--rr-text-1, #f3ead8);
+  font: inherit;
+  font-size: var(--rr-text-sm, 14px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.boot-splash__button:hover {
+  border-color: var(--rr-sunprint-amber, #f2a541);
+  background: rgba(242, 165, 65, 0.16);
+  transform: translateY(-1px);
+}
+
+.boot-splash__button:focus-visible {
+  outline: 2px solid var(--rr-sunprint-amber, #f2a541);
+  outline-offset: 2px;
+}
+
+@keyframes boot-splash-breathe {
+  from {
+    opacity: 0.62;
+    transform: scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes boot-splash-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes boot-splash-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes boot-splash-slide {
+  from {
+    transform: translateX(-170%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-splash,
+  .boot-splash__button {
+    transition: none;
+  }
+
+  .boot-splash__aura,
+  .boot-splash__hex-fill,
+  .boot-splash__progress-fill {
+    animation: none;
+  }
+
+  .boot-splash__hex-outline {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .boot-splash.is-leaving {
+    display: none;
+  }
+}

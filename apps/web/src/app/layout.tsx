@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import '../styles/design-tokens.css';
+import '../styles/loading-splash.css';
 import '../styles/core-system.css';
 import '../styles/components.css';
 import '../styles/interfaces.css';

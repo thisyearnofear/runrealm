@@ -14,27 +14,33 @@ if (typeof window !== 'undefined') {
   installRuntimeGuards();
 }
 
+export interface BootstrapOptions {
+  onPhase?: (phase: string) => void;
+}
+
 /** Single-flight boot — page.tsx owns startup; do not auto-run on import. */
 let bootPromise: Promise<void> | null = null;
 
 // Initialize the application
-export async function initializeApp(): Promise<void> {
+export async function initializeApp(options: BootstrapOptions = {}): Promise<void> {
   if (bootPromise) {
     return bootPromise;
   }
 
-  bootPromise = bootApp().catch((error) => {
+  bootPromise = bootApp(options).catch((error) => {
     bootPromise = null;
     throw error;
   });
   return bootPromise;
 }
 
-async function bootApp(): Promise<void> {
+async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
   try {
+    onPhase?.('Waking the atlas');
     const app = RunRealmApp.getInstance();
 
     // Initialize platform-specific UI components
+    onPhase?.('Loading core systems');
     const { DOMService } = await import('@runrealm/shared-core/services/dom-service');
     const { LocationService } = await import('@runrealm/shared-core/services/location-service');
     const { UIService } = await import('@runrealm/shared-core/services/ui-service');
@@ -82,6 +88,7 @@ async function bootApp(): Promise<void> {
     }
 
     // Initialize platform UI with all components
+    onPhase?.('Charting territories');
     app.initializePlatformUI({
       mainUI,
       walletWidget,
@@ -91,6 +98,7 @@ async function bootApp(): Promise<void> {
 
     await app.initialize();
 
+    onPhase?.('Securing claim vault');
     // Phase 5 — wire the `ConfidentialContractService` so the
     // encrypted-side methods in `ConfidentialTerritoryService`
     // (boost / contest / read) find it via
@@ -138,6 +146,7 @@ async function bootApp(): Promise<void> {
     );
 
     // Initialize User Dashboard (consolidated command center)
+    onPhase?.('Preparing your expedition');
     const userDashboard = new UserDashboard();
     const dashboardContainer = document.createElement('div');
     dashboardContainer.id = 'user-dashboard-root';
@@ -368,7 +377,7 @@ async function bootApp(): Promise<void> {
 
     console.log('RunRealm initialized successfully');
   } catch (error) {
-    // Enhanced error logging
+    // Enhanced error logging; the page renders the branded error state.
     console.error('Failed to initialize RunRealm:', error);
     if (error instanceof Error) {
       console.error('Error name:', error.name);
@@ -377,61 +386,7 @@ async function bootApp(): Promise<void> {
     } else {
       console.error('Error object:', JSON.stringify(error, null, 2));
     }
-
-    // Remove loading indicator
-    const loadingDiv = document.getElementById('loading');
-    if (loadingDiv) {
-      loadingDiv.remove();
-    }
-
-    // Show user-friendly error message with more details
-    const errorMessage = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-    const errorStack =
-      error instanceof Error && error.stack
-        ? `<pre style="font-size: 11px; text-align: left; max-height: 200px; overflow: auto; background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 8px 0;">${error.stack}</pre>`
-        : '';
-
-    const errorDiv = document.createElement('div');
-    errorDiv.innerHTML = `
-      <div style="
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-        text-align: center;
-        z-index: 10000;
-        max-width: 600px;
-        max-height: 80vh;
-        overflow: auto;
-      ">
-        <h2 style="color: #ff4444; margin: 0 0 16px 0;">
-          Failed to Initialize RunRealm
-        </h2>
-        <p style="margin: 0 0 16px 0; color: #666; word-break: break-word;">
-          ${errorMessage}
-        </p>
-        ${errorStack}
-        <p style="margin: 16px 0 0 0; font-size: 12px; color: #999;">
-          Check the browser console for more details
-        </p>
-        <button onclick="window.location.reload()" style="
-          background: #00bd00;
-          color: white;
-          border: none;
-          padding: 12px 24px;
-          border-radius: 8px;
-          cursor: pointer;
-          margin-top: 16px;
-        ">
-          Retry
-        </button>
-      </div>
-    `;
-    document.body.appendChild(errorDiv);
+    throw error;
   }
 }
 
