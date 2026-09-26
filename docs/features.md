@@ -359,3 +359,52 @@ The dashboard has been transformed from a centered overlay to a primary interfac
   chain anchor, performance, tests, gameplay fun-factor) are sequenced in
   `docs/roadmap.md`.
 
+## Collectibles & Location-Based Gamification (September 2026)
+
+Inspired by high-dopamine collectible reveals and GPS cache hunting (such as GoCollect and Pokémon GO), RunRealm integrates physical-to-digital collectible mechanics into the athletic loop while preserving the cyanotype cartography of the **Sunprint Atlas**.
+
+### 1. Collectible "Sunprint Deed" Claim & Reveal Modal
+- **Location**: `packages/shared-core/components/sunprint-deed-modal.ts`
+- **Audio Service Extension**: `packages/shared-core/services/sound-service.ts` (`playDeedRevealSound`)
+- **Features**:
+  - **Chemical Wash Exposure**: Photographic paper development animation revealing street geometry, H3 cell address, and cadastral boundaries.
+  - **Foil Wax Seals**: Shimmering rarity seals for Common (Verdigris), Rare (Sapphire), Epic (Amethyst), and Legendary (Amber/Gold).
+  - **Telemetry Grid**: Displays expedition distance, pacing band, estimated daily $REALM yield, and on-chain verification hash.
+  - **Sensory Cues**: Multi-tap mobile vibration (`navigator.vibrate`) paired with synthesized harmonic chord chimes via Web Audio API.
+  - **1-Tap Social Share**: Generates shareable brag text with native Web Share API integration and clipboard fallback.
+
+### 2. "Atlas Binder" (Territory Deed Showcase)
+- **Location**: `apps/web/src/shell/components/user-dashboard.ts`
+- **Styles**: `apps/web/src/styles/components.css`
+- **Features**:
+  - **View Toggle**: Switch between `[ ☷ Binder ]` and `[ ☰ List ]` modes in the User Dashboard.
+  - **3D Deed Tiles**: Tactile collectible cards with hover elevation, SVG hexagon cadastral boundaries, daily token yield, and defense status.
+  - **Deed Inspection**: Each tile provides a `[ 📜 Deed ]` button to trigger the full `SunprintDeedModal` anytime.
+  - **Integrated Rarity Filters**: Filter by `All`, `Legendary`, `Epic`, `Rare`, or `Common` across both views.
+
+### 3. Dynamic "Realm Relics" & Landmark POIs (Micro-Destinations)
+- **Location**: `packages/shared-core/services/relic-service.ts`
+- **Map Layers**: `packages/shared-core/services/map-service.ts` (`relics-source`, `relics-layer`, `relics-pulse-layer`)
+- **Features**:
+  - Spawns dynamic, timed GPS supply drops (*Sunprint Cache*, *Cadastral Beacon*, *Ghost Elixir*, *Solana Genesis Shard*) at urban landmarks within 400m–2,200m of the runner.
+  - **Proximity Radar**: As the runner approaches within 250m, auditory pulses and haptic ticks increase in frequency.
+  - **Collection Geofence**: Crossing within 35 meters unlocks the relic, granting bonus $REALM tokens and defensive shields.
+
+### 4. Eyes-Free Sensory Feedback Engine
+- **Location**: `packages/shared-core/services/sensory-feedback-service.ts`
+- **Features**:
+  - Built for phone-in-pocket and armband running without looking at the screen.
+  - Provides distinct haptic vibration sequences and synthesized audio cues:
+    - New H3 cell exposed: 50ms light pulse
+    - Territory loop developing/closing: rising double pulse with resonant tone
+    - Contested/threat territory entered: warning double pulse
+    - Distance milestones: 1km pacing buzz and notification chime
+
+### 5. "Run First, Mint Later" (Deferred Onboarding)
+- **Location**: `packages/shared-core/services/deferred-claim-service.ts`
+- **Features**:
+  - Removes pre-workout wallet connection friction. Guests can start running and capture territories immediately.
+  - Unminted deeds are queued in offline local storage (`runrealm_unminted_deeds`).
+  - Upon post-workout wallet connection, notifies the user of all pending unminted deeds and prepares them for on-chain registration.
+
+

@@ -80,6 +80,77 @@ export class SoundService extends BaseService {
   }
 
   /**
+   * Play high-dopamine Deed Reveal / Territory Claim sound (Cyanotype exposure chime)
+   */
+  public playDeedRevealSound(rarity: 'common' | 'rare' | 'epic' | 'legendary' = 'common'): void {
+    if (!this.isEnabled || !this.audioContext) return;
+
+    try {
+      const now = this.audioContext.currentTime;
+      // Musical chord frequencies by rarity (Lydian / Pentatonic shimmer)
+      const chords: Record<string, number[]> = {
+        common: [261.63, 329.63, 392.0, 523.25], // C Major
+        rare: [329.63, 392.0, 493.88, 659.25], // E Minor / G
+        epic: [349.23, 440.0, 523.25, 698.46, 880.0], // F Major / A Lydian
+        legendary: [261.63, 392.0, 523.25, 659.25, 783.99, 1046.5], // Majestic Pentatonic shimmer
+      };
+
+      const notes = chords[rarity] || chords.common;
+
+      notes.forEach((freq, idx) => {
+        if (!this.audioContext) return;
+        const osc = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+
+        osc.type = rarity === 'legendary' || rarity === 'epic' ? 'triangle' : 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+        gain.gain.setValueAtTime(0, now + idx * 0.08);
+        gain.gain.linearRampToValueAtTime(this.volume * 0.25, now + idx * 0.08 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.8);
+
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.85);
+      });
+    } catch (error) {
+      console.warn('SoundService: Failed to play deed reveal sound:', error);
+    }
+  }
+
+  /**
+   * Play proximity radar pulse (for relics or nearby territory boundaries)
+   */
+  public playProximityPulse(urgency: number = 0.5): void {
+    if (!this.isEnabled || !this.audioContext) return;
+
+    try {
+      const now = this.audioContext.currentTime;
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+
+      osc.connect(gain);
+      gain.connect(this.audioContext.destination);
+
+      // Pitch increases with urgency (500Hz to 1200Hz)
+      const freq = 500 + urgency * 700;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(this.volume * 0.15, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+      osc.start(now);
+      osc.stop(now + 0.13);
+    } catch (error) {
+      console.warn('SoundService: Failed to play proximity pulse:', error);
+    }
+  }
+
+  /**
    * Play an error sound
    */
   public playErrorSound(): void {

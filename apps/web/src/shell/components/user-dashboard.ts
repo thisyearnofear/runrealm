@@ -36,6 +36,7 @@ export class UserDashboard {
   private unsubscribeDataUpdates: (() => void) | null = null;
   private unsubscribeVisibilityChanges: (() => void) | null = null;
   private expandedTerritoryId: string | null = null;
+  private territoryViewMode: 'list' | 'binder' = 'binder';
   // Stored so render()'s re-init can remove the previous handler
   // instead of stacking anonymous listeners (perf pass).
   private containerClickHandler: ((e: Event) => void) | null = null;
@@ -168,8 +169,8 @@ export class UserDashboard {
     });
     target.classList.add('active');
 
-    // Filter territory items
-    const territoryItems = this.container?.querySelectorAll('.territory-item-compact');
+    // Filter territory items (both list and binder grid)
+    const territoryItems = this.container?.querySelectorAll('.territory-item-compact, .territory-deed-tile');
     territoryItems?.forEach((item) => {
       const itemElement = item as HTMLElement;
       if (filter === 'all') {
@@ -232,6 +233,31 @@ export class UserDashboard {
         if (territoryId) {
           this.eventBus.emit('dashboard:showTerritoryOnMap', { territoryId });
           console.log('Show territory on map:', territoryId);
+        }
+        break;
+      }
+
+      case 'set-view-binder': {
+        this.territoryViewMode = 'binder';
+        this.render();
+        break;
+      }
+
+      case 'set-view-list': {
+        this.territoryViewMode = 'list';
+        this.render();
+        break;
+      }
+
+      case 'inspect-deed': {
+        const territoryId = target.getAttribute('data-territory');
+        if (territoryId) {
+          const data = this.dashboardService.getData();
+          const territory = (data.territories || []).find((t) => t.geohash === territoryId);
+          if (territory) {
+            this.eventBus.emit('ui:showDeedModal', { territory });
+            this.dashboardService.minimize();
+          }
         }
         break;
       }
@@ -454,6 +480,10 @@ export class UserDashboard {
         <div class="section-header">
           <h3>🗺️ Your Territories (${territoryCount})</h3>
           <div class="section-actions">
+            <div class="view-mode-toggle">
+              <button class="view-mode-btn ${this.territoryViewMode === 'binder' ? 'active' : ''}" data-action="set-view-binder" title="Atlas Binder Showcase">☷ Binder</button>
+              <button class="view-mode-btn ${this.territoryViewMode === 'list' ? 'active' : ''}" data-action="set-view-list" title="Compact List">☰ List</button>
+            </div>
             <button class="action-btn" data-action="open-territory-widget">Widget</button>
             <button class="action-btn" data-action="show-territories-on-map">Map →</button>
           </div>
@@ -478,15 +508,28 @@ export class UserDashboard {
           <button class="filter-btn" data-filter="common">Common</button>
         </div>
         
-        <div class="territory-list-compact">
-          ${territories
-            .slice(0, 10)
-            .map((t) => this.renderTerritoryCard(t))
-            .join('')}
-        </div>
+        ${
+          this.territoryViewMode === 'binder'
+            ? `
+          <div class="territory-binder-grid">
+            ${territories
+              .slice(0, 12)
+              .map((t) => this.renderTerritoryDeedTile(t))
+              .join('')}
+          </div>
+        `
+            : `
+          <div class="territory-list-compact">
+            ${territories
+              .slice(0, 10)
+              .map((t) => this.renderTerritoryCard(t))
+              .join('')}
+          </div>
+        `
+        }
         
         ${
-          territories.length > 10
+          territories.length > (this.territoryViewMode === 'binder' ? 12 : 10)
             ? `
           <button class="view-all-btn" data-action="view-all-territories">
             View All ${territories.length} Territories
@@ -494,6 +537,45 @@ export class UserDashboard {
         `
             : ''
         }
+      </div>
+    `;
+  }
+
+  private renderTerritoryDeedTile(territory: DashboardTerritory): string {
+    const rarity = (territory.rarity || 'common').toLowerCase();
+    const name = territory.metadata?.name || `Sector ${territory.geohash?.substring(0, 6) || 'Alpha'}`;
+    const estReward = territory.estimatedReward || 50;
+    const dailyYield = (estReward * 0.15).toFixed(1);
+    const defenseStatus = territory.defenseStatus || 'moderate';
+    const geohashTag = (territory.geohash || 'H3RES9').slice(-6).toUpperCase();
+
+    return `
+      <div class="territory-deed-tile ${rarity}" data-territory-id="${territory.geohash}">
+        <div class="deed-tile-top">
+          <span class="deed-tile-badge ${rarity}">${rarity}</span>
+          <span class="deed-tile-yield">+${dailyYield} $R/day</span>
+        </div>
+
+        <div class="deed-tile-cadastral">
+          <svg viewBox="0 0 100 80" class="tile-hex-svg">
+            <polygon points="50,15 76,30 76,60 50,75 24,60 24,30" fill="var(--tile-fill)" stroke="var(--tile-stroke)" stroke-width="2"/>
+            <circle cx="50" cy="45" r="3.5" fill="#f8f4e8"/>
+          </svg>
+          <span class="tile-geohash-tag">${geohashTag}</span>
+        </div>
+
+        <div class="deed-tile-info">
+          <div class="deed-tile-name" title="${name}">${name}</div>
+          <div class="deed-tile-meta">
+            <span class="tile-defense ${defenseStatus}">🛡️ ${defenseStatus}</span>
+            <span class="tile-reward">+${estReward} $REALM</span>
+          </div>
+        </div>
+
+        <div class="deed-tile-footer">
+          <button class="tile-action-btn inspect" data-action="inspect-deed" data-territory="${territory.geohash}" title="Inspect Collectible Deed">📜 Deed</button>
+          <button class="tile-action-btn map" data-action="show-territory-on-map" data-territory="${territory.geohash}" title="View on Map">📍 Map</button>
+        </div>
       </div>
     `;
   }

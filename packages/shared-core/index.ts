@@ -7,6 +7,7 @@ export * from './components/route-info-panel';
 export * from './components/run-progress-feedback';
 // export * from './components/enhanced-onboarding'; // Legacy - not used by either app
 // export * from './components/gamefi-ui'; // Legacy - not used by either app
+export * from './components/sunprint-deed-modal';
 export * from './components/territory-toggle';
 export * from './components/touch-gesture-service';
 // Export shared components
@@ -20,6 +21,7 @@ export * from './services/achievement-service';
 export * from './services/ai-orchestrator';
 export * from './services/ai-service';
 export * from './services/animation-service';
+export * from './services/deferred-claim-service';
 export * from './services/dom-service';
 export * from './services/external-fitness-service';
 export * from './services/game-service';
@@ -33,8 +35,10 @@ export * from './services/onboarding-service';
 export * from './services/orbis-director';
 export * from './services/preference-service';
 export * from './services/progression-service';
+export * from './services/relic-service';
 export * from './services/route-state-service';
 export * from './services/run-tracking-service';
+export * from './services/sensory-feedback-service';
 export * from './services/sound-service';
 export * from './services/territory-service';
 export * from './services/ui-service';

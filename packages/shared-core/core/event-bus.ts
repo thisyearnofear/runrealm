@@ -257,6 +257,26 @@ export interface AppEvents extends Web3Events {
     sourceChainId?: number;
     source?: string;
   };
+  'ui:showDeedModal': {
+    territory: Territory;
+    transactionHash?: string;
+  };
+  'relics:updated': {
+    geojson: any;
+    relics?: any[];
+  };
+  'relic:collected': {
+    relic: any;
+  };
+  'deferred:queueUpdated': {
+    count: number;
+    deeds: any[];
+  };
+  'deferred:unmintedReady': {
+    count: number;
+    totalTokens: number;
+    deeds: any[];
+  };
   'territory:claimFailed': {
     error: string;
     territory: Territory;

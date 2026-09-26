@@ -8,6 +8,7 @@ import { ContractService } from '@runrealm/shared-blockchain/services/contract-s
 import { GameFiUI } from '@runrealm/shared-core/components/gamefi-ui';
 import { MobileWidgetService } from '@runrealm/shared-core/components/mobile-widget-service';
 import { RewardSystemUI } from '@runrealm/shared-core/components/reward-system-ui';
+import { SunprintDeedModal } from '@runrealm/shared-core/components/sunprint-deed-modal';
 import { TouchGestureService } from '@runrealm/shared-core/components/touch-gesture-service';
 import { TransactionStatus } from '@runrealm/shared-core/components/transaction-status';
 import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
@@ -17,9 +18,12 @@ import { DragService } from '@runrealm/shared-core/internal/_legacy-widget/drag-
 import { VisibilityService } from '@runrealm/shared-core/internal/_legacy-widget/visibility-service';
 import { WidgetStateService } from '@runrealm/shared-core/internal/_legacy-widget/widget-state-service';
 import { AnimationService } from '@runrealm/shared-core/services/animation-service';
+import { DeferredClaimService } from '@runrealm/shared-core/services/deferred-claim-service';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { LocationService } from '@runrealm/shared-core/services/location-service';
+import { RelicService } from '@runrealm/shared-core/services/relic-service';
 import { RouteStateService } from '@runrealm/shared-core/services/route-state-service';
+import { SensoryFeedbackService } from '@runrealm/shared-core/services/sensory-feedback-service';
 import { UIService } from '@runrealm/shared-core/services/ui-service';
 import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
@@ -45,6 +49,10 @@ export class MainUI extends BaseService {
   private walletWidget!: WalletWidget;
   private transactionStatus!: TransactionStatus;
   private rewardSystemUI!: RewardSystemUI;
+  private sunprintDeedModal!: SunprintDeedModal;
+  private relicService!: RelicService;
+  private sensoryFeedbackService!: SensoryFeedbackService;
+  private deferredClaimService!: DeferredClaimService;
   private contractService!: ContractService;
   private gamefiUI: GameFiUI;
   private web3Service: Web3Service;
@@ -181,6 +189,26 @@ export class MainUI extends BaseService {
     );
     await this.rewardSystemUI.initialize();
     console.log('MainUI: Reward system UI initialized');
+
+    // Initialize Sunprint Deed Modal for collectible territory claims
+    this.sunprintDeedModal = new SunprintDeedModal(this.domService);
+    await this.sunprintDeedModal.initialize();
+    console.log('MainUI: Sunprint Deed Modal initialized');
+
+    // Initialize Dynamic GPS Relics / Supply Drops
+    this.relicService = RelicService.getInstance();
+    await this.relicService.initialize();
+    console.log('MainUI: RelicService initialized');
+
+    // Initialize Sensory Feedback (eyes-free running haptics & audio)
+    this.sensoryFeedbackService = SensoryFeedbackService.getInstance();
+    await this.sensoryFeedbackService.initialize();
+    console.log('MainUI: SensoryFeedbackService initialized');
+
+    // Initialize Deferred Claims ("Run First, Mint Later" guest onboarding)
+    this.deferredClaimService = DeferredClaimService.getInstance(this.web3Service);
+    await this.deferredClaimService.initialize();
+    console.log('MainUI: DeferredClaimService initialized');
 
     // Connect rewards to wallet widget
     this.walletWidget.setRewardSystemUI(this.rewardSystemUI);

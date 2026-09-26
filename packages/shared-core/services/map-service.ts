@@ -45,6 +45,10 @@ const OWNED_TERRITORY_BORDER_LAYER_ID = 'owned-territory-border-layer';
 const CLAIM_REVEAL_SOURCE_ID = 'claim-reveal-source';
 const CLAIM_REVEAL_FILL_LAYER_ID = 'claim-reveal-fill-layer';
 const CLAIM_REVEAL_BORDER_LAYER_ID = 'claim-reveal-border-layer';
+// Dynamic GPS Supply Drops / Relics
+const RELICS_SOURCE_ID = 'relics-source';
+const RELICS_LAYER_ID = 'relics-layer';
+const RELICS_PULSE_LAYER_ID = 'relics-pulse-layer';
 
 /** Fill colors keyed by defense status — green strong → red claimable. */
 export const DEFENSE_STATUS_COLORS: Record<string, string> = {
@@ -76,6 +80,15 @@ export class MapService extends BaseService {
     previewOpacity: 0.2,
     intentOpacity: 0.4,
   };
+
+  constructor() {
+    super();
+    this.subscribe('relics:updated', (data: { geojson: GeoJSON.FeatureCollection }) => {
+      if (data?.geojson) {
+        this.updateRelics(data.geojson);
+      }
+    });
+  }
 
   public setMap(map: MaplibreMap): void {
     this.map = map;
@@ -1137,5 +1150,64 @@ export class MapService extends BaseService {
     const lng = Number.parseFloat(parts[1]);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return { lat, lng };
+  }
+
+  /**
+   * Render dynamic GPS Supply Drops / Relics onto the map
+   */
+  public updateRelics(geojson: GeoJSON.FeatureCollection): void {
+    if (!this.map) return;
+
+    if (!this.map.getSource(RELICS_SOURCE_ID)) {
+      this.map.addSource(RELICS_SOURCE_ID, {
+        type: 'geojson',
+        data: geojson,
+      });
+
+      // Outer glowing pulse ring
+      this.map.addLayer({
+        id: RELICS_PULSE_LAYER_ID,
+        type: 'circle',
+        source: RELICS_SOURCE_ID,
+        paint: {
+          'circle-radius': 16,
+          'circle-color': '#f2a541',
+          'circle-opacity': 0.25,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#f2a541',
+          'circle-stroke-opacity': 0.6,
+        },
+      });
+
+      // Core beacon dot colored by rarity
+      this.map.addLayer({
+        id: RELICS_LAYER_ID,
+        type: 'circle',
+        source: RELICS_SOURCE_ID,
+        paint: {
+          'circle-radius': 7,
+          'circle-color': [
+            'match',
+            ['get', 'rarity'],
+            'legendary', '#f2a541',
+            'epic', '#a855f7',
+            'rare', '#63b3c8',
+            /* default */ '#4fae8b',
+          ],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#f8f4e8',
+        },
+      });
+    } else {
+      (this.map.getSource(RELICS_SOURCE_ID) as any)?.setData(geojson);
+    }
+  }
+
+  public clearRelics(): void {
+    if (!this.map) return;
+    const source = this.map.getSource(RELICS_SOURCE_ID) as any;
+    if (source) {
+      source.setData({ type: 'FeatureCollection', features: [] });
+    }
   }
 }

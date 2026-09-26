@@ -448,6 +448,188 @@
     transition: all 0.2s;
   }
 
+  /* Atlas Binder View (Collectible Deed Showcase) */
+  .view-mode-toggle {
+    display: inline-flex;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .view-mode-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .view-mode-btn.active {
+    background: rgba(242, 165, 65, 0.2);
+    color: #f2a541;
+  }
+
+  .territory-binder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  .territory-deed-tile {
+    position: relative;
+    background: linear-gradient(160deg, #12384f 0%, #0d2b3e 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .territory-deed-tile:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 15px var(--tile-glow, rgba(79, 174, 139, 0.3));
+    border-color: var(--tile-stroke, #4fae8b);
+  }
+
+  .territory-deed-tile.legendary {
+    --tile-stroke: #f2a541;
+    --tile-fill: rgba(242, 165, 65, 0.25);
+    --tile-glow: rgba(242, 165, 65, 0.4);
+    border-color: rgba(242, 165, 65, 0.6);
+  }
+
+  .territory-deed-tile.epic {
+    --tile-stroke: #a855f7;
+    --tile-fill: rgba(168, 85, 247, 0.25);
+    --tile-glow: rgba(168, 85, 247, 0.4);
+    border-color: rgba(168, 85, 247, 0.6);
+  }
+
+  .territory-deed-tile.rare {
+    --tile-stroke: #63b3c8;
+    --tile-fill: rgba(99, 179, 200, 0.25);
+    --tile-glow: rgba(99, 179, 200, 0.4);
+    border-color: rgba(99, 179, 200, 0.6);
+  }
+
+  .territory-deed-tile.common {
+    --tile-stroke: #4fae8b;
+    --tile-fill: rgba(79, 174, 139, 0.2);
+    --tile-glow: rgba(79, 174, 139, 0.3);
+    border-color: rgba(79, 174, 139, 0.5);
+  }
+
+  .deed-tile-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .deed-tile-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+
+  .deed-tile-badge.legendary { background: rgba(242, 165, 65, 0.2); color: #f2a541; }
+  .deed-tile-badge.epic { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+  .deed-tile-badge.rare { background: rgba(99, 179, 200, 0.2); color: #63b3c8; }
+  .deed-tile-badge.common { background: rgba(79, 174, 139, 0.2); color: #4fae8b; }
+
+  .deed-tile-yield {
+    font-size: 0.7rem;
+    color: #ffd700;
+    font-weight: 600;
+  }
+
+  .deed-tile-cadastral {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+    position: relative;
+  }
+
+  .tile-hex-svg {
+    width: 60px;
+    height: 50px;
+    filter: drop-shadow(0 0 6px var(--tile-glow, rgba(79, 174, 139, 0.4)));
+  }
+
+  .tile-geohash-tag {
+    font-family: monospace;
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 2px;
+  }
+
+  .deed-tile-info {
+    text-align: center;
+  }
+
+  .deed-tile-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #f8f4e8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .deed-tile-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 4px;
+  }
+
+  .deed-tile-footer {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .tile-action-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    color: #f8f4e8;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 5px 0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .tile-action-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
+  }
+
+  .tile-action-btn.inspect {
+    background: var(--tile-fill, rgba(79, 174, 139, 0.2));
+    border-color: var(--tile-stroke, #4fae8b);
+    color: #f8f4e8;
+  }
+
   .view-all-btn:hover {
     background: rgba(0, 189, 0, 0.2);
   }
