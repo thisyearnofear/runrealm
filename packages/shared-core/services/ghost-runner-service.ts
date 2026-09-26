@@ -265,12 +265,64 @@ export class GhostRunnerService extends BaseService {
   }
 
   /**
-   * Career rivalry record for one ghost, derived from persisted race
-   * history (ghost vs owner form). Powers the rivalry line in the UI.
+   * Career rivalry record for one ghost. Reads the attestation ledger
+   * first (protocol-vision Layer 3): a proof-backed record third
+   * parties can verify, not local fiction. Falls back to the persisted
+   * local race history during the dual-run era.
    */
   getRivalryRecord(ghostId: string): RivalryRecord {
-    const ghost = this.ghosts.get(ghostId);
-    return summarizeRivalry(this.raceHistory, ghostId, ghost?.name);
+    const ledger = this.ledgerRaces(ghostId);
+    if (ledger) {
+      return summarizeRivalry(ledger, ghostId, this.ghosts.get(ghostId)?.name);
+    }
+    return summarizeRivalry(this.raceHistory, ghostId, this.ghosts.get(ghostId)?.name);
+  }
+
+  /**
+   * Where a ghost's rivalry record comes from: 'attested' once the
+   * signed ledger covers it, 'local' while only the local history does.
+   */
+  getRivalryProvenance(ghostId: string): 'attested' | 'local' {
+    return this.ledgerRaces(ghostId) ? 'attested' : 'local';
+  }
+
+  /** Race history from the attestation ledger, oldest first; null when
+   *  the ledger has no races for this ghost (or isn't live). */
+  private ledgerRaces(ghostId: string): GhostRaceResult[] | null {
+    try {
+      const attestation = this.getSiblingService('attestation') as {
+        getGhostRecord?: (id: string) => {
+          races: Array<{ id: string; summary: unknown }>;
+        };
+      } | null;
+      const record = attestation?.getGhostRecord?.(ghostId);
+      if (!record || record.races.length === 0) return null;
+      return record.races
+        .map((a) => {
+          const s = a.summary as {
+            ghostId: string;
+            ghostName: string;
+            territoryId: string;
+            ghostScore: number;
+            userScore: number;
+            winner: 'ghost' | 'user';
+            endedAt: number;
+          };
+          return {
+            raceId: a.id,
+            ghostId: s.ghostId,
+            ghostName: s.ghostName,
+            territoryId: s.territoryId,
+            ghostScore: s.ghostScore,
+            userScore: s.userScore,
+            winner: s.winner,
+            completedAt: s.endedAt,
+          };
+        })
+        .sort((a, b) => a.completedAt - b.completedAt);
+    } catch {
+      return null;
+    }
   }
 
   /**

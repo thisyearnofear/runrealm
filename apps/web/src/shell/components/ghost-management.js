@@ -83,8 +83,10 @@ export class GhostManagement extends BaseService {
     listEl.innerHTML = ghosts
       .map((g) => {
         let rivalry = '';
+        let attested = false;
         try {
           rivalry = this.ghostService.getRivalryRecord(g.id).line;
+          attested = this.ghostService.getRivalryProvenance?.(g.id) === 'attested';
         } catch {
           rivalry = '';
         }
@@ -98,7 +100,7 @@ export class GhostManagement extends BaseService {
             <span>⚡ ${this.formatPace(g.pace)}/km</span>
             <span>🏃 ${g.totalRuns} runs</span>
           </div>
-          ${rivalry ? `<div class="ghost-rivalry">⚔️ ${rivalry}</div>` : ''}
+          ${rivalry ? `<div class="ghost-rivalry"${attested ? ' title="Verified on the attestation ledger"' : ''}>${attested ? '⛓' : '⚔️'} ${rivalry}</div>` : ''}
         </div>
         <div class="ghost-status">
           ${this.getGhostStatus(g)}

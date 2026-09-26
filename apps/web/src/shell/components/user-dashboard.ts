@@ -11,6 +11,7 @@
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import { BountyService } from '@runrealm/shared-core/services/bounty-service';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
+import { GhostRunnerService } from '@runrealm/shared-core/services/ghost-runner-service';
 import { PreferenceService } from '@runrealm/shared-core/services/preference-service';
 import {
   DashboardData,
@@ -926,12 +927,28 @@ export class UserDashboard {
           ${ghosts
             .map((g) => {
               const isReady = !g.cooldownUntil || new Date(g.cooldownUntil) < new Date();
+              // Rivalry line prefers the signed attestation ledger
+              // (proof-backed record) over the local race history.
+              let rivalry = '';
+              let attested = false;
+              try {
+                const ghostService = GhostRunnerService.getInstance();
+                rivalry = ghostService.getRivalryRecord(g.id).line;
+                attested = ghostService.getRivalryProvenance(g.id) === 'attested';
+              } catch {
+                /* ghost service not live */
+              }
               return `
               <div class="ghost-card-compact">
                 <div class="ghost-avatar">${g.avatar || '👻'}</div>
                 <div class="ghost-info">
                   <div class="ghost-name">${g.name}</div>
                   <div class="ghost-meta">Lvl ${g.level} • ${g.type}</div>
+                  ${
+                    rivalry
+                      ? `<div class="ghost-rivalry"${attested ? ' title="Verified on the attestation ledger"' : ''}>${attested ? '⛓' : '⚔️'} ${rivalry}</div>`
+                      : ''
+                  }
                 </div>
                 <div class="ghost-status ${isReady ? 'ready' : 'cooldown'}">
                   ${isReady ? 'Ready' : 'Cooldown'}
