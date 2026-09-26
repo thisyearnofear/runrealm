@@ -223,6 +223,7 @@ export interface AppEvents extends Web3Events {
   };
   'session:issued': { sessionKey: import('../services/account-service').SessionKey };
   'session:revoked': { sessionKeyId: string };
+  'account:showRequested': Record<string, never>;
   'session:authorizationDenied': {
     action: import('../services/account-service').GameAction;
     reason: import('../services/account-service').AuthorizationDenial;

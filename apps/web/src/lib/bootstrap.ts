@@ -1,6 +1,7 @@
 // Clean, modular entry point for RunRealm
 import { RunRealmApp } from '@runrealm/shared-core/core/run-realm-app';
 import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
+import AccountScreen from '../shell/components/account-screen';
 import { MainUI } from '../shell/components/main-ui';
 import UserDashboard from '../shell/components/user-dashboard';
 import { type WalletProvider, WalletWidget } from '../shell/components/wallet-widget';
@@ -170,6 +171,15 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
     dashboardContainer.id = 'user-dashboard-root';
     document.body.appendChild(dashboardContainer);
     userDashboard.initialize(dashboardContainer);
+
+    // Accounts layer (protocol-vision Layer 2): identity, session keys,
+    // privacy posture. Opened from the dashboard header 👤 or via
+    // `account:showRequested`.
+    const accountScreen = new AccountScreen();
+    const accountContainer = document.createElement('div');
+    accountContainer.id = 'account-screen-root';
+    document.body.appendChild(accountContainer);
+    accountScreen.initialize(accountContainer);
 
     // Mount the React wallet flow. The legacy WalletWidget still owns
     // connection state and connect logic; the React root owns the

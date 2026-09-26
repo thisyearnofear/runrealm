@@ -106,6 +106,17 @@ export class PreferenceService {
     return map[territoryId] ?? 'shielded';
   }
 
+  /** Ids of territories the user has explicitly disclosed. */
+  public getPublicTerritoryIds(): string[] {
+    const map = this.loadJsonPreference<Record<string, TerritoryVisibility>>(
+      this.TERRITORY_VISIBILITY_KEY,
+      {}
+    );
+    return Object.entries(map)
+      .filter(([, v]) => v === 'public')
+      .map(([id]) => id);
+  }
+
   public saveTerritoryVisibility(territoryId: string, visibility: TerritoryVisibility): void {
     const map = this.loadJsonPreference<Record<string, TerritoryVisibility>>(
       this.TERRITORY_VISIBILITY_KEY,

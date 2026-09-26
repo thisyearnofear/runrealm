@@ -2155,6 +2155,182 @@ button:disabled,
   pointer-events: none;
 }
 
+/* Account screen (protocol-vision Layer 2): same overlay language as the
+   dashboard so identity feels like part of the same surface. */
+.account-screen {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 350px;
+  max-height: 85vh;
+  overflow-y: auto;
+  z-index: var(--z-modal);
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: all;
+}
+
+.account-screen.hidden {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(20px);
+  pointer-events: none;
+}
+
+.account-screen .account-content {
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.account-card {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.account-card h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.account-tier-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-tier-icon {
+  font-size: 1.6rem;
+}
+
+.account-tier-label {
+  font-weight: 600;
+  color: #fff;
+}
+
+.account-id {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.account-copy {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 8px 0 0;
+}
+
+.account-address {
+  margin-top: 8px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.account-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.account-screen .action-btn {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  background: rgba(79, 174, 139, 0.15);
+  border: 1px solid rgba(79, 174, 139, 0.3);
+  border-radius: 8px;
+  color: var(--rr-success);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.account-screen .action-btn:hover {
+  background: rgba(79, 174, 139, 0.25);
+}
+
+.account-screen .action-btn.secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.account-screen .info-text {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.advanced-tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.session-key-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.session-key {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+}
+
+.session-key-title {
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+.session-key-meta {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.session-spend {
+  margin-left: 6px;
+  color: var(--rr-accent, #4fae8b);
+}
+
+.dashboard-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboard-account-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dashboard-account-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
 .user-dashboard .dashboard-header {
   display: flex;
   justify-content: space-between;

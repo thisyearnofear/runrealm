@@ -318,6 +318,12 @@ export class UserDashboard {
         this.dashboardService.minimize();
         break;
 
+      case 'open-account': {
+        this.eventBus.emit('account:showRequested', {});
+        this.dashboardService.hide(); // one overlay at a time
+        break;
+      }
+
       case 'manage-territory': {
         const territoryId = target.getAttribute('data-territory');
         if (territoryId) {
@@ -414,7 +420,10 @@ export class UserDashboard {
     this.container.innerHTML = `
       <div class="dashboard-header">
         <h2>User Dashboard</h2>
-        <button id="dashboard-close" class="dashboard-close-btn">✕</button>
+        <div class="dashboard-header-actions">
+          <button class="dashboard-account-btn" data-action="open-account" title="Account — identity, authorizations, privacy">👤</button>
+          <button id="dashboard-close" class="dashboard-close-btn">✕</button>
+        </div>
       </div>
       <div class="dashboard-tabs">
         <button class="dashboard-tab ${this.activeTab === 'overview' ? 'active' : ''}" data-tab="overview">Overview</button>
