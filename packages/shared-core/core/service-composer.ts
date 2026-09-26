@@ -201,7 +201,6 @@ export interface PlatformUI {
   walletWidget?: WalletWidgetInterface;
   territoryDashboard?: TerritoryDashboardInterface;
   ghostManagement?: { initialize(container: HTMLElement): Promise<void> | void };
-  ghostButton?: { initialize(container: HTMLElement): void };
 }
 
 export function registerGlobalServices(services: Services, platformUI: PlatformUI = {}): void {

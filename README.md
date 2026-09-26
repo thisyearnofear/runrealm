@@ -2,6 +2,8 @@
 
 A cross-chain fitness GameFi platform: your runs become NFT territories. Connect Strava, track runs with AI coaching, and claim geospatial territories on ZetaChain — with encrypted territory defense on Zama FHEVM.
 
+**Live:** <https://runrealm.netlify.app> (Orbis Live slice: <https://runrealm.netlify.app/orbis-live/>)
+
 - **Run-to-territory gameplay** — runs auto-claim H3 territories as NFTs; activity points decay without regular engagement
 - **Ghost Runners** — AI virtual competitors that defend your territories when you can't run
 - **Confidential defense (live on Sepolia)** — encrypted activity-point state; rivals see only a silhouette until they win a contest

@@ -56,9 +56,6 @@ export async function initializeGameFi(opts: GameFiBootstrapOptions): Promise<vo
     if (platformUI.ghostManagement?.initialize) {
       await platformUI.ghostManagement.initialize(document.body);
     }
-    if (platformUI.ghostButton?.initialize) {
-      platformUI.ghostButton.initialize(document.body);
-    }
 
     if (platformUI.territoryDashboard) {
       console.log('Using platform-provided territory dashboard');

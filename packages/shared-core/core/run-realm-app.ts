@@ -73,7 +73,6 @@ export class RunRealmApp {
     walletWidget?: WalletWidgetInterface;
     territoryDashboard?: TerritoryDashboardInterface;
     ghostManagement?: PlatformUI['ghostManagement'];
-    ghostButton?: PlatformUI['ghostButton'];
   }): void {
     this.platformUI = platformUI;
     // Refresh globals that depend on platform UI (ghostManagement).

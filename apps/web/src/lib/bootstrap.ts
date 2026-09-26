@@ -66,14 +66,14 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
       web3Service
     );
 
-    // Import platform-specific ghost UI components
+    // Import platform-specific ghost UI components.
+    // Ghost management lives in the dashboard (ghosts tab) and on
+    // territory cards — there is intentionally no floating ghost button;
+    // run theater hides corner chrome so the map owns the screen.
     let ghostManagement: { initialize(container: HTMLElement): void | Promise<void> } | undefined;
-    let ghostButton: { initialize(container: HTMLElement): void } | undefined;
     try {
       const { GhostManagement } = await import('../shell/components/ghost-management.js');
-      const { GhostButton } = await import('../shell/components/ghost-button.js');
       ghostManagement = new GhostManagement();
-      ghostButton = new GhostButton(ghostManagement);
     } catch (err) {
       console.warn('Ghost management components not available:', err);
       // Continue without ghost features
@@ -93,10 +93,25 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
       mainUI,
       walletWidget,
       ghostManagement,
-      ghostButton,
     });
 
     await app.initialize();
+
+    // Run theater: run-mode immersion shell (auto-hiding chrome,
+    // status-sentence HUD, pocket mode). Mounts after services exist.
+    onPhase?.('Raising the curtain');
+    try {
+      const { RunTheater } = await import('../shell/components/run-theater');
+      const services = app.getServices();
+      new RunTheater({
+        eventBus: app.getEventBus(),
+        runTracking: services.runTracking,
+        sound: services.sound,
+        haptics: services.haptics,
+      }).initialize(document.body);
+    } catch (err) {
+      console.warn('Run theater not available:', err);
+    }
 
     onPhase?.('Securing claim vault');
     // Phase 5 — wire the `ConfidentialContractService` so the

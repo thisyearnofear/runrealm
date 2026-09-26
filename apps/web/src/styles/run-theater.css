@@ -1,0 +1,163 @@
+/* RunTheater — run-mode immersion shell.
+ * While body.run-theater is set, the map owns the screen: widget zones,
+ * dashboard, and ghost chrome hide, leaving the expedition control
+ * (run tracker), the theater HUD, and pocket mode. Tapping the HUD
+ * toggles body.run-theater-reveal to briefly bring chrome back.
+ * All colors come from design-tokens.css (--rr-*).
+ */
+
+#run-theater-hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: calc(var(--z-widgets, 1000) + 20);
+  pointer-events: none;
+  font-family: var(--font-sans, "Geist", system-ui, sans-serif);
+}
+
+#run-theater-hud[hidden] {
+  display: none;
+}
+
+.theater-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm, 8px);
+  padding: 10px 14px;
+  background: linear-gradient(to bottom, rgba(13, 43, 62, 0.85), rgba(13, 43, 62, 0));
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.theater-sentence {
+  flex: 1;
+  color: var(--rr-sunprint-bone);
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.theater-pocket-btn {
+  flex: none;
+  background: rgba(13, 43, 62, 0.7);
+  border: 1px solid var(--rr-sunprint-cyan);
+  color: var(--rr-sunprint-bone);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.theater-pocket-btn.active {
+  border-color: var(--rr-sunprint-amber);
+  color: var(--rr-sunprint-amber);
+}
+
+.theater-stats {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  padding: 2px 0 8px;
+  pointer-events: none;
+}
+
+.theater-stat {
+  color: var(--rr-sunprint-chalk);
+  font-family: var(--font-mono, "Geist Mono", monospace);
+  font-size: 0.85rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+/* ---- theater chrome hiding ---- */
+
+body.run-theater .widget-system .widget-zone {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+}
+
+/* The expedition control stays: run tracker zone keeps its volume. */
+body.run-theater .widget-system .widget-zone:has(#widget-run-tracker, #enhanced-run-controls) {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: none;
+}
+
+body.run-theater
+  .widget-system
+  .widget-zone:has(#widget-run-tracker, #enhanced-run-controls)
+  .widget {
+  pointer-events: auto;
+}
+
+body.run-theater .user-dashboard,
+body.run-theater .ghost-management,
+body.run-theater .ghost-button {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Tap-the-HUD reveal: chrome comes back until the next tap. */
+body.run-theater.run-theater-reveal .widget-system .widget-zone,
+body.run-theater.run-theater-reveal .user-dashboard,
+body.run-theater.run-theater-reveal .ghost-management,
+body.run-theater.run-theater-reveal .ghost-button {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---- pocket mode ---- */
+
+#run-theater-veil {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-widgets, 1000) + 40);
+  background: #04090d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+#run-theater-veil[hidden] {
+  display: none;
+}
+
+.veil-sentence {
+  color: var(--rr-sunprint-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.veil-hint {
+  color: var(--rr-sunprint-cyan);
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+body.pocket-mode #run-theater-hud {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.run-theater .widget-system .widget-zone,
+  body.run-theater .user-dashboard,
+  body.run-theater .ghost-management,
+  body.run-theater .ghost-button {
+    transition: none;
+  }
+}

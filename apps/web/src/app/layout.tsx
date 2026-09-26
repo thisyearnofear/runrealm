@@ -8,6 +8,7 @@ import '../styles/wallet-sheet.css';
 import '../styles/external-fitness.css';
 import '../styles/orbis-live.css';
 import '../styles/responsive.css';
+import '../styles/run-theater.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://runrealm.example.com'),
