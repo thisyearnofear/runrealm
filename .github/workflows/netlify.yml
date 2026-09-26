@@ -1,0 +1,63 @@
+name: Deploy to Netlify
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: netlify-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Build-time public flags for the Orbis/Reactor slice. The Reactor API key
+  # itself is server-side only and lives in Netlify env vars, not here.
+  NEXT_PUBLIC_ENABLE_ORBIS: "true"
+  NEXT_PUBLIC_REACTOR_TOKEN_URL: "/.netlify/functions/reactor-token"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared packages and web app
+        run: npm run build
+
+      - name: Install Netlify CLI
+        run: npm install -g netlify-cli
+
+      - name: Deploy to Netlify (production)
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          netlify deploy \
+            --prod \
+            --site "$NETLIFY_SITE_ID" \
+            --dir apps/web/dist \
+            --functions netlify/functions \
+            --message "GitHub Actions deploy ${{ github.sha }}"
+
+      - name: Smoke test production
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          # Give the CDN a moment to propagate, then verify the key routes.
+          sleep 20
+          curl -fsS https://runrealm.netlify.app/ -o /tmp/index.html
+          curl -fsS https://runrealm.netlify.app/orbis-live/ -o /tmp/orbis.html
+          grep -qi 'RunRealm' /tmp/index.html
+          grep -qi 'Orbis' /tmp/orbis.html
+          echo "smoke test passed"
