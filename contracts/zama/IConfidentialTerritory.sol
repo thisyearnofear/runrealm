@@ -86,6 +86,25 @@ interface IConfidentialTerritory {
         uint64 currentDay
     );
 
+    /// @notice Emitted when an encrypted bounty is staked (or
+    /// replaced) on a territory. The amount stays ciphertext —
+    /// `bountyCipher` is the handle for owner-side user-decryption.
+    event BountyStakedEncrypted(
+        uint256 indexed tokenId,
+        address indexed staker,
+        bytes32 bountyCipher
+    );
+
+    /// @notice Emitted when a contest seals the encrypted bounty into
+    /// the winner's credit. Loser-side seals carry the zero credit.
+    /// The winner user-decrypts the credit off-chain; REALM movement
+    /// stays in the Phase B escrow keyed to the public outcome.
+    event EncryptedBountySealed(
+        uint256 indexed tokenId,
+        address indexed winner,
+        bytes32 creditCipher
+    );
+
     /// @notice Seed the encrypted defense for a tokenId. Called by
     /// `CrossChainAnchor` (Phase 6) after a ZetaChain
     /// `TerritoryCreated` event. Re-anchoring is a no-op (the
@@ -126,4 +145,19 @@ interface IConfidentialTerritory {
     /// the encrypted defense (floored at 0). Idempotent within the
     /// same UTC day.
     function applyEncryptedDecay(uint256 tokenId) external;
+
+    /// @notice Stake (or replace) an encrypted bounty on an owned,
+    /// anchored territory. See `BountyStakedEncrypted`.
+    function stakeBountyEncrypted(
+        uint256 tokenId,
+        externalEuint32 encryptedAmount,
+        bytes calldata inputProof
+    ) external;
+
+    /// @notice Read the encrypted bounty handle (owner-decryptable).
+    function bountyCipher(uint256 tokenId) external view returns (euint32);
+
+    /// @notice Read the winner's encrypted bounty credit and winner
+    /// address after a contest (winner-decryptable).
+    function bountyCreditOf(uint256 tokenId) external view returns (euint32, address);
 }

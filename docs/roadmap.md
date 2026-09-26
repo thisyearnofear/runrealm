@@ -98,18 +98,18 @@ only see a glowing silhouette on the map until they win a contest.
 
 ## Future horizons (proposed, Sep 2026)
 
-Sequenced product/design/game follow-ups. Not yet scheduled; promote into
-numbered phases when picked up.
+Sequenced product/design/game follow-ups. Statuses updated as horizons
+ship; promote remaining ones into numbered phases when picked up.
 
 | # | Horizon | Why now |
 |---|---|---|
-| H1 | Shield legibility | Translate 0–1000 points into fiction: named integrity tiers, days-of-safety, *overexposure* copy. First slice: `shield-presentation.ts` (pure tier/copy model off `GAME_RULES`); UI wiring follows. |
-| H2 | Off-palette color audit | Enforce Sunprint tokens (`design-tokens.css`) across all components; every off-palette screen undermines the identity. |
-| H3 | Encrypted bounties | Defender-staked REALM bounties raise attacker reward — the risk/reward tension that makes territory games sticky, and the gameplay payoff for the FHE layer. Outranks cipher ghost races. |
-| H4 | Ghost identity & rivalry | Named ghosts, persistent win/loss records against specific rival ghosts, surfaced rivalries. Players defend against characters, not difficulty numbers. |
-| H5 | Pocket-mode surface | Pre-run eyes-free toggle with 10-second onboarding for the sensory engine; a marketable differentiator. |
-| H6 | Notification digest philosophy | Default to the daily digest; escalate only imminent-loss ("you will lose X in 48h") to immediate push. Per-territory push trains users to opt out. |
-| H7 | Non-color status encoding | Defense status needs pattern/icon/label encoding alongside color (colorblind runners); audit deed/claim-reveal animations against `prefers-reduced-motion`. |
+| H1 | Shield legibility | ✅ Shipped (model + dashboard + digest). Open: fog legend, shield-widget copy. |
+| H2 | Off-palette color audit | ✅ Done (rarity + high-contrast intentionally kept). |
+| H3 | Encrypted bounties | 🟡 Phase A live in app; Phase B escrow + Phase C FHE seal built and tested (73 contract tests) — deploy + rebind pending. See `docs/encrypted-bounties.md`. |
+| H4 | Ghost identity & rivalry | 🟡 Career records + rivalry lines shipped. Open: cross-ghost rivalries (needs a race mode). |
+| H5 | Pocket-mode surface | ✅ Core + soundcheck + first-run nudge shipped. |
+| H6 | Notification digest philosophy | ✅ Escalation tier shipped (watch vs urgent). |
+| H7 | Non-color status encoding | 🟡 Model carries icon+pattern keys; dashboard uses text+emoji. Open: CSS pattern rendering, deed/claim-reveal `prefers-reduced-motion` audit. |
 
 ## What we are NOT doing
 

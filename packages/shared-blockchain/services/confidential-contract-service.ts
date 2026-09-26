@@ -294,6 +294,70 @@ export class ConfidentialContractService extends BaseService {
    * stringification). The caller feeds the handle to the Zama
    * Relayer SDK for decryption.
    */
+  /*//////////////////////////////////////////////////////////////
+                        ENCRYPTED BOUNTY (H3 Phase C)
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * Stake (or replace) an encrypted bounty on an owned territory.
+   * Same handle/proof shape as boostEncrypted (Relayer SDK output).
+   */
+  public async stakeBountyEncrypted(
+    tokenId: string | number,
+    handle: string,
+    inputProof: string
+  ): Promise<ConfidentialReceipt> {
+    this.ensureContractReady();
+
+    this.userContextService.trackUserAction('territory_bounty_stake_attempted', {
+      tokenId: tokenId.toString(),
+    });
+
+    const tokenIdNum = this.toTokenIdNumber(tokenId);
+
+    const tx = await this.sendConfidentialTx(
+      this.confidentialContract[CONTRACT_METHODS.confidential.stakeBountyEncrypted],
+      'stakeBountyEncrypted',
+      tokenIdNum,
+      handle,
+      inputProof
+    );
+
+    this.userContextService.trackUserAction('territory_bounty_stake_success', {
+      tokenId: tokenId.toString(),
+      transactionHash: tx.transactionHash,
+    });
+
+    return tx;
+  }
+
+  /**
+   * Read the encrypted bounty handle (owner-decryptable via Relayer).
+   */
+  public async bountyCipher(tokenId: string | number): Promise<string> {
+    this.ensureContractReady();
+
+    const tokenIdNum = this.toTokenIdNumber(tokenId);
+    const handle =
+      await this.confidentialContract[CONTRACT_METHODS.confidential.bountyCipher](tokenIdNum);
+    return handle as string;
+  }
+
+  /**
+   * Read the winner's encrypted bounty credit + winner address after
+   * a contest (winner-decryptable via Relayer).
+   */
+  public async bountyCreditOf(
+    tokenId: string | number
+  ): Promise<{ cipher: string; winner: string }> {
+    this.ensureContractReady();
+
+    const tokenIdNum = this.toTokenIdNumber(tokenId);
+    const [cipher, winner] =
+      await this.confidentialContract[CONTRACT_METHODS.confidential.bountyCreditOf](tokenIdNum);
+    return { cipher: cipher as string, winner: winner as string };
+  }
+
   public async myDefenseCipher(tokenId: string | number): Promise<string> {
     this.ensureContractReady();
 

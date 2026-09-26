@@ -91,6 +91,8 @@ function emitRealmRules(r) {
   const a = r.activity;
   const rw = r.rewards;
   const t = r.territory;
+  const b = r.bounty;
+  const c = r.contest;
   const zamaIds = emitZamaChainConstants(r, '  ');
   return `${COMMON_HEADER}
 /**
@@ -130,6 +132,14 @@ library RealmRules {
   uint256 public constant MIN_TERRITORY_DISTANCE_METERS    = ${t.minDistanceMeters};
   uint256 public constant MAX_TERRITORY_DISTANCE_METERS    = ${t.maxDistanceMeters};
   uint256 public constant LEVEL_DISTANCE_THRESHOLD_METERS  = ${t.levelDistanceThresholdMeters};
+
+  // Encrypted bounties (mirrors GAME_RULES.bounty; consumed by RunRealmBountyV1)
+  uint256 public constant BOUNTY_MIN_STAKE_REALM_E18        = ${b.minStakeRealm} * 10**18;
+  uint256 public constant BOUNTY_MAX_STAKE_REALM_E18        = ${b.maxStakeRealm} * 10**18;
+  uint256 public constant BOUNTY_ATTACKER_SHARE_BPS         = ${b.attackerShareBps};
+  uint256 public constant BOUNTY_COOLDOWN_SECONDS           = ${b.cooldownHours} * 1 hours;
+  uint256 public constant BOUNTY_WITHDRAW_DELAY_SECONDS     = ${b.withdrawDelayHours} * 1 hours;
+  uint256 public constant BOUNTY_RECLAIM_SHIELD_SECONDS     = ${c.reclaimShieldDays} * 1 days;
 ${zamaIds}}
 `;
 }

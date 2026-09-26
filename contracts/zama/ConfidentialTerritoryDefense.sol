@@ -65,6 +65,18 @@ contract ConfidentialTerritoryDefense is
     // score. Made publicly decryptable in `contestEncrypted`.
     mapping(uint256 => ebool) private _lastContestChallengerWon;
 
+    // Encrypted bounty escrow (H3 Phase C). The staked amount stays
+    // ciphertext; only a contest win moves it — homomorphically — into
+    // the winner's encrypted credit, which the winner user-decrypts
+    // off-chain like a defense score. Actual REALM movement stays in
+    // the Phase B `RunRealmBountyV1` escrow, whose payout is keyed to
+    // the same publicly-decryptable contest outcome: the FHE layer
+    // keeps amounts private pre-contest, the payout stays trustless.
+    mapping(uint256 => euint32) private _bounties;
+    mapping(uint256 => bool) private _hasBounty;
+    mapping(uint256 => euint32) private _bountyCredit;
+    mapping(uint256 => address) private _bountyCreditWinner;
+
     // Custom errors — the off-chain service branches on a typed
     // revert reason (matches `RunRealmBoostV1.BoostAlreadyUsedToday`).
     error NotAnchored(uint256 tokenId);
@@ -204,6 +216,74 @@ contract ConfidentialTerritoryDefense is
             euint32.unwrap(newDefender),
             ebool.unwrap(challengerWon)
         );
+
+        // H3 Phase C: seal the encrypted bounty to the winner's
+        // credit — homomorphically, so the amount never appears in
+        // plaintext. Loser takes nothing (credit 0). Skipped entirely
+        // when no bounty is staked (FHE ops on uninitialized handles
+        // are not portable across coprocessors).
+        if (_hasBounty[tokenId]) {
+            euint32 credit = FHE.select(challengerWon, _bounties[tokenId], FHE.asEuint32(0));
+            _bountyCredit[tokenId] = credit;
+            _bountyCreditWinner[tokenId] = msg.sender;
+            // euint32 is a user-defined value type — `delete` does not
+            // apply. Reset to a trivial zero and drop the flag. The
+            // zero keeps the owner's read ACL so `bountyCipher` stays
+            // user-decryptable after a seal (mock + real coprocessors
+            // gate decryption on ACL even for trivial handles).
+            euint32 cleared = FHE.asEuint32(0);
+            _bounties[tokenId] = cleared;
+            _hasBounty[tokenId] = false;
+            FHE.allowThis(cleared);
+            FHE.allow(cleared, d.owner);
+
+            FHE.allowThis(credit);
+            FHE.allow(credit, msg.sender);
+
+            emit EncryptedBountySealed(tokenId, msg.sender, euint32.unwrap(credit));
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          ENCRYPTED BOUNTY
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Stake (or replace) an encrypted bounty on an owned,
+    /// anchored territory. The amount stays ciphertext; the owner can
+    /// user-decrypt it via `bountyCipher` + the Relayer SDK.
+    function stakeBountyEncrypted(
+        uint256 tokenId,
+        externalEuint32 encryptedAmount,
+        bytes calldata inputProof
+    ) external nonReentrant {
+        EncryptedDefense storage d = _defenses[tokenId];
+        if (!d.anchored) revert NotAnchored(tokenId);
+        if (d.owner != msg.sender) revert NotOwner(tokenId, msg.sender, d.owner);
+
+        euint32 amount = FHE.fromExternal(encryptedAmount, inputProof);
+        _bounties[tokenId] = amount;
+        _hasBounty[tokenId] = true;
+
+        FHE.allowThis(amount);
+        FHE.allow(amount, d.owner);
+
+        emit BountyStakedEncrypted(tokenId, msg.sender, euint32.unwrap(amount));
+    }
+
+    /// @notice Read the encrypted bounty handle for a tokenId.
+    /// Owner-decryptable via the Relayer SDK. Returns the zero handle
+    /// when no bounty is staked.
+    function bountyCipher(uint256 tokenId) external view returns (euint32) {
+        EncryptedDefense storage d = _defenses[tokenId];
+        if (!d.anchored) revert NotAnchored(tokenId);
+        return _bounties[tokenId];
+    }
+
+    /// @notice Read the winner's encrypted bounty credit after a
+    /// contest, plus the winner address. Winner-decryptable via the
+    /// Relayer SDK. Returns the zero handle when nothing was sealed.
+    function bountyCreditOf(uint256 tokenId) external view returns (euint32, address) {
+        return (_bountyCredit[tokenId], _bountyCreditWinner[tokenId]);
     }
 
     /*//////////////////////////////////////////////////////////////

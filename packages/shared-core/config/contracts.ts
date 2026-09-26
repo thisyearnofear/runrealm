@@ -245,6 +245,34 @@ const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
     type: 'function',
   },
   {
+    inputs: [
+      { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { internalType: 'externalEuint32', name: 'encryptedAmount', type: 'bytes32' },
+      { internalType: 'bytes', name: 'inputProof', type: 'bytes' },
+    ],
+    name: 'stakeBountyEncrypted',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'bountyCipher',
+    outputs: [{ internalType: 'euint32', name: '', type: 'bytes32' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'bountyCreditOf',
+    outputs: [
+      { internalType: 'euint32', name: '', type: 'bytes32' },
+      { internalType: 'address', name: '', type: 'address' },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
     name: 'isAnchored',
     outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
@@ -646,6 +674,9 @@ export const CONTRACT_METHODS = {
     anchorFromZeta: 'anchorFromZeta',
     boostEncrypted: 'boostEncrypted',
     contestEncrypted: 'contestEncrypted',
+    stakeBountyEncrypted: 'stakeBountyEncrypted',
+    bountyCipher: 'bountyCipher',
+    bountyCreditOf: 'bountyCreditOf',
     myDefenseCipher: 'myDefenseCipher',
     lastContestOutcome: 'lastContestOutcome',
     applyEncryptedDecay: 'applyEncryptedDecay',
@@ -672,5 +703,7 @@ export const CONTRACT_EVENTS = {
     EncryptedBoost: 'EncryptedBoost',
     EncryptedContest: 'EncryptedContest',
     EncryptedDecayApplied: 'EncryptedDecayApplied',
+    BountyStakedEncrypted: 'BountyStakedEncrypted',
+    EncryptedBountySealed: 'EncryptedBountySealed',
   },
 } as const;

@@ -5,6 +5,26 @@ wins the steal/contest claims the bounty. Risk/reward tension for attackers,
 a REALM sink for the economy, and the gameplay payoff for the FHE layer:
 bounty amounts stay encrypted until payout.
 
+## Build status
+
+- **Phase A (off-chain escrow) — built, live in app.** `BountyService`
+  (versioned store, settle-on-`territory:claimed`, winner/burn split,
+  cooldown + reclaim-shield + withdraw-delay guards, winner credit via
+  `GhostRunnerService.creditRealm`); dashboard `💰` badges; 8 service tests.
+- **Phase B (on-chain escrow) — built, tested, NOT deployed.**
+  `contracts/boost/RunRealmBountyV1.sol` (additive, BoostV1 precedent;
+  claimant verified via `universal.ownerOf`); 7 Hardhat tests; tuning
+  mirrored from `GAME_RULES.bounty` via `sync:rules`
+  (`BOUNTY_*_E18/BPS/SECONDS`). Deploy with
+  `hardhat run scripts/deployment/deploy-bounty.js --network zetachain`
+  (script TODO) after review.
+- **Phase C (FHE amounts) — built, tested, NOT deployed.** Defense
+  contract extended (`stakeBountyEncrypted`, homomorphic seal into
+  winner credit on contest win, `bountyCipher`/`bountyCreditOf` views,
+  interface + TS bindings + Relayer method/event names); 5 mock-coprocessor
+  tests; full contract suite 73 passing. Redeploying changes the defense
+  address — rebind `RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS` after deploy.
+
 ## Why
 
 Today attacking is pure upside (steal a weak territory) and defending is pure

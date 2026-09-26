@@ -40,6 +40,14 @@ library RealmRules {
   uint256 public constant MAX_TERRITORY_DISTANCE_METERS    = 50000;
   uint256 public constant LEVEL_DISTANCE_THRESHOLD_METERS  = 10000;
 
+  // Encrypted bounties (mirrors GAME_RULES.bounty; consumed by RunRealmBountyV1)
+  uint256 public constant BOUNTY_MIN_STAKE_REALM_E18        = 25 * 10**18;
+  uint256 public constant BOUNTY_MAX_STAKE_REALM_E18        = 1000 * 10**18;
+  uint256 public constant BOUNTY_ATTACKER_SHARE_BPS         = 8000;
+  uint256 public constant BOUNTY_COOLDOWN_SECONDS           = 24 * 1 hours;
+  uint256 public constant BOUNTY_WITHDRAW_DELAY_SECONDS     = 48 * 1 hours;
+  uint256 public constant BOUNTY_RECLAIM_SHIELD_SECONDS     = 7 * 1 days;
+
   // Zama fhEVM supported chain IDs (mirrors GAME_RULES.zama.supportedChainIds).
   uint256 public constant ZAMA_CHAIN_ID_0 = 11155111;
 }
