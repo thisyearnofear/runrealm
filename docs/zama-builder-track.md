@@ -44,8 +44,8 @@ and `contest` math homomorphically.
 ## Deployed addresses
 
 - **ConfidentialTerritoryDefense (Sepolia, 11155111):**
-  `0x243D95fE43777533aC3E81b5fB8251A282b17E3A`
-  — [Etherscan](https://sepolia.etherscan.io/address/0x243D95fE43777533aC3E81b5fB8251A282b17E3A)
+  `0xa15C61871E4D096093d183040D0c1005CB4Fe0b8
+  — [Etherscan](https://sepolia.etherscan.io/address/0xa15C61871E4D096093d183040D0c1005CB4Fe0b8)
 - **Deployment record:** `deployments/sepolia/ConfidentialTerritoryDefense.json`
 
 The frontend reads the address from `RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS`
@@ -77,7 +77,7 @@ npm run build:web     # static export → apps/web/dist
 
 ```bash
 # Set these in the Netlify build environment (the web app reads NEXT_PUBLIC_* vars):
-#   NEXT_PUBLIC_RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=0x243D95fE43777533aC3E81b5fB8251A282b17E3A
+#   NEXT_PUBLIC_RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=0xa15C61871E4D096093d183040D0c1005CB4Fe0b8
 #   NEXT_PUBLIC_SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 npm run build:web          # static export → apps/web/dist
 # Netlify publish dir: apps/web/dist  (see netlify.toml)
@@ -123,5 +123,5 @@ end. Suggested beats:
 > — both sides' scores stay secret. Privacy from strangers, transparency to
 > yourself.
 >
-> 4/ Live contract: `0x243D95fE43777533aC3E81b5fB8251A282b17E3A` on Sepolia.
+> 4/ Live contract: `0xa15C61871E4D096093d183040D0c1005CB4Fe0b8 on Sepolia.
 > Try the demo: _<demo URL>_. Built with @zama_fhe FHEVM. #ZamaBuilderTrack

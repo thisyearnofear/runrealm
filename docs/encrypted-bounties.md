@@ -11,19 +11,19 @@ bounty amounts stay encrypted until payout.
   (versioned store, settle-on-`territory:claimed`, winner/burn split,
   cooldown + reclaim-shield + withdraw-delay guards, winner credit via
   `GhostRunnerService.creditRealm`); dashboard `💰` badges; 8 service tests.
-- **Phase B (on-chain escrow) — built, tested, NOT deployed.**
-  `contracts/boost/RunRealmBountyV1.sol` (additive, BoostV1 precedent;
-  claimant verified via `universal.ownerOf`); 7 Hardhat tests; tuning
-  mirrored from `GAME_RULES.bounty` via `sync:rules`
-  (`BOUNTY_*_E18/BPS/SECONDS`). Deploy with
-  `hardhat run scripts/deployment/deploy-bounty.js --network zetachain`
-  (script TODO) after review.
-- **Phase C (FHE amounts) — built, tested, NOT deployed.** Defense
-  contract extended (`stakeBountyEncrypted`, homomorphic seal into
-  winner credit on contest win, `bountyCipher`/`bountyCreditOf` views,
-  interface + TS bindings + Relayer method/event names); 5 mock-coprocessor
-  tests; full contract suite 73 passing. Redeploying changes the defense
-  address — rebind `RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS` after deploy.
+- **Phase B (on-chain escrow) — DEPLOYED on ZetaChain Athens (2026-09-26).**
+  `RunRealmBountyV1` at `0x9Cb90f7b84fEa2775F5Ab4610585a8BB7d8Ad9c1`
+  ([explorer](https://zetachain-athens-3.blockscout.com/address/0x9Cb90f7b84fEa2775F5Ab4610585a8BB7d8Ad9c1));
+  7 Hardhat tests; record in `deployments/zetachain_testnet/RunRealmBountyV1.json`.
+- **Phase C (FHE amounts) — DEPLOYED on Ethereum Sepolia (2026-09-26).**
+  `ConfidentialTerritoryDefense` (with encrypted-bounty seal) at
+  `0xa15C61871E4D096093d183040D0c1005CB4Fe0b8`
+  ([explorer](https://sepolia.etherscan.io/address/0xa15C61871E4D096093d183040D0c1005CB4Fe0b8));
+  5 mock-coprocessor tests; full contract suite 73 passing.
+  `CrossChainAnchor` at `0xd097Effcc4764c98bEd0199210838a5691142583`
+  forwards Athens claims; the operator relayer
+  (`scripts/ops/run-anchor-relayer.js`) must be running for shields
+  to activate on new claims.
 
 ## Why
 

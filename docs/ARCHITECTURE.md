@@ -366,7 +366,7 @@ contest results. The off-chain `@zama-fhe/relayer-sdk` encrypts inputs
 and decrypts authorized outputs.
 
 The contract is deployed on Ethereum Sepolia at
-`0x243D95fE43777533aC3E81b5fB8251A282b17E3A`. Set
+`0xa15C61871E4D096093d183040D0c1005CB4Fe0b8`. Set
 `RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS` to this address (or the new
 address after a redeploy) so `ConfidentialContractService` binds to the
 live contract.

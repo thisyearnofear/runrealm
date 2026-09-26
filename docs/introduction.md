@@ -73,7 +73,7 @@ Now edit `.env` with your own API keys:
 The confidential territory-defense layer lives on **Ethereum Sepolia** (the Zama Protocol FHEVM host chain). The deployed `ConfidentialTerritoryDefense` address is already set in the example env; if you redeploy, update `.env`:
 
 ```env
-RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=0x243D95fE43777533aC3E81b5fB8251A282b17E3A
+RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=0xa15C61871E4D096093d183040D0c1005CB4Fe0b8
 SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 ```
 
@@ -83,6 +83,22 @@ The additive `RunRealmBoostV1` contract is deployed on **ZetaChain Athens Testne
 
 ```env
 RUNREALM_BOOST_ADDRESS=0x243D95fE43777533aC3E81b5fB8251A282b17E3A
+```
+
+#### ZetaChain Bounty Escrow (H3 Phase B):
+
+The additive `RunRealmBountyV1` escrow lives on **ZetaChain Athens Testnet**. Defenders stake REALM; new owners claim 80% (20% burns):
+
+```env
+RUNREALM_BOUNTY_ADDRESS=0x9Cb90f7b84fEa2775F5Ab4610585a8BB7d8Ad9c1
+```
+
+#### Cross-Chain Anchor Relayer (trial operator):
+
+`CrossChainAnchor` on Sepolia forwards Athens claims into encrypted defense state. It needs a running relayer (`scripts/ops/run-anchor-relayer.js`) holding `RELAYER_ROLE`:
+
+```env
+RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS=0xd097Effcc4764c98bEd0199210838a5691142583
 ```
 
 #### Minimal `.env` file (to get started):
