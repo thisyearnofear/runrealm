@@ -1,6 +1,15 @@
 import { MapFocus } from './map-focus';
 
 /**
+ * Per-territory disclosure state (protocol-vision axiom 3: privacy by
+ * default, disclosure by choice). `shielded` keeps defense score, pace,
+ * and activity encrypted/private; `public` discloses them to rivals and
+ * leaderboards. Default is always `shielded` — absence of a record means
+ * the user has not opted into disclosure.
+ */
+export type TerritoryVisibility = 'shielded' | 'public';
+
+/**
  * Load user preferences for a variety of settings, currently
  * an abstraction over localStorage
  */
@@ -12,6 +21,7 @@ export class PreferenceService {
   private MAP_STYLE_KEY = 'runmap-map_style';
   private LAST_RUN_KEY = 'runmap-last_run';
   private SHOW_TERRITORIES_KEY = 'runmap-show_territories';
+  private TERRITORY_VISIBILITY_KEY = 'runmap-territory_visibility';
 
   public getLastOrDefaultFocus(): MapFocus {
     const lastFocus = localStorage.getItem(this.LAST_FOCUS_KEY);
@@ -84,6 +94,27 @@ export class PreferenceService {
     this.saveBooleanPreference(this.STORAGE_NOTICE_KEY, value);
   }
 
+  /**
+   * Visibility for one territory. Default `shielded` — a missing record
+   * is a privacy-preserving answer, not missing data.
+   */
+  public getTerritoryVisibility(territoryId: string): TerritoryVisibility {
+    const map = this.loadJsonPreference<Record<string, TerritoryVisibility>>(
+      this.TERRITORY_VISIBILITY_KEY,
+      {}
+    );
+    return map[territoryId] ?? 'shielded';
+  }
+
+  public saveTerritoryVisibility(territoryId: string, visibility: TerritoryVisibility): void {
+    const map = this.loadJsonPreference<Record<string, TerritoryVisibility>>(
+      this.TERRITORY_VISIBILITY_KEY,
+      {}
+    );
+    map[territoryId] = visibility;
+    this.saveJsonPreference(this.TERRITORY_VISIBILITY_KEY, map);
+  }
+
   private loadBooleanPreference(settingKey: string, defaultValue: boolean = true): boolean {
     const setting = localStorage.getItem(settingKey);
     if (setting === null) {
@@ -108,6 +139,18 @@ export class PreferenceService {
 
   private saveStringPreference(settingKey: string, value: string): void {
     localStorage.setItem(settingKey, value);
+  }
+
+  private loadJsonPreference<T>(settingKey: string, defaultValue: T): T {
+    const setting = localStorage.getItem(settingKey);
+    if (setting === null) {
+      return defaultValue;
+    }
+    try {
+      return JSON.parse(setting) as T;
+    } catch {
+      return defaultValue;
+    }
   }
 
   private saveJsonPreference(settingKey: string, value: any): void {

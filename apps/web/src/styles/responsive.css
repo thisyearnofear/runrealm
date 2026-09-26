@@ -130,8 +130,7 @@
 
   /* Tablet-specific modal adjustments */
   .location-modal,
-  .wallet-modal,
-  .cross-chain-demo {
+  .wallet-modal {
     max-width: 600px;
     padding: var(--space-xl);
   }
@@ -185,10 +184,6 @@
   .location-modal,
   .wallet-modal {
     max-width: 700px;
-  }
-
-  .cross-chain-demo {
-    max-width: 800px;
   }
 }
 
@@ -364,10 +359,6 @@
   }
 
   /* Larger modals for ultra-wide */
-  .cross-chain-demo {
-    max-width: 900px;
-  }
-
   .location-modal,
   .wallet-modal {
     max-width: 800px;

@@ -11,6 +11,13 @@ The two tracks are **independent and additive** — Zama does not replace ZetaCh
 it adds a privacy-preserving layer for activity-point state without disturbing
 the deployed public chain.
 
+> **North star:** [docs/protocol-vision.md](protocol-vision.md) defines the target
+> architecture (experience → attestation → accounts → settlement) and the wedge:
+> *private proof-of-movement*. Where this roadmap's trial scaffold and the vision
+> disagree, the vision wins — cross-chain messaging is demoted to lazy bridging
+> until multi-chain users exist, and chain UI is being progressively removed from
+> the experience layer.
+
 | # | Phase | Status | Headline outcome |
 |---|---|---|---|
 | 1 | Consolidation audit | ✅ Complete | `BaseService.getSiblingService` / `getWalletSnapshot`; legacy stubs quarantined; production simulator fenced. |

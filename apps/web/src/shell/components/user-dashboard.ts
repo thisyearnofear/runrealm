@@ -11,6 +11,7 @@
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import { BountyService } from '@runrealm/shared-core/services/bounty-service';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
+import { PreferenceService } from '@runrealm/shared-core/services/preference-service';
 import {
   DashboardData,
   DashboardState,
@@ -61,6 +62,7 @@ export class UserDashboard {
   private unsubscribeDataUpdates: (() => void) | null = null;
   private unsubscribeVisibilityChanges: (() => void) | null = null;
   private expandedTerritoryId: string | null = null;
+  private preferenceService: PreferenceService;
   private territoryViewMode: 'list' | 'binder' = 'binder';
   // Stored so render()'s re-init can remove the previous handler
   // instead of stacking anonymous listeners (perf pass).
@@ -71,6 +73,7 @@ export class UserDashboard {
     this.dashboardService = UserDashboardService.getInstance();
     this.domService = DOMService.getInstance();
     this.eventBus = EventBus.getInstance();
+    this.preferenceService = new PreferenceService();
   }
 
   public initialize(parentElement: HTMLElement): void {
@@ -325,6 +328,22 @@ export class UserDashboard {
             this.expandedTerritoryId = territoryId;
           }
           // Re-render to show/hide expanded view
+          this.render();
+        }
+        break;
+      }
+
+      case 'toggle-territory-visibility': {
+        const territoryId = target.getAttribute('data-territory');
+        if (territoryId) {
+          const current = this.preferenceService.getTerritoryVisibility(territoryId);
+          const next = current === 'public' ? 'shielded' : 'public';
+          this.preferenceService.saveTerritoryVisibility(territoryId, next);
+          // Attestation/leaderboard layers consume this; today it drives UI.
+          this.eventBus.emit('territory:visibilityChanged', {
+            territoryId,
+            visibility: next,
+          });
           this.render();
         }
         break;
@@ -615,6 +634,7 @@ export class UserDashboard {
     const activityPoints = territory.activityPoints || 500;
     const defenseStatus = territory.defenseStatus || 'moderate';
     const shield = describeShield(activityPoints);
+    const visibility = this.preferenceService.getTerritoryVisibility(territory.geohash);
 
     return `
       <div class="territory-item-compact ${(territory.rarity || 'common').toLowerCase()} ${isExpanded ? 'expanded' : ''}" 
@@ -627,6 +647,7 @@ export class UserDashboard {
               <span class="territory-reward">+${territory.estimatedReward || 0} $REALM</span>
               ${bountyBadge(territory.geohash)}
               <span class="defense-badge ${defenseStatus}" title="${shield.headline}">${SHIELD_TIER_EMOJI[shield.tier]} ${shield.tierLabel}</span>
+              <span class="visibility-marker" title="${visibility === 'public' ? 'Public — rivals can see your defense score' : 'Shielded — your defense score is private'}">${visibility === 'public' ? '🌐' : '🔒'}</span>
             </div>
           </div>
           <div class="territory-actions">
@@ -678,6 +699,8 @@ export class UserDashboard {
             <value>${territory.lastActivityUpdate ? this.formatTimeAgo(territory.lastActivityUpdate) : 'Never'}</value>
           </div>
         </div>
+
+        ${this.renderVisibilityToggle(territory)}
 
         ${
           territory.deployedGhost
@@ -741,6 +764,32 @@ export class UserDashboard {
             </button>
           </div>
         </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Per-territory disclosure switch (protocol-vision axiom 3: privacy by
+   * default, disclosure by choice). One control collapses all the FHE
+   * complexity into a metaphor users already know from social apps.
+   */
+  private renderVisibilityToggle(territory: DashboardTerritory): string {
+    const visibility = this.preferenceService.getTerritoryVisibility(territory.geohash);
+    const isPublic = visibility === 'public';
+    return `
+      <div class="visibility-row">
+        <div class="visibility-copy">
+          <label>Visibility</label>
+          <span class="visibility-note">
+            ${isPublic ? 'Public — rivals and leaderboards can see your defense score.' : 'Shielded — only you can see your defense score.'}
+          </span>
+        </div>
+        <button class="visibility-toggle ${visibility}" role="switch" aria-checked="${isPublic}"
+                data-action="toggle-territory-visibility" data-territory="${territory.geohash}"
+                title="${isPublic ? 'Switch to shielded' : 'Disclose publicly'}">
+          <span class="visibility-toggle-icon">${isPublic ? '🌐' : '🔒'}</span>
+          <span class="visibility-toggle-label">${isPublic ? 'Public' : 'Shielded'}</span>
+        </button>
       </div>
     `;
   }

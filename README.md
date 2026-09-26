@@ -1,6 +1,6 @@
 # RunRealm
 
-A cross-chain fitness GameFi platform: your runs become NFT territories. Connect Strava, track runs with AI coaching, and claim geospatial territories on ZetaChain — with encrypted territory defense on Zama FHEVM.
+A fitness game where you truly own everything: your runs become NFT territories, with **private proof-of-movement** — cryptographically provable athletic achievement over location data that stays encrypted (Zama FHEVM). Connect Strava, track runs, claim ground, beat rivals. The chain is the court, not the product — the north-star architecture lives in [docs/protocol-vision.md](docs/protocol-vision.md).
 
 **Live:** <https://runrealm.netlify.app> (Orbis Live slice: <https://runrealm.netlify.app/orbis-live/>)
 
@@ -40,7 +40,7 @@ Useful commands: `npm run build`, `npm test`, `npm run sync:rules` (regenerate S
 
 ## Status
 
-Actively developed; see [Roadmap](docs/roadmap.md) for phase status. Deployed: `ConfidentialTerritoryDefense` on Ethereum Sepolia, `RunRealmBoostV1` on ZetaChain Athens (addresses in [Introduction](docs/introduction.md)).
+Actively developed; see [Roadmap](docs/roadmap.md) for phase status and [Protocol Vision](docs/protocol-vision.md) for the target architecture (accounts → attestation → clean settlement). Deployed: `ConfidentialTerritoryDefense` on Ethereum Sepolia, `RunRealmBoostV1` on ZetaChain Athens (addresses in [Introduction](docs/introduction.md)).
 
 ## Contributing
 

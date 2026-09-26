@@ -1,6 +1,5 @@
 // Export core services
 
-export * from './components/cross-chain-demo';
 export * from './components/enhanced-run-controls'; // Used by web app RunRealmApp
 export * from './components/mobile-widget-service';
 export * from './components/route-info-panel';

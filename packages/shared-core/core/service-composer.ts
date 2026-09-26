@@ -10,7 +10,7 @@
  *   config, eventBus → preferences, ui, dom → location, web3, ai,
  *   game, contractService, territory, territoryToggle, runTracking,
  *   progression, onboarding, navigation, animation, sound,
- *   aiOrchestrator, crossChain, crossChainDemo, mapService,
+ *   aiOrchestrator, crossChain, mapService,
  *   externalFitness, ghostRunner, enhancedRunControls, gamefiUI,
  *   geocodingService, routeInfoPanel.
  *
@@ -23,7 +23,6 @@ import { ContractService } from '@runrealm/shared-blockchain/services/contract-s
 import { CrossChainAnchorService } from '@runrealm/shared-blockchain/services/cross-chain-anchor-service';
 import { CrossChainService } from '@runrealm/shared-blockchain/services/cross-chain-service';
 import { ZamaSupportService } from '@runrealm/shared-blockchain/services/zama-support';
-import { CrossChainDemoComponent } from '../components/cross-chain-demo';
 import { EnhancedRunControls } from '../components/enhanced-run-controls';
 import { GameFiUI } from '../components/gamefi-ui';
 import { RouteInfoPanel } from '../components/route-info-panel';
@@ -89,7 +88,6 @@ export interface Services {
   sound: SoundService;
   aiOrchestrator: AIOrchestrator;
   crossChainService: CrossChainService;
-  crossChainDemo: CrossChainDemoComponent;
   mapService: MapService;
   externalFitnessService: ExternalFitnessService;
   ghostRunnerService: GhostRunnerService;
@@ -136,7 +134,6 @@ export function createServices(): Services {
   const sound = SoundService.getInstance();
   const aiOrchestrator = AIOrchestrator.getInstance();
   const crossChainService = new CrossChainService();
-  const crossChainDemo = new CrossChainDemoComponent();
   const mapService = new MapService();
   const externalFitnessService = new ExternalFitnessService();
   const ghostRunnerService = GhostRunnerService.getInstance();
@@ -176,7 +173,6 @@ export function createServices(): Services {
     sound,
     aiOrchestrator,
     crossChainService,
-    crossChainDemo,
     mapService,
     externalFitnessService,
     ghostRunnerService,

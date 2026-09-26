@@ -215,6 +215,8 @@ export interface AppEvents extends Web3Events {
   'run:cleared': { runId: string };
   'run:loaded': { run: any };
   'territory:toggleVisibility': Record<string, never>;
+  /** Per-territory disclosure switch (privacy by default, disclosure by choice). */
+  'territory:visibilityChanged': { territoryId: string; visibility: 'shielded' | 'public' };
   'route:stateChanged': { routeId: string; routeData: any; isActive: boolean };
   'route:cleared': Record<string, never>;
   'run:plannedRouteChanged': { geojson: any };

@@ -88,7 +88,6 @@ describe('service-composer', () => {
       'sound',
       'aiOrchestrator',
       'crossChainService',
-      'crossChainDemo',
       'mapService',
       'externalFitnessService',
       'ghostRunnerService',

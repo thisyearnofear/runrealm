@@ -339,6 +339,68 @@
     gap: 8px;
   }
 
+  /* Per-territory disclosure switch (privacy by default, disclosure by choice) */
+  .visibility-marker {
+    font-size: 0.8rem;
+    margin-left: 4px;
+  }
+
+  .visibility-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+  }
+
+  .visibility-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .visibility-copy label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: #fff;
+  }
+
+  .visibility-note {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .visibility-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .visibility-toggle:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .visibility-toggle.shielded {
+    border-color: color-mix(in srgb, var(--rr-accent, #4fae8b) 40%, transparent);
+  }
+
+  .visibility-toggle.public {
+    border-color: color-mix(in srgb, var(--rr-rarity-rare, #3498db) 60%, transparent);
+    background: color-mix(in srgb, var(--rr-rarity-rare, #3498db) 15%, transparent);
+  }
+
   .territory-item-compact {
     display: flex;
     justify-content: space-between;
@@ -877,29 +939,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
-  }
-
-  .territory-item {
-    padding: var(--space-sm);
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--radius-md);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .territory-item.common {
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .territory-item.rare {
-    border-color: color-mix(in srgb, var(--rr-rarity-rare) 50%, transparent);
-  }
-
-  .territory-item.epic {
-    border-color: color-mix(in srgb, var(--rr-rarity-epic) 50%, transparent);
-  }
-
-  .territory-item.legendary {
-    border-color: color-mix(in srgb, var(--rr-rarity-legendary) 50%, transparent);
   }
 
   .territory-name {
@@ -2247,50 +2286,10 @@ button:disabled,
   letter-spacing: 0.5px;
 }
 
-.user-dashboard .territory-list {
-  margin-top: 12px;
-}
-
-.user-dashboard .territory-item {
-  padding: 10px;
-  margin-bottom: 8px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.user-dashboard .territory-item:last-child {
-  margin-bottom: 0;
-}
-
 .user-dashboard .territory-name {
   font-weight: 500;
   color: #fff;
   font-size: 0.9rem;
-}
-
-.user-dashboard .territory-value {
-  color: var(--rr-accent);
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.user-dashboard .territory-item.legendary {
-  border-left: 3px solid var(--rr-rarity-legendary);
-}
-
-.user-dashboard .territory-item.epic {
-  border-left: 3px solid var(--rr-rarity-epic);
-}
-
-.user-dashboard .territory-item.rare {
-  border-left: 3px solid var(--rr-rarity-rare);
-}
-
-.user-dashboard .territory-item.common {
-  border-left: 3px solid var(--rr-rarity-common);
 }
 
 .user-dashboard .wallet-info {
