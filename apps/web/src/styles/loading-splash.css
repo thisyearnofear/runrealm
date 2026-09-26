@@ -217,9 +217,45 @@
   }
 }
 
+/* Slow-boot hint + skip affordance */
+.boot-splash__hint {
+  margin: 12px 0 0;
+  max-width: 46ch;
+  font-size: var(--rr-text-xs, 13px);
+  line-height: 1.5;
+  color: var(--rr-text-3, #9fb8bf);
+}
+
+.boot-splash__skip {
+  margin-top: 18px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  background: none;
+  color: var(--rr-text-3, #9fb8bf);
+  font: inherit;
+  font-size: var(--rr-text-2xs, 12px);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  transition: color 180ms ease;
+}
+
+.boot-splash__skip:hover {
+  color: var(--rr-text-2, #b9cbd0);
+}
+
+.boot-splash__skip:focus-visible {
+  outline: 2px solid var(--rr-sunprint-amber, #f2a541);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .boot-splash,
-  .boot-splash__button {
+  .boot-splash__button,
+  .boot-splash__skip {
     transition: none;
   }
 

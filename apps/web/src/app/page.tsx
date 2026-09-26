@@ -9,17 +9,25 @@ const RETRY_COOLDOWN_MS = 1200;
 function BootSplash({
   status,
   phase,
+  showSkip,
+  slow,
   onRetry,
+  onSkip,
 }: {
   status: BootStatus;
   phase: string;
+  showSkip: boolean;
+  slow: boolean;
   onRetry: () => void;
+  onSkip: () => void;
 }) {
   return (
-    <output
+    // biome-ignore lint/a11y/useSemanticElements: full-screen splash overlay is not a form output element
+    <div
       className={`boot-splash${status === 'ready' ? ' is-leaving' : ''}${
         status === 'error' ? ' boot-splash--error' : ''
       }`}
+      role="status"
       aria-live="polite"
       aria-busy={status === 'loading'}
     >
@@ -61,10 +69,21 @@ function BootSplash({
               <span className="boot-splash__progress-fill" />
             </div>
             <p className="boot-splash__phase">{phase}</p>
+            {slow && (
+              <p className="boot-splash__hint">
+                Still warming up — first visits load the atlas engine, territory chart and realm
+                services.
+              </p>
+            )}
+            {showSkip && (
+              <button type="button" className="boot-splash__skip" onClick={onSkip}>
+                Skip the intro
+              </button>
+            )}
           </>
         )}
       </div>
-    </output>
+    </div>
   );
 }
 
@@ -73,6 +92,8 @@ export default function Home() {
   const [phase, setPhase] = useState('Waking the atlas');
   const [attempt, setAttempt] = useState(0);
   const [dismissed, setDismissed] = useState(false);
+  const [showSkip, setShowSkip] = useState(false);
+  const [slow, setSlow] = useState(false);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -82,12 +103,26 @@ export default function Home() {
     };
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: attempt intentionally restarts the boot sequence
   useEffect(() => {
     let hideTimer: ReturnType<typeof setTimeout> | undefined;
     let phaseTimer: ReturnType<typeof setTimeout> | undefined;
+    let skipTimer: ReturnType<typeof setTimeout> | undefined;
+    let slowTimer: ReturnType<typeof setTimeout> | undefined;
 
     setStatus('loading');
     setPhase('Waking the atlas');
+    setShowSkip(false);
+    setSlow(false);
+
+    // The skip affordance appears once the splash has clearly begun; the
+    // slow-boot hint explains a cold first visit instead of looking stuck.
+    skipTimer = setTimeout(() => {
+      if (mountedRef.current) setShowSkip(true);
+    }, 2_500);
+    slowTimer = setTimeout(() => {
+      if (mountedRef.current) setSlow(true);
+    }, 8_000);
 
     // If boot is quick, the splash still reads as intentional rather than a flash.
     const minSplash = new Promise<void>((resolve) => {
@@ -125,6 +160,8 @@ export default function Home() {
     return () => {
       if (hideTimer) clearTimeout(hideTimer);
       if (phaseTimer) clearTimeout(phaseTimer);
+      if (skipTimer) clearTimeout(skipTimer);
+      if (slowTimer) clearTimeout(slowTimer);
     };
   }, [attempt]);
 
@@ -138,9 +175,25 @@ export default function Home() {
     }, RETRY_COOLDOWN_MS);
   }, []);
 
-  if (dismissed) {
+  // Skipping only hides the splash; boot keeps running underneath. If it
+  // later fails, the splash returns so the visitor is never left on a blank
+  // page with no recovery path.
+  const handleSkip = useCallback(() => {
+    setDismissed(true);
+  }, []);
+
+  if (dismissed && status !== 'error') {
     return null;
   }
 
-  return <BootSplash status={status} phase={phase} onRetry={handleRetry} />;
+  return (
+    <BootSplash
+      status={status}
+      phase={phase}
+      showSkip={showSkip && status === 'loading'}
+      slow={slow && status === 'loading'}
+      onRetry={handleRetry}
+      onSkip={handleSkip}
+    />
+  );
 }
