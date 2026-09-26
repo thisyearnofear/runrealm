@@ -57,6 +57,8 @@ export interface RunStatusOptions {
   sector?: string | null;
   /** 0-1 threat level for the current territory, when known. */
   threatLevel?: number | null;
+  /** Ghost presence line, e.g. "a ghost defends Sector Kestrel". */
+  ghostNote?: string | null;
 }
 
 const PHASE_COPY: Record<RunSession['status'], string> = {
@@ -94,5 +96,6 @@ export function describeRun(
     const threat = threatCopy(opts.threatLevel);
     if (threat) parts.push(threat);
   }
+  if (opts.ghostNote) parts.push(opts.ghostNote);
   return parts.join(' · ');
 }

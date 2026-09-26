@@ -135,15 +135,13 @@
 /* Modals */
 .location-modal-overlay,
 .wallet-modal-overlay,
-.install-modal-overlay,
-.wallet-info-modal-overlay {
+.install-modal-overlay {
   z-index: var(--z-modals-backdrop);
 }
 
 .location-modal,
 .wallet-modal,
-.install-modal,
-.wallet-info-modal {
+.install-modal {
   z-index: var(--z-modals);
 }
 

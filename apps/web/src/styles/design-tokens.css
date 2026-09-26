@@ -19,6 +19,13 @@
   --rr-sunprint-ink: #102633;
   --rr-sunprint-muted: #9fb8bf;
 
+  /* Rarity fiction — wax-seal tiers (docs/features.md). Epic amethyst has
+   * no Sunprint base; the tier owns its value. Mirror in rarity UI only. */
+  --rr-rarity-legendary: var(--rr-sunprint-amber);
+  --rr-rarity-epic: #9370db;
+  --rr-rarity-rare: var(--rr-sunprint-cyan);
+  --rr-rarity-common: var(--rr-sunprint-verdigris);
+
   /* Color — surfaces */
   --rr-bg-0: var(--rr-sunprint-blueprint);
   --rr-bg-1: var(--rr-sunprint-raised);

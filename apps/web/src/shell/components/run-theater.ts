@@ -14,9 +14,12 @@
  * knows what each cue means before the screen goes dark.
  */
 import type { AppEvents, EventBus } from '@runrealm/shared-core/core/event-bus';
+import type { GhostRunnerService } from '@runrealm/shared-core/services/ghost-runner-service';
 import type { HapticsService } from '@runrealm/shared-core/services/haptics-service';
+import type { MapService } from '@runrealm/shared-core/services/map-service';
 import type { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
 import type { SoundService } from '@runrealm/shared-core/services/sound-service';
+import type { TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import {
   describeRun,
   formatDistance,
@@ -29,6 +32,9 @@ export interface RunTheaterDeps {
   runTracking: RunTrackingService;
   sound: SoundService;
   haptics: HapticsService;
+  ghostRunnerService: GhostRunnerService;
+  territoryService: TerritoryService;
+  mapService: MapService;
 }
 
 type RunTheaterEvent = Extract<
@@ -39,19 +45,24 @@ type RunTheaterEvent = Extract<
   | 'run:completed'
   | 'run:cancelled'
   | 'location:changed'
+  | 'ghost:deployed'
+  | 'ghost:completed'
 >;
 
 const REFRESH_MS = 1000;
+const NUDGE_KEY = 'runrealm_pocket_nudge_seen';
+const NUDGE_AUTO_DISMISS_MS = 15000;
 const LOCATION_RENDER_THROTTLE_MS = 1000;
 const POCKET_WAKE_HINT = 'Tap to wake · cues on';
 
 export class RunTheater {
   private root: HTMLElement | null = null;
   private sentenceEl: HTMLElement | null = null;
-  private statsEl: HTMLElement | null = null;
   private pocketBtn: HTMLButtonElement | null = null;
   private veil: HTMLElement | null = null;
   private veilSentenceEl: HTMLElement | null = null;
+  private nudgeEl: HTMLElement | null = null;
+  private nudgeTimer: number | null = null;
   private timer: number | null = null;
   private lastLocationRender = 0;
   private inTheater = false;
@@ -76,7 +87,6 @@ export class RunTheater {
       </div>
     `;
     this.sentenceEl = this.root.querySelector('.theater-sentence');
-    this.statsEl = this.root.querySelector('.theater-stats');
     this.pocketBtn = this.root.querySelector('.theater-pocket-btn');
     container.appendChild(this.root);
 
@@ -90,6 +100,16 @@ export class RunTheater {
     this.veilSentenceEl = this.veil.querySelector('.veil-sentence');
     container.appendChild(this.veil);
 
+    this.nudgeEl = document.createElement('div');
+    this.nudgeEl.id = 'run-theater-nudge';
+    this.nudgeEl.hidden = true;
+    this.nudgeEl.innerHTML = `
+      <span class="nudge-text">Running phone-away? 🌙 Pocket keeps the cues on.</span>
+      <button class="nudge-preview" type="button">Preview cues</button>
+      <button class="nudge-dismiss" type="button" aria-label="Dismiss">✕</button>
+    `;
+    container.appendChild(this.nudgeEl);
+
     this.root.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       if (target.closest('.theater-pocket-btn')) {
@@ -100,11 +120,20 @@ export class RunTheater {
     });
     this.veil.addEventListener('click', () => this.setPocket(false));
 
+    this.nudgeEl.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      // Preview runs inside the click gesture so audio is allowed.
+      if (target.closest('.nudge-preview')) this.soundcheck();
+      this.dismissNudge();
+    });
+
     this.on('run:started', () => this.enter());
     this.on('run:resumed', () => this.enter());
     this.on('run:paused', () => this.render());
     this.on('run:completed', () => this.exit());
     this.on('run:cancelled', () => this.exit());
+    this.on('ghost:deployed', () => this.refreshGhostPresence());
+    this.on('ghost:completed', () => this.refreshGhostPresence());
     this.on('location:changed', () => {
       const now = Date.now();
       if (now - this.lastLocationRender < LOCATION_RENDER_THROTTLE_MS) return;
@@ -125,8 +154,10 @@ export class RunTheater {
     }
     this.handlers = [];
     this.stopTimer();
+    this.clearNudgeTimer();
     this.root?.remove();
     this.veil?.remove();
+    this.nudgeEl?.remove();
     document.body.classList.remove('run-theater', 'run-theater-reveal', 'pocket-mode');
   }
 
@@ -143,11 +174,20 @@ export class RunTheater {
     }
     this.startTimer();
     this.render();
+    this.refreshGhostPresence();
+    this.maybeShowNudge();
   }
 
   private exit(): void {
     this.inTheater = false;
     this.stopTimer();
+    this.clearNudgeTimer();
+    if (this.nudgeEl) this.nudgeEl.hidden = true;
+    try {
+      this.deps.mapService.clearGhostMarkers();
+    } catch {
+      /* map unavailable — nothing to clear */
+    }
     this.setPocket(false);
     document.body.classList.remove('run-theater', 'run-theater-reveal');
     if (this.root) this.root.hidden = true;
@@ -165,11 +205,103 @@ export class RunTheater {
     }
   }
 
+  /**
+   * One-time pocket-mode discovery: first theater entry shows a
+   * dismissible nudge with a cue preview. Seen-once (localStorage)
+   * so it never nags; either button or the timeout retires it.
+   */
+  private maybeShowNudge(): void {
+    if (!this.nudgeEl || this.pocketMode) return;
+    try {
+      if (localStorage.getItem(NUDGE_KEY)) return;
+    } catch {
+      return;
+    }
+    this.nudgeEl.hidden = false;
+    this.clearNudgeTimer();
+    this.nudgeTimer = window.setTimeout(() => this.dismissNudge(), NUDGE_AUTO_DISMISS_MS);
+  }
+
+  private dismissNudge(): void {
+    this.clearNudgeTimer();
+    if (this.nudgeEl) this.nudgeEl.hidden = true;
+    try {
+      localStorage.setItem(NUDGE_KEY, '1');
+    } catch {
+      /* storage unavailable — nudge may repeat next run */
+    }
+  }
+
+  private clearNudgeTimer(): void {
+    if (this.nudgeTimer !== null) {
+      window.clearTimeout(this.nudgeTimer);
+      this.nudgeTimer = null;
+    }
+  }
+
+  /**
+   * Ghost presence: actively deployed ghosts (cooldown in the future)
+   * read as defenders of their territory. Returns the HUD note; marker
+   * rendering happens in refreshGhostPresence so the map and the
+   * sentence can never disagree about who is defending what.
+   */
+  private activeDefenses(): Array<{
+    name: string;
+    territoryName: string;
+    lng: number;
+    lat: number;
+  }> {
+    try {
+      const now = Date.now();
+      const claimed = this.deps.territoryService.getClaimedTerritories();
+      const defenses = [];
+      for (const ghost of this.deps.ghostRunnerService.getGhosts()) {
+        if (!ghost.lastDeployedTerritory) continue;
+        const cooldownUntil = ghost.cooldownUntil ? new Date(ghost.cooldownUntil).getTime() : 0;
+        if (cooldownUntil <= now) continue;
+        const territory = claimed.find(
+          (t) => t.id === ghost.lastDeployedTerritory || t.geohash === ghost.lastDeployedTerritory
+        );
+        if (!territory) continue;
+        defenses.push({
+          name: ghost.name,
+          territoryName:
+            territory.metadata?.name ?? territory.geohash.slice(0, 6) ?? territory.id.slice(0, 6),
+          lng: territory.bounds.center.lng,
+          lat: territory.bounds.center.lat,
+        });
+      }
+      return defenses;
+    } catch {
+      return [];
+    }
+  }
+
+  private resolveGhostNote(): string | null {
+    const defenses = this.activeDefenses();
+    if (defenses.length === 0) return null;
+    if (defenses.length === 1) return `a ghost defends ${defenses[0].territoryName}`;
+    return `${defenses.length} ghosts defend the realm`;
+  }
+
+  private refreshGhostPresence(): void {
+    try {
+      const defenses = this.activeDefenses();
+      this.deps.mapService.renderGhostMarkers(
+        defenses.map((d) => ({ lng: d.lng, lat: d.lat, label: d.name }))
+      );
+    } catch {
+      /* map unavailable — the sentence still carries presence */
+    }
+    this.render();
+  }
+
   private render(): void {
     if (!this.inTheater || !this.root) return;
     const session = this.deps.runTracking.getCurrentRun();
     const sentence = describeRun(session, {
       sector: session?.geohash ?? null,
+      ghostNote: this.resolveGhostNote(),
     });
     if (!sentence) {
       this.root.hidden = true;

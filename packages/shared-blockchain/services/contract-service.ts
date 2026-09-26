@@ -393,25 +393,6 @@ export class ContractService extends BaseService {
   }
 
   /**
-   * Phase 3 — convenience wrapper for legacy callers that expected
-   * the old `Promise<string>` return shape (Phase 2 signature). The
-   * source-of-truth `mintTerritory` now returns a structured
-   * `TerritoryMintReceipt` so `TerritoryService.claimTerritory` can
-   * gate the local state mutation on `status === 1` and a parsed
-   * `tokenId`. New code MUST use `mintTerritory` directly; this
-   * method exists for backward compatibility with any external
-   * consumer that hasn't migrated yet.
-   *
-   * @deprecated Use `mintTerritory` (returns `TerritoryMintReceipt`).
-   * Will be removed once the wallet widget boost modal and any other
-   * downstream callers are confirmed migrated.
-   */
-  public async mintTerritoryHash(territoryData: TerritoryClaimData): Promise<string> {
-    const receipt = await this.mintTerritory(territoryData);
-    return receipt.transactionHash;
-  }
-
-  /**
    * Handle cross-chain territory claim
    * MODULAR: Reusable for cross-chain interactions
    */

@@ -1,5 +1,10 @@
 import { GAME_RULES } from '../../config/game-rules';
-import { describeShield, getDaysOfSafety, getShieldTier } from '../shield-presentation';
+import {
+  decayDigestFor,
+  describeShield,
+  getDaysOfSafety,
+  getShieldTier,
+} from '../shield-presentation';
 
 describe('getShieldTier', () => {
   it('maps GAME_RULES thresholds to tiers', () => {
@@ -51,5 +56,27 @@ describe('describeShield', () => {
     const descs = [800, 500, 200, 20].map(describeShield);
     expect(new Set(descs.map((d) => d.icon)).size).toBe(4);
     expect(new Set(descs.map((d) => d.pattern)).size).toBe(4);
+  });
+});
+
+describe('decayDigestFor', () => {
+  it('stays silent at or above the moderate floor', () => {
+    expect(decayDigestFor(300, 'Kestrel')).toBeNull();
+    expect(decayDigestFor(800, 'Kestrel')).toBeNull();
+  });
+
+  it('nudges while slipping', () => {
+    const digest = decayDigestFor(250, 'Kestrel');
+    expect(digest?.tier).toBe('watch');
+    expect(digest?.title).toMatch(/fading/i);
+    expect(digest?.body).toContain('Kestrel');
+  });
+
+  it('escalates with the rescue action when about to fall', () => {
+    const digest = decayDigestFor(110, 'Kestrel');
+    expect(digest?.tier).toBe('urgent');
+    expect(digest?.title).toMatch(/about to fall/i);
+    expect(digest?.body).toContain('Territory Walk');
+    expect(digest?.body).toContain('+150');
   });
 });

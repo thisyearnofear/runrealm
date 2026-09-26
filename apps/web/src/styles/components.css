@@ -357,19 +357,19 @@
   }
 
   .territory-item-compact.legendary {
-    border-left-color: #ff8c00;
+    border-left-color: var(--rr-rarity-legendary);
   }
 
   .territory-item-compact.epic {
-    border-left-color: #9370db;
+    border-left-color: var(--rr-rarity-epic);
   }
 
   .territory-item-compact.rare {
-    border-left-color: #1e90ff;
+    border-left-color: var(--rr-rarity-rare);
   }
 
   .territory-item-compact.common {
-    border-left-color: #00ff88;
+    border-left-color: var(--rr-rarity-common);
   }
 
   .territory-info {
@@ -397,23 +397,23 @@
   }
 
   .rarity-badge.legendary {
-    background: rgba(255, 140, 0, 0.2);
-    color: #ff8c00;
+    background: color-mix(in srgb, var(--rr-rarity-legendary) 20%, transparent);
+    color: var(--rr-rarity-legendary);
   }
 
   .rarity-badge.epic {
-    background: rgba(147, 112, 219, 0.2);
-    color: #9370db;
+    background: color-mix(in srgb, var(--rr-rarity-epic) 20%, transparent);
+    color: var(--rr-rarity-epic);
   }
 
   .rarity-badge.rare {
-    background: rgba(30, 144, 255, 0.2);
-    color: #1e90ff;
+    background: color-mix(in srgb, var(--rr-rarity-rare) 20%, transparent);
+    color: var(--rr-rarity-rare);
   }
 
   .rarity-badge.common {
-    background: rgba(0, 255, 136, 0.2);
-    color: #00ff88;
+    background: color-mix(in srgb, var(--rr-rarity-common) 20%, transparent);
+    color: var(--rr-rarity-common);
   }
 
   .territory-reward {
@@ -513,10 +513,10 @@
   }
 
   .territory-deed-tile.epic {
-    --tile-stroke: #a855f7;
-    --tile-fill: rgba(168, 85, 247, 0.25);
-    --tile-glow: rgba(168, 85, 247, 0.4);
-    border-color: rgba(168, 85, 247, 0.6);
+    --tile-stroke: var(--rr-rarity-epic);
+    --tile-fill: color-mix(in srgb, var(--rr-rarity-epic) 25%, transparent);
+    --tile-glow: color-mix(in srgb, var(--rr-rarity-epic) 40%, transparent);
+    border-color: color-mix(in srgb, var(--rr-rarity-epic) 60%, transparent);
   }
 
   .territory-deed-tile.rare {
@@ -527,10 +527,10 @@
   }
 
   .territory-deed-tile.common {
-    --tile-stroke: #4fae8b;
-    --tile-fill: rgba(79, 174, 139, 0.2);
-    --tile-glow: rgba(79, 174, 139, 0.3);
-    border-color: rgba(79, 174, 139, 0.5);
+    --tile-stroke: var(--rr-rarity-common);
+    --tile-fill: color-mix(in srgb, var(--rr-rarity-common) 25%, transparent);
+    --tile-glow: color-mix(in srgb, var(--rr-rarity-common) 40%, transparent);
+    border-color: color-mix(in srgb, var(--rr-rarity-common) 60%, transparent);
   }
 
   .deed-tile-top {
@@ -553,16 +553,16 @@
     color: #f2a541;
   }
   .deed-tile-badge.epic {
-    background: rgba(168, 85, 247, 0.2);
-    color: #c084fc;
+    background: color-mix(in srgb, var(--rr-rarity-epic) 20%, transparent);
+    color: var(--rr-rarity-epic);
   }
   .deed-tile-badge.rare {
     background: rgba(99, 179, 200, 0.2);
     color: #63b3c8;
   }
   .deed-tile-badge.common {
-    background: rgba(79, 174, 139, 0.2);
-    color: #4fae8b;
+    background: color-mix(in srgb, var(--rr-rarity-common) 20%, transparent);
+    color: var(--rr-rarity-common);
   }
 
   .deed-tile-yield {
@@ -884,15 +884,15 @@
   }
 
   .territory-item.rare {
-    border-color: rgba(65, 105, 225, 0.5);
+    border-color: color-mix(in srgb, var(--rr-rarity-rare) 50%, transparent);
   }
 
   .territory-item.epic {
-    border-color: rgba(128, 0, 128, 0.5);
+    border-color: color-mix(in srgb, var(--rr-rarity-epic) 50%, transparent);
   }
 
   .territory-item.legendary {
-    border-color: rgba(255, 215, 0, 0.5);
+    border-color: color-mix(in srgb, var(--rr-rarity-legendary) 50%, transparent);
   }
 
   .territory-name {
@@ -1591,32 +1591,25 @@
   border: 1px solid rgba(128, 128, 128, 0.3);
 }
 
-.territory-rarity.uncommon,
-.rarity-badge.uncommon {
-  background: rgba(79, 174, 139, 0.15);
-  color: var(--rr-success);
-  border: 1px solid rgba(79, 174, 139, 0.3);
-}
-
 .territory-rarity.rare,
 .rarity-badge.rare {
-  background: rgba(0, 100, 255, 0.15);
-  color: #4da3ff;
-  border: 1px solid rgba(0, 100, 255, 0.3);
+  background: color-mix(in srgb, var(--rr-rarity-rare) 15%, transparent);
+  color: var(--rr-rarity-rare);
+  border: 1px solid color-mix(in srgb, var(--rr-rarity-rare) 30%, transparent);
 }
 
 .territory-rarity.epic,
 .rarity-badge.epic {
-  background: rgba(160, 32, 240, 0.15);
-  color: #c68cff;
-  border: 1px solid rgba(160, 32, 240, 0.3);
+  background: color-mix(in srgb, var(--rr-rarity-epic) 15%, transparent);
+  color: var(--rr-rarity-epic);
+  border: 1px solid color-mix(in srgb, var(--rr-rarity-epic) 30%, transparent);
 }
 
 .territory-rarity.legendary,
 .rarity-badge.legendary {
-  background: rgba(255, 165, 0, 0.15);
-  color: #ffcf70;
-  border: 1px solid rgba(255, 165, 0, 0.3);
+  background: color-mix(in srgb, var(--rr-rarity-legendary) 15%, transparent);
+  color: var(--rr-rarity-legendary);
+  border: 1px solid color-mix(in srgb, var(--rr-rarity-legendary) 30%, transparent);
 }
 
 /* Enhanced Cross-Chain Info */
@@ -1907,7 +1900,7 @@ button:disabled,
   border-color: rgba(79, 174, 139, 0.4);
 }
 .widget.theme-territory {
-  border-color: rgba(255, 165, 0, 0.4);
+  border-color: color-mix(in srgb, var(--rr-rarity-legendary) 40%, transparent);
 }
 .widget.theme-challenges {
   border-color: rgba(255, 69, 0, 0.4);
@@ -2278,19 +2271,19 @@ button:disabled,
 }
 
 .user-dashboard .territory-item.legendary {
-  border-left: 3px solid #ff8c00;
+  border-left: 3px solid var(--rr-rarity-legendary);
 }
 
 .user-dashboard .territory-item.epic {
-  border-left: 3px solid #9370db;
+  border-left: 3px solid var(--rr-rarity-epic);
 }
 
 .user-dashboard .territory-item.rare {
-  border-left: 3px solid #1e90ff;
+  border-left: 3px solid var(--rr-rarity-rare);
 }
 
 .user-dashboard .territory-item.common {
-  border-left: 3px solid #00ff88;
+  border-left: 3px solid var(--rr-rarity-common);
 }
 
 .user-dashboard .wallet-info {

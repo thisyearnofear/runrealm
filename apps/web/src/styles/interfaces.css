@@ -8,8 +8,7 @@
 /* Modal Backdrop Enhancement */
 .location-modal-overlay,
 .wallet-modal-overlay,
-.install-modal-overlay,
-.wallet-info-modal-overlay {
+.install-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -28,8 +27,7 @@
 /* Enhanced Modal Containers */
 .location-modal,
 .wallet-modal,
-.install-modal,
-.wallet-info-modal {
+.install-modal {
   background: white;
   border-radius: var(--radius-xl);
   padding: var(--space-lg);

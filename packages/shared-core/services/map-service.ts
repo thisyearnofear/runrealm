@@ -7,6 +7,7 @@ import {
   type TerritoryCellPolygon,
 } from '../utils/h3-territory';
 import { makeEaseToThrottle, makeMapThrottle, type ThrottledFn } from '../utils/map-throttle';
+import { SUNPRINT_ATLAS_COLORS } from '../utils/sunprint-atlas';
 import { ReplayService } from './replay-service';
 import { RunPoint } from './run-tracking-service';
 import type { Territory, TerritoryIntent, TerritoryPreview } from './territory-service';
@@ -40,6 +41,18 @@ const CONTESTED_PULSE_MAX_DURATION_MS = 20_000;
 const OWNED_TERRITORY_SOURCE_ID = 'owned-territory-source';
 const OWNED_TERRITORY_LAYER_ID = 'owned-territory-layer';
 const OWNED_TERRITORY_BORDER_LAYER_ID = 'owned-territory-border-layer';
+// Ghost presence: spectral markers over territories with an actively
+// deployed ghost, so defenders read as alive on the map — not as rows
+// in a modal. Points are static per deployment; callers refresh on
+// ghost:deployed / ghost:completed and clear on run end.
+export interface GhostMarker {
+  lng: number;
+  lat: number;
+  label: string;
+}
+const GHOST_SOURCE_ID = 'ghost-presence-source';
+const GHOST_HALO_LAYER_ID = 'ghost-presence-halo-layer';
+const GHOST_LABEL_LAYER_ID = 'ghost-presence-label-layer';
 // One-shot reveal animation played at a claim location while the claim
 // transaction is in flight ("one-tap claim" UX).
 const CLAIM_REVEAL_SOURCE_ID = 'claim-reveal-source';
@@ -52,10 +65,11 @@ const RELICS_PULSE_LAYER_ID = 'relics-pulse-layer';
 
 /** Fill colors keyed by defense status — green strong → red claimable. */
 export const DEFENSE_STATUS_COLORS: Record<string, string> = {
-  strong: '#00ff88',
-  moderate: '#f1c40f',
-  vulnerable: '#ff3366',
-  claimable: '#7f8c8d',
+  // Sunprint tokens (see SUNPRINT_ATLAS_COLORS / design-tokens.css).
+  strong: SUNPRINT_ATLAS_COLORS.verdigris,
+  moderate: SUNPRINT_ATLAS_COLORS.amber,
+  vulnerable: SUNPRINT_ATLAS_COLORS.coral,
+  claimable: SUNPRINT_ATLAS_COLORS.muted,
 };
 
 export interface TerritoryMapOptions {
@@ -575,7 +589,7 @@ export class MapService extends BaseService {
             'line-cap': 'round',
           },
           paint: {
-            'line-color': '#ff6b35',
+            'line-color': SUNPRINT_ATLAS_COLORS.chalk,
             'line-width': 5,
             'line-opacity': 0.9,
           },
@@ -624,11 +638,68 @@ export class MapService extends BaseService {
           visibility: this.territoriesVisible ? 'visible' : 'none',
         },
         paint: {
-          'fill-color': '#00ff88',
+          'fill-color': SUNPRINT_ATLAS_COLORS.verdigris,
           'fill-opacity': 0.3,
         },
       });
     }
+  }
+
+  /**
+   * Spectral ghost markers over defended territories. Idempotent:
+   * updates the source when present, builds layers on first call.
+   * Pass an empty array to hide presence without dropping layers.
+   */
+  public renderGhostMarkers(markers: GhostMarker[]): void {
+    if (!this.map) return;
+    const data = {
+      type: 'FeatureCollection' as const,
+      features: markers.map((m) => ({
+        type: 'Feature' as const,
+        properties: { label: `👻 ${m.label}` },
+        geometry: { type: 'Point' as const, coordinates: [m.lng, m.lat] },
+      })),
+    };
+    const source = this.map.getSource(GHOST_SOURCE_ID) as any;
+    if (source) {
+      source.setData(data);
+      return;
+    }
+    this.map.addSource(GHOST_SOURCE_ID, { type: 'geojson', data });
+    this.map.addLayer({
+      id: GHOST_HALO_LAYER_ID,
+      type: 'circle',
+      source: GHOST_SOURCE_ID,
+      paint: {
+        'circle-radius': 14,
+        'circle-color': SUNPRINT_ATLAS_COLORS.chalk,
+        'circle-opacity': 0.15,
+      },
+    });
+    this.map.addLayer({
+      id: GHOST_LABEL_LAYER_ID,
+      type: 'symbol',
+      source: GHOST_SOURCE_ID,
+      layout: {
+        'text-field': ['get', 'label'],
+        'text-size': 12,
+        'text-offset': [0, 1.2],
+        'text-anchor': 'top',
+      },
+      paint: {
+        'text-color': SUNPRINT_ATLAS_COLORS.chalk,
+        'text-halo-color': SUNPRINT_ATLAS_COLORS.blueprint,
+        'text-halo-width': 2,
+      },
+    });
+  }
+
+  public clearGhostMarkers(): void {
+    if (!this.map) return;
+    for (const layerId of [GHOST_HALO_LAYER_ID, GHOST_LABEL_LAYER_ID]) {
+      if (this.map.getLayer(layerId)) this.map.removeLayer(layerId);
+    }
+    if (this.map.getSource(GHOST_SOURCE_ID)) this.map.removeSource(GHOST_SOURCE_ID);
   }
 
   public clearRun(): void {
@@ -720,7 +791,7 @@ export class MapService extends BaseService {
    */
   public drawH3Cells(cells: TerritoryCell[], opts?: { color?: string; opacity?: number }): void {
     if (!this.map) return;
-    const color = opts?.color ?? '#00ff88';
+    const color = opts?.color ?? SUNPRINT_ATLAS_COLORS.verdigris;
     const opacity = opts?.opacity ?? 0.3;
 
     const features = cells.map((cell) => ({
@@ -852,7 +923,7 @@ export class MapService extends BaseService {
         type: 'fill',
         source: CONTESTED_CELLS_SOURCE_ID,
         paint: {
-          'fill-color': '#ff3366',
+          'fill-color': SUNPRINT_ATLAS_COLORS.coral,
           'fill-opacity': 0.15,
         },
       });
@@ -861,7 +932,7 @@ export class MapService extends BaseService {
         type: 'line',
         source: CONTESTED_CELLS_SOURCE_ID,
         paint: {
-          'line-color': '#ff3366',
+          'line-color': SUNPRINT_ATLAS_COLORS.coral,
           'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 14, 3, 18, 5],
           'line-opacity': 0.9,
         },
@@ -1063,13 +1134,13 @@ export class MapService extends BaseService {
         id: CLAIM_REVEAL_FILL_LAYER_ID,
         type: 'fill',
         source: CLAIM_REVEAL_SOURCE_ID,
-        paint: { 'fill-color': '#00ff88', 'fill-opacity': 0.4 },
+        paint: { 'fill-color': SUNPRINT_ATLAS_COLORS.verdigris, 'fill-opacity': 0.4 },
       });
       this.map.addLayer({
         id: CLAIM_REVEAL_BORDER_LAYER_ID,
         type: 'line',
         source: CLAIM_REVEAL_SOURCE_ID,
-        paint: { 'line-color': '#00ff88', 'line-width': 3, 'line-opacity': 0.9 },
+        paint: { 'line-color': SUNPRINT_ATLAS_COLORS.amber, 'line-width': 3, 'line-opacity': 0.9 },
       });
     } else {
       (this.map.getSource(CLAIM_REVEAL_SOURCE_ID) as any)?.setData({

@@ -177,6 +177,24 @@ export const GAME_RULES = {
   },
 
   // ---------------------------------------------------------------------
+  // Encrypted bounties — off-chain only for now (no Solidity sibling).
+  //   Defender stakes REALM on an owned territory; a successful
+  //   challenger claims attackerShareBps of the stake, the rest burns.
+  //   Full spec in docs/encrypted-bounties.md. Phase A settles off-chain;
+  //   on-chain escrow (Phase B) and FHE amounts (Phase C) follow.
+  // ---------------------------------------------------------------------
+  bounty: {
+    minStakeRealm: 25,
+    maxStakeRealm: 1000,
+    /** Winner's share in basis points; remainder burns (sink). */
+    attackerShareBps: 8000,
+    /** Per-territory contest cooldown — matches ghost cadence. */
+    cooldownHours: 24,
+    /** Unstake delay — must exceed contest.disputeHours (rug-pull guard). */
+    withdrawDelayHours: 48,
+  },
+
+  // ---------------------------------------------------------------------
   // Offline catch-up — reporting rules for absences, not a softcap on
   // decay. Decay applies in full (punishment-as-state: a territory that
   // went claimable stays claimable), which is what removes the

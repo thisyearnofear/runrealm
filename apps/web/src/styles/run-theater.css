@@ -153,6 +153,57 @@ body.pocket-mode #run-theater-hud {
   display: none;
 }
 
+/* ---- first-run pocket nudge ---- */
+
+#run-theater-nudge {
+  position: fixed;
+  left: 50%;
+  bottom: 118px;
+  transform: translateX(-50%);
+  z-index: calc(var(--z-widgets, 1000) + 30);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(92vw, 420px);
+  padding: 10px 12px;
+  background: rgba(13, 43, 62, 0.92);
+  border: 1px solid var(--rr-sunprint-cyan);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+#run-theater-nudge[hidden] {
+  display: none;
+}
+
+.nudge-text {
+  flex: 1;
+  color: var(--rr-sunprint-bone);
+  font-size: 0.82rem;
+}
+
+.nudge-preview {
+  flex: none;
+  background: transparent;
+  border: 1px solid var(--rr-sunprint-amber);
+  color: var(--rr-sunprint-amber);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.nudge-dismiss {
+  flex: none;
+  background: transparent;
+  border: none;
+  color: var(--rr-sunprint-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   body.run-theater .widget-system .widget-zone,
   body.run-theater .user-dashboard,

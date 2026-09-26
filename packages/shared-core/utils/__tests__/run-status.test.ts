@@ -64,6 +64,12 @@ describe('describeRun', () => {
     expect(describeRun(session({ status: 'paused' }))).toBe('The run catches its breath');
   });
 
+  it('appends ghost presence when known', () => {
+    expect(describeRun(session(), { ghostNote: 'a ghost defends Kestrel' })).toBe(
+      'Recording the run · 3.2 km · 5:00/km · a ghost defends Kestrel'
+    );
+  });
+
   it('returns null when idle or cancelled', () => {
     expect(describeRun(null)).toBeNull();
     expect(describeRun(session({ status: 'cancelled' }))).toBeNull();

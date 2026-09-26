@@ -1,5 +1,5 @@
 import { BaseService } from '../core/base-service';
-import { describeShield } from '../utils/shield-presentation';
+import { decayDigestFor } from '../utils/shield-presentation';
 import { openVersioned } from '../utils/versioned-store';
 
 const DECAY_SUMMARY_KEY = 'runrealm_last_decay_summary';
@@ -224,16 +224,12 @@ export class NotificationService extends BaseService {
       );
       const points = weakest.activityPoints ?? 500;
 
-      // Only nag when a territory is genuinely slipping.
-      if (points >= 300) return;
-
+      // Silence by default; nudge while slipping, escalate when falling.
+      // Both tiers share the once-a-day throttle below.
       const name = weakest.name ?? weakest.geohash ?? 'one of your territories';
-      const shield = describeShield(points);
-      this.notify(
-        '📉 Defenses fading',
-        `${name} — ${shield.headline}. A short run restores it.`,
-        'decay-summary'
-      );
+      const digest = decayDigestFor(points, name);
+      if (!digest) return;
+      this.notify(digest.title, digest.body, 'decay-summary');
       localStorage.setItem(DECAY_SUMMARY_KEY, String(Date.now()));
     } catch {
       // Storage unavailable (private mode) — skip silently.

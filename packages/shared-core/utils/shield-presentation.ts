@@ -55,6 +55,47 @@ export function getDaysOfSafety(points: number): number {
   return Math.max(0, Math.floor((points - stealThresholdPoints) / decayPerDay));
 }
 
+/**
+ * Days of safety at or below which the decay digest escalates from a
+ * routine nudge to loss-framed urgency. At 10 pts/day decay this is
+ * ~30 points above the steal threshold — close enough to name the
+ * rescue action, far enough that the runner can still act.
+ */
+export const URGENT_SAFETY_DAYS = 3;
+
+export type DecayDigestTier = 'watch' | 'urgent';
+
+export interface DecayDigest {
+  tier: DecayDigestTier;
+  title: string;
+  body: string;
+}
+
+/**
+ * Digest decision for one territory: null when healthy (at or above the
+ * moderate floor — silence is the default), a routine nudge while
+ * slipping, and loss-framed urgency naming the rescue action when the
+ * territory is about to fall. Pure; the scheduler owns throttling.
+ */
+export function decayDigestFor(points: number, name: string): DecayDigest | null {
+  if (points >= GAME_RULES.activity.thresholds.moderateMin) return null;
+  const shield = describeShield(points);
+  if (shield.daysOfSafety <= URGENT_SAFETY_DAYS) {
+    return {
+      tier: 'urgent',
+      title: '🚨 Territory about to fall',
+      body:
+        `${name} — ${shield.headline}. ` +
+        `A Territory Walk (+${GAME_RULES.economy.walkPoints}) or short run saves it.`,
+    };
+  }
+  return {
+    tier: 'watch',
+    title: '📉 Defenses fading',
+    body: `${name} — ${shield.headline}. A short run restores it.`,
+  };
+}
+
 export function describeShield(points: number): ShieldDescription {
   const tier = getShieldTier(points);
   const daysOfSafety = getDaysOfSafety(points);

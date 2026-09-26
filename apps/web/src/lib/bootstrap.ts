@@ -108,6 +108,9 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
         runTracking: services.runTracking,
         sound: services.sound,
         haptics: services.haptics,
+        ghostRunnerService: services.ghostRunnerService,
+        territoryService: services.territory,
+        mapService: services.mapService,
       }).initialize(document.body);
     } catch (err) {
       console.warn('Run theater not available:', err);

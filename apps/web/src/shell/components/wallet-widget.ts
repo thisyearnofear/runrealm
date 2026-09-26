@@ -197,6 +197,13 @@ export class WalletWidget extends BaseService {
       this.retryConnection();
     });
 
+    // Pill details toggle (self-contained; no router change needed)
+    this.domService.delegate(document.body, '[data-wallet-toggle]', 'click', (event) => {
+      const pill = (event.target as HTMLElement).closest('[data-wallet-toggle]');
+      const expanded = pill?.parentElement?.querySelector<HTMLElement>('.wallet-expanded');
+      if (expanded) expanded.hidden = !expanded.hidden;
+    });
+
     // Provider selection in modal
     this.domService.delegate(document.body, '.wallet-provider-option', 'click', (event) => {
       const providerId = (event.target as HTMLElement)
@@ -395,28 +402,16 @@ export class WalletWidget extends BaseService {
 
   private renderDisconnectedState(): string {
     return `
-      <div class="wallet-status disconnected">
-        <div class="wallet-icon">🦊</div>
-        <div class="wallet-info">
-          <div class="wallet-title">Wallet</div>
-          <div class="wallet-subtitle">Not connected</div>
-        </div>
-        <button class="wallet-action-btn" data-action="connect-wallet">
-          Connect
-        </button>
-      </div>
+      <button class="wallet-pill" data-action="connect-wallet" title="Connect wallet">
+        <span aria-hidden="true">🦊</span> Connect
+      </button>
     `;
   }
 
   private renderConnectingState(): string {
     return `
-      <div class="wallet-status connecting">
-        <div class="wallet-icon spinning">⏳</div>
-        <div class="wallet-info">
-          <div class="wallet-title">Wallet</div>
-          <div class="wallet-subtitle">Connecting...</div>
-        </div>
-        <div class="wallet-spinner"></div>
+      <div class="wallet-pill busy" aria-live="polite">
+        <span class="wallet-spinner" aria-hidden="true"></span> Connecting…
       </div>
     `;
   }
@@ -426,58 +421,35 @@ export class WalletWidget extends BaseService {
     const rewardsContent = this.rewardSystemUI?.getRewardsContent() || '';
 
     return `
-      <div class="wallet-status connected">
-        <div class="wallet-icon">✅</div>
-        <div class="wallet-info">
-          <div class="wallet-title">${shortAddress}</div>
-          <div class="wallet-subtitle">${wallet.networkName}</div>
-          <div class="wallet-balance">${parseFloat(wallet.balance).toFixed(3)} ETH</div>
+      <button class="wallet-pill connected" data-wallet-toggle title="${shortAddress} on ${wallet.networkName} — show details">
+        <span class="wallet-dot" aria-hidden="true"></span> ${shortAddress}
+      </button>
+      <div class="wallet-expanded" hidden>
+        <div class="wallet-expanded-row">
+          <span>${wallet.networkName}</span>
+          <span class="wallet-balance">${parseFloat(wallet.balance).toFixed(3)} ETH</span>
         </div>
-        <div class="wallet-actions">
-          <button class="wallet-action-btn secondary" data-action="disconnect-wallet" title="Disconnect">
-            🔌
-          </button>
-        </div>
+        ${rewardsContent}
+        <button class="wallet-action-btn secondary" data-action="disconnect-wallet" title="Disconnect">
+          Disconnect
+        </button>
       </div>
-      ${rewardsContent}
     `;
   }
 
   private renderErrorState(error: string): string {
+    const safeError = error.replace(/"/g, '&quot;');
     return `
-      <div class="wallet-status error">
-        <div class="wallet-icon">❌</div>
-        <div class="wallet-info">
-          <div class="wallet-title">Connection Failed</div>
-          <div class="wallet-subtitle">${error}</div>
-        </div>
-        <div class="wallet-actions">
-          ${
-            this.retryCount < this.maxRetries
-              ? `
-            <button class="wallet-action-btn" data-action="retry-connection">
-              Retry
-            </button>
-          `
-              : `
-            <button class="wallet-action-btn" data-action="connect-wallet">
-              Try Again
-            </button>
-          `
-          }
-        </div>
-      </div>
+      <button class="wallet-pill error" data-action="${this.retryCount < this.maxRetries ? 'retry-connection' : 'connect-wallet'}" title="${safeError}">
+        <span aria-hidden="true">⚠️</span> Retry
+      </button>
     `;
   }
 
   private renderSwitchingState(): string {
     return `
-      <div class="wallet-status switching">
-        <div class="wallet-icon spinning">🔄</div>
-        <div class="wallet-info">
-          <div class="wallet-title">Switching Network</div>
-          <div class="wallet-subtitle">Please confirm in wallet</div>
-        </div>
+      <div class="wallet-pill busy" aria-live="polite">
+        <span class="wallet-spinner" aria-hidden="true"></span> Switching…
       </div>
     `;
   }
@@ -608,66 +580,10 @@ export class WalletWidget extends BaseService {
     this.domService.createElement('style', {
       id: 'wallet-widget-styles',
       textContent: `
-        /* Wallet Widget Styles */
-        .wallet-status {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          border-radius: 8px;
-          transition: all 0.2s ease;
-        }
-
-        .wallet-status.disconnected {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .wallet-status.connecting {
-          background: rgba(255, 193, 7, 0.1);
-          border: 1px solid rgba(255, 193, 7, 0.3);
-        }
-
-        .wallet-status.connected {
-          background: rgba(0, 255, 136, 0.1);
-          border: 1px solid rgba(0, 255, 136, 0.3);
-        }
-
-        .wallet-status.error {
-          background: rgba(220, 53, 69, 0.1);
-          border: 1px solid rgba(220, 53, 69, 0.3);
-        }
-
-        .wallet-status.switching {
-          background: rgba(102, 126, 234, 0.1);
-          border: 1px solid rgba(102, 126, 234, 0.3);
-        }
-
-        .wallet-icon {
-          font-size: 20px;
-          min-width: 24px;
-          text-align: center;
-        }
-
-        .wallet-icon.spinning {
-          animation: spin 1s linear infinite;
-        }
-
+        /* Wallet Widget Styles (pill + shared dashboard wallet classes) */
         .wallet-info {
           flex: 1;
           min-width: 0;
-        }
-
-        .wallet-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: white;
-          margin-bottom: 2px;
-        }
-
-        .wallet-subtitle {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.7);
         }
 
         .wallet-balance {
@@ -706,7 +622,7 @@ export class WalletWidget extends BaseService {
         .wallet-spinner {
           width: 16px;
           height: 16px;
-          border: 2px solid rgba(255, 193, 7, 0.3);
+          border: 2px solid rgba(242, 165, 65, 0.3);
           border-top: 2px solid var(--rr-accent);
           border-radius: 50%;
           animation: spin 1s linear infinite;
@@ -730,7 +646,7 @@ export class WalletWidget extends BaseService {
 
         .wallet-modal {
           background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(0, 25, 50, 0.9));
-          border: 2px solid rgba(102, 126, 234, 0.3);
+          border: 2px solid rgba(99, 179, 200, 0.3);
           border-radius: 20px;
           max-width: 500px;
           width: 100%;
@@ -798,7 +714,7 @@ export class WalletWidget extends BaseService {
         .wallet-provider-option:hover,
         .wallet-provider-option:focus {
           border-color: var(--rr-accent);
-          background: rgba(102, 126, 234, 0.1);
+          background: rgba(99, 179, 200, 0.1);
           transform: translateY(-2px);
         }
 
@@ -834,7 +750,7 @@ export class WalletWidget extends BaseService {
         }
 
         .popular-badge {
-          background: rgba(255, 193, 7, 0.2);
+          background: rgba(242, 165, 65, 0.2);
           color: var(--rr-accent);
           font-size: 10px;
           padding: 2px 6px;
@@ -889,8 +805,8 @@ export class WalletWidget extends BaseService {
 
         .security-notice {
           padding: 16px 24px;
-          background: rgba(0, 255, 136, 0.1);
-          border-top: 1px solid rgba(0, 255, 136, 0.2);
+          background: rgba(79, 174, 139, 0.1);
+          border-top: 1px solid rgba(79, 174, 139, 0.2);
           font-size: 12px;
           text-align: center;
           color: rgba(255, 255, 255, 0.9);
@@ -1053,7 +969,76 @@ export class WalletWidget extends BaseService {
         /* Reduced motion support */
         @media (prefers-reduced-motion: reduce) {
           .wallet-icon.spinning,
-          .wallet-spinner {
+        /* Wallet pill — one-line status; details expand inline */
+        .wallet-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 7px 14px;
+          border-radius: 999px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--rr-sunprint-bone, #f3ead8);
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .wallet-pill:hover {
+          transform: translateY(-1px);
+          border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .wallet-pill.connected {
+          border-color: rgba(79, 174, 139, 0.5);
+          background: rgba(79, 174, 139, 0.12);
+        }
+
+        .wallet-pill.error {
+          border-color: rgba(232, 93, 93, 0.5);
+          background: rgba(232, 93, 93, 0.12);
+        }
+
+        .wallet-pill.busy {
+          cursor: default;
+          border-color: rgba(242, 165, 65, 0.5);
+          background: rgba(242, 165, 65, 0.1);
+        }
+
+        .wallet-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: var(--rr-success);
+          box-shadow: 0 0 6px var(--rr-success);
+        }
+
+        .wallet-expanded {
+          margin-top: 8px;
+          padding: 10px 12px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .wallet-expanded[hidden] {
+          display: none;
+        }
+
+        .wallet-expanded-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .wallet-spinner {
             animation: none;
           }
         }
