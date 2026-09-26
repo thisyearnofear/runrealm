@@ -93,6 +93,7 @@ describe('service-composer', () => {
       'ghostRunnerService',
       'bountyService',
       'accountService',
+      'attestationService',
       'enhancedRunControls',
       'gamefiUI',
       'haptics',

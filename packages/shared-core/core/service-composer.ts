@@ -32,6 +32,7 @@ import { AccountService } from '../services/account-service';
 import { AIOrchestrator } from '../services/ai-orchestrator';
 import { AIService } from '../services/ai-service';
 import { AnimationService } from '../services/animation-service';
+import { AttestationService } from '../services/attestation-service';
 import { BountyService } from '../services/bounty-service';
 import { ConfidentialTerritoryService } from '../services/confidential-territory-service';
 import { DOMService } from '../services/dom-service';
@@ -94,6 +95,7 @@ export interface Services {
   ghostRunnerService: GhostRunnerService;
   bountyService: BountyService;
   accountService: AccountService;
+  attestationService: AttestationService;
   enhancedRunControls: EnhancedRunControls;
   gamefiUI: GameFiUI;
   haptics: HapticsService;
@@ -141,6 +143,7 @@ export function createServices(): Services {
   const ghostRunnerService = GhostRunnerService.getInstance();
   const bountyService = BountyService.getInstance();
   const accountService = AccountService.getInstance();
+  const attestationService = AttestationService.getInstance();
   const enhancedRunControls = new EnhancedRunControls();
   const gamefiUI = GameFiUI.getInstance();
   const haptics = HapticsService.getInstance();
@@ -181,6 +184,7 @@ export function createServices(): Services {
     ghostRunnerService,
     bountyService,
     accountService,
+    attestationService,
     enhancedRunControls,
     gamefiUI,
     haptics,

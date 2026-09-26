@@ -21,6 +21,7 @@ export * from './services/achievement-service';
 export * from './services/ai-orchestrator';
 export * from './services/ai-service';
 export * from './services/animation-service';
+export * from './services/attestation-service';
 export * from './services/deferred-claim-service';
 export * from './services/dom-service';
 export * from './services/external-fitness-service';

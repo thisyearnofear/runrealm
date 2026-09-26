@@ -224,6 +224,10 @@ export interface AppEvents extends Web3Events {
   'session:issued': { sessionKey: import('../services/account-service').SessionKey };
   'session:revoked': { sessionKeyId: string };
   'account:showRequested': Record<string, never>;
+  /** Attestation layer (protocol-vision Layer 3): run proofs. */
+  'attestation:created': { attestation: import('../services/attestation-service').Attestation };
+  'attestation:finalized': { attestationId: string };
+  'attestation:mismatch': { territoryId: string; reason: string };
   'session:authorizationDenied': {
     action: import('../services/account-service').GameAction;
     reason: import('../services/account-service').AuthorizationDenial;

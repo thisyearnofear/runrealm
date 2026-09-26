@@ -102,6 +102,12 @@ export class RunRealmApp {
       // never gated on web3 — it is what makes web3 optional.
       await this.services.accountService.initialize();
 
+      // Attestation layer (protocol-vision Layer 3): dual-runs with the
+      // legacy claim flow — signed run summaries alongside every claim,
+      // compared, cut over later. Oracle-quorum when configured, honest
+      // `local` status otherwise.
+      await this.services.attestationService.initialize();
+
       const _tokenDeps = createTokenDependentServices(this.services.config);
       void _tokenDeps;
 
