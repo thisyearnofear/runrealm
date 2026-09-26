@@ -492,7 +492,20 @@ export interface AppEvents extends Web3Events {
   // Ghost runner events
   'ghost:unlocked': { ghost: GhostRunner; reason: string };
   'ghost:deployed': { ghost: GhostRunner; territoryId: string };
-  'ghost:completed': { ghostRun: { ghostId: string; runId: string; completedAt: number } };
+  'ghost:completed': {
+    ghostRun: {
+      ghostId: string;
+      runId: string;
+      completedAt: number;
+      // Full performance record (attestation layer consumes these).
+      territoryId?: string;
+      duration?: number;
+      distance?: number;
+      pace?: number;
+      activityPointsEarned?: number;
+      result?: 'completed' | 'failed';
+    };
+  };
   'ghost:upgraded': { ghost: GhostRunner };
   'ghost:unlockAvailable': { message: string; types: string[] };
   // Encrypted-bounty escrow (Phase A settles off-chain; spec in

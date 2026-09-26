@@ -52,6 +52,38 @@ export interface RunSummary {
   endedAt: number;
 }
 
+/**
+ * A ghost's defense performance, territory-bound (the territory id is
+ * already the location — no H3 route needed). Signed history is what
+ * makes cross-ghost rivalries real instead of local fiction.
+ */
+export interface GhostPerformanceSummary {
+  ghostId: string;
+  territoryId: string;
+  distanceMeters: number;
+  durationMs: number;
+  paceBand: number;
+  activityPointsEarned: number;
+  result: 'completed' | 'failed';
+  endedAt: number;
+}
+
+/**
+ * Head-to-head race outcome. Contest outcomes are public (axiom 3), so
+ * this summary carries scores in the clear.
+ */
+export interface RaceSummary {
+  ghostId: string;
+  ghostName: string;
+  territoryId: string;
+  ghostScore: number;
+  userScore: number;
+  winner: 'ghost' | 'user';
+  endedAt: number;
+}
+
+export type AttestationKind = 'run' | 'ghostRun' | 'race';
+
 export interface OracleSignature {
   /** Oracle identifier (URL or key id). */
   oracle: string;
@@ -73,11 +105,23 @@ export type AttestationStatus =
 
 export interface Attestation {
   id: string;
-  summary: RunSummary;
+  /** Missing on pre-ghost-ledger entries: read as 'run'. */
+  kind: AttestationKind;
+  summary: RunSummary | GhostPerformanceSummary | RaceSummary;
   signatures: OracleSignature[];
   status: AttestationStatus;
   createdAt: number;
   disputeWindowEndsAt: number;
+}
+
+/** Aggregated signed ghost history — the cross-ghost rivalry primitive. */
+export interface GhostRecord {
+  ghostId: string;
+  performances: Attestation[];
+  races: Attestation[];
+  wins: number;
+  losses: number;
+  territoriesDefended: number;
 }
 
 /** EIP-712 typed data for a run summary — the quorum signs exactly this. */
@@ -97,6 +141,49 @@ export function runSummaryTypedData(summary: RunSummary, chainId: number) {
         { name: 'durationMs', type: 'uint256' },
         { name: 'paceBand', type: 'uint8' },
         { name: 'h3Cells', type: 'string[]' },
+        { name: 'endedAt', type: 'uint256' },
+      ],
+    },
+    message: summary,
+  };
+}
+
+/**
+ * EIP-712 typed data for ghost performances and race outcomes — same
+ * envelope, different primary type.
+ */
+export function ghostPerformanceTypedData(summary: GhostPerformanceSummary, chainId: number) {
+  return {
+    domain: { name: 'RunRealm Attestation', version: '1', chainId },
+    primaryType: 'GhostPerformance' as const,
+    types: {
+      GhostPerformance: [
+        { name: 'ghostId', type: 'string' },
+        { name: 'territoryId', type: 'string' },
+        { name: 'distanceMeters', type: 'uint256' },
+        { name: 'durationMs', type: 'uint256' },
+        { name: 'paceBand', type: 'uint8' },
+        { name: 'activityPointsEarned', type: 'uint256' },
+        { name: 'result', type: 'string' },
+        { name: 'endedAt', type: 'uint256' },
+      ],
+    },
+    message: summary,
+  };
+}
+
+export function raceOutcomeTypedData(summary: RaceSummary, chainId: number) {
+  return {
+    domain: { name: 'RunRealm Attestation', version: '1', chainId },
+    primaryType: 'RaceOutcome' as const,
+    types: {
+      RaceOutcome: [
+        { name: 'ghostId', type: 'string' },
+        { name: 'ghostName', type: 'string' },
+        { name: 'territoryId', type: 'string' },
+        { name: 'ghostScore', type: 'uint256' },
+        { name: 'userScore', type: 'uint256' },
+        { name: 'winner', type: 'string' },
         { name: 'endedAt', type: 'uint256' },
       ],
     },
@@ -184,6 +271,36 @@ export class AttestationService extends BaseService {
         });
       }
     });
+
+    // Ghost performances and race outcomes are attestations too — a
+    // ghost's signed history is what makes cross-ghost rivalries real
+    // instead of local fiction (H4 second-half prerequisite).
+    this.subscribe('ghost:completed', (data) => {
+      const g = data.ghostRun;
+      if (typeof g.distance !== 'number' || typeof g.duration !== 'number') return;
+      void this.attestGhostRun({
+        ghostId: g.ghostId,
+        territoryId: g.territoryId ?? g.runId,
+        distanceMeters: Math.round(g.distance),
+        durationMs: Math.round(g.duration),
+        paceBand: paceToBand(g.distance, g.duration),
+        activityPointsEarned: g.activityPointsEarned ?? 0,
+        result: g.result ?? 'completed',
+        endedAt: g.completedAt,
+      }).catch((err) => console.warn('AttestationService: ghost attestation failed:', err));
+    });
+
+    this.subscribe('ghost:raceCompleted', (data) => {
+      void this.attestRace({
+        ghostId: data.ghostId,
+        ghostName: data.ghostName,
+        territoryId: data.territoryId,
+        ghostScore: data.ghostScore,
+        userScore: data.userScore,
+        winner: data.winner,
+        endedAt: Date.now(),
+      }).catch((err) => console.warn('AttestationService: race attestation failed:', err));
+    });
   }
 
   /**
@@ -211,6 +328,7 @@ export class AttestationService extends BaseService {
     const now = Date.now();
     const attestation: Attestation = {
       id: `att_${summary.runId}`,
+      kind: 'run',
       summary,
       signatures: [],
       status: this.oracles.length === 0 ? 'local' : 'pending',
@@ -244,6 +362,85 @@ export class AttestationService extends BaseService {
     return id ? (this.attestations.get(id) ?? null) : null;
   }
 
+  /** Attest a ghost's defense performance (signed ghost history). */
+  async attestGhostRun(summary: GhostPerformanceSummary): Promise<Attestation> {
+    return this.commit(`att_ghost_${summary.ghostId}_${summary.endedAt}`, 'ghostRun', summary);
+  }
+
+  /** Attest a head-to-head race outcome (contest outcomes are public). */
+  async attestRace(summary: RaceSummary): Promise<Attestation> {
+    return this.commit(`att_race_${summary.ghostId}_${summary.endedAt}`, 'race', summary);
+  }
+
+  /**
+   * A ghost's aggregated signed history — wins, losses, territories
+   * defended — derived from the attestation ledger rather than local
+   * counters. Third parties can verify every line independently once
+   * the quorum signs; that's the cross-ghost rivalry primitive.
+   */
+  getGhostRecord(ghostId: string): GhostRecord {
+    const performances: Attestation[] = [];
+    const races: Attestation[] = [];
+    const territories = new Set<string>();
+    let wins = 0;
+    let losses = 0;
+    for (const a of this.attestations.values()) {
+      if (a.kind === 'ghostRun') {
+        const s = a.summary as GhostPerformanceSummary;
+        if (s.ghostId !== ghostId) continue;
+        performances.push(a);
+        if (s.result === 'completed') territories.add(s.territoryId);
+      } else if (a.kind === 'race') {
+        const s = a.summary as RaceSummary;
+        if (s.ghostId !== ghostId) continue;
+        races.push(a);
+        if (s.winner === 'ghost') wins++;
+        else losses++;
+      }
+    }
+    return {
+      ghostId,
+      performances,
+      races,
+      wins,
+      losses,
+      territoriesDefended: territories.size,
+    };
+  }
+
+  private async commit(
+    id: string,
+    kind: AttestationKind,
+    summary: GhostPerformanceSummary | RaceSummary
+  ): Promise<Attestation> {
+    const now = Date.now();
+    const attestation: Attestation = {
+      id,
+      kind,
+      summary,
+      signatures: [],
+      status: this.oracles.length === 0 ? 'local' : 'pending',
+      createdAt: now,
+      disputeWindowEndsAt: now + GAME_RULES.contest.disputeHours * 60 * 60 * 1000,
+    };
+    if (this.oracles.length > 0) {
+      const typedData =
+        kind === 'race'
+          ? raceOutcomeTypedData(summary as RaceSummary, 0)
+          : ghostPerformanceTypedData(summary as GhostPerformanceSummary, 0);
+      const results = await Promise.allSettled(this.oracles.map((o) => o.sign(typedData as never)));
+      for (const result of results) {
+        if (result.status === 'fulfilled') attestation.signatures.push(result.value);
+      }
+      if (attestation.signatures.length === 0) attestation.status = 'local';
+    }
+    this.attestations.set(attestation.id, attestation);
+    this.trimStore();
+    await this.save();
+    this.safeEmit('attestation:created', { attestation });
+    return attestation;
+  }
+
   /** Move pending attestations past their dispute window to finalized. */
   sweepFinalizable(now = Date.now()): number {
     let finalized = 0;
@@ -271,7 +468,9 @@ export class AttestationService extends BaseService {
     const ordered = this.getAttestations(); // newest first
     for (const old of ordered.slice(MAX_STORED)) {
       this.attestations.delete(old.id);
-      this.byRunId.delete(old.summary.runId);
+      if (old.kind === 'run') {
+        this.byRunId.delete((old.summary as RunSummary).runId);
+      }
     }
   }
 
@@ -288,9 +487,12 @@ export class AttestationService extends BaseService {
       if (opened.status !== 'ok' && opened.status !== 'fresh') return;
       if (opened.readOnly) this.readOnly = true;
       for (const a of opened.state?.attestations ?? []) {
-        if (a?.id && a.summary?.runId) {
-          this.attestations.set(a.id, a);
-          this.byRunId.set(a.summary.runId, a.id);
+        if (!a?.id || !a.summary) continue;
+        // Pre-ghost-ledger entries predate the kind discriminator.
+        if (!a.kind) a.kind = 'run';
+        this.attestations.set(a.id, a);
+        if (a.kind === 'run' && (a.summary as RunSummary).runId) {
+          this.byRunId.set((a.summary as RunSummary).runId, a.id);
         }
       }
     } catch {

@@ -108,7 +108,7 @@ describe('AttestationService', () => {
     it('attests an eligible run with coarse data only — no raw GPS', async () => {
       const attestation = await service.attestRun(fakeRun());
       expect(attestation).not.toBeNull();
-      const summary = attestation!.summary;
+      const summary = attestation!.summary as import('../attestation-service').RunSummary;
       expect(summary.distanceMeters).toBe(5000);
       expect(summary.paceBand).toBe(1);
       expect(summary.h3Cells.length).toBeGreaterThan(0);
@@ -118,7 +118,8 @@ describe('AttestationService', () => {
 
     it('derives H3 cells from the route', async () => {
       const attestation = await service.attestRun(fakeRun());
-      for (const cell of attestation!.summary.h3Cells) {
+      for (const cell of (attestation!.summary as import('../attestation-service').RunSummary)
+        .h3Cells) {
         expect(typeof cell).toBe('string');
         expect(cell.length).toBeGreaterThan(8);
       }
@@ -126,7 +127,9 @@ describe('AttestationService', () => {
 
     it('handles runs with no points (degenerate route)', async () => {
       const attestation = await service.attestRun(fakeRun({ points: [] }));
-      expect(attestation!.summary.h3Cells).toEqual([]);
+      expect((attestation!.summary as import('../attestation-service').RunSummary).h3Cells).toEqual(
+        []
+      );
     });
   });
 
@@ -179,7 +182,11 @@ describe('AttestationService', () => {
         Date.now() + GAME_RULES.contest.disputeHours * 60 * 60 * 1000 + 1000
       );
       expect(after).toBe(1);
-      expect(withOracle.getAttestationForRun(attestation!.summary.runId)?.status).toBe('finalized');
+      expect(
+        withOracle.getAttestationForRun(
+          (attestation!.summary as import('../attestation-service').RunSummary).runId
+        )?.status
+      ).toBe('finalized');
     });
 
     it('never finalizes local or disputed attestations', async () => {
@@ -230,12 +237,117 @@ describe('AttestationService', () => {
     });
   });
 
+  describe('ghost attestations (signed ghost histories)', () => {
+    const ghostPerf = {
+      ghostId: 'ghost-1',
+      territoryId: 'terr-1',
+      distanceMeters: 3200,
+      durationMs: 16 * 60 * 1000,
+      paceBand: 1,
+      activityPointsEarned: 120,
+      result: 'completed' as const,
+      endedAt: Date.now(),
+    };
+
+    it('attests ghost performances from ghost:completed events', async () => {
+      const bus = EventBus.getInstance();
+      bus.emit('ghost:completed', {
+        ghostRun: {
+          ghostId: 'ghost-1',
+          runId: 'terr-1',
+          completedAt: Date.now(),
+          territoryId: 'terr-1',
+          distance: 3200,
+          duration: 16 * 60 * 1000,
+          activityPointsEarned: 120,
+          result: 'completed',
+        },
+      });
+      await new Promise((r) => setTimeout(r, 10));
+      const record = service.getGhostRecord('ghost-1');
+      expect(record.performances).toHaveLength(1);
+      expect(record.territoriesDefended).toBe(1);
+    });
+
+    it('skips ghost:completed events without performance data (thin payloads)', async () => {
+      const bus = EventBus.getInstance();
+      bus.emit('ghost:completed', {
+        ghostRun: { ghostId: 'ghost-2', runId: 'x', completedAt: Date.now() },
+      });
+      await new Promise((r) => setTimeout(r, 10));
+      expect(service.getGhostRecord('ghost-2').performances).toHaveLength(0);
+    });
+
+    it('attests race outcomes from ghost:raceCompleted events', async () => {
+      const bus = EventBus.getInstance();
+      bus.emit('ghost:raceCompleted', {
+        ghostId: 'ghost-1',
+        ghostName: 'Shadow',
+        territoryId: 'terr-1',
+        ghostScore: 700,
+        userScore: 550,
+        winner: 'ghost',
+      });
+      await new Promise((r) => setTimeout(r, 10));
+      const record = service.getGhostRecord('ghost-1');
+      expect(record.races).toHaveLength(1);
+      expect(record.wins).toBe(1);
+      expect(record.losses).toBe(0);
+    });
+
+    it('aggregates a ghost record across performances and races', async () => {
+      await service.attestGhostRun(ghostPerf);
+      await service.attestGhostRun({
+        ...ghostPerf,
+        territoryId: 'terr-2',
+        endedAt: Date.now() + 1,
+      });
+      await service.attestRace({
+        ghostId: 'ghost-1',
+        ghostName: 'Shadow',
+        territoryId: 'terr-1',
+        ghostScore: 400,
+        userScore: 600,
+        winner: 'user',
+        endedAt: Date.now(),
+      });
+      const record = service.getGhostRecord('ghost-1');
+      expect(record.performances).toHaveLength(2);
+      expect(record.territoriesDefended).toBe(2);
+      expect(record.wins).toBe(0);
+      expect(record.losses).toBe(1);
+    });
+
+    it('produces EIP-712 typed data for ghost kinds', async () => {
+      const { ghostPerformanceTypedData, raceOutcomeTypedData } = await import(
+        '../attestation-service'
+      );
+      expect(ghostPerformanceTypedData(ghostPerf, 0).primaryType).toBe('GhostPerformance');
+      const raceTd = raceOutcomeTypedData(
+        {
+          ghostId: 'g',
+          ghostName: 'S',
+          territoryId: 't',
+          ghostScore: 1,
+          userScore: 2,
+          winner: 'ghost',
+          endedAt: 1,
+        },
+        0
+      );
+      expect(raceTd.primaryType).toBe('RaceOutcome');
+    });
+  });
+
   describe('persistence', () => {
     it('round-trips attestations across instances', async () => {
       const run = fakeRun();
       await service.attestRun(run);
       const fresh = await makeService();
-      expect(fresh.getAttestationForRun(run.id)?.summary.distanceMeters).toBe(5000);
+      expect(
+        (fresh.getAttestationForRun(run.id)?.summary as import('../attestation-service').RunSummary)
+          .distanceMeters
+      ).toBe(5000);
     });
   });
 });
