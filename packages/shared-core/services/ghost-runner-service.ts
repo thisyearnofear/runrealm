@@ -85,6 +85,21 @@ export class GhostRunnerService extends BaseService {
   private setupEventListeners(): void {
     this.subscribe('run:completed', (data) => this.onRunCompleted(data));
     this.subscribe('territory:claimed', () => this.checkGhostUnlocks());
+    // Bounty winnings credit the single local runner (Phase A escrow).
+    this.subscribe('bounty:claimed', (data) => {
+      void this.creditRealm(data.amountRealm, 'bounty_claimed');
+    });
+  }
+
+  /**
+   * Credit off-chain REALM from non-run sources (bounty winnings).
+   * Single-local-user model: any settled bounty pays the runner.
+   */
+  public async creditRealm(amount: number, reason: string): Promise<void> {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    this.userRealmBalance += Math.floor(amount);
+    await this.saveRealmBalance();
+    this.safeEmit('realm:earned', { amount: Math.floor(amount), reason });
   }
 
   private async loadGhosts(): Promise<void> {

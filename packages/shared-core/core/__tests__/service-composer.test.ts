@@ -92,6 +92,7 @@ describe('service-composer', () => {
       'mapService',
       'externalFitnessService',
       'ghostRunnerService',
+      'bountyService',
       'enhancedRunControls',
       'gamefiUI',
       'haptics',

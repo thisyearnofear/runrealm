@@ -45,6 +45,10 @@ export async function initializeGameFi(opts: GameFiBootstrapOptions): Promise<vo
     await services.notificationService.initialize();
     await services.territoryWalkService.initialize();
 
+    // H3 Phase A: off-chain bounty escrow. Loads persisted bounties and
+    // subscribes settle-on-claim; memory-only without storage.
+    await services.bountyService.initialize();
+
     // Phase 6: cross-chain anchor relayer. Degrades to a no-op unless
     // RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS is configured; start() only
     // begins polling when configured (operator/relayer context).

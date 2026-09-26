@@ -9,6 +9,7 @@
  */
 
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
+import { BountyService } from '@runrealm/shared-core/services/bounty-service';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import {
   DashboardData,
@@ -19,6 +20,18 @@ import {
   describeShield,
   type ShieldDescription,
 } from '@runrealm/shared-core/utils/shield-presentation';
+
+/** Bounty badge HTML for a territory, or '' when no bounty is staked. */
+function bountyBadge(territoryId: string | undefined): string {
+  if (!territoryId) return '';
+  try {
+    const bounty = BountyService.getInstance().getBounty(territoryId);
+    if (!bounty) return '';
+    return `<span class="tile-bounty" title="Bounty: ${bounty.amountRealm} $REALM to whoever takes this territory">💰 ${bounty.amountRealm}</span>`;
+  } catch {
+    return '';
+  }
+}
 
 /** Emoji per shield tier — text label always accompanies it (non-color encoding). */
 const SHIELD_TIER_EMOJI: Record<ShieldDescription['tier'], string> = {
@@ -585,6 +598,7 @@ export class UserDashboard {
           <div class="deed-tile-meta">
             <span class="tile-defense ${defenseStatus}" title="${shield.headline}">${SHIELD_TIER_EMOJI[shield.tier]} ${shield.tierLabel} · ${shield.daysOfSafety}d</span>
             <span class="tile-reward">+${estReward} $REALM</span>
+            ${bountyBadge(territory.geohash)}
           </div>
         </div>
 
@@ -611,6 +625,7 @@ export class UserDashboard {
             <div class="territory-meta">
               <span class="rarity-badge ${(territory.rarity || 'common').toLowerCase()}">${territory.rarity || 'Common'}</span>
               <span class="territory-reward">+${territory.estimatedReward || 0} $REALM</span>
+              ${bountyBadge(territory.geohash)}
               <span class="defense-badge ${defenseStatus}" title="${shield.headline}">${SHIELD_TIER_EMOJI[shield.tier]} ${shield.tierLabel}</span>
             </div>
           </div>

@@ -476,6 +476,16 @@ export interface AppEvents extends Web3Events {
   'ghost:completed': { ghostRun: { ghostId: string; runId: string; completedAt: number } };
   'ghost:upgraded': { ghost: GhostRunner };
   'ghost:unlockAvailable': { message: string; types: string[] };
+  // Encrypted-bounty escrow (Phase A settles off-chain; spec in
+  // docs/encrypted-bounties.md, tuning in GAME_RULES.bounty).
+  'bounty:staked': { territoryId: string; staker: string; amountRealm: number };
+  'bounty:withdrawn': { territoryId: string; staker: string; amountRealm: number };
+  'bounty:claimed': {
+    territoryId: string;
+    winner: string;
+    amountRealm: number;
+    burnedRealm: number;
+  };
   // Ghost head-to-head race result (ghost defends a territory vs the
   // owner's recent form). Scores are 0-1000 activity-point scale so the
   // result card reads like the rest of the defense system.

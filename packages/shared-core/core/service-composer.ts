@@ -32,6 +32,7 @@ import { TerritoryToggle } from '../components/territory-toggle';
 import { AIOrchestrator } from '../services/ai-orchestrator';
 import { AIService } from '../services/ai-service';
 import { AnimationService } from '../services/animation-service';
+import { BountyService } from '../services/bounty-service';
 import { ConfidentialTerritoryService } from '../services/confidential-territory-service';
 import { DOMService } from '../services/dom-service';
 import { ExternalFitnessService } from '../services/external-fitness-service';
@@ -92,6 +93,7 @@ export interface Services {
   mapService: MapService;
   externalFitnessService: ExternalFitnessService;
   ghostRunnerService: GhostRunnerService;
+  bountyService: BountyService;
   enhancedRunControls: EnhancedRunControls;
   gamefiUI: GameFiUI;
   haptics: HapticsService;
@@ -138,6 +140,7 @@ export function createServices(): Services {
   const mapService = new MapService();
   const externalFitnessService = new ExternalFitnessService();
   const ghostRunnerService = GhostRunnerService.getInstance();
+  const bountyService = BountyService.getInstance();
   const enhancedRunControls = new EnhancedRunControls();
   const gamefiUI = GameFiUI.getInstance();
   const haptics = HapticsService.getInstance();
@@ -177,6 +180,7 @@ export function createServices(): Services {
     mapService,
     externalFitnessService,
     ghostRunnerService,
+    bountyService,
     enhancedRunControls,
     gamefiUI,
     haptics,
