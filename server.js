@@ -76,6 +76,20 @@ app.get('/api/tokens', (req, res) => {
 
 // Scoped Reactor token broker for the Orbis challenge slice. The browser gets
 // only the returned short-lived JWT; REACTOR_API_KEY stays on this server.
+// Attestation oracle (protocol-vision Layer 3): signs EIP-712 run
+// summaries for the client quorum. Mounted only when the oracle key is
+// configured — without it the client honestly reports `local` mode.
+if (process.env.RUNREALM_ORACLE_PRIVATE_KEY) {
+  const { createAttestationOracleHandler } = require('./server/attestation-oracle');
+  app.post(
+    '/attestations/sign',
+    createAttestationOracleHandler({ privateKey: process.env.RUNREALM_ORACLE_PRIVATE_KEY })
+  );
+  console.log('Attestation oracle: /attestations/sign mounted');
+} else {
+  console.log('Attestation oracle: RUNREALM_ORACLE_PRIVATE_KEY not set — disabled');
+}
+
 app.get('/api/reactor/token', async (req, res) => {
   const apiKey = process.env.REACTOR_API_KEY;
   if (!apiKey) {
