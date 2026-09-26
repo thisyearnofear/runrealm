@@ -15,8 +15,8 @@ RunRealm is a **cross-chain fitness GameFi platform** that:
 ## ✅ Prerequisites Check
 
 You have:
-- ✅ Node.js v22.18.0 (required: 16+)
-- ✅ npm 10.9.3
+- ✅ Node.js 20 (matches CI; 20.x required)
+- ✅ npm 10+
 
 You'll need:
 - API keys (we'll set these up together)
@@ -117,8 +117,12 @@ npm run dev
 ```
 
 This will:
-- Start the web app on `http://localhost:8080` (or check terminal output)
-- Start the backend server on `http://localhost:3000`
+- Start the web app (Next.js dev server, default `http://localhost:3000` — check terminal output)
+- Start the backend server on `http://localhost:3000` (`server.js`, `PORT` env)
+
+> Both default to port 3000, so when running together set `PORT=3001` on the
+> backend (e.g. `PORT=3001 npm run dev:backend`) — the same pattern
+> [orbis-live.md](orbis-live.md) uses.
 
 Or run them separately:
 
@@ -132,26 +136,25 @@ npm run dev:web
 
 ### Step 5: Open in Browser
 
-Navigate to: `http://localhost:8080` (or the port shown in terminal)
+Navigate to the web-app URL printed in the terminal (Next.js default `http://localhost:3000`).
 
 ## 📁 Project Structure
 
 ```
 runrealm/
+├── apps/
+│   └── web/                  # Next.js web app (app/, lib/, shell/, styles/)
 ├── packages/
-│   ├── shared-core/        # Core business logic (services, components)
-│   ├── shared-types/       # TypeScript type definitions
-│   ├── shared-utils/       # Utility functions
-│   ├── shared-blockchain/  # Web3 & smart contract services
-│   ├── web-app/            # Web platform UI
-│   └── mobile-app/         # Mobile app (React Native)
-├── contracts/              # Smart contracts (Solidity)
-├── config/                 # Configuration files
-│   ├── build/             # Webpack config
-│   ├── docker/            # Docker setup
-│   └── environment/       # Environment variable templates
-├── server.js              # Express.js backend server
-└── public/                # Built static files (generated)
+│   ├── shared-core/          # Core business logic (services, components)
+│   ├── shared-types/         # TypeScript type definitions
+│   ├── shared-utils/         # Utility functions
+│   ├── shared-blockchain/    # Web3 & smart contract services
+│   └── mobile-app/           # Mobile app (React Native / Expo)
+├── contracts/                # Smart contracts (Solidity)
+├── scripts/                  # Build, sync, deployment scripts
+├── config/environment/       # Environment variable templates
+├── netlify/functions/        # Serverless functions (static-deploy API broker)
+└── server.js                 # Express.js backend server
 ```
 
 ## 🎯 Key Features to Try
@@ -200,32 +203,10 @@ npm run clean            # Remove build artifacts
 
 ## 🐛 Troubleshooting
 
-### "API keys not found"
-- Make sure `.env` file exists in the root directory
-- Check that variable names match exactly (case-sensitive)
-- Restart the server after changing `.env`
-
-### "Port already in use"
-- Change `PORT` in `.env` to a different number (e.g., 3001)
-- Or kill the process using the port:
-  ```bash
-  # Find process
-  lsof -ti:3000
-  # Kill it
-  kill -9 $(lsof -ti:3000)
-  ```
-
-### "Module not found" errors
-- Run `npm install` again
-- Delete `node_modules` and reinstall:
-  ```bash
-  rm -rf node_modules package-lock.json
-  npm install
-  ```
-
-### Build errors
-- Make sure you ran `npm run build:shared` first
-- Check that TypeScript is installed: `npm list typescript`
+- **"API keys not found"** — check `.env` exists in the repo root, variable names match exactly (case-sensitive), and restart the server after editing.
+- **"Port already in use"** — both processes default to 3000; run the backend with `PORT=3001`, or free the port with `kill -9 $(lsof -ti:3000)`.
+- **"Module not found"** — rerun `npm install`; if that fails, `rm -rf node_modules package-lock.json && npm install`.
+- **Build errors** — run `npm run build:shared` first, then check `npm list typescript`.
 
 ## 🔐 Security Notes
 
@@ -243,21 +224,13 @@ npm run clean            # Remove build artifacts
    - Look at `server.js` for backend API endpoints
 
 2. **Read the docs**:
-   - `docs/design-improvement-plan.md` - Canonical Sunprint Atlas design contract
-   - `docs/architecture.md` - System architecture
-   - `docs/features.md` - Feature history and guides
-   - `docs/guides.md` - Implementation details
+    - `docs/architecture.md` - System architecture
+    - `docs/features.md` - Game mechanics
+    - `docs/guides.md` - Implementation details
 
 3. **Try the features**:
-   - Plan a route with AI
-   - Connect a wallet and claim a territory
-   - Import a Strava activity
+    - Plan a route with AI
+    - Connect a wallet and claim a territory
+    - Import a Strava activity
 
-## 🆘 Need Help?
-
-- Check the documentation in `docs/` folder
-- Review error messages in the browser console and terminal
-
-## 🎉 You're Ready!
-
-Once you see the app running in your browser, you're all set! Start exploring and have fun building with RunRealm.
+Once the app loads in your browser, you're set — errors will point at the browser console or terminal.

@@ -1,87 +1,45 @@
 # RunRealm
 
-A cross-chain fitness GameFi platform that transforms your runs into NFT territories. Connect your Strava account, track runs with AI-powered coaching, and claim geospatial territories on ZetaChain.
+A cross-chain fitness GameFi platform: your runs become NFT territories. Connect Strava, track runs with AI coaching, and claim geospatial territories on ZetaChain — with encrypted territory defense on Zama FHEVM.
 
-## 🌟 Key Features
+- **Run-to-territory gameplay** — runs auto-claim H3 territories as NFTs; activity points decay without regular engagement
+- **Ghost Runners** — AI virtual competitors that defend your territories when you can't run
+- **Confidential defense (live on Sepolia)** — encrypted activity-point state; rivals see only a silhouette until they win a contest
+- **Sunprint Atlas** — a living cyanotype-style map; try the wallet-free demo at `/orbis-live`
+- **Collectibles** — animated Sunprint Deed reveals, Atlas Binder showcase, GPS-anchored Realm Relics supply drops
 
-- **Strava Integration**: Import runs and claim them as NFT territories
-- **AI-Powered Coaching**: Smart route suggestions and personalized training with Google Gemini
-- **Ghost Runners**: AI-generated virtual competitors that defend your territories when you can't run
-- **Territory Defense**: Activity point system keeps territories secure through regular engagement
-- **Cross-Chain GameFi**: Territory claiming and REALM token rewards on ZetaChain
-- **Dual Platform**: Web app for analysis & management, mobile app for performance & play
-- **Geospatial NFTs & Collectible Deeds**: Own and trade location-based territories. Capturing ground unveils high-dopamine animated "Sunprint Deeds" with rarity wax seals (Legendary gold, Epic amethyst, Rare sapphire, Common verdigris) and one-tap social sharing.
-- **Atlas Binder Showcase**: Interactive collectible showcase mode in the User Dashboard presenting owned territories as tactile 3D deed tiles with daily yields and defense status.
-- **Dynamic Realm Relics & GPS Supply Drops**: Timed GPS-anchored loot crates spawn at landmarks within running radius with proximity radar pulses, rewarding runners with $REALM tokens and defensive shields.
-- **Eyes-Free Sensory Engine**: Auditory & haptic feedback for runners keeping phones in pockets (1km pacing buzz, territory boundary alerts, rival encounter signals).
-- **Run First, Mint Later**: Frictionless guest runs with deferred offline deed queuing, eliminating pre-run wallet friction.
-- **Sunprint Atlas Experience**: Runs expose a living cyanotype-inspired atlas; routes trace it, claims develop H3 territory, and Orbis supplies reactive atmosphere without becoming the game-state source of truth. Experience the wallet-free **Orbis Live** challenge slice at `/orbis-live` — see [docs/orbis-live.md](docs/orbis-live.md).
-- **Confidential Defence (live on Sepolia)**: Encrypted `euint32` activity-point state on the Zama Protocol FHEVM (Ethereum Sepolia testnet). Territory owners decrypt their own defense score; rivals see only a dimmed silhouette until they win an encrypted contest. The full integration is in [docs/roadmap.md](docs/roadmap.md) and [docs/architecture.md](docs/architecture.md).
+## Quick start
 
-## 🚀 Quick Start
+Requires Node.js 20.
 
-### Prerequisites
-- Node.js 16+
-- npm or yarn
-
-### Installation
 ```bash
 git clone https://github.com/thisyearnofear/runrealm.git
 cd runrealm
 npm install
-cp .env.example .env
-# Edit .env with your API keys (Mapbox, Google Gemini)
+npm run setup:env   # copies config/environment/config.env.example -> .env; add your API keys
+npm run build:shared
+npm run dev         # web app (Next.js) + backend (server.js)
 ```
 
-### Development
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production (shared packages + web app)
-npm run test         # Run tests
-npm run sync:rules   # Regenerate RealmRules.sol + ConfidentialRules.sol from game-rules.ts
-npm run sync:check   # CI hook: exit 1 if generated .sol siblings are out of sync
-```
+Useful commands: `npm run build`, `npm test`, `npm run sync:rules` (regenerate Solidity rule mirrors from `game-rules.ts`), `npm run sync:check` (CI drift gate).
 
-## 📚 Documentation
+## Docs
 
-- [Introduction](docs/introduction.md) - Current setup and development guide.
-- [Sunprint Atlas](docs/design-improvement-plan.md) - **Canonical visual, motion, map, and Orbis direction.**
-- [Orbis Live](docs/orbis-live.md) - Wallet-free real-time Orbis challenge slice: setup, token broker, and demo loop.
-- [Architecture](docs/architecture.md) - System architecture, platform design, and smart contracts.
-- [Features](docs/features.md) - Detailed look at key features like Ghost Runners and the User Dashboard.
-- [Guides](docs/guides.md) - Implementation guides, mobile development, and testing strategies.
-- [Roadmap](docs/roadmap.md) - The 9-phase consolidation → Zama fhEVM integration plan (Phases 1-5 shipped; 6-9 in flight).
-- [Mobile UX](MOBILE_UX.md) - Mobile experience enhancement (widget redirect to dashboard, responsive layouts).
+| Doc | What it covers |
+| --- | --- |
+| [Introduction](docs/introduction.md) | Full local setup, env keys, troubleshooting |
+| [Architecture](docs/architecture.md) | System design, contracts, game rules, events |
+| [Features](docs/features.md) | Game mechanics: ghosts, defense, collectibles |
+| [Guides](docs/guides.md) | Dashboard, game-rule editing, sync workflow |
+| [Roadmap](docs/roadmap.md) | Build phases and project status |
+| [Sunprint Atlas](docs/design-improvement-plan.md) | Canonical visual/map/motion direction |
+| [Orbis Live](docs/orbis-live.md) | Wallet-free live demo slice (`/orbis-live`) |
+| [Zama Builder Track](docs/zama-builder-track.md) | FHE submission: demo flow, deploys, pitch assets |
 
-## 🚧 Project Status (July 2026)
+## Status
 
-- ✅ **Phase 1 — Consolidation audit** complete. Removed duplicate geohash helpers, deprecated methods, and TODO comments. Quarantined legacy widget stubs into `internal/_legacy-widget/`. Hoisted `(window as any).RunRealm?.services` lookups onto `BaseService.getSiblingService` / `BaseService.getWalletSnapshot`. Production-only `setInterval` simulator pulled out of `CrossChainService` into `__stubs__/zeta-mock.ts` with a `NODE_ENV === 'production'` throw.
-- ✅ **Phase 2 — DRY foundation** complete. `packages/shared-core/config/game-rules.ts` is now the single source of truth for activity / rewards / territory / H3 constants. `scripts/build/sync-game-rules.mjs` regenerates `contracts/generated/RealmRules.sol` and `contracts/zama/generated/ConfidentialRules.sol` from the TS source — `npm run sync:check` is wired into CI to fail builds on drift. `RealmToken.sol` and `reward-system-ui.ts` consume the canonical source. `GameLogic.sol` keeps its inline constants under a `// MIRROR of RealmRules` docblock (a real import would shift the IPFS metadata hash on the bytecode-frozen ZetaChain Athens deploy).
-- ✅ **Phase 3 — Zeta Honesty Pass** complete. Three coupled changes: (a) the additive `contracts/boost/RunRealmBoostV1.sol` is a parallel deployment that owns the `boostTerritoryActivity` selector (per-address per-tokenId per-UTC-day rate limit; REALM burned to `0x...dEaD`; `TerritoryBoosted` event) without touching the frozen `RunRealmUniversal`; (b) `claimTerritory` is now gated on a real `TerritoryMintReceipt` (`status === 1` + parsed `tokenId`); (c) the `chainSupportsZama(chainId)` + `encryptedShieldEnabled` toggle lives in a new `ZamaSupportService` keyed off `GAME_RULES.zama.supportedChainIds` (Sepolia 11155111, the public Zama FHEVM testnet). Also caught a Phase 2 latent sync-script bug: the previous `emitConfidentialRules` had a duplicated `library` block in its template literal — both `.sol` siblings now have exactly one library declaration each.
-- ✅ **Phases 4–5 — Zama FHEVM live** complete. `ConfidentialTerritoryDefense.sol` now uses real `euint32` ciphertexts (`@fhevm/solidity`); the mock `Mocks.sol` shim is deleted; 18 Hardhat tests exercise the FHE flow via `@fhevm/hardhat-plugin`; `zama-relayer.ts` wraps the live `@zama-fhe/relayer-sdk` for encrypt + user-decrypt + public-decrypt; the React shell adds `EncryptedShield`, `ConfidentialDefensePanel`, `FogOfWarMap`, `ContestModal`, and `useConfidentialShield`. Deployed on Ethereum Sepolia at `0x243D95fE43777533aC3E81b5fB8251A282b17E3A`; set `RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS` to this address to bind the UI. The Phase 3 additive boost contract `RunRealmBoostV1` is deployed on ZetaChain Athens at the same address `0x243D95fE43777533aC3E81b5fB8251A282b17E3A`; set `RUNREALM_BOOST_ADDRESS` to enable on-chain boosts.
-- 🟡 **Phase 6+** — see [docs/roadmap.md](docs/roadmap.md) for the cross-chain anchor, performance polish, and gameplay fun-factor work.
-- ✅ **Core loop repair (Aug 2026)** — six game-logic bugs fixed end-to-end: completed runs now auto-create + auto-claim territories (`run:completed` handler was dead code); `shouldDeactivateTerritory` keys off a new `Territory.lastActivity` field so actively defended territories never permanently expire; `claimTimeBasedRewards(uint256)` exposes direct time-based reward claiming without the cross-chain `onCall` indirection; the mint pre-check TOCTOU was collapsed into gas estimation; `RealmToken.distributeRunningReward` difficulty bonus now matches `GameLogic.calculateTerritoryReward`. **Requires the next contract deploy cycle** (struct field + new methods).
-- ✅ **Player experience loop (Aug 2026)** — the map is now the game surface: owned territories render color-coded by defense status (strong/moderate/vulnerable/claimable) with red pulse on vulnerable cells; claims play an in-flight map reveal instead of a pending modal; new `NotificationService` surfaces decay/race/walk events as OS notifications (service worker `push` + `notificationclick` handlers, one-time permission prompt on first claim); ghost deployments resolve head-to-head race results with a shareable result card; and **Territory Walk** verifies GPS presence at an owned territory for a daily +150 defense-point boost.
-- ✅ **Phase 6 — Cross-chain anchor (Aug 2026)** — `contracts/zama/CrossChainAnchor.sol` bridges ZetaChain territory ownership into the Zama encrypted defense layer: a relayer-gated Sepolia contract (per-log replay protection, batch catch-up) forwards observed ZetaChain `TerritoryCreated` logs to `anchorFromZeta(tokenId, owner)`, with an off-chain polling service (`cross-chain-anchor-service.ts`) and deploy script. The two chains now visibly work together.
-- ✅ **Contract test suite repaired (Aug 2026)** — the `RunRealmUniversal` Hardhat suite (32 tests) was stale against the current contract surface (proxy-era fixture, missing mocks, wrong constructor/role APIs) and is now green, which surfaced and fixed three real contract bugs: `mintTerritory` never emitted `TerritoryCreated` (breaking on-chain tokenId resolution for the claim flow), territory arrays were double-pushed on mint, and `territoriesOwned` was double-counted. `_distributeRewards` now surfaces any token-transfer failure as the typed `InsufficientRewards` error. Full suite: 61 passing, 0 failing.
-- ✅ **Launch hardening (Sep 2026)** — `game-rules.ts` v1.1.0: inactivity timeout derived and unified at 40 days (`(500−100)/10`) across TS, `RealmRules.sol`, and `GameLogic.sol` (takes effect on next deploy); ghost economy centralized with difficulty cap 85, score cap 850, level-bonus cap +120, and rubber-banding (−80 help / +50 heat); steal/contest spec formalized (`steal<100` + run proof, 500-pt start, 7-day reclaim shield, 24h dispute) with `canSteal()` guard; staking UI fixed to on-chain 10% APY (correct daily/monthly preview math); runner-first metadata, Sunprint theme tokens in manifest/viewport, and accessible viewport scaling; `sync-game-rules.mjs` restored with `sync:check` CI gate (Node 20, fixed `web` workspace name).
-- ✅ **Gamification & Collectibles Upgrade (Sep 2026)** — integrated lessons from location-based collectibles (inspired by GoCollect): animated "Sunprint Deed" claim reveal modal with chemical wash exposure and rarity wax seals; Atlas Binder showcase in the User Dashboard with tactile 3D deed tiles; dynamic "Realm Relics" landmark supply drops with proximity radar pulses; eyes-free sensory engine for phone-in-pocket running; and "Run First, Mint Later" deferred guest onboarding.
+Actively developed; see [Roadmap](docs/roadmap.md) for phase status. Deployed: `ConfidentialTerritoryDefense` on Ethereum Sepolia, `RunRealmBoostV1` on ZetaChain Athens (addresses in [Introduction](docs/introduction.md)).
 
-## 🏗️ Architecture
+## Contributing
 
-RunRealm uses a monorepo structure with shared core packages:
-
-```
-packages/
-├── shared-core/         # Domain logic and business rules
-├── shared-types/        # TypeScript interfaces
-├── shared-utils/        # Common utilities
-├── shared-blockchain/   # Web3 and contract services
-├── web-app/            # Web platform (analysis & manage)
-├── mobile-app/         # Mobile platform (performance & play)
-└── api-gateway/        # Backend services
-```
-
-## 🤝 Contributing
-
-See [architecture.md](docs/architecture.md) for detailed contribution guidelines.
+PRs welcome. Read [Architecture](docs/architecture.md) for the design and [Guides](docs/guides.md) for the `game-rules.ts` → Solidity sync workflow (`npm run sync:check` must pass). `LICENSE` applies.

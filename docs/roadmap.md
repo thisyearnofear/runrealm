@@ -13,31 +13,32 @@ the deployed public chain.
 
 | # | Phase | Status | Headline outcome |
 |---|---|---|---|
-| 1 | Consolidation audit | ✅ Complete | `BaseService.getSiblingService` / `getWalletSnapshot`; legacy stubs quarantined; production `setInterval` simulator fenced. |
-| 2 | DRY foundation | ✅ Complete | `game-rules.ts` regenerates `RealmRules.sol` + `ConfidentialRules.sol`; `RealmToken.sol` and `reward-system-ui.ts` consume the canonical source. |
-| 3 | ZetaChain honesty pass | ✅ Complete (Jul 2026) | Additive `RunRealmBoostV1` contract; `claimTerritory` is receipt-gated on `status === 1` + parsed `tokenId`; `chainSupportsZama(chainId)` + `encryptedShieldEnabled` toggle; `boostCostRealmWei` precomputed bigint; Phase 2 latent sync-script bug fixed. |
-| 4 | Zama scaffolding | ✅ Complete (Jul 2026) | `contracts/zama/ConfidentialTerritoryDefense.sol` rewritten with real `euint32` FHE (`@fhevm/solidity`); `IConfidentialTerritory` interface; 18 Hardhat tests via `@fhevm/hardhat-plugin` mock coprocessor; Sepolia deploy script. Mock `Mocks.sol` removed. |
-| 5 | Live Zama UX | ✅ Complete | `EncryptedShield`, `ConfidentialDefensePanel`, `FogOfWarMap`, `ContestModal`, `useConfidentialShield`; wired into `AppShell`; real `@zama-fhe/relayer-sdk` encrypt / user-decrypt / public-decrypt. |
-| 6 | Cross-chain anchor | ✅ Complete (Aug 2026) | `contracts/zama/CrossChainAnchor.sol` (Sepolia): RELAYER_ROLE-gated forwarder with per-log replay protection → `ConfidentialTerritoryDefense.anchorFromZeta(tokenId, owner)`. Off-chain relayer (`cross-chain-anchor-service.ts`) polls ZetaChain `TerritoryCreated` logs and calls `anchor()`. Deploy script + 11 Hardhat tests. |
-| 7 | Performance & polish | 🟡 Planned | Encrypted-decay cadence animation; relayer SDK connection pooling; per-territory ciphertext cache (TTL 30 min). |
-| 8 | Tests & CI | 🟡 Partial (Sep 2026) | `sync:check` drift gate added to `ci.yml` (Node 20, `web` workspace name fixed); `sync-game-rules.mjs` restored; jest suites for `versioned-store` (envelope/migration/future-read-only) and `offline-catchup` (exact crossings, reanchor). Still pending: unit tests for `ConfidentialTerritoryService`, `canSteal()`, and ghost rubber-banding. |
-| 9 | Gameplay fun-factor | 🟡 Partial (Sep 2026) | Done: ghost difficulty cap 85, score cap 850, level-bonus cap +120, rubber-banding, boost rate-limit (one per territory per day), steal/contest spec with reclaim shield. Still planned: encrypted bounty contests; cipher ghost race; shield-metaphor UI. |
-| 10 | Core loop repair | ✅ Complete (Aug 2026) | Six game-logic bugs fixed: `run:completed` auto-claim wiring; `Territory.lastActivity` drives deactivation (actively defended territories never expire); direct `claimTimeBasedRewards(uint256)`; mint TOCTOU collapsed into gas estimation; `RealmToken` difficulty bonus aligned with `GameLogic`. Requires next deploy cycle. |
-| 11 | Player experience loop | ✅ Complete (Aug 2026) | Defense-status map layer (color-coded owned territories + vulnerable pulse); one-tap claim reveal animation; `NotificationService` + service-worker push for decay/race/walk events; shareable ghost race result cards; GPS-verified Territory Walk (+150 pts/day). |
-| 12 | Sunprint Atlas foundation | 🟡 Active | Canonical design contract; shared world-state types; `WorldStateService`; `OrbisDirector`; public `ENABLE_ORBIS` flag; renderer-independent prompt grammar. |
-| 13 | Orbis challenge slice | ✅ Complete (Sep 2026) | `/orbis-live` wallet-free route: demo adapter → `WorldStateService` → `OrbisDirector` → Visko Orbis Dynamic live video with procedural world-mirror storyboard fallback; server-side scoped-JWT broker (Express + Netlify); cinematic act titles, threat-reactive ambience, keyboard conductor. |
-| 14 | Realm Atlas renderer | 🟡 Planned | Upgrade MapLibre; custom cyanotype style; deck.gl overlaid H3/route/ghost layers behind feature flags; existing MapLibre layers remain fallback. |
-| 15 | Cross-platform convergence | 🟡 Planned | Expo/React Native upgrade, MapLibre React Native, shared `WorldSnapshot` and Sunprint semantics across web and mobile. |
-| 16 | Launch hardening | ✅ Complete (Sep 2026) | `game-rules.ts` v1.1.0 (40-day timeout unified, ghost/economy/contest tables centralized); staking APY honesty fix; runner-first metadata + Sunprint manifest/viewport + accessible scaling; `RunRealmApp.getServices()` reduces `window.RunRealm` reliance in bootstrap; CI repaired. |
+| 1 | Consolidation audit | ✅ Complete | `BaseService.getSiblingService` / `getWalletSnapshot`; legacy stubs quarantined; production simulator fenced. |
+| 2 | DRY foundation | ✅ Complete | `game-rules.ts` regenerates `RealmRules.sol` + `ConfidentialRules.sol`. |
+| 3 | ZetaChain honesty pass | ✅ Complete (Jul 2026) | Additive `RunRealmBoostV1`; receipt-gated `claimTerritory`; `chainSupportsZama` toggle. |
+| 4 | Zama scaffolding | ✅ Complete (Jul 2026) | Real-`euint32` `ConfidentialTerritoryDefense`; 18 Hardhat tests; Sepolia deploy. |
+| 5 | Live Zama UX | ✅ Complete | Shield HUD, defense panel, fog-of-war map, contest modal, relayer SDK wiring. |
+| 6 | Cross-chain anchor | ✅ Complete (Aug 2026) | `CrossChainAnchor` forwarder + off-chain relayer + 11 tests. |
+| 7 | Performance & polish | 🟡 Planned | Encrypted-decay animation; relayer pooling; ciphertext cache (TTL 30 min). |
+| 8 | Tests & CI | 🟡 Partial (Sep 2026) | `sync:check` in CI; versioned-store + offline-catchup suites. Still pending: `ConfidentialTerritoryService`, `canSteal()`, ghost rubber-banding tests. |
+| 9 | Gameplay fun-factor | 🟡 Partial (Sep 2026) | Done: ghost caps, rubber-banding, boost rate-limit, steal spec. Still planned: encrypted bounty contests; cipher ghost race; shield-metaphor UI. |
+| 10 | Core loop repair | ✅ Complete (Aug 2026) | Auto-claim on `run:completed`; `lastActivityUpdate`-driven deactivation; direct `claimTimeBasedRewards`. Requires next deploy cycle. |
+| 11 | Player experience loop | ✅ Complete (Aug 2026) | Defense-status map layer; claim reveal; `NotificationService`; ghost race cards; Territory Walk (+150 pts/day). |
+| 12 | Sunprint Atlas foundation | 🟡 Active | Design contract; `WorldStateService`; `OrbisDirector`; `ENABLE_ORBIS` flag. |
+| 13 | Orbis challenge slice | ✅ Complete (Sep 2026) | `/orbis-live` wallet-free route with storyboard fallback; scoped-JWT broker. |
+| 14 | Realm Atlas renderer | 🟡 Planned | MapLibre upgrade; cyanotype style; deck.gl H3/route/ghost layers behind flags. |
+| 15 | Cross-platform convergence | 🟡 Planned | Expo upgrade; MapLibre React Native; shared `WorldSnapshot` semantics. |
+| 16 | Launch hardening | ✅ Complete (Sep 2026) | `game-rules.ts` v1.1.0; staking APY fix; metadata/manifest hardening; CI repaired. |
+
+Details for completed phases live in git history (`git log --grep='phase\|feat(' --oneline`). Active and planned phases are tracked below.
 
 ## Why this order
 
-The two tracks are not independent. Phase 1 is the precondition for *any* new
-work: the consolidation pass pays back duplicated code paths so that later
-phases can extend rather than copy. Phase 2 is the precondition for the Zama
-track specifically: a single TS source of truth for game-rule constants is
-what makes the on-chain Zama sibling (which will live or die by its
-constants) tractable. Phases 3 and 4 are deliberately *parallel-shaped* — both
+Phase 1 is the precondition for *any* new work: the consolidation pass pays
+back duplicated code paths so that later phases can extend rather than copy.
+Phase 2 is the precondition for the Zama track specifically: a single TS
+source of truth for game-rule constants is what makes the on-chain Zama
+sibling tractable. Phases 3 and 4 are deliberately *parallel-shaped* — both
 add a single on-chain method (boost / encrypted decay) and wire one consumer
 on each side. Phases 5 and 6 are the user-visible payoff; 7 and 8 are the
 runtime-readiness tax; 9 is the fun polish.
@@ -77,7 +78,7 @@ only see a glowing silhouette on the map until they win a contest.
 | `scripts/build/sync-game-rules.mjs` | Regenerates the two Solidity siblings; supports `--check` for CI. | 2 |
 | `contracts/generated/RealmRules.sol` | Solidity mirror for ZetaChain (`uint256`). | 2 |
 | `contracts/zama/generated/ConfidentialRules.sol` | Solidity mirror for Zama fhEVM (`euint32`/`uint64`). | 2 |
-| `contracts/RealmToken.sol` | Consumes `RealmRules`; will host the on-chain `boostTerritory` call. | 3 |
+| `contracts/RealmToken.sol` | Consumes `RealmRules` via local public-constant aliases (preserving the public ABI). | 3 |
 | `contracts/boost/RunRealmBoostV1.sol` | New (Phase 3): additive boost contract; per-address per-tokenId per-UTC-day rate limit; burns REALM to `0x...dEaD`; emits `TerritoryBoosted`. Deployed alongside, not replacing, the bytecode-frozen `RunRealmUniversal`. | 3 |
 | `contracts/libraries/GameLogic.sol` | Frozen deploy; constants mirrored with explicit `// MIRROR of RealmRules` docblock. | 2 |
 | `packages/shared-blockchain/services/zama-support.ts` | New (Phase 3): `ZamaSupportService` exposes `chainSupportsZama(chainId)` and `getEncryptedShieldState(chainId)`; emits `web3:zamaUnsupported` for UI listeners. | 3 |
@@ -92,12 +93,23 @@ only see a glowing silhouette on the map until they win a contest.
 | `packages/shared-core/services/territory-walk-service.ts` | New (Phase 11): GPS-verified visits to owned territories (≤150m, ≤50m accuracy); +150 defense points, one reward per territory per day. | 11 |
 | `packages/shared-core/services/map-service.ts` | Phase 11 additions: `renderOwnedTerritories` defense-status layer, `playClaimReveal` one-tap claim animation, `DEFENSE_STATUS_COLORS`. | 11 |
 | `apps/web/src/shell/components/ghost-race-result.ts` | New (Phase 11): shareable ghost head-to-head result card (Web Share API → clipboard fallback). | 11 |
-| `packages/web-app/src/components/react/EncryptedShield.tsx` | New: HUD shield badge; status: ready / busy / unsupported / error. | 5 |
-| `packages/web-app/src/components/react/ConfidentialDefensePanel.tsx` | New: inspector card for encrypted defense + boost presets. | 5 |
-| `packages/web-app/src/components/react/FogOfWarMap.tsx` | New: map overlay that dims non-anchored territories when shield is active. | 5 |
-| `packages/web-app/src/components/react/ContestModal.tsx` | New: encrypted-bounty contest flow. | 5 |
-| `packages/web-app/src/components/react/useConfidentialShield.ts` | New: hook that mirrors the confidential service state into React. | 5 |
-| `packages/web-app/src/components/react/AppShell.tsx` | Wires shield, panel, modal, and fog overlay into the React shell. | 5 |
+| `apps/web/src/shell/components/confidential-shield-widget.ts` | Shield widget: Read Defense, Boost, Contest flows, gated to Sepolia. | 5 |
+| `apps/web/src/shell/components/confidential-shield-reveal.ts` | Lazy-loaded decrypt/transaction reveal animation. | 5 |
+
+## Future horizons (proposed, Sep 2026)
+
+Sequenced product/design/game follow-ups. Not yet scheduled; promote into
+numbered phases when picked up.
+
+| # | Horizon | Why now |
+|---|---|---|
+| H1 | Shield legibility | Translate 0–1000 points into fiction: named integrity tiers, days-of-safety, *overexposure* copy. First slice: `shield-presentation.ts` (pure tier/copy model off `GAME_RULES`); UI wiring follows. |
+| H2 | Off-palette color audit | Enforce Sunprint tokens (`design-tokens.css`) across all components; every off-palette screen undermines the identity. |
+| H3 | Encrypted bounties | Defender-staked REALM bounties raise attacker reward — the risk/reward tension that makes territory games sticky, and the gameplay payoff for the FHE layer. Outranks cipher ghost races. |
+| H4 | Ghost identity & rivalry | Named ghosts, persistent win/loss records against specific rival ghosts, surfaced rivalries. Players defend against characters, not difficulty numbers. |
+| H5 | Pocket-mode surface | Pre-run eyes-free toggle with 10-second onboarding for the sensory engine; a marketable differentiator. |
+| H6 | Notification digest philosophy | Default to the daily digest; escalate only imminent-loss ("you will lose X in 48h") to immediate push. Per-territory push trains users to opt out. |
+| H7 | Non-color status encoding | Defense status needs pattern/icon/label encoding alongside color (colorblind runners); audit deed/claim-reveal animations against `prefers-reduced-motion`. |
 
 ## What we are NOT doing
 

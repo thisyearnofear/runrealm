@@ -70,16 +70,18 @@ authoritative geometry        generated atmosphere
 ```
 RunRealm/
 ├── apps/
-│   └── web/                  # Next.js App Router web app (shell/, lib/)
+│   └── web/                  # Next.js App Router web app (app/, lib/, shell/, styles/)
 ├── packages/
 │   ├── shared-core/          # Domain models, business logic, services
 │   ├── shared-types/         # TypeScript interfaces
 │   ├── shared-utils/         # Shared utilities
 │   ├── shared-blockchain/    # Web3 services, contract bindings, zama-support
 │   └── mobile-app/           # React Native mobile app
-├── contracts/                # Smart contracts (zama/, boost/, crosschain/)
+├── contracts/                # Smart contracts (generated/, boost/, zama/, libraries/)
 ├── scripts/                  # Build, sync, deployment scripts
-└── docs/                     # Architecture, features, submission guide
+├── server.js                 # Express backend (dev token broker, webhooks)
+├── netlify/functions/        # Serverless equivalents for the static deploy
+└── docs/                     # Architecture, features, guides, roadmap
 ```
 
 ### Architecture Layers
@@ -102,7 +104,7 @@ RunRealm/
 
 #### 2. Platform-Specific Presentation Layers
 
-**Web Presentation Layer** (`packages/web-app/`)
+**Web Presentation Layer** (`apps/web/`)
 - `MainUI`: Analysis & Management interface
 - `TerritoryDashboard`: Territory management and trading interface
 - `AnalyticsDashboard`: Deep performance analysis tools
@@ -248,7 +250,8 @@ any external consumer that hasn't migrated to the new shape.
 **Activity Staking Model**:
 Territories use an activity point system to maintain ownership. Points decay over time, requiring ongoing engagement.
 
-**Territory State**:
+**Territory State** (off-chain `Territory`; deactivation keys off
+`lastActivityUpdate`, so actively defended territories never expire):
 ```solidity
 struct Territory {
     uint256 tokenId;
@@ -318,12 +321,8 @@ struct GhostRunner {
 - Ghost runs worth 50% of real run value for activity points
 
 **Earning Ghosts** (Achievement-Based):
-- Complete onboarding → Basic All-Rounder Ghost
-- First 10 runs → Unlock ghost type of choice
-- Claim 5 territories → Bonus ghost
-- Share on social → Random ghost (lottery)
-- Refer friend (5 runs) → Premium ghost
-- Custom ghost mint: 1000 $REALM
+- First run → All-Rounder Ghost
+- 10 runs → Specialist ghost of choice (Sprinter, Endurance, or Hill Climber)
 
 **Oracle Integration**:
 - Multi-signature validation (2-of-3) for run proofs
@@ -343,11 +342,13 @@ Web Territory Management → Shared TerritoryService → Mobile Notifications
 ### Zama fhEVM Confidential Layer
 
 RunRealm's public ZetaChain state exposes territory ownership and REALM
-accounting, but the *defense score* (`activityPoints`, 0–1000) is now
-held in ciphertext on the Zama Protocol FHEVM host chain (Ethereum
-Sepolia testnet). Phases 4 and 5 built this layer; Phase 6 will add the
-cross-chain anchor that seeds Zama state from ZetaChain `TerritoryCreated`
-events automatically.
+accounting, but the *defense score* (`activityPoints`, 0–1000) is held
+in ciphertext on the Zama Protocol FHEVM host chain (Ethereum Sepolia
+testnet). A `CrossChainAnchor` contract on Sepolia seeds Zama state from
+observed ZetaChain `TerritoryCreated` logs (relayer-gated, per-log replay
+protection); see [roadmap.md](roadmap.md) (Phase 6) for the bridge design
+and [zama-builder-track.md](zama-builder-track.md) for the contract API,
+deploy state, and demo flow.
 
 - **ZetaChain** keeps the public GameFi surface: territory NFT ownership,
   REALM token accounting, cross-chain messaging, public leaderboards,
@@ -370,11 +371,10 @@ The contract is deployed on Ethereum Sepolia at
 address after a redeploy) so `ConfidentialContractService` binds to the
 live contract.
 
-A new `CrossChainAnchor` contract (phase 6) will read ZetaChain
-`TerritoryCreated` events and call
+A `CrossChainAnchor` contract reads ZetaChain
+`TerritoryCreated` events and calls
 `ConfidentialTerritoryDefense.anchorFromZeta(tokenId, owner)` to seed
-the encrypted state. Until then, territories can be anchored manually or
-via a future script. From there, defense and contest operations live
+the encrypted state. After that, defense and contest operations live
 entirely on Zama; the public ZetaChain state only knows that the
 territory is owned by `X`, not what `X`'s defense score is.
 
