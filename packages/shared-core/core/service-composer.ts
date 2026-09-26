@@ -28,6 +28,7 @@ import { GameFiUI } from '../components/gamefi-ui';
 import { RouteInfoPanel } from '../components/route-info-panel';
 import { RunProgressFeedback } from '../components/run-progress-feedback';
 import { TerritoryToggle } from '../components/territory-toggle';
+import { AccountService } from '../services/account-service';
 import { AIOrchestrator } from '../services/ai-orchestrator';
 import { AIService } from '../services/ai-service';
 import { AnimationService } from '../services/animation-service';
@@ -92,6 +93,7 @@ export interface Services {
   externalFitnessService: ExternalFitnessService;
   ghostRunnerService: GhostRunnerService;
   bountyService: BountyService;
+  accountService: AccountService;
   enhancedRunControls: EnhancedRunControls;
   gamefiUI: GameFiUI;
   haptics: HapticsService;
@@ -138,6 +140,7 @@ export function createServices(): Services {
   const externalFitnessService = new ExternalFitnessService();
   const ghostRunnerService = GhostRunnerService.getInstance();
   const bountyService = BountyService.getInstance();
+  const accountService = AccountService.getInstance();
   const enhancedRunControls = new EnhancedRunControls();
   const gamefiUI = GameFiUI.getInstance();
   const haptics = HapticsService.getInstance();
@@ -177,6 +180,7 @@ export function createServices(): Services {
     externalFitnessService,
     ghostRunnerService,
     bountyService,
+    accountService,
     enhancedRunControls,
     gamefiUI,
     haptics,

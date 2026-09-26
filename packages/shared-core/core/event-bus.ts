@@ -215,6 +215,18 @@ export interface AppEvents extends Web3Events {
   'run:cleared': { runId: string };
   'run:loaded': { run: any };
   'territory:toggleVisibility': Record<string, never>;
+  /** Accounts layer (protocol-vision Layer 2): identity + session keys. */
+  'account:created': { account: import('../services/account-service').Account };
+  'account:upgraded': {
+    accountId: string;
+    tier: import('../services/account-service').AccountTier;
+  };
+  'session:issued': { sessionKey: import('../services/account-service').SessionKey };
+  'session:revoked': { sessionKeyId: string };
+  'session:authorizationDenied': {
+    action: import('../services/account-service').GameAction;
+    reason: import('../services/account-service').AuthorizationDenial;
+  };
   /** Per-territory disclosure switch (privacy by default, disclosure by choice). */
   'territory:visibilityChanged': { territoryId: string; visibility: 'shielded' | 'public' };
   'route:stateChanged': { routeId: string; routeData: any; isActive: boolean };

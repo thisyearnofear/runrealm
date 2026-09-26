@@ -96,6 +96,12 @@ export class RunRealmApp {
   private async doInitialize(): Promise<void> {
     try {
       await this.services.config.initializeRuntimeTokens();
+
+      // Accounts layer (protocol-vision Layer 2): identity exists before
+      // anything else. Silent walletless guest account on first launch;
+      // never gated on web3 — it is what makes web3 optional.
+      await this.services.accountService.initialize();
+
       const _tokenDeps = createTokenDependentServices(this.services.config);
       void _tokenDeps;
 

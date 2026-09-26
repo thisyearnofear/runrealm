@@ -16,6 +16,7 @@ export * from './core/app-config';
 export * from './core/base-service';
 export * from './core/event-bus';
 export * from './core/run-realm-app';
+export * from './services/account-service';
 export * from './services/achievement-service';
 export * from './services/ai-orchestrator';
 export * from './services/ai-service';
