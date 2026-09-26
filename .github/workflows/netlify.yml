@@ -46,6 +46,7 @@ jobs:
           netlify deploy \
             --prod \
             --site "$NETLIFY_SITE_ID" \
+            --filter @runrealm/web \
             --dir apps/web/dist \
             --functions netlify/functions \
             --message "GitHub Actions deploy ${{ github.sha }}"
@@ -55,9 +56,20 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
           # Give the CDN a moment to propagate, then verify the key routes.
-          sleep 20
-          curl -fsS https://runrealm.netlify.app/ -o /tmp/index.html
-          curl -fsS https://runrealm.netlify.app/orbis-live/ -o /tmp/orbis.html
-          grep -qi 'RunRealm' /tmp/index.html
-          grep -qi 'Orbis' /tmp/orbis.html
+          # Retry because Netlify edge routing can flap briefly after a deploy
+          # or a site rename; the immutable deploy URL is always stable.
+          check() {
+            local url="$1" out="$2" needle="$3"
+            for attempt in 1 2 3 4 5 6; do
+              if curl -fsS "$url" -o "$out" && grep -qi "$needle" "$out"; then
+                echo "OK: $url (attempt $attempt)"
+                return 0
+              fi
+              sleep 10
+            done
+            echo "FAIL: $url did not serve '$needle' after retries" >&2
+            return 1
+          }
+          check "https://runrealm.netlify.app/" /tmp/index.html 'RunRealm'
+          check "https://runrealm.netlify.app/orbis-live/" /tmp/orbis.html 'Orbis'
           echo "smoke test passed"
