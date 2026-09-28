@@ -1,0 +1,106 @@
+# Cloudflare configuration — RunRealm.
+#
+# Two workers, mirroring the process split from Phase 3, plus a Pages project
+# for the static export. Nothing here is required to run the app on Netlify;
+# it is the target configuration for the migration.
+#
+# The reason there are two workers and not one: the attestation oracle holds
+# a quorum signing key. On the old single-process server that key sat in the
+# same environment as an unauthenticated `POST /api/runs` under
+# `Access-Control-Allow-Origin: *`. One env read away from a public write
+# endpoint is not a key you can rotate on its own schedule, and not a key
+# whose blast radius is one service.
+#
+# `runrealm-api`     — public. No signing key is ever set on it.
+# `runrealm-oracle`  — signs. Holds `RUNREALM_ORACLE_PRIVATE_KEY` as a
+#                      secret, and serves no other route.
+#
+# Deploy:
+#   wrangler secret put RUNREALM_ORACLE_PRIVATE_KEY --name runrealm-oracle
+#   wrangler deploy --config wrangler.toml --name runrealm-api
+#   wrangler deploy --config wrangler.toml --name runrealm-oracle
+#
+# The secrets each worker needs, set with `wrangler secret put`:
+#   runrealm-api     MAPBOX_ACCESS_TOKEN, GOOGLE_GEMINI_API_KEY,
+#                    STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, REACTOR_API_KEY
+#   runrealm-oracle  RUNREALM_ORACLE_PRIVATE_KEY
+#
+# `RUNREALM_LEDGER_PATH` is deliberately absent from the oracle's vars. A
+# container filesystem is not durable, so persisting there loses the board on
+# every deploy; leave it unset and the ledger stays in memory, or point it at
+# a mounted volume with a persistence-compatible configuration.
+
+name = "runrealm-api"
+main = "server.js"
+compatibility_date = "2026-09-01"
+
+# Node APIs the server uses that worklets do not provide: express routing,
+# the node:http server, and node:fs for the Strava webhook subscription
+# check. `nodejs_compat` is required; the rest is the honest list.
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+# ---------------------------------------------------------------------------
+# The public API.
+# ---------------------------------------------------------------------------
+[[services]]
+name = "runrealm-api"
+
+[[containers]]
+class_name = "runrealm-api"
+image = "./Dockerfile"
+target = "api"
+instances = 1
+max_instances = 3
+
+[[services.vars]]
+RUNREALM_LEDGER_PATH = "off"
+
+# ---------------------------------------------------------------------------
+# The attestation oracle.
+# ---------------------------------------------------------------------------
+[[services]]
+name = "runrealm-oracle"
+
+[[containers]]
+class_name = "runrealm-oracle"
+image = "./Dockerfile"
+target = "oracle"
+instances = 1
+# Signing is not a scaling problem. One replica, deliberately: two would
+# each hold a copy of the same key and diverge on the ledger, which is a
+# worse failure than the one it was meant to avoid.
+max_instances = 1
+
+# No `RUNREALM_ORACLE_PRIVATE_KEY` here. It goes in with
+# `wrangler secret put`, which is the only path that keeps it out of this
+# file and out of the image.
+
+# ---------------------------------------------------------------------------
+# The static export. apps/web builds to apps/web/dist with `output: 'export'`.
+# ---------------------------------------------------------------------------
+# pages_build_output_dir = "apps/web/dist"
+#
+# Create the project once with `wrangler pages project create runrealm`, then
+# uncomment the line above.
+#
+# Two files carry the deploy's real behaviour, and both are already written:
+#
+#   apps/web/public/_headers          the port of netlify.toml's header rules
+#                                    — HTML no-store, hashed assets immutable,
+#                                    explicit Content-Type on .js/.css/.json
+#                                    for Chrome and Brave
+#   config/deploy/_redirects.cloudflare  the Cloudflare redirects. Copy it over
+#                                    apps/web/public/_redirects at deploy time.
+#
+# The API needs no proxy. Cloudflare Pages documents that proxying "will only
+# support relative URLs on your site. You cannot proxy external domains", so
+# the browser calls the API at an absolute origin instead, via
+# `NEXT_PUBLIC_API_BASE_URL`. CORS is already `*` in server.js, so this needs
+# no server change and no cross-origin configuration on either side.
+#
+# That is also why the service worker is network-first for navigations: with
+# no same-origin proxy and no long-lived HTML, a cached shell is the one
+# thing that can survive a deploy and break it. See apps/web/public/sw.js.

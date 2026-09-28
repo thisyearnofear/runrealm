@@ -1,0 +1,74 @@
+# Cloudflare Pages response headers.
+#
+# This is the port of netlify.toml's `[[headers]]` blocks. Those were not
+# incidental — three of them exist because something broke:
+#
+#   1. HTML is `no-store`. A static export emits an index.html that points at
+#      content-hashed assets. Cache it and a deploy serves an index referencing
+#      files that no longer exist, which is a white screen rather than a
+#      stale-but-working page. The failure is silent and total.
+#   2. Hashed assets are `immutable` for a year. Their names change when their
+#      contents do, so a long cache costs nothing and saves a round trip on
+#      every route chunk.
+#   3. Explicit Content-Type on .js/.css/.json. Chrome and Brave have both
+#      refused to execute a module served with the wrong type, and the
+#      symptom — a blank app with no console error — is miserable to debug.
+#
+# Netlify-specific syntax (`for = "/*.js"`) is replaced with Cloudflare's
+# splats, which use the same shape. Rules are first-match-wins in the order
+# they appear, so the specific ones come before the general ones.
+
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer-when-downgrade
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  # X-XSS-Protection is deliberately absent. It was removed from every major
+  # browser years ago, and browsers that still honour it only ever introduce
+  # vulnerabilities into otherwise-correct pages.
+
+# MIME types, before any caching rule can mask a wrong one.
+/*.js
+  Content-Type: application/javascript; charset=utf-8
+
+/*.css
+  Content-Type: text/css; charset=utf-8
+
+/*.json
+  Content-Type: application/json; charset=utf-8
+
+/*.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+
+/*.map
+  Content-Type: application/json; charset=utf-8
+
+# Content-hashed build output: safe to cache forever, because the filename
+# changes whenever the content does.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML: never cached. See note 1 above.
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+# The service worker must never be cached either, or a fix to it cannot reach
+# anyone — which is the one file whose whole job is to be replaced.
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/favicon.ico
+  Cache-Control: public, max-age=31536000, immutable
+
+/apple-touch-icon*
+  Cache-Control: public, max-age=31536000, immutable

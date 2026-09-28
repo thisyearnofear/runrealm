@@ -9,7 +9,27 @@
 
 export interface RunRealmEnv {
   NODE_ENV: string;
+  /**
+   * Dev token backend (`/api/tokens`). Defaults to localhost and is
+   * explicitly skipped at runtime when it still points there, because a
+   * static host has no such endpoint. Not what the browser should use for
+   * ordinary API calls.
+   */
   API_BASE_URL: string;
+  /**
+   * Origin the browser sends ordinary `/api/*` calls to. Empty means
+   * same-origin, which is the Netlify shape (`_redirects` proxies them).
+   *
+   * Separate from `API_BASE_URL` on purpose: that one has a localhost
+   * default that is right in development and wrong in production, and
+   * borrowing it here would make every production API call go to
+   * `http://localhost:3000`. Empty-by-default is the only safe default,
+   * because an unset variable and a same-origin app behave identically.
+   *
+   * Set it when the API is on another origin — which Cloudflare Pages
+   * requires, since it cannot proxy `/api/*` to an external domain.
+   */
+  NEXT_PUBLIC_API_BASE_URL: string;
   ENABLE_WEB3: string;
   ENABLE_AI_FEATURES: string;
   ENABLE_CROSS_CHAIN: string;
@@ -38,6 +58,7 @@ export interface RunRealmEnv {
 const DEFAULT_ENV: RunRealmEnv = {
   NODE_ENV: 'development',
   API_BASE_URL: 'http://localhost:3000',
+  NEXT_PUBLIC_API_BASE_URL: '',
   ENABLE_WEB3: 'true',
   ENABLE_AI_FEATURES: 'false',
   ENABLE_CROSS_CHAIN: 'true',
@@ -62,6 +83,8 @@ export function createEnvGlobal(): RunRealmEnv {
   const env: RunRealmEnv = {
     NODE_ENV: process.env.NODE_ENV || DEFAULT_ENV.NODE_ENV,
     API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_ENV.API_BASE_URL,
+    NEXT_PUBLIC_API_BASE_URL:
+      process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_ENV.NEXT_PUBLIC_API_BASE_URL,
     ENABLE_WEB3: process.env.NEXT_PUBLIC_ENABLE_WEB3 || DEFAULT_ENV.ENABLE_WEB3,
     ENABLE_AI_FEATURES:
       process.env.NEXT_PUBLIC_ENABLE_AI_FEATURES || DEFAULT_ENV.ENABLE_AI_FEATURES,

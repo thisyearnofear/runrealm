@@ -1,3 +1,11 @@
+# Netlify redirects.
+#
+# Kept for the current Netlify deployment. The Cloudflare Pages equivalent is
+# `config/deploy/_redirects.cloudflare` — the two hosts cannot read one file,
+# because Cloudflare Pages cannot proxy to an external origin at all, and a
+# stale hard-coded API host in the client bundle is a class of bug worth
+# making visible rather than hiding.
+
 # API proxy
 /api/* https://runrealm.coupondj.fun/api/:splat 200
 

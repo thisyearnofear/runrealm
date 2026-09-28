@@ -1,0 +1,46 @@
+# The image installs its own dependencies and contains only server.js and
+# server/. Everything else in this repo is either a build artifact, a
+# workspace the server never loads, or — in the case of .env files — a
+# secret that must never end up in a layer.
+
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/build
+**/out
+
+.git
+.github
+.freebuff
+
+# Secrets and local state.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!.env.example
+.data
+artifacts
+cache
+fhevmTemp
+deployments
+
+# Not needed at runtime, and large.
+contracts
+docs
+test
+src
+static
+assets
+config
+lefthook.yml
+biome.json
+netlify.toml
+tsconfig*.json
+**/*.md
+
+# Editor and OS noise.
+.DS_Store
+*.log

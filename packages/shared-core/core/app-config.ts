@@ -7,6 +7,7 @@ import { EventBus } from './event-bus';
 declare const __ENV__: {
   NODE_ENV?: string;
   API_BASE_URL?: string;
+  NEXT_PUBLIC_API_BASE_URL?: string;
   ENABLE_WEB3?: string;
   ENABLE_AI_FEATURES?: string;
   ENABLE_CROSS_CHAIN?: string;
@@ -381,6 +382,37 @@ export class ConfigService {
 
   getConfig(): AppConfig {
     return { ...this.config }; // Return copy to prevent mutation
+  }
+
+  /**
+   * The origin the browser should send API calls to.
+   *
+   * Empty means "same origin as the page", which is the Netlify shape: a
+   * `_redirects` rule proxies `/api/*` to the backend. It is NOT portable —
+   * Cloudflare Pages can only proxy to paths on its own domain, so the
+   * migration to Cloudflare needs an absolute origin here instead.
+   *
+   * That is cheap because the API already sends `Access-Control-Allow-Origin:
+   * *`, so pointing the client straight at it needs no server change. Set
+   * `NEXT_PUBLIC_API_BASE_URL` (inlined at build time) to the API's origin,
+   * with no trailing slash.
+   *
+   * Deliberately NOT `API_BASE_URL`: that one defaults to
+   * `http://localhost:3000`, which is right in development and would send
+   * every production API call to the runner's own machine.
+   */
+  getApiBaseUrl(): string {
+    return (this.getEnvVar('NEXT_PUBLIC_API_BASE_URL') || '').replace(/\/+$/, '');
+  }
+
+  /**
+   * Build an absolute API URL from a same-origin path, honouring
+   * `getApiBaseUrl()`. `path` must start with `/`.
+   */
+  apiUrl(path: string): string {
+    const base = this.getApiBaseUrl();
+    if (!base) return path;
+    return `${base}${path.startsWith('/') ? path : `/${path}`}`;
   }
 
   /**

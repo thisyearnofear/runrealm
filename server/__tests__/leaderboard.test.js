@@ -9,6 +9,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { ethers } = require('ethers');
 const { createAttestationLedger, createLeaderboardHandler } = require('../leaderboard');
+const { createFileStore, createQueuedStore } = require('../ledger-store');
 const { createAttestationOracleHandler } = require('../attestation-oracle');
 
 /** Hermetic ledger path — never the repo's own runtime file. */
@@ -161,32 +162,42 @@ describe('createAttestationLedger', () => {
 });
 
 describe('createAttestationLedger persistence', () => {
-  test('resumes the board after a restart', () => {
+  /** A ledger over a real file, as the oracle actually runs it. */
+  async function fileLedger(ledgerPath, options = {}) {
+    const store = createQueuedStore(createFileStore(ledgerPath));
+    const ledger = createAttestationLedger({ store, ...options });
+    await ledger.ready();
+    return { ledger, store };
+  }
+
+  test('resumes the board after a restart', async () => {
     const ledgerPath = tempLedgerPath();
-    const first = createAttestationLedger({ persistPath: ledgerPath });
-    first.record('RunSummary', runSummary({ runId: 'persisted' }));
+    const first = await fileLedger(ledgerPath);
+    first.ledger.record('RunSummary', runSummary({ runId: 'persisted' }));
+    await first.store.flush();
 
     // A fresh process (new ledger, same file) serves the rows it signed before.
-    const restarted = createAttestationLedger({ persistPath: ledgerPath });
-    assert.equal(restarted.size(), 1);
-    assert.equal(restarted.list()[0].id, 'att_persisted');
-    assert.equal(restarted.list()[0].label, 'runner · accoun');
+    const restarted = await fileLedger(ledgerPath);
+    assert.equal(restarted.ledger.size(), 1);
+    assert.equal(restarted.ledger.list()[0].id, 'att_persisted');
+    assert.equal(restarted.ledger.list()[0].label, 'runner · accoun');
 
     // And the privacy contract survives the round-trip through disk.
     assert.doesNotMatch(fs.readFileSync(ledgerPath, 'utf8'), /abcdef123456/);
     assert.doesNotMatch(fs.readFileSync(ledgerPath, 'utf8'), /h3Cells/);
   });
 
-  test('keeps bounded history on disk (oldest dropped)', () => {
+  test('keeps bounded history on disk (oldest dropped)', async () => {
     const ledgerPath = tempLedgerPath();
-    const ledger = createAttestationLedger({ maxEntries: 2, persistPath: ledgerPath });
+    const { ledger, store } = await fileLedger(ledgerPath, { maxEntries: 2 });
     ledger.record('RunSummary', runSummary({ runId: 'old', endedAt: 1 }));
     ledger.record('RunSummary', runSummary({ runId: 'mid', endedAt: 2 }));
     ledger.record('RunSummary', runSummary({ runId: 'new', endedAt: 3 }));
+    await store.flush();
 
-    const restarted = createAttestationLedger({ maxEntries: 2, persistPath: ledgerPath });
+    const restarted = await fileLedger(ledgerPath, { maxEntries: 2 });
     assert.deepEqual(
-      restarted
+      restarted.ledger
         .list()
         .map((r) => r.id)
         .sort(),
@@ -194,17 +205,17 @@ describe('createAttestationLedger persistence', () => {
     );
   });
 
-  test('starts empty (and stays usable) when the file is corrupt', () => {
+  test('starts empty (and stays usable) when the file is corrupt', async () => {
     const ledgerPath = tempLedgerPath();
     fs.writeFileSync(ledgerPath, '{ this is not json');
 
-    const ledger = createAttestationLedger({ persistPath: ledgerPath });
+    const { ledger } = await fileLedger(ledgerPath);
     assert.equal(ledger.size(), 0);
     ledger.record('RunSummary', runSummary({ runId: 'after-corruption' }));
     assert.equal(ledger.size(), 1);
   });
 
-  test('drops rows that do not look like board entries', () => {
+  test('drops rows that do not look like board entries', async () => {
     const ledgerPath = tempLedgerPath();
     fs.writeFileSync(
       ledgerPath,
@@ -217,7 +228,7 @@ describe('createAttestationLedger persistence', () => {
       })
     );
 
-    const ledger = createAttestationLedger({ persistPath: ledgerPath });
+    const { ledger } = await fileLedger(ledgerPath);
     assert.deepEqual(
       ledger.list().map((r) => r.id),
       ['ok']
@@ -225,9 +236,9 @@ describe('createAttestationLedger persistence', () => {
   });
 
   test('a write failure never breaks a signature', async () => {
-    // A directory can't be written as a file — persistPath is unusable.
+    // A directory can't be written as a file — the store is unusable.
     const ledgerPath = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-ledger-dir-'));
-    const ledger = createAttestationLedger({ persistPath: ledgerPath });
+    const { ledger } = await fileLedger(ledgerPath);
     const handler = createAttestationOracleHandler({
       privateKey: TEST_KEY,
       onSigned: (primaryType, message) => ledger.record(primaryType, message),
@@ -237,6 +248,30 @@ describe('createAttestationLedger persistence', () => {
     assert.equal(res.statusCode, 200);
     assert.ok(res.payload.signature);
     assert.equal(ledger.size(), 1);
+  });
+
+  test('answers reads before ready() from what it has, and the full board after', async () => {
+    // The store is a promise away. A board that answered "nobody has ever
+    // run" during that window would be lying, and would look like a working
+    // empty deployment.
+    const ledgerPath = tempLedgerPath();
+    fs.writeFileSync(
+      ledgerPath,
+      JSON.stringify({
+        version: 1,
+        entries: [
+          { id: 'att_old', label: 'x', paceBand: 1, distanceMeters: 1, kind: 'run', endedAt: 2 },
+        ],
+      })
+    );
+    const store = createQueuedStore(createFileStore(ledgerPath));
+    const ledger = createAttestationLedger({ store });
+
+    // Recording before hydration must not be lost when hydration lands.
+    ledger.record('RunSummary', runSummary({ runId: 'new' }));
+    await ledger.ready();
+
+    assert.equal(ledger.size(), 2);
   });
 });
 

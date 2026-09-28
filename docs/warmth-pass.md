@@ -309,8 +309,156 @@ checkpoint intact, so it is offered again on the next boot.
 
 ### What is still open
 
-Phase 3 — **split the backend.** See `docs/roadmap.md` H11 and the migration
-notes at the foot of this file.
+Phases 3 and 4 are below.
+
+---
+
+## 10. Splitting the backend
+
+### The finding
+
+`server.js` was 487 lines of Express doing five unrelated jobs: Strava OAuth,
+Strava webhooks, a Reactor token broker, a mobile run-upload queue, and the
+attestation oracle. The last one is a signing service. It held a quorum
+member's private key, read straight out of `process.env`, in the same
+process that served `POST /api/runs` — an unauthenticated endpoint with a
+5 MB body limit, on a server that sets `Access-Control-Allow-Origin: *` on
+everything.
+
+The key itself never went out over the wire. That is not the problem. The
+problem is that a key one env read away from a public write endpoint is not a
+key you can rotate on its own schedule, and its blast radius is every other
+thing in the process. A dependency CVE in any of the other four jobs would
+have taken the quorum with it.
+
+### The split
+
+`server/oracle.js` now runs the signer and nothing else. Three routes: the
+sign endpoint, the board, and a health check. No run upload, no Strava, no
+token broker, no static files. If it is compromised, there is nothing left
+in it to reach.
+
+It also **refuses to boot without a key**. A signer with no key is not a
+degraded signer, it is a 500 on every quorum attempt — which is much clearer
+at boot than halfway through someone's run.
+
+`server.js` keeps the leaderboard, which is public by design and needs no
+key. The board reads the same ledger file, so the two processes see the same
+rows. The dangerous shape still exists for local development, behind
+`RUNREALM_EMBEDDED_ORACLE=1`: a footgun with a deliberate name, so that
+putting the key back next to the write endpoint has to be typed out loud and
+prints a warning when it happens.
+
+A 404 on `/attestations/sign` with no explanation is a support ticket, so the
+public API says where signing went at boot.
+
+### The storage seam
+
+The ledger used to take a `persistPath` and read `fs` itself. That welded
+persistence to the deployment, and the deployment was about to change. It now
+takes a *store* — anything with `load()` and `save(entries)` — with file and
+memory implementations behind `createQueuedStore`.
+
+The queue is not ceremony. Two signatures in the same millisecond must not
+race a whole-file rewrite, and a burst collapses to one write of the newest
+ledger rather than N. The failure path is the part that matters: a store
+whose `save` throws must not leave the queue wedged, because a wedged queue
+turns one disk error into a permanently memory-only oracle — a failure nobody
+would ever notice, and the ledger is the record of what the quorum attested.
+
+### What the tests found
+
+The write-queue test found the real one. `record()` before hydration wrote a
+partial board to disk; hydration then read that back as truth, and the
+pre-restart rows were gone. Writes are now gated on `ready()`, and the first
+flush happens after hydration lands. That path is unreachable in production
+today (the oracle hydrates at boot) and would be the first thing to break the
+moment a second writer or a warm start existed.
+
+---
+
+## 11. Moving hosts
+
+### The finding
+
+`netlify.toml` carries deliberate work that a naive `wrangler pages deploy`
+would drop: HTML `no-store` so a deploy is picked up instead of serving an
+index that points at deleted hashed assets; `immutable` for a year on
+content-hashed chunks; and explicit `Content-Type` on `.js`/`.css`/`.json`
+because Chrome and Brave have both refused to execute a module served with
+the wrong type. All ported to `apps/web/public/_headers`.
+
+### The part that could not be ported
+
+`apps/web/public/_redirects` proxies `/api/*` to
+`https://runrealm.coupondj.fun/api/:splat`. Cloudflare Pages documents that
+proxying "will only support relative URLs on your site. You cannot proxy
+external domains." There is no equivalent, and pretending otherwise would
+have produced the worst possible failure: with no `/api/*` rule, API calls
+fall through to the SPA fallback and get `index.html` with a `200` — which
+reads as a successful response and is not one.
+
+The alternative is the cheap one: the API already sends
+`Access-Control-Allow-Origin: *`, so the browser can call it at an absolute
+origin. `ConfigService.apiUrl()` resolves that from
+`NEXT_PUBLIC_API_BASE_URL`, empty by default (same-origin, the Netlify
+shape).
+
+It is a *separate* variable from the existing `API_BASE_URL` on purpose.
+That one defaults to `http://localhost:3000` — right in development, and it
+would send every production API call to the runner's own machine. Borrowing
+it would have been a one-line change and a production outage.
+
+### The service worker
+
+Porting the cache rules surfaced a bug that had nothing to do with hosts. The
+worker served navigations `cached || network` — stale-while-revalidate,
+cache-first — while its own comment claimed it was "never stuck on stale
+HTML". It was stuck on stale HTML. On a static export that means, after
+every deploy, an `index.html` referencing chunks the deploy just deleted: a
+blank app, no console error, first load after every release.
+
+Navigations are now network-first, with the cache as the offline fallback.
+That costs one round trip on a repeat visit and removes the whole class of
+"the site is down after a release" report. Hashed assets stay cache-first —
+their filenames change when their contents do.
+
+`CACHE_NAME` is bumped to `runrealm-v3`, which is the only mechanism that
+retires an already-installed worker. `service-worker.test.ts` runs the real
+`public/sw.js` against a fake Cache and a fake `self`, so the strategy is
+tested rather than described, and the comment cannot drift from the code
+again.
+
+---
+
+## Deploying
+
+Two processes, two containers, one image.
+
+```bash
+# Public API — never holds the signing key.
+docker build -t runrealm-api .
+docker run -p 3000:3000 runrealm-api
+
+# The quorum signer — its own container, its own environment.
+docker run -p 3001:3001 -e RUNREALM_ORACLE_PRIVATE_KEY=0x… runrealm-api
+```
+
+Or without Docker: `npm run dev:all` runs the web app, the API and the
+oracle together for local work.
+
+`wrangler.toml` maps the same two roles onto two Cloudflare workers. The
+oracle is pinned to one replica deliberately: two would each hold a copy of
+the same key and diverge on the ledger, which is a worse failure than the one
+the split was meant to avoid.
+
+The ledger needs a persistent volume shared by both processes, or
+`RUNREALM_LEDGER_PATH=off` and an in-memory board that empties on every
+deploy. A container's local disk is not durable, and a board that empties
+itself on deploy is worse than an empty one.
+
+Still Netlify? Nothing here is required. `apps/web/public/_redirects` and
+`netlify.toml` are untouched and still the live path.
 
 ---
 
@@ -416,6 +564,26 @@ in production under HMR.
   screen and staying silent.
 - Anything the browser takes back quietly is re-checked, not assumed. A lock,
   a permission, a connection.
+- A signing key lives in a process that does nothing else. If a key is
+  needed, it gets its own entrypoint, its own container, and its own
+  environment.
+- An opt-in that restores a dangerous shape is spelled out in full, and warns
+  loudly when used.
+- A comment that claims a behaviour is a test that holds it. `sw.js` said it
+  was "never stuck on stale HTML" and was; the test now runs the real file.
+- Read the target platform's documentation before writing its config. Half of
+  the Cloudflare plan was undone by one sentence in their docs about
+  proxying external domains.
+- A signing key lives in a process that does nothing else. If a key is
+  needed, it gets its own entrypoint, its own container, and its own
+  environment.
+- An opt-in that restores a dangerous shape is spelled out in full, and warns
+  loudly when used.
+- A comment that claims a behaviour is a test that holds it. `sw.js` said it
+  was "never stuck on stale HTML" and was; the test now runs the real file.
+- Read the target platform's documentation before writing its config. Half of
+  the Cloudflare plan was undone by one sentence in their docs about
+  proxying external domains.
 - Status is carried in words as well as colour. A rule down the edge of a
   note is decoration, not a signal.
 - A timed surface holds open while it is being read or driven from the

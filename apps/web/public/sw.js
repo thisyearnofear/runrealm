@@ -8,10 +8,24 @@
 //    worked. Now only `/` is precached; everything else is cached at
 //    runtime.
 //  - Runtime: cache-first for static build assets (immutable,
-//    content-hashed `_next/static` files), stale-while-revalidate for
-//    navigation + other same-origin GETs so repeat visits are
-//    instant but never stuck on stale HTML.
-const CACHE_NAME = 'runrealm-v2';
+//    content-hashed `_next/static` files) and network-first for
+//    navigations.
+//
+// Why navigations are network-first, and not stale-while-revalidate:
+// the export emits an index.html that points at content-hashed chunks, and
+// a deploy *deletes* the chunks the old index referenced. Serving a cached
+// shell after a deploy therefore asks the browser to load files that no
+// longer exist — a blank app with no console error, on the first load after
+// every release. The old version did exactly that: it claimed to be "never
+// stuck on stale HTML" and was, because `cached || network` puts the cache
+// first. Network-first costs one round trip on a repeat visit and removes an
+// entire class of "the site is down after a release" reports. Offline still
+// works: the network attempt fails and the cache answers.
+//
+// CACHE_NAME is bumped to v3 for that change. Bumping it is what makes every
+// browser drop the v2 shell on activate, which is the only mechanism that
+// gets a corrected strategy to people who already have one installed.
+const CACHE_NAME = 'runrealm-v3';
 const PRECACHE_ASSETS = ['/'];
 
 self.addEventListener('install', (event) => {
@@ -65,15 +79,45 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-while-revalidate for navigations and other same-origin gets:
-  // serve from cache when available, refresh in the background.
+  if (request.mode === 'navigate') {
+    // Network-first for the shell. See the header comment for why a cached
+    // index.html is not safe to serve ahead of the network.
+    event.respondWith(
+      caches.open(CACHE_NAME).then(async (cache) => {
+        try {
+          const response = await fetch(request);
+          if (response.ok) {
+            // Best-effort: a full disk must not turn a working page into an
+            // error page. The next visit online will fix it.
+            try {
+              await cache.put(request, response.clone());
+            } catch {
+              /* quota or private mode */
+            }
+          }
+          return response;
+        } catch (error) {
+          // Offline. The cached shell is the whole point of having one.
+          const cached = await cache.match(request);
+          if (cached) return cached;
+          const root = await cache.match('/');
+          if (root) return root;
+          throw error;
+        }
+      })
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for everything else that is same-origin and a
+  // GET. Nothing here is the shell, so serving it a moment stale is fine.
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       const cached = await cache.match(request);
       const network = fetch(request)
         .then((response) => {
           if (response.ok) {
-            cache.put(request, response.clone());
+            cache.put(request, response.clone()).catch(() => {});
           }
           return response;
         })

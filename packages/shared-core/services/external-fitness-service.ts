@@ -87,7 +87,7 @@ export class ExternalFitnessService extends BaseService {
     }
 
     try {
-      const response = await fetch('/api/strava/refresh', {
+      const response = await fetch(this.configService.apiUrl('/api/strava/refresh'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,7 +162,7 @@ export class ExternalFitnessService extends BaseService {
     }
 
     try {
-      const response = await fetch('/api/strava/token', {
+      const response = await fetch(this.configService.apiUrl('/api/strava/token'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

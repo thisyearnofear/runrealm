@@ -3,6 +3,10 @@ declare global {
     NODE_ENV: string;
     // API base URL for token endpoint (dev/prod configuration)
     API_BASE_URL: string;
+    // Origin the browser sends ordinary /api/* calls to. Empty means
+    // same-origin (the Netlify shape). Distinct from API_BASE_URL, which
+    // defaults to localhost and is only for the dev token endpoint.
+    NEXT_PUBLIC_API_BASE_URL: string;
     // ⚠️ SECURITY NOTE: Only public configuration is exposed via __ENV__
     // Sensitive API keys are loaded via other secure methods
     ENABLE_WEB3: string;

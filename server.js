@@ -76,48 +76,54 @@ app.get('/api/tokens', (req, res) => {
 
 // Scoped Reactor token broker for the Orbis challenge slice. The browser gets
 // only the returned short-lived JWT; REACTOR_API_KEY stays on this server.
-// Attestation oracle (protocol-vision Layer 3): signs EIP-712 run
-// summaries for the client quorum. Mounted only when the oracle key is
-// configured — without it the client honestly reports `local` mode.
 //
-// Every summary the oracle signs is recorded in a ledger, and
-// `GET /attestations/leaderboard` serves the ranked, pseudonymous view of
-// it (H8 bet 4: the network-wide board). The ledger is empty without a
-// signing key, so the endpoint is always safe to mount.
+// ---------------------------------------------------------------------------
+// Attestation (protocol-vision Layer 3) — READ ONLY in this process.
 //
-// The ledger is persisted (atomically, after every signature) so a restart
-// resumes the board instead of serving an empty one. Override the location
-// with RUNREALM_LEDGER_PATH, or set it to `off` for a memory-only board.
-// `||` rather than `??` on purpose: the shipped env examples leave the key
-// blank, and blank means "unset" — it must not silently stop persisting.
-const {
-  DEFAULT_LEDGER_PATH,
-  createAttestationLedger,
-  createLeaderboardHandler,
-} = require('./server/leaderboard');
-const ledgerPath = process.env.RUNREALM_LEDGER_PATH || DEFAULT_LEDGER_PATH;
-const attestationLedger = createAttestationLedger({
-  persistPath: ledgerPath === 'off' ? null : ledgerPath,
-});
-app.get('/attestations/leaderboard', createLeaderboardHandler(attestationLedger));
+// Phase 3 moved signing out. `RUNREALM_ORACLE_PRIVATE_KEY` used to be read
+// by this file, which meant the quorum key for a signer lived in the same
+// environment — and the same process — as `POST /api/runs` (unauthenticated,
+// 5 MB body) under `Access-Control-Allow-Origin: *`. Signing now runs in
+// `server/oracle.js`, in its own process with nothing else in it.
+//
+// What stays here is the board: `GET /attestations/leaderboard` is public by
+// design and needs no key. The rows come from the same ledger file, so both
+// processes read the same board. With no key set — the normal public-API
+// deployment — the endpoint is simply empty, which is honest: nothing has
+// been signed by this deployment.
+//
+// For local development, `RUNREALM_EMBEDDED_ORACLE=1` mounts the signer here
+// too. That is a deliberate footgun with a deliberate name, so the shape
+// where the key is next to the write endpoint has to be typed out loud.
+const { createAttestationService, describeLedgerTarget } = require('./server/attestation-service');
 
-if (process.env.RUNREALM_ORACLE_PRIVATE_KEY) {
-  const { createAttestationOracleHandler } = require('./server/attestation-oracle');
-  app.post(
-    '/attestations/sign',
-    createAttestationOracleHandler({
-      privateKey: process.env.RUNREALM_ORACLE_PRIVATE_KEY,
-      onSigned: (primaryType, message) => attestationLedger.record(primaryType, message),
-    })
-  );
-  console.log('Attestation oracle: /attestations/sign mounted');
-  console.log(
-    `Attestation oracle: /attestations/leaderboard mounted (network board, ledger: ${
-      ledgerPath === 'off' ? 'memory only' : ledgerPath
-    })`
+const embedOracle = process.env.RUNREALM_EMBEDDED_ORACLE === '1';
+if (embedOracle && !process.env.RUNREALM_ORACLE_PRIVATE_KEY) {
+  console.error(
+    'RUNREALM_EMBEDDED_ORACLE=1 but RUNREALM_ORACLE_PRIVATE_KEY is not set — the signer cannot start.'
   );
 } else {
-  console.log('Attestation oracle: RUNREALM_ORACLE_PRIVATE_KEY not set — disabled');
+  const service = createAttestationService({
+    privateKey: embedOracle ? process.env.RUNREALM_ORACLE_PRIVATE_KEY : null,
+  });
+  app.use(service.router);
+  if (embedOracle) {
+    console.warn(
+      `\n  ⚠  EMBEDDED ORACLE — the signing key is in this process.\n` +
+        `     This process also serves POST /api/runs with CORS *. That is fine for\n` +
+        `     local development and wrong everywhere else. Run server/oracle.js\n` +
+        `     separately in any shared environment.\n`
+    );
+    console.log(`Attestation oracle (embedded): signer ${service.signer}`);
+  }
+  console.log(
+    `Attestation leaderboard: /attestations/leaderboard (ledger: ${describeLedgerTarget()})`
+  );
+  if (!embedOracle) {
+    // A 404 on /attestations/sign with no explanation is a support ticket.
+    // Say where signing went, so nobody goes looking for a missing env var.
+    console.log('Attestation signing: NOT in this process — run server/oracle.js for the signer.');
+  }
 }
 
 app.get('/api/reactor/token', async (req, res) => {
@@ -310,6 +316,13 @@ app.post('/api/strava/webhook', (req, res) => {
   } catch (error) {
     console.error('Error processing Strava webhook event:', error);
   }
+});
+
+// Liveness for the container platform. Deliberately reports *nothing*
+// about configuration: a health endpoint that leaks which optional keys are
+// present is a map of this deployment's env for anyone who can reach it.
+app.get('/healthz', (_req, res) => {
+  res.json({ service: 'runrealm-api', status: 'ok' });
 });
 
 app.get('/', (_req, res) => {

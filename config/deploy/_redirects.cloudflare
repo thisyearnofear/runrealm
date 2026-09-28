@@ -1,0 +1,40 @@
+# Cloudflare Pages redirects.
+#
+# The Netlify twin of `apps/web/public/_redirects`, for the Cloudflare
+# migration. It lives here rather than in `public/` on purpose: anything in
+# `public/` is copied into the static export and served at a public URL, and
+# shipping a second redirects file as a downloadable asset is clutter nobody
+# asked for.
+#
+# To deploy to Cloudflare, copy this over `apps/web/public/_redirects` (or
+# drop it into the build output) and set `NEXT_PUBLIC_API_BASE_URL`.
+#
+# THE API PROXY CANNOT BE PORTED. Cloudflare Pages documents that proxying
+# "will only support relative URLs on your site. You cannot proxy external
+# domains", so Netlify's
+#
+#   /api/* https://runrealm.coupondj.fun/api/:splat 200
+#
+# has no equivalent here. Two honest options, and this repo takes the second:
+#
+#   1. Put the API on the same Pages zone behind a Worker route, so the
+#      proxy becomes same-origin. More moving parts, and it puts the API and
+#      the static site on one hostname — which is the coupling this migration
+#      is trying to remove.
+#   2. Set NEXT_PUBLIC_API_BASE_URL to the API's absolute origin and let the
+#      browser call it directly. The server already sends
+#      `Access-Control-Allow-Origin: *` in both netlify.toml and server.js,
+#      so this needs no server change at all.
+#
+# Option 2 is what `ConfigService.apiUrl()` implements, and it is the only
+# reason this file can be this short.
+#
+# Do NOT add `/api/* /index.html 200` here to "handle" API calls on a static
+# host. With no `/api/*` rule, requests fall through to the SPA fallback
+# below and get index.html with a 200 — which reads as a successful API
+# response and is not one. Better to 404.
+
+# SPA fallback — serve index.html for every other route. A static export has
+# three real routes; anything else is client-side navigation, and answering
+# 404 here would break a deep link and a refresh on it.
+/* /index.html 200
