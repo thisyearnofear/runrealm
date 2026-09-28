@@ -50,6 +50,7 @@ describe('WhileYouWereAway', () => {
   afterEach(() => {
     component.hide();
     jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   it('starts hidden and waits for an absence', () => {
@@ -168,5 +169,74 @@ describe('WhileYouWereAway', () => {
     });
     (document.querySelector('[data-wywa-action="dismiss"]') as HTMLElement).click();
     expect(document.querySelector('#while-you-were-away')?.classList.contains('hidden')).toBe(true);
+  });
+
+  describe('reachability', () => {
+    const absence = {
+      absenceMs: DAY_MS,
+      crossings: [{ territoryId: 't-harbour', threshold: 300, atMs: 1 }],
+      truncated: 0,
+    };
+
+    it('is a labelled dialog, not a live region — a card with buttons in it is not a status', () => {
+      bus.emit('offline:catchup', absence);
+      // `role="status"` on a container holding focusable controls makes a
+      // screen reader re-announce the buttons every time it is interacted
+      // with. A labelled dialog is the honest description.
+      expect(card().getAttribute('role')).toBe('dialog');
+      expect(card().getAttribute('aria-labelledby')).toBe('wywa-title');
+      expect(document.getElementById('wywa-title')?.textContent).toBe('While you were away');
+      expect(card().getAttribute('aria-describedby')).toBe('wywa-greeting');
+    });
+
+    it('takes focus when it appears, so a keyboard can find it', () => {
+      bus.emit('offline:catchup', absence);
+      expect(card().getAttribute('tabindex')).toBe('-1');
+      expect(document.activeElement).toBe(card());
+    });
+
+    it('hands focus back to the map when dismissed, rather than dropping it on <body>', () => {
+      const map = document.createElement('div');
+      map.id = 'maplibre-container';
+      document.body.appendChild(map);
+
+      bus.emit('offline:catchup', absence);
+      component.hide();
+      expect(document.activeElement).toBe(map);
+    });
+
+    it('stays up while it is being read or driven from the keyboard', () => {
+      jest.useFakeTimers();
+      bus.emit('offline:catchup', absence);
+
+      // Focus is on the card from the moment it opens, so the hold engages
+      // immediately rather than after a mouse happens to pass over.
+      jest.advanceTimersByTime(60_000);
+      expect(document.querySelector('#while-you-were-away')?.classList.contains('hidden')).toBe(
+        false
+      );
+
+      card().dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+      jest.advanceTimersByTime(30_000);
+      expect(document.querySelector('#while-you-were-away')?.classList.contains('hidden')).toBe(
+        true
+      );
+    });
+
+    it('dismisses on Escape', () => {
+      bus.emit('offline:catchup', absence);
+      const root = document.querySelector('#while-you-were-away') as HTMLElement;
+      root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(root.classList.contains('hidden')).toBe(true);
+    });
+
+    it('gives every control a name and an explicit type', () => {
+      bus.emit('offline:catchup', absence);
+      for (const button of Array.from(card().querySelectorAll('button'))) {
+        const name = (button.getAttribute('aria-label') ?? button.textContent ?? '').trim();
+        expect(name.length).toBeGreaterThan(0);
+        expect(button.getAttribute('type')).toBe('button');
+      }
+    });
   });
 });

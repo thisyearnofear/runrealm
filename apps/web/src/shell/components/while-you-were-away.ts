@@ -71,6 +71,15 @@ export default class WhileYouWereAway {
     this.container = container;
 
     container.addEventListener('click', (event) => this.handleClick(event));
+    // Hold the card open while it is being read or driven from the keyboard,
+    // and let Escape put it away without hunting for the close button.
+    container.addEventListener('mouseenter', this.holdOpen);
+    container.addEventListener('mouseleave', this.releaseOpen);
+    container.addEventListener('focusin', this.holdOpen);
+    container.addEventListener('focusout', this.releaseOpen);
+    container.addEventListener('keydown', (event) => {
+      if ((event as KeyboardEvent).key === 'Escape') this.hide();
+    });
     this.eventBus.on('offline:catchup', (data) => this.showReturn(data));
     this.ensureStyles();
   }
@@ -94,21 +103,26 @@ export default class WhileYouWereAway {
       thin.length > 0 ? returnSummary({ crossings: thin.length, developedCount: heldCount }) : '';
 
     this.container.innerHTML = `
-      <section class="wywa-card" role="status" aria-label="While you were away">
+      <section
+        class="wywa-card"
+        role="dialog"
+        aria-labelledby="wywa-title"
+        aria-describedby="wywa-greeting"
+      >
         <header class="wywa-head">
-          <h2>While you were away</h2>
-          <button class="wywa-close" data-wywa-action="dismiss" aria-label="Dismiss">✕</button>
+          <h2 id="wywa-title">While you were away</h2>
+          <button class="wywa-close" data-wywa-action="dismiss" aria-label="Dismiss" type="button">✕</button>
         </header>
-        <p class="wywa-greeting">${escapeHtml(greeting)}</p>
+        <p class="wywa-greeting" id="wywa-greeting">${escapeHtml(greeting)}</p>
         ${summary ? `<p class="wywa-summary">${escapeHtml(summary)}</p>` : ''}
         ${this.listMarkup(thin, data.truncated ?? 0)}
         <div class="wywa-actions">
           ${
             thin.length > 0
-              ? `<button class="wywa-primary" data-wywa-action="walk" data-territory-id="${escapeHtml(thin[0].id)}">Walk ${escapeHtml(shortName(thin[0].name))}</button>`
+              ? `<button class="wywa-primary" data-wywa-action="walk" data-territory-id="${escapeHtml(thin[0].id)}" type="button">Walk ${escapeHtml(shortName(thin[0].name))}</button>`
               : ''
           }
-          <button class="wywa-link" data-wywa-action="map">Show me on the map</button>
+          <button class="wywa-link" data-wywa-action="map" type="button">Show me on the map</button>
         </div>
         ${
           thin.length > 0
@@ -119,16 +133,59 @@ export default class WhileYouWereAway {
     `;
 
     this.container.classList.remove('hidden');
-    if (this.hideTimer) clearTimeout(this.hideTimer);
+    this.armAutoHide();
+
+    // A card that appears with buttons in it but never receives focus is a
+    // card a keyboard user never finds. Focus goes to the card itself
+    // (tabindex=-1) rather than the primary button, so a screen reader reads
+    // the greeting and the offer before being thrown at an action.
+    const card = this.container.querySelector<HTMLElement>('.wywa-card');
+    if (card) {
+      card.setAttribute('tabindex', '-1');
+      card.focus();
+    }
+  }
+
+  /**
+   * The card leaves on its own so it never becomes furniture — but not while
+   * someone is reading it or has tabbed into one of its buttons. Twenty-five
+   * seconds is generous for a glance and merciless for a screen reader.
+   */
+  private armAutoHide(): void {
+    this.disarmAutoHide();
     this.hideTimer = setTimeout(() => this.hide(), AUTO_HIDE_MS);
   }
 
+  private disarmAutoHide(): void {
+    if (!this.hideTimer) return;
+    clearTimeout(this.hideTimer);
+    this.hideTimer = null;
+  }
+
+  private holdOpen = (): void => {
+    this.disarmAutoHide();
+  };
+
+  private releaseOpen = (): void => {
+    if (this.container?.classList.contains('hidden')) return;
+    this.armAutoHide();
+  };
+
   public hide(): void {
-    if (this.hideTimer) {
-      clearTimeout(this.hideTimer);
-      this.hideTimer = null;
-    }
+    this.disarmAutoHide();
+    const card = this.container?.querySelector<HTMLElement>('.wywa-card');
+    const hadFocus = card?.contains(document.activeElement) || document.activeElement === card;
     this.container?.classList.add('hidden');
+    // Dismissing a card while focus is inside it strands focus on <body>,
+    // which reads to a screen reader as the page vanishing. Hand it back to
+    // the map, which is where the runner actually was.
+    if (hadFocus) {
+      const map = document.getElementById('maplibre-container');
+      if (map) {
+        if (!map.hasAttribute('tabindex')) map.setAttribute('tabindex', '-1');
+        map.focus();
+      }
+    }
   }
 
   /** Distinct claims that crossed a threshold, most endangered first. */
@@ -236,6 +293,19 @@ export default class WhileYouWereAway {
         padding: 15px 16px 14px;
         animation: wywa-in var(--rr-d-5, 520ms) var(--rr-ease-out, cubic-bezier(0.2, 0.7, 0.2, 1)) both;
       }
+      /* The card takes focus so a keyboard can find it; the ring is what tells
+         you it took it. Suppressing the ring here would make focus invisible. */
+      .wywa-card:focus { outline: none; }
+      .wywa-card:focus-visible {
+        outline: 2px solid var(--rr-sunprint-ink, #102633);
+        outline-offset: 2px;
+      }
+      .wywa-card button:focus-visible,
+      .wywa-link:focus-visible {
+        outline: 2px solid var(--rr-sunprint-ink, #102633);
+        outline-offset: 2px;
+        border-radius: var(--rr-r-1, 3px);
+      }
       @keyframes wywa-in {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: none; }
@@ -249,10 +319,13 @@ export default class WhileYouWereAway {
       }
       .wywa-close {
         background: none; border: none; cursor: pointer; padding: 0;
-        font-size: 15px; line-height: 1; color: rgba(16, 38, 51, 0.55);
+        font-size: 15px; line-height: 1; color: #425157;
+        /* 28px, so the dismiss target is reachable with a thumb as well as a
+           cursor. */
+        min-width: 28px; min-height: 28px;
       }
       .wywa-greeting { margin: 8px 0 0; font-size: var(--rr-text-sm, 14px); line-height: 1.5; }
-      .wywa-summary { margin: 6px 0 0; font-size: var(--rr-text-xs, 13px); line-height: 1.5; color: rgba(16, 38, 51, 0.78); }
+      .wywa-summary { margin: 6px 0 0; font-size: var(--rr-text-xs, 13px); line-height: 1.5; color: #425157; }
       .wywa-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
       .wywa-list li {
         display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
@@ -264,9 +337,11 @@ export default class WhileYouWereAway {
       .wywa-state {
         font-size: var(--rr-text-3xs, 11px); text-transform: uppercase;
         letter-spacing: var(--rr-track-caps, 0.12em);
-        color: var(--rr-sunprint-coral, #e85d5d);
+        /* The stock coral measures 2.85:1 on bone — a smudge at 11px. Deepened
+           for text; the amber rule on the card edge keeps the bright coral. */
+        color: #8f2f2f;
       }
-      .wywa-more { margin: 5px 0 0; font-size: var(--rr-text-2xs, 12px); color: rgba(16, 38, 51, 0.62); }
+      .wywa-more { margin: 5px 0 0; font-size: var(--rr-text-2xs, 12px); color: #49575c; }
       .wywa-actions { margin-top: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
       .wywa-primary {
         background: var(--rr-sunprint-amber, #f2a541);
@@ -274,14 +349,16 @@ export default class WhileYouWereAway {
         border: none; border-radius: var(--rr-r-2, 4px);
         padding: 9px 12px; font: inherit; font-size: var(--rr-text-xs, 13px);
         font-weight: var(--rr-w-semibold, 600); cursor: pointer;
+        min-height: 36px;
       }
       .wywa-primary:hover { background: var(--rr-sunprint-amber-hover, #ffbd63); }
       .wywa-link {
-        background: none; border: none; cursor: pointer; padding: 0;
+        background: none; border: none; cursor: pointer; padding: 4px 0;
         font: inherit; font-size: var(--rr-text-xs, 13px);
-        color: rgba(16, 38, 51, 0.75); text-decoration: underline;
+        color: #425157; text-decoration: underline;
+        min-height: 32px;
       }
-      .wywa-hint { margin: 9px 0 0; font-size: var(--rr-text-2xs, 12px); color: rgba(16, 38, 51, 0.62); }
+      .wywa-hint { margin: 9px 0 0; font-size: var(--rr-text-2xs, 12px); color: #49575c; }
       @media (prefers-reduced-motion: reduce) {
         .wywa-card { animation: none; }
       }

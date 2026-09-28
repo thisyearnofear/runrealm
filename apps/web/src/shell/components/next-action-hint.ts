@@ -47,12 +47,21 @@ export default class NextActionHint {
     const container = document.createElement('div');
     container.id = 'next-action-hint';
     container.className = 'nah hidden';
+    // `role="status"` already implies aria-live="polite"; setting both is
+    // redundant, and this is the surface that announces itself to a screen
+    // reader without being a toast.
     container.setAttribute('role', 'status');
-    container.setAttribute('aria-live', 'polite');
     parent.appendChild(container);
     this.container = container;
 
     container.addEventListener('click', (event) => this.handleClick(event));
+    container.addEventListener('mouseenter', this.holdOpen);
+    container.addEventListener('mouseleave', this.releaseOpen);
+    container.addEventListener('focusin', this.holdOpen);
+    container.addEventListener('focusout', this.releaseOpen);
+    container.addEventListener('keydown', (event) => {
+      if ((event as KeyboardEvent).key === 'Escape') this.hide();
+    });
     this.eventBus.on('location:error', () =>
       this.suggest({ kind: 'connect-location', act: () => void this.requestLocation() })
     );
@@ -110,27 +119,68 @@ export default class NextActionHint {
       <span class="nah-line">${escapeHtml(line)}</span>
       ${
         suggestion.act
-          ? '<button class="nah-act" data-nah-action="act">Do that</button>'
-          : '<button class="nah-act nah-dismiss" data-nah-action="dismiss" aria-label="Dismiss">Dismiss</button>'
+          ? `<button class="nah-act" data-nah-action="act" type="button">${escapeHtml(this.actionLabel(suggestion.kind))}</button>`
+          : '<button class="nah-act nah-dismiss" data-nah-action="dismiss" aria-label="Dismiss" type="button">Dismiss</button>'
       }
     `;
     this.container.classList.remove('hidden');
 
-    if (this.hideTimer) clearTimeout(this.hideTimer);
-    this.hideTimer = null;
+    this.disarmAutoHide();
     if (!STANDING.has(suggestion.kind)) {
-      this.hideTimer = setTimeout(() => this.hide(), AUTO_HIDE_MS);
+      this.armAutoHide();
+    }
+  }
+
+  /**
+   * "Do that" told a screen-reader user nothing about what the button would
+   * do. The label names the action instead, so the button makes sense out of
+   * the context of the sentence beside it.
+   */
+  private actionLabel(kind: NextActionKind): string {
+    switch (kind) {
+      case 'connect-location':
+        return 'Allow location';
+      case 'defend-territory':
+        return 'Fix it with a run';
+      case 'claim-ground':
+        return 'Claim it';
+      case 'start-run':
+        return 'Start the run';
+      default:
+        return 'Do that';
     }
   }
 
   public hide(): void {
-    if (this.hideTimer) {
-      clearTimeout(this.hideTimer);
-      this.hideTimer = null;
-    }
+    this.disarmAutoHide();
     this.current = null;
     this.container?.classList.add('hidden');
   }
+
+  /**
+   * A nudge that vanishes while a keyboard user is on its button is a nudge
+   * that cannot be acted on. Twenty seconds is a glance; the hold is what
+   * makes it an offer.
+   */
+  private armAutoHide(): void {
+    this.disarmAutoHide();
+    this.hideTimer = setTimeout(() => this.hide(), AUTO_HIDE_MS);
+  }
+
+  private disarmAutoHide(): void {
+    if (!this.hideTimer) return;
+    clearTimeout(this.hideTimer);
+    this.hideTimer = null;
+  }
+
+  private holdOpen = (): void => {
+    this.disarmAutoHide();
+  };
+
+  private releaseOpen = (): void => {
+    if (this.container?.classList.contains('hidden')) return;
+    if (this.current && !STANDING.has(this.current.kind)) this.armAutoHide();
+  };
 
   /** The line currently on screen, or null. Exposed for tests. */
   public getLine(): string | null {
@@ -198,17 +248,30 @@ export default class NextActionHint {
         font-weight: var(--rr-w-semibold, 600);
         padding: 5px 9px;
         cursor: pointer;
+        min-height: 30px;
         color: var(--rr-sunprint-ink, #102633);
         background: rgba(79, 174, 139, 0.18);
         border: 1px solid rgba(79, 174, 139, 0.45);
         border-radius: var(--rr-r-1, 3px);
       }
       .nah-act:hover { background: rgba(79, 174, 139, 0.3); }
+      /* A verdigris outline is the right ring on the dark map and close to
+         invisible on bone paper, so the chip carries its own ink ring. */
+      .nah-act:focus-visible {
+        outline: 2px solid var(--rr-sunprint-ink, #102633);
+        outline-offset: 2px;
+      }
       .nah-dismiss {
         background: none; border: none; padding: 4px 6px;
-        font-weight: 400; color: rgba(16, 38, 51, 0.6);
+        min-height: 30px;
+        font-weight: 400; color: #49575c;
       }
       .nah-dismiss:hover { background: rgba(16, 38, 51, 0.06); }
+      .nah-dismiss:focus-visible {
+        outline: 2px solid var(--rr-sunprint-ink, #102633);
+        outline-offset: 2px;
+        border-radius: var(--rr-r-1, 3px);
+      }
       @media (prefers-reduced-motion: reduce) {
         .nah { animation: none; }
       }

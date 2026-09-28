@@ -53,7 +53,7 @@ describe('NextActionHint', () => {
     expect(chip().classList.contains('hidden')).toBe(false);
     expect(line()).toMatch(/atlas|location/i);
     // A blocker gets a real button, never a dismiss-and-hope.
-    expect(button()?.textContent).toBe('Do that');
+    expect(button()?.textContent).toBe('Allow location');
     expect(button()?.classList.contains('nah-dismiss')).toBe(false);
   });
 
@@ -147,5 +147,57 @@ describe('NextActionHint', () => {
     for (const term of VOICE_BANNED_TERMS) {
       expect(text).not.toContain(term);
     }
+  });
+
+  describe('reachability', () => {
+    it('announces itself politely, without stealing focus', () => {
+      // The chip must not yank focus: a nudge that interrupts whatever the
+      // runner is doing (a route they are reading, a claim they are reading)
+      // is worse than one that waits to be found.
+      expect(chip().getAttribute('role')).toBe('status');
+      bus.emit('location:error', {});
+      expect(chip().getAttribute('role')).toBe('status');
+      expect(document.activeElement).toBe(document.body);
+    });
+
+    it('names the action on the button, not just "do that"', () => {
+      bus.emit('territory:vulnerable', {
+        territory: { id: 't-canal', metadata: { name: 'Canal Bend' } },
+      });
+      expect(button()?.textContent).toBe('Fix it with a run');
+    });
+
+    it('labels each kind of action in the terms of that action', () => {
+      bus.emit('location:error', {});
+      expect(button()?.textContent).toBe('Allow location');
+    });
+
+    it('gives the dismiss button a name when there is no action', () => {
+      bus.emit('web3:walletDisconnected', {});
+      const dismiss = button();
+      expect(dismiss?.getAttribute('aria-label')).toBe('Dismiss');
+      expect(dismiss?.getAttribute('type')).toBe('button');
+    });
+
+    it('keeps the nudge up while a keyboard is on its button', () => {
+      jest.useFakeTimers();
+      bus.emit('territory:vulnerable', {
+        territory: { id: 't-canal', metadata: { name: 'Canal Bend' } },
+      });
+
+      button()?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      jest.advanceTimersByTime(60_000);
+      expect(chip().classList.contains('hidden')).toBe(false);
+
+      button()?.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+      jest.advanceTimersByTime(30_000);
+      expect(chip().classList.contains('hidden')).toBe(true);
+    });
+
+    it('dismisses on Escape without hunting for the button', () => {
+      bus.emit('location:error', {});
+      chip().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(chip().classList.contains('hidden')).toBe(true);
+    });
   });
 });

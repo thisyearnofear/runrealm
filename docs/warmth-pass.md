@@ -153,12 +153,88 @@ cannot creep back.
 
 ---
 
-## What to hold us to
+## 7. Reachability
+
+The warmth pass rebuilt three surfaces and then looked only at how they
+looked. This is the second look — what happens when you are not looking.
+
+The findings were not stylistic. Each of the three new surfaces was, for a
+keyboard or screen-reader user, a thing that appeared and could not be reached.
+
+**The toasts were silent.** A `div` with no role, in a container with no live
+region, means a note that says "The claim did not go through" reaches nobody
+who is not looking at the screen. The container is now `role="log"` with
+`aria-live="polite"` — one region rather than one per note, so three notes
+arriving together queue instead of interrupting each other.
+
+**The status was a colour.** The 4px rule down the left edge of a note is the
+first thing a design reaches for and the first thing a colour-blind runner, a
+greyscale print and a screen reader never see. Each note now says its status
+in words — `Done`, `Careful`, `Not done`, `Working` — in a colour that
+survives the check. The stock coral measures **2.85:1** against bone paper; a
+smudge at 11px. The deepened values used for text are in `SUNPRINT_NOTE`
+alongside the bright ones used for decoration.
+
+**The dismiss timer ran while you were reaching for the button.** A five-second
+note with a "Try again" button is a retry that can vanish between focus
+arriving and Enter being pressed. Notes now hold open on hover *and* on
+focus, and Escape puts one away. The same rule went on the return card and the
+next-action chip — twenty-five seconds is a generous glance and a merciless
+screen reader.
+
+**The close button announced as "button."** A bare `×` has no accessible name,
+so two notes in a row are indistinguishable. It is now `Dismiss this note`,
+and the glyph is decoration.
+
+**The return card was `role="status"` with buttons inside it.** A live region
+holding focusable controls makes a screen reader re-announce the controls
+every time one is used. It is a labelled `role="dialog"` now, it takes focus
+when it appears (so a keyboard can find it at all), and dismissing it hands
+focus back to the map rather than dropping it on `<body>`.
+
+**"Do that" told you nothing.** The chip's action button was labelled "Do
+that", which is only meaningful to someone who can see the sentence next to
+it. It now names the action: *Allow location*, *Fix it with a run*, *Claim
+it*.
+
+**The focus ring was invisible where it mattered.** The global web rule is a
+verdigris outline at 3px, which is right on the dark map and **2.26:1** against
+bone — effectively absent on the one surface the note is printed on. Each of
+the three surfaces carries its own ink ring.
+
+**The loading bar never animated.** `animation: toastProgress 3s linear`
+referenced keyframes that were not defined anywhere in the repo. The bar
+rendered as a static rule under a note claiming to be working, which is worse
+than no bar: it looks like a divider. The keyframes exist now, and under
+reduced motion the bar is simply full — the honest depiction of a wait that
+has not finished.
+
+### What was checked, and how
+
+Contrast was measured, not eyeballed — every pair above is a real ratio
+against `--rr-sunprint-bone` (`#f3ead8`). Ink on bone is 13.04:1; body copy
+passes comfortably and only the tinted accents needed deepening.
+
+Twenty-eight new tests hold this in place: 14 on the toast surface
+(`ui-service-toast-a11y.test.ts`) and 14 across the two web cards. They are
+written to fail if a restyle takes the behaviour away, not just to describe
+what currently happens.
+
+---
+
 
 - New player-facing strings go in `atlas-voice.ts`, not inline at the call site.
 - A failure message says what happened *and* what happens next.
 - A button appears only if pressing it does the thing.
 - `ui:toast` has exactly one bridge; new surfaces emit it rather than building
   their own toast channel.
+- Status is carried in words as well as colour. A rule down the edge of a
+  note is decoration, not a signal.
+- A timed surface holds open while it is being read or driven from the
+  keyboard, and Escape dismisses it.
+- A control that appears on screen is reachable by keyboard. If it takes
+  focus, it also returns focus somewhere sensible when dismissed.
+- Anything that carries meaning is checked against the surface it is printed
+  on — a focus ring that works on the dark map is not a focus ring on paper.
 - Run `npm run build:shared`, the shared-core and web jest suites, and
   `npm run sync:check` before pushing.

@@ -14,6 +14,18 @@ import { DOMService } from './dom-service';
  */
 const TOAST_STYLE_ID = 'runrealm-toast-styles';
 
+/**
+ * The status word that sits beside the coloured rule. Colour alone is not a
+ * signal — it is invisible in greyscale, in a colour-blind reader, and to a
+ * screen reader — so the note says what it is in text as well.
+ */
+const TOAST_STATUS: Record<string, string> = {
+  success: 'Done',
+  warning: 'Careful',
+  error: 'Not done',
+  loading: 'Working',
+};
+
 const SUNPRINT_NOTE = {
   ink: '#102633',
   paper: 'linear-gradient(180deg, rgba(243, 234, 216, 0.98), rgba(243, 234, 216, 0.92))',
@@ -22,6 +34,16 @@ const SUNPRINT_NOTE = {
   coral: '#e85d5d',
   cyan: '#63b3c8',
   muted: '#607c86',
+  /**
+   * Text that sits on the paper at less than full ink still has to clear 4.5:1
+   * against bone (#f3ead8). The stock accents are decoration, not text — a
+   * coral label at full strength measures 2.85:1 and reads as a smudge — so
+   * anything carrying words uses these deepened values instead.
+   */
+  inkSoft: '#425157',
+  inkFaint: '#49575c',
+  coralInk: '#8f2f2f',
+  verdigrisInk: '#2f6f57',
 } as const;
 
 export interface ToastOptions {
@@ -52,6 +74,8 @@ export class UIService {
   private static instance: UIService;
   private domService: DOMService;
   private toastContainer: HTMLElement | null = null;
+  /** Pending auto-dismiss timers, so a note being read can be held open. */
+  private toastTimers = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
   private celebrationEffects: HTMLElement[] = [];
   /** Working copy, sourced from the single voice module so the loading bank and
    *  the tone everywhere else can never drift apart. */
@@ -80,6 +104,15 @@ export class UIService {
   private createToastContainer(): void {
     this.toastContainer = this.domService.createElement('div', {
       id: 'toast-container',
+      // The container is the live region. Announcing the individual notes
+      // instead would work, but a burst of three notes would interrupt itself;
+      // one region lets a screen reader queue them in order.
+      attributes: {
+        role: 'log',
+        'aria-live': 'polite',
+        'aria-relevant': 'additions',
+        'aria-label': 'Run notes',
+      },
       style: {
         position: 'fixed',
         bottom: '20px',
@@ -105,6 +138,16 @@ export class UIService {
     style.id = TOAST_STYLE_ID;
     style.textContent = `
       .toast-message { line-height: 1.45; }
+      .toast-status { line-height: 1.45; }
+      /* A visible focus ring on the paper surface. The global web rule is a
+         verdigris outline, which is right on the dark map and all but
+         invisible on bone — so the note carries its own. */
+      .toast button:focus-visible,
+      .toast a:focus-visible {
+        outline: 2px solid ${SUNPRINT_NOTE.ink};
+        outline-offset: 2px;
+        border-radius: var(--rr-r-1, 3px);
+      }
       .toast-ceremony {
         padding: 18px 20px;
         border-left-width: 6px;
@@ -126,8 +169,21 @@ export class UIService {
         background: radial-gradient(circle at 35% 30%, #f2a541, #c9791f);
         box-shadow: inset 0 0 0 2px rgba(16, 38, 51, 0.18);
       }
+      /* The loading bar referenced this name, but the keyframes were never
+         written anywhere — the bar rendered as a still rule and read as a
+         static divider. Here it is, and under reduced motion it is simply
+         full, which is the honest depiction of a stuck-at-100% wait. */
+      @keyframes toastProgress {
+        from { width: 0%; }
+        to { width: 100%; }
+      }
+      .toast-progress { width: 0%; }
       @media (prefers-reduced-motion: reduce) {
         .toast-ceremony::after { box-shadow: none; }
+        /* The slide-in is the one motion on this surface; without it the note
+           just appears, which is all it needed to do. */
+        .toast { transition: none !important; }
+        .toast-progress { animation: none !important; width: 100%; }
       }
     `;
     document.head.appendChild(style);
@@ -206,6 +262,7 @@ export class UIService {
     if (showProgress && type === 'loading') {
       const progressBar = this.domService.createElement('div', {
         className: 'toast-progress',
+        attributes: { 'aria-hidden': 'true' },
         style: {
           position: 'absolute',
           bottom: '0',
@@ -213,7 +270,7 @@ export class UIService {
           height: '3px',
           background: accent,
           borderRadius: '0 0 12px 12px',
-          animation: 'toastProgress 3s linear',
+          animation: 'toastProgress 3s linear forwards',
         },
       });
       toast.style.position = 'relative';
@@ -221,9 +278,12 @@ export class UIService {
     }
 
     // A small survey mark carries the status, not an emoji sticker — the note
-    // reads as filed paper rather than a notification tray.
-    const mark = this.domService.createElement('div', {
+    // reads as filed paper rather than a notification tray. It is decoration:
+    // the status is also carried in words just after it, because a coloured
+    // square is invisible to anyone who cannot see it.
+    const mark = this.domService.createElement('span', {
       className: 'toast-mark',
+      attributes: { 'aria-hidden': 'true' },
       style: {
         width: '8px',
         height: '8px',
@@ -245,20 +305,43 @@ export class UIService {
     });
 
     toast.appendChild(mark);
+    if (type !== 'info') {
+      toast.appendChild(
+        this.domService.createElement('span', {
+          className: 'toast-status',
+          textContent: TOAST_STATUS[type] ?? '',
+          style: {
+            fontSize: '11px',
+            fontWeight: '700',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: this.getToastStatusInk(type),
+            alignSelf: 'flex-start',
+            marginTop: '1px',
+            flexShrink: '0',
+          },
+        })
+      );
+    }
     toast.appendChild(messageEl);
 
     // Add action button if provided
     if (action) {
       const actionBtn = this.domService.createElement('button', {
+        className: 'toast-action',
+        attributes: { type: 'button' },
         textContent: action.text,
         style: {
           background: 'rgba(16, 38, 51, 0.06)',
-          border: '1px solid rgba(16, 38, 51, 0.16)',
+          border: '1px solid rgba(16, 38, 51, 0.28)',
           color: SUNPRINT_NOTE.ink,
           fontFamily: 'inherit',
           fontWeight: 'bold',
           cursor: 'pointer',
           padding: '6px 10px',
+          // 32px tall before padding, comfortably over the 24px target a
+          // thumb or a stylus needs on a phone.
+          minHeight: '32px',
           borderRadius: 'var(--rr-r-2, 4px)',
           flexShrink: '0',
         },
@@ -272,18 +355,22 @@ export class UIService {
       toast.appendChild(actionBtn);
     }
 
-    // Add close button
+    // Add close button. A bare "×" has no accessible name, so a screen reader
+    // announces it as "button"; the glyph is decoration, the name is not.
     const closeBtn = this.domService.createElement('button', {
-      innerHTML: '×',
+      className: 'toast-close',
+      attributes: { type: 'button', 'aria-label': 'Dismiss this note' },
+      textContent: '×',
       style: {
         background: 'none',
         border: 'none',
         fontSize: '20px',
         cursor: 'pointer',
-        color: 'rgba(16, 38, 51, 0.55)',
+        // Deepened from 0.55 alpha so the glyph clears 3:1 against the paper.
+        color: SUNPRINT_NOTE.inkSoft,
         padding: '0',
-        width: '24px',
-        height: '24px',
+        width: '28px',
+        height: '28px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -296,6 +383,33 @@ export class UIService {
     });
 
     toast.appendChild(closeBtn);
+
+    // A note the runner is reading should not leave on a timer. Hover or
+    // keyboard focus holds it open, and Escape puts it away — the same promise
+    // as a native notification, without the notification.
+    if (duration > 0) {
+      const startDismissTimer = () => {
+        this.clearToastTimer(toast);
+        this.toastTimers.set(
+          toast,
+          setTimeout(() => this.removeToast(toast), duration)
+        );
+      };
+      const holdOpen = () => this.clearToastTimer(toast);
+      const resume = () => {
+        if (toast.parentElement) startDismissTimer();
+      };
+
+      toast.addEventListener('mouseenter', holdOpen);
+      toast.addEventListener('mouseleave', resume);
+      toast.addEventListener('focusin', holdOpen);
+      toast.addEventListener('focusout', resume);
+      toast.addEventListener('keydown', (event) => {
+        if ((event as KeyboardEvent).key === 'Escape') this.removeToast(toast);
+      });
+      startDismissTimer();
+    }
+
     this.toastContainer.appendChild(toast);
 
     // Enhanced animation in
@@ -308,13 +422,6 @@ export class UIService {
         this.createCelebrationEffect(toast);
       }
     }, 10);
-
-    // Auto remove after duration
-    if (duration > 0) {
-      setTimeout(() => {
-        this.removeToast(toast);
-      }, duration);
-    }
   }
 
   /** The single coloured rule on a note, carrying the status. Every other
@@ -334,7 +441,31 @@ export class UIService {
     }
   }
 
+  /** The same status, in words, in a colour that survives a contrast check. */
+  private getToastStatusInk(type: string): string {
+    switch (type) {
+      case 'success':
+        return SUNPRINT_NOTE.verdigrisInk;
+      case 'warning':
+      case 'error':
+        return SUNPRINT_NOTE.coralInk;
+      case 'loading':
+        return SUNPRINT_NOTE.inkSoft;
+      default:
+        return SUNPRINT_NOTE.inkSoft;
+    }
+  }
+
+  /** Drop a note's pending dismiss timer, if it has one. */
+  private clearToastTimer(toast: HTMLElement): void {
+    const timer = this.toastTimers.get(toast);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    this.toastTimers.delete(toast);
+  }
+
   private removeToast(toast: HTMLElement): void {
+    this.clearToastTimer(toast);
     if (!toast.parentElement) return;
 
     // Animate out
