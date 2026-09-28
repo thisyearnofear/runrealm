@@ -172,4 +172,41 @@ describe('UIService toast accessibility', () => {
       expect(sheet.textContent).toContain('.toast { transition: none !important; }');
     });
   });
+
+  describe('one live region per document', () => {
+    beforeEach(() => {
+      UIService.resetInstance();
+    });
+
+    afterEach(() => {
+      UIService.resetInstance();
+    });
+
+    it('does not build a second container when asked twice', () => {
+      // Found in a real browser: `bootstrap.ts` constructed its own UIService
+      // while the composer held the singleton, and the page ended up with two
+      // `role="log"` regions. A screen reader then had no way to tell which
+      // one was current, and every note could be announced twice.
+      const first = UIService.getInstance();
+      const second = UIService.getInstance();
+
+      expect(second).toBe(first);
+      expect(document.querySelectorAll('#toast-container')).toHaveLength(1);
+    });
+
+    it('holds the invariant even for a caller that skips the singleton', () => {
+      // The guarantee belongs to the class, not to every call site being
+      // careful. A direct construction must not be able to break it.
+      const a = new UIService();
+      const b = new UIService();
+
+      expect(document.querySelectorAll('#toast-container')).toHaveLength(1);
+      a.showToast('One region.', { type: 'info' });
+      b.showToast('Still one region.', { type: 'info' });
+
+      const regions = document.querySelectorAll('[role="log"]');
+      expect(regions).toHaveLength(1);
+      expect(notes()).toHaveLength(2);
+    });
+  });
 });

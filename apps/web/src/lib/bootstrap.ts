@@ -52,7 +52,13 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
 
     const domService = new DOMService();
     const locationService = LocationService.getInstance();
-    const uiService = new UIService();
+    // The composed instance, not a second one. `new UIService()` here built a
+    // second toast container and a second timer map while the composer held
+    // the real one, so the app had two `role="log"` live regions and two
+    // opinions about which notes were on screen. Everything that reaches the
+    // UI through `getSiblingService('UIService')` uses the singleton, so this
+    // had to become the singleton too.
+    const uiService = UIService.getInstance();
     const gamefiUI = new GameFiUI();
     const web3Service = Web3Service.getInstance();
     const animationService = AnimationService.getInstance();

@@ -71,7 +71,7 @@ export interface SuccessMessageData {
 }
 
 export class UIService {
-  private static instance: UIService;
+  private static instance: UIService | null = null;
   private domService: DOMService;
   private toastContainer: HTMLElement | null = null;
   /** Pending auto-dismiss timers, so a note being read can be held open. */
@@ -94,6 +94,11 @@ export class UIService {
     this.createToastContainer();
   }
 
+  /**
+   * The one UI service. Toast state — the container, the pending dismiss
+   * timers — belongs to a single object; two instances is two answers to
+   * "is that note still on screen", and only one of them is consulted.
+   */
   static getInstance(): UIService {
     if (!UIService.instance) {
       UIService.instance = new UIService();
@@ -101,7 +106,25 @@ export class UIService {
     return UIService.instance;
   }
 
+  /** Test seam. Does not tear down the container. */
+  static resetInstance(): void {
+    UIService.instance = null;
+  }
+
   private createToastContainer(): void {
+    // One live region per document, not one per instance. The container is an
+    // ARIA landmark: two of them means a screen reader announces every note
+    // twice and has no way to tell which is current. `bootstrap.ts` used to
+    // build a second `UIService` alongside the composed one, which is how that
+    // happened. Reusing an existing container makes the invariant hold even
+    // for a caller that does not know to ask for the singleton.
+    const existing = document.getElementById('toast-container');
+    if (existing) {
+      this.toastContainer = existing;
+      this.ensureStyles();
+      return;
+    }
+
     this.toastContainer = this.domService.createElement('div', {
       id: 'toast-container',
       // The container is the live region. Announcing the individual notes
