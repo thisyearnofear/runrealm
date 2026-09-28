@@ -225,6 +225,22 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
       console.warn('Return card not available:', err);
     }
 
+    // Recovered run: if the device was still holding an unfinished run when
+    // the tab went away, offer it back. Mounted after the return card so a
+    // runner returning from a long absence sees the realm's news first and
+    // their own unfinished run second.
+    try {
+      const { default: RecoveredRunCard } = await import('../shell/components/recovered-run-card');
+      const recoveredContainer = document.createElement('div');
+      recoveredContainer.id = 'recovered-run-root';
+      document.body.appendChild(recoveredContainer);
+      // The composed instance, not a fresh one — this is the same object that
+      // wrote the checkpoint in the first place.
+      new RecoveredRunCard(app.getServices().runTracking).initialize(recoveredContainer);
+    } catch (err) {
+      console.warn('Recovered run card not available:', err);
+    }
+
     // Intuitive clarity: one quiet line naming the single most useful thing to
     // do, and nothing at all when there is no next move.
     try {

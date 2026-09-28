@@ -16,6 +16,7 @@ a manual, that talks to you like a person, and never dead-ends.
 | §1–6 | The voice layer, the three surfaces, the copy sweep | [`321f8dd`] |
 | §6 | The phone, swept into the same voice | [`f98a63f`] |
 | §7 | Reachability — what happened when you are not looking | [`debbef5`] |
+| §8 | Runner moments — a run is never lost to a dead tab | [`f51416c`] + `recovered-run-card` |
 
 The third one exists because the first one only checked how the new surfaces
 *looked*. Each of them turned out to be something that appeared on screen and
@@ -235,12 +236,101 @@ what currently happens.
 
 ---
 
+## 8. Runner moments
+
+The warmth pass was about how the game reads. This section is about the four
+things a runner actually *does*, and what happens when reality interrupts.
+
+Measured, not assumed — the four moments are cold open, mid-run, weak signal,
+and after.
+
+### The finding: a run lived only in memory
+
+`saveRun()` was called from exactly two places: on completion, and on import.
+There was no mid-run checkpoint anywhere.
+
+So a phone that died at 6 km, a tab the OS evicted under memory pressure, a
+browser crash — **the entire run was gone.** Not degraded: gone. For a game
+whose premise is "your run develops your ground", that is the worst failure
+available. The runner does the hard part and gets nothing for it.
+
+Now the run is written to storage every 30 seconds, and — more importantly —
+on `pagehide` and `visibilitychange`, the two events that reliably fire before
+a mobile browser suspends a tab. The 30-second interval is a backstop; the
+event flush is what actually saves the run.
+
+### What is stored, and what is not
+
+**Segments are not stored.** They are derivable from consecutive points, so
+storing them doubles the payload for no information. Recovery rebuilds them
+with the same distance and speed the live path computes.
+
+**Stats are carried, not recomputed.** The live path accumulates stats
+incrementally on purpose — the old full recompute was O(n) per point and
+quadratic over a run. Recomputing on recovery would be quadratic exactly when
+the device is already struggling.
+
+**Recovery is strict.** A wrong version, corrupt JSON, a non-finite
+coordinate, a run with no points, or a checkpoint older than twelve hours all
+return nothing rather than a half-read run. A broken map whose distance does
+not match its track is worse than being asked to start again.
+
+### The honesty rule
+
+A recovered run **does not earn a claim.** It was never closed by the runner,
+so it cannot develop ground. The tempting lie was to mark it eligible; the
+card says so in words before the runner presses anything. It still goes to
+their history, because the work happened.
+
+### A bug the tests found
+
+The first draft guarded the suspend listeners with a `static` "already
+installed" flag. It read as if it prevented double-binding. It actually
+pinned the *first* service instance's closure for the life of the page — every
+later instance would have flushed through a stale object and silently written
+nothing.
+
+That is the exact failure the commit exists to prevent, hiding behind
+working-looking code. It was caught by a test asserting that the *second*
+instance's run gets flushed. Worth remembering as an argument for that style
+of test generally.
+
+### The card
+
+`recovered-run-card.ts` is the half that tells the runner the run exists. It
+is deliberately a different surface from the "while you were away" card:
+coming back after a fortnight is the realm having moved on; coming back after a
+crash is *your* run, still there, unfinished. So this one leads with what you
+did, not with what happened to the phone.
+
+It takes focus when it appears, holds open while focused, and only leaves on
+a two-minute backstop if the runner walks away — and even then it leaves the
+checkpoint intact, so it is offered again on the next boot.
+
+### What is still open
+
+Phase 2 — **the pocket.** There is a `wakeLock` gap. You have pocket mode, a
+near-black veil, haptics and audio carrying the run for a phone in a pocket.
+But nothing in the codebase touches `visibilitychange` or the Wake Lock API,
+so on a real phone the screen sleeps, the browser throttles intervals to once
+a minute, and there is nothing keeping it alive.
+
+The saving grace, found while measuring: `totalDuration = endTime -
+startTime` from wall clock, and GPS fixes are filtered by distance rather than
+tick count. So a throttled interval does *not* corrupt distance or duration.
+The design already survives this. What is missing is keeping the thing awake.
+
+---
+
+## What to hold us to
 
 - New player-facing strings go in `atlas-voice.ts`, not inline at the call site.
 - A failure message says what happened *and* what happens next.
 - A button appears only if pressing it does the thing.
 - `ui:toast` has exactly one bridge; new surfaces emit it rather than building
   their own toast channel.
+- A runner never loses a run. If the device was still holding one, say so on
+  the next boot — and say plainly what the run can and cannot do.
 - Status is carried in words as well as colour. A rule down the edge of a
   note is decoration, not a signal.
 - A timed surface holds open while it is being read or driven from the
