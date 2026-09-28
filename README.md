@@ -25,6 +25,8 @@ npm run dev         # web app (Next.js) + backend (server.js)
 
 Useful commands: `npm run build`, `npm test`, `npm run sync:rules` (regenerate Solidity rule mirrors from `game-rules.ts`), `npm run sync:check` (CI drift gate).
 
+Optional: the network pace-band leaderboard needs an attestation-oracle quorum. Set `RUNREALM_ATTESTATION_ORACLES` (plus `NEXT_PUBLIC_RUNREALM_ATTESTATION_ORACLES` for the web app) to point the client at one, and give the backend a `RUNREALM_ORACLE_PRIVATE_KEY` to run one yourself; the board it signs persists to `RUNREALM_LEDGER_PATH` (`./.data/attestation-ledger.json` by default). Blank these and the app honestly reports `local` attestations — nothing else changes. See [Introduction](docs/introduction.md) for the setup details.
+
 ## Docs
 
 | Doc | What it covers |
@@ -37,6 +39,7 @@ Useful commands: `npm run build`, `npm test`, `npm run sync:rules` (regenerate S
 | [Sunprint Atlas](docs/design-improvement-plan.md) | Canonical visual/map/motion direction |
 | [Orbis Live](docs/orbis-live.md) | Wallet-free live demo slice (`/orbis-live`) |
 | [Zama Builder Track](docs/zama-builder-track.md) | FHE submission: demo flow, deploys, pitch assets |
+| [Experience Differentiation](docs/experience-differentiation.md) | The four bets that make the protocol visible: claim ceremony, fog-of-war, race replays, leaderboards |
 
 ## Status
 

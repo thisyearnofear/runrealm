@@ -104,6 +104,10 @@ export class SunprintDeedModal extends BaseService {
     document.body.appendChild(modal);
     this.activeModal = modal;
 
+    // Announce the reveal so parallel chrome (run-theater's Develop act)
+    // can yield — the deed is the stronger artifact for the same moment.
+    this.safeEmit('ui:deedRevealed', { territoryId: territory.id });
+
     // Setup ESC dismiss handler
     this.escKeyHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -360,27 +364,27 @@ export class SunprintDeedModal extends BaseService {
           justify-content: center;
           padding: 16px;
           animation: deedFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          --deed-navy: #0d2b3e;
-          --deed-raised: #173d52;
-          --deed-chalk: #f8f4e8;
-          --deed-bone: #f3ead8;
-          --deed-ink: #102633;
-          --deed-accent: #4fae8b; /* Default Common Verdigris */
+          --deed-navy: var(--rr-sunprint-blueprint, #0d2b3e);
+          --deed-raised: var(--rr-sunprint-raised, #173d52);
+          --deed-chalk: var(--rr-sunprint-chalk, #f8f4e8);
+          --deed-bone: var(--rr-sunprint-bone, #f3ead8);
+          --deed-ink: var(--rr-sunprint-ink, #102633);
+          --deed-accent: var(--rr-rarity-common, #4fae8b);
           --deed-glow: rgba(79, 174, 139, 0.3);
         }
 
         .sunprint-deed-overlay.rarity-rare {
-          --deed-accent: #63b3c8;
+          --deed-accent: var(--rr-rarity-rare, #63b3c8);
           --deed-glow: rgba(99, 179, 200, 0.4);
         }
 
         .sunprint-deed-overlay.rarity-epic {
-          --deed-accent: #a855f7;
-          --deed-glow: rgba(168, 85, 247, 0.45);
+          --deed-accent: var(--rr-rarity-epic, #9370db);
+          --deed-glow: rgba(147, 112, 219, 0.45);
         }
 
         .sunprint-deed-overlay.rarity-legendary {
-          --deed-accent: #f2a541;
+          --deed-accent: var(--rr-rarity-legendary, #f2a541);
           --deed-glow: rgba(242, 165, 65, 0.55);
         }
 
@@ -396,16 +400,41 @@ export class SunprintDeedModal extends BaseService {
           position: relative;
           width: 100%;
           max-width: 440px;
-          background: linear-gradient(165deg, #103248 0%, #0d2b3e 60%, #071a26 100%);
+          background: linear-gradient(165deg, #103248 0%, var(--deed-navy) 60%, #071a26 100%);
           border: 2px solid var(--deed-accent);
           border-radius: 12px;
           padding: 24px;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 40px var(--deed-glow);
           color: var(--deed-chalk);
-          font-family: -apple-system, BlinkMacSystemFont, "Geist", "Segoe UI", Roboto, sans-serif;
+          font-family: var(--rr-font-body, -apple-system, BlinkMacSystemFont, "Geist", "Segoe UI", Roboto, sans-serif);
           overflow: hidden;
           animation: deedPaperEmerge 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
           transform-origin: center;
+        }
+
+        /* Development ceremony: content fixes into view after the wash,
+           staggered like an image emerging on photographic paper. */
+        .sunprint-deed-card .deed-header,
+        .sunprint-deed-card .deed-seal-container,
+        .sunprint-deed-card .deed-title-block,
+        .sunprint-deed-card .deed-map-preview,
+        .sunprint-deed-card .deed-stats-grid,
+        .sunprint-deed-card .deed-proof-bar,
+        .sunprint-deed-card .deed-actions {
+          opacity: 0;
+          animation: deedFixIn 0.5s var(--rr-ease-out, cubic-bezier(0.2, 0.7, 0.2, 1)) forwards;
+        }
+        .sunprint-deed-card .deed-header { animation-delay: 0.9s; }
+        .sunprint-deed-card .deed-seal-container { animation-delay: 1.05s; }
+        .sunprint-deed-card .deed-title-block { animation-delay: 1.2s; }
+        .sunprint-deed-card .deed-map-preview { animation-delay: 1.35s; }
+        .sunprint-deed-card .deed-stats-grid { animation-delay: 1.5s; }
+        .sunprint-deed-card .deed-proof-bar { animation-delay: 1.65s; }
+        .sunprint-deed-card .deed-actions { animation-delay: 1.8s; }
+
+        @keyframes deedFixIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: none; }
         }
 
         /* Registration Crosshairs */
@@ -429,7 +458,8 @@ export class SunprintDeedModal extends BaseService {
           width: 300%;
           height: 300%;
           background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.15) 50%, transparent 60%);
-          animation: exposureSweep 1.2s ease-out forwards;
+          opacity: 0;
+          animation: exposureSweep 1.2s ease-out 0.25s forwards;
           pointer-events: none;
         }
 
@@ -444,9 +474,9 @@ export class SunprintDeedModal extends BaseService {
         }
 
         .deed-registry-tag {
-          font-family: monospace;
+          font-family: var(--rr-font-mono, monospace);
           font-size: 10px;
-          letter-spacing: 0.1em;
+          letter-spacing: var(--rr-track-caps, 0.12em);
           color: var(--deed-accent);
           font-weight: 600;
         }
@@ -479,6 +509,12 @@ export class SunprintDeedModal extends BaseService {
           background: rgba(13, 43, 62, 0.9);
           box-shadow: 0 0 16px var(--deed-glow);
           overflow: hidden;
+          animation: sealStamp 0.5s var(--rr-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) 1.05s backwards;
+        }
+
+        @keyframes sealStamp {
+          0% { transform: scale(1.6); }
+          100% { transform: scale(1); }
         }
 
         .seal-inner {
@@ -516,9 +552,9 @@ export class SunprintDeedModal extends BaseService {
         .deed-name {
           margin: 0;
           font-size: 24px;
-          font-family: "Fraunces", Georgia, serif;
+          font-family: var(--rr-font-display, "Fraunces", Georgia, serif);
           font-weight: 700;
-          color: #f8f4e8;
+          color: var(--deed-chalk);
           line-height: 1.2;
           text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
@@ -711,6 +747,27 @@ export class SunprintDeedModal extends BaseService {
 
         @keyframes deedFadeOut {
           to { opacity: 0; transform: scale(0.95); }
+        }
+
+        /* Reduced motion: skip the ceremony, show the developed deed. */
+        @media (prefers-reduced-motion: reduce) {
+          .sunprint-deed-overlay,
+          .sunprint-deed-card,
+          .chemical-wash-sweep,
+          .seal-foil-shine,
+          .deed-seal,
+          .sunprint-deed-overlay.closing,
+          .sunprint-deed-card .deed-header,
+          .sunprint-deed-card .deed-seal-container,
+          .sunprint-deed-card .deed-title-block,
+          .sunprint-deed-card .deed-map-preview,
+          .sunprint-deed-card .deed-stats-grid,
+          .sunprint-deed-card .deed-proof-bar,
+          .sunprint-deed-card .deed-actions {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+          }
         }
       `,
     });

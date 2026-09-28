@@ -1,6 +1,12 @@
 import { GAME_RULES } from '../config/game-rules';
 import { BaseService } from '../core/base-service';
 import { type RivalryRecord, summarizeRivalry } from '../utils/ghost-rivalry';
+import {
+  createRaceReplayRecord,
+  type RaceReplayRecord,
+  raceReplayHash,
+} from '../utils/race-replay';
+import { computeRaceScores, rubberBandWindow } from '../utils/race-scoring';
 import { StorageAdapter } from '../utils/storage-adapter';
 import { openVersioned, quarantineKey, writeVersioned } from '../utils/versioned-store';
 import { AIService, GhostRunner } from './ai-service';
@@ -57,11 +63,13 @@ export class GhostRunnerService extends BaseService {
   private ghosts: Map<string, GhostRunnerNFT> = new Map();
   private ghostRuns: GhostRun[] = [];
   private raceHistory: GhostRaceResult[] = [];
+  private raceRecords: RaceReplayRecord[] = [];
   private userRealmBalance: number = 0;
   // Set when a future-version save is on disk: degrade in memory and
   // skip writes so a stale build never overwrites the good save.
   private ghostsReadOnly = false;
   private raceHistoryReadOnly = false;
+  private raceRecordsReadOnly = false;
   private balanceReadOnly = false;
 
   private constructor() {
@@ -82,6 +90,7 @@ export class GhostRunnerService extends BaseService {
     await this.loadGhosts();
     await this.loadRealmBalance();
     await this.loadRaceHistory();
+    await this.loadRaceRecords();
     this.setupEventListeners();
   }
 
@@ -197,6 +206,56 @@ export class GhostRunnerService extends BaseService {
     } catch (error) {
       console.error('Failed to save race history:', error);
     }
+  }
+
+  private async loadRaceRecords(): Promise<void> {
+    const key = 'runrealm_race_records';
+    try {
+      const raw = await StorageAdapter.getItem(key);
+      const opened = openVersioned<RaceReplayRecord[]>(raw, {
+        floor: 1,
+        head: 1,
+        steps: [
+          {
+            toVersion: 1,
+            note: 'base race replay record array',
+            migrate: (v) => v as RaceReplayRecord[],
+            validate: (v) => {
+              if (!Array.isArray(v)) throw new RangeError('race records: expected an array');
+              return v as RaceReplayRecord[];
+            },
+          },
+        ],
+        fresh: () => [],
+      });
+      if (opened.status !== 'ok' && opened.status !== 'fresh') {
+        console.warn(`GhostRunnerService: race record storage ${opened.status} (${opened.reason})`);
+      }
+      if (opened.status === 'corrupt' && raw !== null) {
+        await StorageAdapter.setItem(quarantineKey(key), raw);
+      }
+      if (opened.readOnly) this.raceRecordsReadOnly = true;
+      this.raceRecords = opened.state.slice(-50);
+    } catch (error) {
+      console.error('Failed to load race replay records:', error);
+    }
+  }
+
+  private async saveRaceRecords(): Promise<void> {
+    if (this.raceRecordsReadOnly) return;
+    try {
+      await StorageAdapter.setItem(
+        'runrealm_race_records',
+        writeVersioned(1, this.raceRecords, Date.now())
+      );
+    } catch (error) {
+      console.error('Failed to save race replay records:', error);
+    }
+  }
+
+  /** Replay record for a past race — the shareable, verifiable artifact. */
+  getRaceReplayRecord(raceId: string): RaceReplayRecord | undefined {
+    return this.raceRecords.find((r) => r.raceId === raceId);
   }
 
   private async loadRealmBalance(): Promise<void> {
@@ -336,44 +395,29 @@ export class GhostRunnerService extends BaseService {
    * rubber-banding from recent race history (trailing players get help,
    * leaders get heat).
    *
-   * Determinism: pure Tier A math of (ghost, user stats, race history).
-   * The race ID derives from the ghost's persisted deployment counter
-   * and the clock arrives as `nowMs` from the action handler — no
-   * Math.random, no clock reads. Same history in, same result out.
+   * Determinism: pure Tier A math of (ghost, user stats, race history),
+   * factored into `computeRaceScores` (utils/race-scoring.ts) so replays
+   * re-resolve from the persisted record and compare. The race ID derives
+   * from the ghost's persisted deployment counter and the clock arrives
+   * as `nowMs` from the action handler — no Math.random, no clock reads.
+   * Every resolution also persists a RaceReplayRecord (the inputs) so the
+   * race can be verified and replayed later.
    */
   private resolveRaceResult(
     ghost: GhostRunnerNFT,
     territoryId: string,
     nowMs: number = Date.now()
-  ): GhostRaceResult {
+  ): { result: GhostRaceResult; replayHash: string } {
     const stats = this.getUserStats();
-    const levelBonus = Math.min((ghost.level - 1) * 60, GAME_RULES.ghosts.maxLevelBonusScore);
+    const historyTail = this.raceHistory.slice(-rubberBandWindow()).map((r) => r.winner);
+    const { ghostScore, userScore, winner } = computeRaceScores({
+      ghostPace: ghost.pace,
+      ghostLevel: ghost.level,
+      userStats: stats,
+      historyTail,
+    });
 
-    // Ghost: base fitness from pace (lower seconds/meter is better),
-    // scaled to the 0-1000 defense-point scale, hard-capped.
-    let ghostScore = Math.round(
-      Math.min(GAME_RULES.ghosts.ghostScoreCap, Math.max(50, 600 - ghost.pace * 800 + levelBonus))
-    );
-
-    // Rubber-band: help trailing players, heat leaders.
-    const rb = GAME_RULES.ghosts.rubberBand;
-    const recent = this.raceHistory.slice(-Math.max(rb.lossesForHelp, rb.winsForHeat));
-    const recentLosses = recent.filter((r) => r.winner === 'ghost').length;
-    const recentWins = recent.filter((r) => r.winner === 'user').length;
-    if (recentLosses >= rb.lossesForHelp) ghostScore = Math.max(50, ghostScore - rb.helpPoints);
-    else if (recentWins >= rb.winsForHeat)
-      ghostScore = Math.min(GAME_RULES.ghosts.ghostScoreCap, ghostScore + rb.heatPoints);
-
-    // User: average pace relative to a 6:00/km benchmark plus a volume
-    // nudge; falls back to a neutral 400 when no history exists yet.
-    let userScore = 400;
-    if (stats && Number.isFinite(stats.averagePace) && stats.averagePace > 0) {
-      const paceScore = 900 - stats.averagePace * 120;
-      const volumeScore = Math.min(150, stats.totalDistance / 500);
-      userScore = Math.round(Math.min(1000, Math.max(50, paceScore + volumeScore)));
-    }
-
-    return {
+    const result: GhostRaceResult = {
       raceId: `race_${ghost.id}_${ghost.totalRuns}`,
       ghostId: ghost.id,
       ghostName: ghost.name,
@@ -381,9 +425,31 @@ export class GhostRunnerService extends BaseService {
       territoryId,
       ghostScore,
       userScore,
-      winner: userScore >= ghostScore ? 'user' : 'ghost',
+      winner,
       completedAt: nowMs,
     };
+
+    const record = createRaceReplayRecord({
+      raceId: result.raceId,
+      territoryId,
+      ghost: {
+        id: ghost.id,
+        name: ghost.name,
+        avatar: ghost.avatar,
+        pace: ghost.pace,
+        level: ghost.level,
+      },
+      userStats: stats ?? null,
+      historyTail,
+      result: { ghostScore, userScore, winner, completedAt: nowMs },
+    });
+    this.raceRecords.push(record);
+    if (this.raceRecords.length > 50) {
+      this.raceRecords = this.raceRecords.slice(-50);
+    }
+    void this.saveRaceRecords();
+
+    return { result, replayHash: raceReplayHash(record) };
   }
 
   async unlockGhost(
@@ -449,7 +515,7 @@ export class GhostRunnerService extends BaseService {
 
     // Head-to-head race result: ghost's simulated run vs the owner's
     // recent form. Emitted so the UI can surface a shareable result card.
-    const race = this.resolveRaceResult(ghost, territoryId);
+    const { result: race, replayHash } = this.resolveRaceResult(ghost, territoryId);
     this.raceHistory.push(race);
     if (this.raceHistory.length > 50) {
       this.raceHistory = this.raceHistory.slice(-50);
@@ -472,6 +538,7 @@ export class GhostRunnerService extends BaseService {
       },
     });
     this.safeEmit('ghost:raceCompleted', {
+      raceId: race.raceId,
       ghostId: race.ghostId,
       ghostName: race.ghostName,
       avatar: race.avatar,
@@ -479,6 +546,7 @@ export class GhostRunnerService extends BaseService {
       ghostScore: race.ghostScore,
       userScore: race.userScore,
       winner: race.winner,
+      replayHash,
     });
 
     return ghostRun;

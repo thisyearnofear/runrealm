@@ -79,13 +79,43 @@ app.get('/api/tokens', (req, res) => {
 // Attestation oracle (protocol-vision Layer 3): signs EIP-712 run
 // summaries for the client quorum. Mounted only when the oracle key is
 // configured — without it the client honestly reports `local` mode.
+//
+// Every summary the oracle signs is recorded in a ledger, and
+// `GET /attestations/leaderboard` serves the ranked, pseudonymous view of
+// it (H8 bet 4: the network-wide board). The ledger is empty without a
+// signing key, so the endpoint is always safe to mount.
+//
+// The ledger is persisted (atomically, after every signature) so a restart
+// resumes the board instead of serving an empty one. Override the location
+// with RUNREALM_LEDGER_PATH, or set it to `off` for a memory-only board.
+// `||` rather than `??` on purpose: the shipped env examples leave the key
+// blank, and blank means "unset" — it must not silently stop persisting.
+const {
+  DEFAULT_LEDGER_PATH,
+  createAttestationLedger,
+  createLeaderboardHandler,
+} = require('./server/leaderboard');
+const ledgerPath = process.env.RUNREALM_LEDGER_PATH || DEFAULT_LEDGER_PATH;
+const attestationLedger = createAttestationLedger({
+  persistPath: ledgerPath === 'off' ? null : ledgerPath,
+});
+app.get('/attestations/leaderboard', createLeaderboardHandler(attestationLedger));
+
 if (process.env.RUNREALM_ORACLE_PRIVATE_KEY) {
   const { createAttestationOracleHandler } = require('./server/attestation-oracle');
   app.post(
     '/attestations/sign',
-    createAttestationOracleHandler({ privateKey: process.env.RUNREALM_ORACLE_PRIVATE_KEY })
+    createAttestationOracleHandler({
+      privateKey: process.env.RUNREALM_ORACLE_PRIVATE_KEY,
+      onSigned: (primaryType, message) => attestationLedger.record(primaryType, message),
+    })
   );
   console.log('Attestation oracle: /attestations/sign mounted');
+  console.log(
+    `Attestation oracle: /attestations/leaderboard mounted (network board, ledger: ${
+      ledgerPath === 'off' ? 'memory only' : ledgerPath
+    })`
+  );
 } else {
   console.log('Attestation oracle: RUNREALM_ORACLE_PRIVATE_KEY not set — disabled');
 }

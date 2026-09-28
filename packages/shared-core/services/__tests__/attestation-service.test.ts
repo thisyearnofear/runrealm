@@ -309,6 +309,7 @@ describe('AttestationService', () => {
         ghostScore: 400,
         userScore: 600,
         winner: 'user',
+        replayHash: 'a1b2c3d4',
         endedAt: Date.now(),
       });
       const record = service.getGhostRecord('ghost-1');
@@ -331,11 +332,13 @@ describe('AttestationService', () => {
           ghostScore: 1,
           userScore: 2,
           winner: 'ghost',
+          replayHash: 'a1b2c3d4',
           endedAt: 1,
         },
         0
       );
       expect(raceTd.primaryType).toBe('RaceOutcome');
+      expect(raceTd.types.RaceOutcome.map((f) => f.name)).toContain('replayHash');
     });
   });
 

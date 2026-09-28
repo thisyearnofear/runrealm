@@ -8,13 +8,15 @@
  */
 
 import { DemoGhostDirector } from '../services/demo-ghost-director';
-import { coordsToCell } from '../utils/h3-territory';
+import { coordsToCell, type TerritoryCell } from '../utils/h3-territory';
 import { fitMapToRoute, type MaplibreHandles } from './map-bootstrap';
 import type { Services } from './service-composer';
 
 export interface EventWiringOptions {
   services: Services;
-  getMap: () => import('maplibre-gl').Map;
+  /** Nullable: the map may be absent when the platform can't render
+   *  WebGL. Every map-dependent handler below bails out on `null`. */
+  getMap: () => import('maplibre-gl').Map | null;
   handles: MaplibreHandles | null;
   onMapClick: () => void;
 }
@@ -272,28 +274,82 @@ export function wireEvents(opts: EventWiringOptions): void {
     }
   });
 
-  services.eventBus.on('territory:vulnerable', (data) => {
-    renderOwnedTerritories();
-    const territory = (
-      data as {
-        territory?: { h3Cells?: import('../utils/h3-territory').TerritoryCell[]; geohash?: string };
-      }
-    ).territory;
+  /** The cells a claim should pulse: its own list when it has one, else the
+   *  geohash centre (the shape older persisted claims carry). */
+  const claimCells = (territory?: {
+    h3Cells?: TerritoryCell[];
+    geohash?: string;
+  }): TerritoryCell[] => {
+    if (territory?.h3Cells?.length) return territory.h3Cells;
+    if (!territory?.geohash) return [];
+    const [latRaw, lngRaw] = territory.geohash.split('_');
+    const lat = Number.parseFloat(latRaw ?? '');
+    const lng = Number.parseFloat(lngRaw ?? '');
+    return Number.isFinite(lat) && Number.isFinite(lng) ? [coordsToCell(lat, lng)] : [];
+  };
+
+  const pulseContestedCells = (territory?: {
+    h3Cells?: TerritoryCell[];
+    geohash?: string;
+  }): void => {
+    const cells = claimCells(territory);
+    if (cells.length === 0) return;
     try {
-      let cells = territory?.h3Cells;
-      if ((!cells || cells.length === 0) && territory?.geohash) {
-        const parts = territory.geohash.split('_');
-        const lat = Number.parseFloat(parts[0] ?? '');
-        const lng = Number.parseFloat(parts[1] ?? '');
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          cells = [coordsToCell(lat, lng)];
-        }
-      }
-      if (cells && cells.length > 0) {
-        services.mapService.startContestedPulse(cells);
-      }
+      services.mapService.startContestedPulse(cells);
     } catch (error) {
       console.warn('event-wiring: vulnerable pulse failed:', error);
+    }
+  };
+
+  services.eventBus.on('territory:vulnerable', (data) => {
+    renderOwnedTerritories();
+    pulseContestedCells(
+      (data as { territory?: { h3Cells?: TerritoryCell[]; geohash?: string } }).territory
+    );
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Fog-of-war: rival claims render as undeveloped film (blueprint
+  // fill, dashed chalk outline) — presence, never points. The feed
+  // (RivalTerritoryService) emits on change; repaint then, and once at
+  // wire time for claims already observed during boot.
+  // ─────────────────────────────────────────────────────────────
+
+  const renderRivalTerritories = () => {
+    try {
+      const viewer = services.web3?.getCurrentWallet?.()?.address ?? null;
+      const rivals = services.rivalTerritoryService?.getRivalTerritories() ?? [];
+      services.mapService.renderRivalTerritories(rivals, viewer);
+    } catch (error) {
+      console.warn('event-wiring: failed to render rival territories:', error);
+    }
+  };
+
+  services.eventBus.on('territory:rivalsUpdated', renderRivalTerritories);
+  // Wallet connect changes which silhouettes belong to the viewer
+  // (own claims render on the owned layer, not the fog layer).
+  services.eventBus.on('web3:walletConnected', renderRivalTerritories);
+  services.eventBus.on('service:initialized', (data) => {
+    if ((data as { service?: string }).service === 'RivalTerritoryService') {
+      renderRivalTerritories();
+    }
+  });
+  // The feed's first poll runs during boot, before this wiring exists;
+  // paint the already-observed set once.
+  renderRivalTerritories();
+
+  // A basemap switch clears every custom layer; re-add both territory
+  // surfaces so the map never silently loses the game layer.
+  services.eventBus.on('map:styleLoaded', () => {
+    renderOwnedTerritories();
+    renderRivalTerritories();
+    // The contested pulse owns its own layers, which went with the old style
+    // and are re-announced by nothing — so re-arm it from persisted state. A
+    // late *first* style load (claims seeded before the basemap settles) and a
+    // basemap switch would otherwise both retire the contested signal for
+    // good. The pulse keeps its own 20 s clock, so this can't run forever.
+    for (const territory of services.territory.getClaimedTerritories()) {
+      if (territory.defenseStatus === 'vulnerable') pulseContestedCells(territory);
     }
   });
 

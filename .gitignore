@@ -127,6 +127,7 @@ output.txt
 sh/
 
 # Runtime data
+/.data/
 pids/
 *.pid
 *.seed

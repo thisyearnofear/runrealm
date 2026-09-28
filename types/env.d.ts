@@ -17,6 +17,10 @@ declare global {
     POLYGON_RPC_URL: string;
     AUTO_CONNECT_WALLET: string;
     GOOGLE_GEMINI_API_KEY: string;
+    // Comma-separated attestation-oracle base URLs. Public by design —
+    // the app must be able to reach the quorum to read the network board
+    // and to ask for signatures; the oracle's private key stays server-side.
+    RUNREALM_ATTESTATION_ORACLES: string;
     // Public feature flag only; Reactor API credentials stay server-side.
     ENABLE_ORBIS: string;
   };

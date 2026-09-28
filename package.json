@@ -71,6 +71,7 @@
     "@openzeppelin/contracts": "^5.4.0",
     "buffer": "^6.0.3",
     "dotenv": "^17.2.3",
+    "express": "^4.22.3",
     "process": "^0.11.10",
     "uuid": "^13.0.0"
   },

@@ -80,6 +80,9 @@ export interface RaceSummary {
   ghostScore: number;
   userScore: number;
   winner: 'ghost' | 'user';
+  /** FNV-1a of the race's replay record — the signed outcome commits to
+   *  the replayable inputs, so a shared replay traces back to this proof. */
+  replayHash: string;
   endedAt: number;
 }
 
@@ -185,6 +188,7 @@ export function raceOutcomeTypedData(summary: RaceSummary, chainId: number) {
         { name: 'ghostScore', type: 'uint256' },
         { name: 'userScore', type: 'uint256' },
         { name: 'winner', type: 'string' },
+        { name: 'replayHash', type: 'string' },
         { name: 'endedAt', type: 'uint256' },
       ],
     },
@@ -300,6 +304,7 @@ export class AttestationService extends BaseService {
         ghostScore: data.ghostScore,
         userScore: data.userScore,
         winner: data.winner,
+        replayHash: data.replayHash ?? '',
         endedAt: Date.now(),
       }).catch((err) => console.warn('AttestationService: race attestation failed:', err));
     });

@@ -58,6 +58,12 @@ const GHOST_LABEL_LAYER_ID = 'ghost-presence-label-layer';
 const CLAIM_REVEAL_SOURCE_ID = 'claim-reveal-source';
 const CLAIM_REVEAL_FILL_LAYER_ID = 'claim-reveal-fill-layer';
 const CLAIM_REVEAL_BORDER_LAYER_ID = 'claim-reveal-border-layer';
+// Fog-of-war: rival claims render as silhouettes — blueprint-dark fill,
+// dashed chalk border, NO defense status. Presence, never points: a
+// rival's score never appears in a feature property.
+const RIVAL_TERRITORY_SOURCE_ID = 'rival-territory-source';
+const RIVAL_TERRITORY_LAYER_ID = 'rival-territory-layer';
+const RIVAL_TERRITORY_BORDER_LAYER_ID = 'rival-territory-border-layer';
 // Dynamic GPS Supply Drops / Relics
 const RELICS_SOURCE_ID = 'relics-source';
 const RELICS_LAYER_ID = 'relics-layer';
@@ -71,6 +77,32 @@ export const DEFENSE_STATUS_COLORS: Record<string, string> = {
   vulnerable: SUNPRINT_ATLAS_COLORS.coral,
   claimable: SUNPRINT_ATLAS_COLORS.muted,
 };
+
+/** Linear blend between two #rrggbb colors. Presentation-only (Tier B). */
+function mixHexColors(a: string, b: string, t: number): string {
+  const pa = [1, 3, 5].map((i) => Number.parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => Number.parseInt(b.slice(i, i + 2), 16));
+  const c = pa.map((v, i) => Math.round(v + (pb[i] - v) * t));
+  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Mean of the first ring's coordinates — enough for bloom stagger. */
+function polygonCentroid(geometry: any): [number, number] {
+  const ring =
+    geometry?.type === 'Polygon'
+      ? geometry.coordinates?.[0]
+      : geometry?.type === 'MultiPolygon'
+        ? geometry.coordinates?.[0]?.[0]
+        : null;
+  if (!ring || ring.length === 0) return [0, 0];
+  let x = 0;
+  let y = 0;
+  for (const [lng, lat] of ring) {
+    x += lng;
+    y += lat;
+  }
+  return [x / ring.length, y / ring.length];
+}
 
 export interface TerritoryMapOptions {
   showPreviews?: boolean;
@@ -1108,17 +1140,117 @@ export class MapService extends BaseService {
   }
 
   /**
-   * One-shot "claiming…" reveal at the territory location: a green glow
-   * that pulses in while the transaction is in flight, then fades out.
-   * Lets the user see WHERE the claim is happening without waiting on a
-   * modal or receipt — the map is the feedback surface.
+   * Render rival-claimed territories as undeveloped film: a flat
+   * blueprint-dark fill with a dashed chalk outline. No defense-status
+   * coloring, no score property — the silhouette says "someone holds
+   * this" and nothing more. The viewer's own claims are excluded (they
+   * render in full detail on the owned layer).
+   */
+  public renderRivalTerritories(
+    rivals: Array<{ tokenId: string; geohash: string; owner: string }>,
+    viewerAddress?: string | null
+  ): void {
+    if (!this.map) return;
+
+    const features = rivals
+      .filter((r) => !viewerAddress || r.owner.toLowerCase() !== viewerAddress.toLowerCase())
+      .flatMap((rival) => {
+        // Derive geometry from the on-chain geohash center. The feed's
+        // H3 cell is derived from the same point, so the silhouette lands
+        // exactly where the chain recorded the claim — and rivals' cells
+        // never need to leave the owner's device.
+        const polygons = this.territoryPolygons({ geohash: rival.geohash } as Territory);
+        if (polygons.length === 0) return [];
+        const geometry =
+          polygons.length === 1
+            ? polygons[0]
+            : {
+                type: 'MultiPolygon' as const,
+                coordinates: polygons.map((p) => p.coordinates),
+              };
+        return [
+          {
+            type: 'Feature' as const,
+            properties: {
+              id: rival.tokenId,
+              owner: rival.owner,
+              // Silhouette contract: visibility is the ONLY state the
+              // fog layer carries. Never put a score here.
+              visibility: 'encrypted',
+            },
+            geometry,
+          },
+        ];
+      });
+
+    if (!this.map.getSource(RIVAL_TERRITORY_SOURCE_ID)) {
+      this.map.addSource(RIVAL_TERRITORY_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features },
+      });
+      this.map.addLayer({
+        id: RIVAL_TERRITORY_LAYER_ID,
+        type: 'fill',
+        source: RIVAL_TERRITORY_SOURCE_ID,
+        paint: {
+          'fill-color': SUNPRINT_ATLAS_COLORS.blueprint,
+          'fill-opacity': 0.12,
+        },
+      });
+      this.map.addLayer({
+        id: RIVAL_TERRITORY_BORDER_LAYER_ID,
+        type: 'line',
+        source: RIVAL_TERRITORY_SOURCE_ID,
+        paint: {
+          'line-color': SUNPRINT_ATLAS_COLORS.chalk,
+          'line-width': 1.5,
+          'line-opacity': 0.55,
+          'line-dasharray': [2, 2],
+        },
+      });
+      return;
+    }
+
+    const source = this.map.getSource(RIVAL_TERRITORY_SOURCE_ID) as any;
+    source?.setData({ type: 'FeatureCollection', features });
+  }
+
+  public clearRivalTerritories(): void {
+    if (!this.map) return;
+    if (this.map.getLayer(RIVAL_TERRITORY_BORDER_LAYER_ID)) {
+      this.map.removeLayer(RIVAL_TERRITORY_BORDER_LAYER_ID);
+    }
+    if (this.map.getLayer(RIVAL_TERRITORY_LAYER_ID)) {
+      this.map.removeLayer(RIVAL_TERRITORY_LAYER_ID);
+    }
+    if (this.map.getSource(RIVAL_TERRITORY_SOURCE_ID)) {
+      this.map.removeSource(RIVAL_TERRITORY_SOURCE_ID);
+    }
+  }
+
+  /**
+   * Cyanotype development ceremony, map half: an amber "exposure" flash
+   * cross-fades into a verdigris bloom that spreads outward from the
+   * territory centroid, cell by cell — like chemistry wicking across
+   * paper. Runs while the claim transaction is in flight.
    */
   public playClaimReveal(territory: Pick<Territory, 'geohash' | 'h3Cells'>): void {
     if (!this.map || typeof (globalThis as any).requestAnimationFrame !== 'function') return;
+    // Reduced motion: the deed modal carries the moment; skip the bloom.
+    if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
 
     const polygons = this.territoryPolygons(territory as Territory);
     if (polygons.length === 0) return;
 
+    // Per-cell stagger: cells nearer the centroid develop first.
+    const centroids = polygons.map((g) => polygonCentroid(g));
+    const cx = centroids.reduce((s, c) => s + c[0], 0) / centroids.length;
+    const cy = centroids.reduce((s, c) => s + c[1], 0) / centroids.length;
+    const dists = centroids.map(([x, y]) => Math.hypot(x - cx, y - cy));
+    const maxDist = Math.max(...dists, 1e-9);
+    const BLOOM_SPREAD = 0.35; // outer cells trail the center by this fraction
+
+    const delays = dists.map((d) => (d / maxDist) * BLOOM_SPREAD);
     const features = polygons.map((geometry, i) => ({
       type: 'Feature' as const,
       properties: { idx: i },
@@ -1134,7 +1266,7 @@ export class MapService extends BaseService {
         id: CLAIM_REVEAL_FILL_LAYER_ID,
         type: 'fill',
         source: CLAIM_REVEAL_SOURCE_ID,
-        paint: { 'fill-color': SUNPRINT_ATLAS_COLORS.verdigris, 'fill-opacity': 0.4 },
+        paint: { 'fill-color': SUNPRINT_ATLAS_COLORS.amber, 'fill-opacity': 0 },
       });
       this.map.addLayer({
         id: CLAIM_REVEAL_BORDER_LAYER_ID,
@@ -1149,12 +1281,15 @@ export class MapService extends BaseService {
       });
     }
 
-    // ~2.4s pulse-in/pulse-out then cleanup.
+    // ~2.4s: expose (amber) → bloom (verdigris, centroid-out) → settle.
     if (this.claimRevealRafId !== null) {
       // biome-ignore lint/suspicious/noExplicitAny: rAF signature
       (globalThis as any).cancelAnimationFrame?.(this.claimRevealRafId);
       this.claimRevealRafId = null;
     }
+    // Sin envelope: rises to peak at t=0.35, decays to 0 by t=1.
+    const envelope = (tt: number) =>
+      Math.max(0, Math.sin(Math.min(tt / 0.35, 1) * (Math.PI / 2))) * (1 - tt);
     const startMs = performance.now();
     const tick = () => {
       if (!this.map) return;
@@ -1163,13 +1298,31 @@ export class MapService extends BaseService {
         this.stopClaimReveal();
         return;
       }
-      // Sin envelope: rises to peak at t=0.35, decays to 0 by t=1.
-      const envelope = Math.max(0, Math.sin(Math.min(t / 0.35, 1) * (Math.PI / 2))) * (1 - t);
       if (this.map.getLayer(CLAIM_REVEAL_FILL_LAYER_ID)) {
-        this.map.setPaintProperty(CLAIM_REVEAL_FILL_LAYER_ID, 'fill-opacity', 0.45 * envelope);
+        // Exposure cross-fades to developed ground over the middle third.
+        const colorT = Math.min(1, Math.max(0, (t - 0.15) / 0.35));
+        this.map.setPaintProperty(
+          CLAIM_REVEAL_FILL_LAYER_ID,
+          'fill-color',
+          mixHexColors(SUNPRINT_ATLAS_COLORS.amber, SUNPRINT_ATLAS_COLORS.verdigris, colorT)
+        );
+        // Per-cell opacity: each cell runs the envelope on its own clock,
+        // delayed by distance from the centroid.
+        const entries: number[] = [];
+        for (let i = 0; i < delays.length; i++) {
+          const d = delays[i];
+          const local = Math.min(1, Math.max(0, (t - d) / (1 - d)));
+          entries.push(i, 0.45 * envelope(local));
+        }
+        this.map.setPaintProperty(CLAIM_REVEAL_FILL_LAYER_ID, 'fill-opacity', [
+          'match',
+          ['get', 'idx'],
+          ...entries,
+          0,
+        ] as any);
       }
       if (this.map.getLayer(CLAIM_REVEAL_BORDER_LAYER_ID)) {
-        this.map.setPaintProperty(CLAIM_REVEAL_BORDER_LAYER_ID, 'line-width', 1 + 4 * envelope);
+        this.map.setPaintProperty(CLAIM_REVEAL_BORDER_LAYER_ID, 'line-width', 1 + 4 * envelope(t));
       }
       // biome-ignore lint/suspicious/noExplicitAny: rAF signature
       this.claimRevealRafId = (globalThis as any).requestAnimationFrame(tick);

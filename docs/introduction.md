@@ -101,6 +101,54 @@ RUNREALM_BOUNTY_ADDRESS=0x9Cb90f7b84fEa2775F5Ab4610585a8BB7d8Ad9c1
 RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS=0xd097Effcc4764c98bEd0199210838a5691142583
 ```
 
+#### Attestation oracle & network leaderboard (optional):
+
+Protocol-vision Layer 3. With an oracle quorum configured, completed runs and
+ghost races are signed as EIP-712 summaries, and the leaderboard merges the
+network's board alongside your local one (every network row is `attested` by
+construction — it was signed). Leave it blank and nothing breaks: the app
+reports `local` attestations and the local board stands alone.
+
+```env
+# Server only — the oracle's signing key. Mounts POST /attestations/sign.
+# Use a dedicated throwaway key, never a wallet holding funds.
+RUNREALM_ORACLE_PRIVATE_KEY=
+
+# Client — comma-separated oracle base URLs (sign + leaderboard endpoints).
+RUNREALM_ATTESTATION_ORACLES=
+
+# Web app (apps/web/.env.local). NEXT_PUBLIC_* is inlined at build time, so
+# restart the dev server after changing it. Public by design: a URL, not a key.
+NEXT_PUBLIC_RUNREALM_ATTESTATION_ORACLES=
+
+# Server only — where the ledger persists (default ./.data/attestation-ledger.json,
+# gitignored; loaded on boot so restarts keep the board; `off` = memory only).
+RUNREALM_LEDGER_PATH=
+```
+
+Locally, point the app at your own backend to see the merged board:
+
+```bash
+# Terminal 1 — oracle + board on :3000 (needs RUNREALM_ORACLE_PRIVATE_KEY above)
+node server.js
+
+# Terminal 2 — web app pointed at it. Next.js also defaults to :3000, which the
+# backend now holds, so give the web app its own port.
+NEXT_PUBLIC_RUNREALM_ATTESTATION_ORACLES=http://localhost:3000 \
+  npm run dev --workspace=@runrealm/web -- -p 3100
+```
+
+Notes:
+
+- The key never leaves the server. Only the oracle URLs are public; there is no
+  `NEXT_PUBLIC_` variant of the private key, by design.
+- Oracle URLs must be reachable **from the browser** (the client fetches the
+  board directly). `server.js` sends `Access-Control-Allow-Origin: *`.
+- Network rows are pseudonymous and band-only (`runner · <6 chars>`): the ledger
+  never stores or serves `h3Cells`, exact pace, or a full account id.
+- The ledger is bounded (newest 5000 entries) and written atomically; a corrupt
+  file or a failed write is logged, never fatal.
+
 #### Minimal `.env` file (to get started):
 
 ```env
@@ -114,6 +162,11 @@ ENABLE_ORBIS=false
 # Optional integrations
 GOOGLE_GEMINI_API_KEY=your_gemini_key_here
 REACTOR_API_KEY=your_reactor_key_here
+
+# Optional — attestation oracle (network leaderboard). See the section above.
+# RUNREALM_ORACLE_PRIVATE_KEY=
+# RUNREALM_ATTESTATION_ORACLES=http://localhost:3000
+# NEXT_PUBLIC_RUNREALM_ATTESTATION_ORACLES=http://localhost:3000
 ```
 
 ### Step 3: Build Shared Packages

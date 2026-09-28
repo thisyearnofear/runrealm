@@ -22,6 +22,12 @@ export interface RunRealmEnv {
   POLYGON_RPC_URL: string;
   AUTO_CONNECT_WALLET: string;
   GOOGLE_GEMINI_API_KEY: string;
+  /**
+   * Comma-separated attestation-oracle base URLs. Public by design: the
+   * browser needs them both to request signatures and to read the network
+   * leaderboard. The oracle's private key stays server-side.
+   */
+  RUNREALM_ATTESTATION_ORACLES: string;
   /** Public feature flag only; Reactor credentials stay server-side. */
   ENABLE_ORBIS: string;
   // Zama Protocol FHEVM (confidential territory defense) — Sepolia
@@ -44,6 +50,9 @@ const DEFAULT_ENV: RunRealmEnv = {
   POLYGON_RPC_URL: 'https://polygon-rpc.com',
   AUTO_CONNECT_WALLET: 'false',
   GOOGLE_GEMINI_API_KEY: '',
+  // Empty by default: with no oracle configured the app honestly reports
+  // `local` attestations and the board stays single-scope.
+  RUNREALM_ATTESTATION_ORACLES: '',
   ENABLE_ORBIS: 'false',
   SEPOLIA_RPC_URL: 'https://ethereum-sepolia-rpc.publicnode.com',
   RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS: '0xa15C61871E4D096093d183040D0c1005CB4Fe0b8',
@@ -72,6 +81,9 @@ export function createEnvGlobal(): RunRealmEnv {
       process.env.NEXT_PUBLIC_AUTO_CONNECT_WALLET || DEFAULT_ENV.AUTO_CONNECT_WALLET,
     GOOGLE_GEMINI_API_KEY:
       process.env.NEXT_PUBLIC_GOOGLE_GEMINI_API_KEY || DEFAULT_ENV.GOOGLE_GEMINI_API_KEY,
+    RUNREALM_ATTESTATION_ORACLES:
+      process.env.NEXT_PUBLIC_RUNREALM_ATTESTATION_ORACLES ||
+      DEFAULT_ENV.RUNREALM_ATTESTATION_ORACLES,
     ENABLE_ORBIS: process.env.NEXT_PUBLIC_ENABLE_ORBIS || DEFAULT_ENV.ENABLE_ORBIS,
     SEPOLIA_RPC_URL: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || DEFAULT_ENV.SEPOLIA_RPC_URL,
     RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS:

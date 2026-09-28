@@ -117,6 +117,7 @@ ship; promote remaining ones into numbered phases when picked up.
 | H5 | Pocket-mode surface | ✅ Core + soundcheck + first-run nudge shipped. |
 | H6 | Notification digest philosophy | ✅ Escalation tier shipped (watch vs urgent). |
 | H7 | Non-color status encoding | 🟡 Model carries icon+pattern keys; dashboard uses text+emoji. Open: CSS pattern rendering, deed/claim-reveal `prefers-reduced-motion` audit. |
+| H8 | Experience differentiation | ✅ Claim development ceremony (map expose→bloom, deed wash→fix), visible fog-of-war (rival silhouettes from `TerritoryCreated`), deterministic shareable race replays (seeded RNG, verified spectator mode, `?race=` links), pace-band leaderboard (local + oracle network ledger). See `docs/experience-differentiation.md`. |
 
 ## What we are NOT doing
 

@@ -93,6 +93,32 @@ export async function createMap(
   });
 }
 
+export interface MapBootResult {
+  handles: MaplibreHandles;
+  map: MaplibreMap;
+}
+
+/**
+ * Load MapLibre and construct the map, treating "this platform cannot
+ * render a map" as a first-class outcome rather than an error.
+ *
+ * `createMap` throws when the container is missing or the WebGL context
+ * can't be created (MapLibre's own "Failed to initialize WebGL"). That
+ * used to abort the entire boot. Callers now get `null` instead, so they
+ * can skip the map-dependent wiring and let every other service
+ * initialize — the app degrades to a map-less shell, not a dead page.
+ */
+export async function bootMapOrNull(opts: CreateMapOptions): Promise<MapBootResult | null> {
+  try {
+    const handles = await loadMapLibre();
+    const map = await createMap(handles, opts);
+    return { handles, map };
+  } catch (error) {
+    console.warn('Map unavailable — continuing without the atlas:', error);
+    return null;
+  }
+}
+
 export interface MapWiringOptions {
   map: MaplibreMap;
   handles: MaplibreHandles;

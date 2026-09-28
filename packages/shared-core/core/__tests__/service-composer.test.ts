@@ -101,6 +101,7 @@ describe('service-composer', () => {
       'notificationService',
       'territoryWalkService',
       'crossChainAnchorService',
+      'rivalTerritoryService',
       'worldState',
       'orbisDirector',
     ];

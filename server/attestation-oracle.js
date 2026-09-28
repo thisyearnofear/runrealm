@@ -14,6 +14,11 @@
  * boolean (or Promise<boolean>). Default: accept structurally valid
  * summaries. A rejecting corroborator yields HTTP 422, which the
  * client's allSettled turns into "fewer signatures", never a stuck run.
+ *
+ * Ledger seam: pass `onSigned(primaryType, message)` to observe every
+ * summary that got a signature (the network leaderboard keeps its
+ * entries this way). It is called after signing succeeds and its errors
+ * are swallowed — a bookkeeping failure must never break a proof.
  */
 const { ethers } = require('ethers');
 
@@ -48,6 +53,7 @@ const PRIMARY_TYPES = {
     ghostScore: 'number',
     userScore: 'number',
     winner: 'string',
+    replayHash: 'string',
     endedAt: 'number',
   },
 };
@@ -95,6 +101,7 @@ function createAttestationOracleHandler(opts) {
   if (!opts?.privateKey) throw new Error('attestation-oracle: privateKey required');
   const wallet = new ethers.Wallet(opts.privateKey);
   const corroborate = opts.corroborate ?? (() => true);
+  const onSigned = opts.onSigned ?? (() => {});
 
   return async function attestationSignHandler(req, res) {
     const error = validateTypedData(req.body);
@@ -118,6 +125,11 @@ function createAttestationOracleHandler(opts) {
       // key ethers supplies from the domain object itself.
       const { EIP712Domain: _drop, ...signTypes } = types;
       const signature = await wallet.signTypedData(domain, signTypes, message);
+      try {
+        onSigned(primaryType, message);
+      } catch (ledgerError) {
+        console.warn('attestation-oracle: onSigned hook failed:', ledgerError?.message);
+      }
       res.json({ signer: wallet.address, signature });
     } catch (err) {
       res.status(500).json({ error: `signing failed: ${err?.message ?? 'unknown'}` });

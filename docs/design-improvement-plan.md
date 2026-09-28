@@ -5,6 +5,10 @@
 > neon green, or “tactical sports-utilitarian” styling are superseded.
 >
 > **Core metaphor:** every run exposes the world; every claim develops the realm.
+>
+> **Experience differentiation initiatives:** [experience-differentiation.md](experience-differentiation.md)
+> (claim ceremony, fog-of-war, race replays, leaderboards) — this contract stays
+> canonical for tokens, motion, and vocabulary.
 
 RunRealm should feel like entering a living cartographic medium, not using a
 fitness dashboard with a map behind it. The identity combines cyanotype prints,

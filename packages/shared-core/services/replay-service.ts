@@ -35,6 +35,23 @@ export interface ReplayOptions {
   cancelRaf?: (id: number) => void;
 }
 
+/** Generic frame-clock variant of ReplayOptions — for non-GPS timelines
+ *  (race narratives). onFrame receives one frame per tick boundary. */
+export interface FrameReplayOptions<T> {
+  /** Total wall-clock duration of the playback. Defaults to 20 s. */
+  durationMs?: number;
+  /** Called every animation frame with the frame at the current position. */
+  onFrame?: (frame: T, index: number, progress: number) => void;
+  /** Called when playback finishes. */
+  onComplete?: () => void;
+  /** Override the clock for tests. */
+  now?: () => number;
+  /** Override the rAF for tests. */
+  raf?: (cb: (t: number) => void) => number;
+  /** Override clearTimer for tests. */
+  cancelRaf?: (id: number) => void;
+}
+
 interface ActiveReplay {
   startMs: number;
   rafId: number;
@@ -122,6 +139,62 @@ export class ReplayService extends BaseService {
     if (!this.current) return;
     this.current.cancelled = true;
     this.current = null;
+  }
+
+  /**
+   * Play an arbitrary frame timeline on the same controllable clock as
+   * GPS replays. `onFrame` gets `frames[index]` where index tracks
+   * wall-clock progress, so consumers animate exactly one timeline
+   * position per paint.
+   */
+  playFrames<T>(frames: T[], opts: FrameReplayOptions<T> = {}): Promise<void> {
+    if (frames.length === 0) {
+      opts.onComplete?.();
+      return Promise.resolve();
+    }
+    if (this.current) {
+      this.stop();
+    }
+
+    const getNow = opts.now ?? (() => performance.now());
+    const rafFn =
+      opts.raf ??
+      ((cb: (t: number) => void) =>
+        // biome-ignore lint/suspicious/noExplicitAny: requestAnimationFrame signature
+        (globalThis as any).requestAnimationFrame(cb) as number);
+    const cancelRaf =
+      opts.cancelRaf ??
+      ((id: number) => {
+        // biome-ignore lint/suspicious/noExplicitAny: cancelAnimationFrame signature
+        (globalThis as any).cancelAnimationFrame?.(id);
+      });
+
+    const duration = opts.durationMs ?? 20_000;
+    const startMs = getNow();
+    const replay: ActiveReplay = { startMs, rafId: 0, cancelled: false };
+    this.current = replay;
+
+    return new Promise<void>((resolve) => {
+      const tick = () => {
+        if (replay.cancelled) {
+          resolve();
+          return;
+        }
+        const elapsed = getNow() - startMs;
+        const progress = Math.min(1, elapsed / duration);
+        const index = Math.min(frames.length - 1, Math.floor(progress * (frames.length - 1)));
+        opts.onFrame?.(frames[index], index, progress);
+
+        if (progress >= 1) {
+          this.current = null;
+          opts.onComplete?.();
+          resolve();
+          return;
+        }
+        replay.rafId = rafFn(tick);
+      };
+      replay.rafId = rafFn(tick);
+    });
   }
 
   /**

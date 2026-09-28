@@ -57,6 +57,11 @@ export async function initializeGameFi(opts: GameFiBootstrapOptions): Promise<vo
       services.crossChainAnchorService.start();
     }
 
+    // Fog-of-war: the read-only rival-claims feed. RPC-optional — it
+    // degrades to an empty set, so the map shows only your own ground
+    // rather than failing when the node is unreachable.
+    await services.rivalTerritoryService.initialize();
+
     if (platformUI.ghostManagement?.initialize) {
       await platformUI.ghostManagement.initialize(document.body);
     }

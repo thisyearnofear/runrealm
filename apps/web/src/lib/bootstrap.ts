@@ -104,7 +104,7 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
     try {
       const { RunTheater } = await import('../shell/components/run-theater');
       const services = app.getServices();
-      new RunTheater({
+      const theater = new RunTheater({
         eventBus: app.getEventBus(),
         runTracking: services.runTracking,
         sound: services.sound,
@@ -112,7 +112,26 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
         ghostRunnerService: services.ghostRunnerService,
         territoryService: services.territory,
         mapService: services.mapService,
-      }).initialize(document.body);
+        replay: services.replay,
+      });
+      theater.initialize(document.body);
+
+      // Deep link: ?race=<base64url replay record> opens the race in
+      // spectator mode — verified against its stored inputs first.
+      const raceParam = new URLSearchParams(window.location.search).get('race');
+      if (raceParam) {
+        const { decodeRaceReplayRecord } = await import('@runrealm/shared-core/utils/race-replay');
+        const record = decodeRaceReplayRecord(raceParam);
+        if (record) {
+          theater.spectateRace(record);
+        } else {
+          app.getEventBus().emit('ui:toast', {
+            message: 'That replay link is malformed.',
+            type: 'error',
+            duration: 4000,
+          } as never);
+        }
+      }
     } catch (err) {
       console.warn('Run theater not available:', err);
     }
@@ -180,6 +199,18 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
     accountContainer.id = 'account-screen-root';
     document.body.appendChild(accountContainer);
     accountScreen.initialize(accountContainer);
+
+    // Leaderboard (H8 bet 4): pace-band board built from signed history.
+    // Opened from the nav route; closes back to the map.
+    try {
+      const { default: LeaderboardScreen } = await import('../shell/components/leaderboard-screen');
+      const leaderboardContainer = document.createElement('div');
+      leaderboardContainer.id = 'leaderboard-screen-root';
+      document.body.appendChild(leaderboardContainer);
+      new LeaderboardScreen().initialize(leaderboardContainer);
+    } catch (err) {
+      console.warn('Leaderboard screen not available:', err);
+    }
 
     // Mount the React wallet flow. The legacy WalletWidget still owns
     // connection state and connect logic; the React root owns the

@@ -22,6 +22,7 @@ import { ConfidentialContractService } from '@runrealm/shared-blockchain/service
 import { ContractService } from '@runrealm/shared-blockchain/services/contract-service';
 import { CrossChainAnchorService } from '@runrealm/shared-blockchain/services/cross-chain-anchor-service';
 import { CrossChainService } from '@runrealm/shared-blockchain/services/cross-chain-service';
+import { RivalTerritoryService } from '@runrealm/shared-blockchain/services/rival-territory-service';
 import { ZamaSupportService } from '@runrealm/shared-blockchain/services/zama-support';
 import { EnhancedRunControls } from '../components/enhanced-run-controls';
 import { GameFiUI } from '../components/gamefi-ui';
@@ -103,6 +104,7 @@ export interface Services {
   notificationService: NotificationService;
   territoryWalkService: TerritoryWalkService;
   crossChainAnchorService: CrossChainAnchorService;
+  rivalTerritoryService: RivalTerritoryService;
   worldState: WorldStateService;
   orbisDirector: OrbisDirector;
 }
@@ -151,6 +153,7 @@ export function createServices(): Services {
   const notificationService = NotificationService.getInstance();
   const territoryWalkService = TerritoryWalkService.getInstance();
   const crossChainAnchorService = CrossChainAnchorService.getInstance();
+  const rivalTerritoryService = RivalTerritoryService.getInstance();
   const worldState = WorldStateService.getInstance();
   const orbisDirector = OrbisDirector.getInstance();
 
@@ -192,6 +195,7 @@ export function createServices(): Services {
     notificationService,
     territoryWalkService,
     crossChainAnchorService,
+    rivalTerritoryService,
     worldState,
     orbisDirector,
   };

@@ -36,7 +36,7 @@ const makeStubServices = (overrides: Partial<Services> = {}): Services => {
       playSuccessSound: jest.fn(),
       playNotificationSound: jest.fn(),
     } as never,
-    territory: {} as never,
+    territory: { getClaimedTerritories: () => [] } as never,
     runTracking: {
       getCurrentRun: () => null,
       startRun: jest.fn(),
@@ -63,6 +63,18 @@ const makeStubServices = (overrides: Partial<Services> = {}): Services => {
     } as never,
     haptics: {
       trigger: jest.fn(),
+    } as never,
+    mapService: {
+      renderOwnedTerritories: jest.fn(),
+      renderRivalTerritories: jest.fn(),
+      playClaimReveal: jest.fn(),
+      startContestedPulse: jest.fn(),
+    } as never,
+    rivalTerritoryService: {
+      getRivalTerritories: () => [],
+    } as never,
+    web3: {
+      getCurrentWallet: () => null,
     } as never,
     ...overrides,
   };
@@ -181,5 +193,28 @@ describe('event-wiring', () => {
     wireEvents({ services, handles: null, getMap: () => map, onMapClick: jest.fn() });
     bus.emit('config:updated', {});
     expect(services.ai.refreshConfig).toHaveBeenCalled();
+  });
+
+  it('map:styleLoaded re-adds the owned and rival territory layers', () => {
+    services = makeStubServices({
+      territory: { getClaimedTerritories: () => [{ id: 't1' }] } as never,
+    });
+    wireEvents({ services, handles: null, getMap: () => map, onMapClick: jest.fn() });
+    // Clear the wire-time initial paint so the assertion is about the
+    // style-load repaint.
+    (services.mapService.renderOwnedTerritories as jest.Mock).mockClear();
+    (services.mapService.renderRivalTerritories as jest.Mock).mockClear();
+
+    bus.emit('map:styleLoaded', {});
+
+    expect(services.mapService.renderOwnedTerritories).toHaveBeenCalled();
+    expect(services.mapService.renderRivalTerritories).toHaveBeenCalled();
+  });
+
+  it('territory:rivalsUpdated repaints the fog layer', () => {
+    wireEvents({ services, handles: null, getMap: () => map, onMapClick: jest.fn() });
+    (services.mapService.renderRivalTerritories as jest.Mock).mockClear();
+    bus.emit('territory:rivalsUpdated', { count: 3 });
+    expect(services.mapService.renderRivalTerritories).toHaveBeenCalled();
   });
 });

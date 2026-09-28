@@ -19,12 +19,12 @@ import {
   TerritoryDashboard as TerritoryDashboardInterface,
   WalletWidget as WalletWidgetInterface,
 } from '../types/ui-interfaces';
+import { seedDemoAtlas } from '../utils/dev-atlas-seed';
 import { wireEvents } from './event-wiring';
 import { initializeGameFi } from './gamefi-bootstrap';
 import {
-  createMap,
+  bootMapOrNull,
   fitMapToRoute,
-  loadMapLibre,
   type MaplibreHandles,
   saveMapFocus,
   wireMapControls,
@@ -44,7 +44,7 @@ export class RunRealmApp {
 
   private services!: Services;
   private handles: MaplibreHandles | null = null;
-  private map!: Map;
+  private map: Map | null = null;
   private platformUI: PlatformUI = {};
   private useMetric!: boolean;
   private gameMode: boolean = true;
@@ -93,6 +93,35 @@ export class RunRealmApp {
     return this.initializing;
   }
 
+  /**
+   * Bring the MapLibre map up, if this platform allows it.
+   *
+   * A missing container or an unavailable WebGL context must not take
+   * the whole app down: without a map the game surfaces go quiet, but
+   * runs, claims, ghosts, attestations and the ledger all still work
+   * and the UI still mounts. So this resolves to `null` (and warns +
+   * toasts once) instead of throwing; the caller skips the
+   * map-dependent wiring and lets every other service initialize.
+   */
+  private async bootMap(): Promise<Map | null> {
+    const booted = await bootMapOrNull({
+      config: this.services.config.getConfig(),
+      preferenceService: this.services.preferenceService,
+      isMobile: this.services.config.getConfig().ui.isMobile,
+    });
+
+    if (!booted) {
+      this.services.ui.showToast('The atlas could not be rendered — continuing without the map.', {
+        type: 'warning',
+        duration: 6000,
+      });
+      return null;
+    }
+
+    this.handles = booted.handles;
+    return booted.map;
+  }
+
   private async doInitialize(): Promise<void> {
     try {
       await this.services.config.initializeRuntimeTokens();
@@ -111,26 +140,29 @@ export class RunRealmApp {
       const _tokenDeps = createTokenDependentServices(this.services.config);
       void _tokenDeps;
 
-      this.handles = await loadMapLibre();
-      this.map = await createMap(this.handles, {
-        config: this.services.config.getConfig(),
-        preferenceService: this.services.preferenceService,
-        isMobile: this.services.config.getConfig().ui.isMobile,
-      });
+      const map = await this.bootMap();
+      this.map = map;
 
-      this.services.mapService.setMap(this.map);
-      this.services.territoryToggle.setMapService(this.services.mapService);
+      if (map) {
+        this.services.mapService.setMap(map);
+        this.services.territoryToggle.setMapService(this.services.mapService);
 
-      wireMapControls({
-        map: this.map,
-        handles: this.handles,
-        preferenceService: this.services.preferenceService,
-        isMobile: this.services.config.getConfig().ui.isMobile,
-        mapService: this.services.mapService,
-        territoryToggle: this.services.territoryToggle,
-        onMapClick: () => this.handleMapClick(),
-        onStyleLoad: () => this.services.animation.readdRunToMap(null),
-      });
+        wireMapControls({
+          map,
+          handles: this.handles as MaplibreHandles,
+          preferenceService: this.services.preferenceService,
+          isMobile: this.services.config.getConfig().ui.isMobile,
+          mapService: this.services.mapService,
+          territoryToggle: this.services.territoryToggle,
+          onMapClick: () => this.handleMapClick(),
+          onStyleLoad: () => {
+            this.services.animation.readdRunToMap(null);
+            // A style change (basemap switch) drops every custom source and
+            // layer; announce so the territory surfaces are re-added.
+            this.services.eventBus.emit('map:styleLoaded', {});
+          },
+        });
+      }
 
       wireEvents({
         services: this.services,
@@ -188,6 +220,47 @@ export class RunRealmApp {
   private installDevExtras(): void {
     if (process.env.NODE_ENV !== 'development') return;
 
+    // Seed the atlas' game layers near the current focus so the owned and
+    // fog-of-war surfaces can be eyeballed with record-shaped data on a
+    // network whose rival feed is still empty. Dev-only, like the debug
+    // helpers below; see utils/dev-atlas-seed.ts.
+    const seedAtlas = () => {
+      const center = this.services.preferenceService.getLastOrDefaultFocus();
+      const seeded = seedDemoAtlas(
+        {
+          territory: this.services.territory,
+          rivalTerritoryService: this.services.rivalTerritoryService,
+        },
+        { lat: center.lat, lng: center.lng }
+      );
+      // `recordExternalClaim` deliberately stays silent (callers persist from
+      // the `territory:claimed` payload), so nudge the owned layer directly —
+      // once is enough, both demo claims are in the service by now.
+      this.services.eventBus.emit('territory:activityUpdated', { territory: seeded.owned });
+      // The decayed claim announces itself the way a real sweep does, which is
+      // what starts the contested-cell pulse on the map.
+      this.services.eventBus.emit('territory:vulnerable', { territory: seeded.vulnerable });
+      console.log(
+        `Seeded demo atlas at ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}: ` +
+          `1 owned territory (${seeded.owned.h3Cells?.length ?? 0} cells), ` +
+          `1 vulnerable territory (${seeded.vulnerable.activityPoints} activity), ` +
+          `${seeded.rivals.length} rival silhouettes.`
+      );
+      return seeded;
+    };
+
+    (window as { seedDemoAtlas?: unknown }).seedDemoAtlas = seedAtlas;
+
+    // `?seed=1` seeds on arrival, so eyeballing the layers takes one link
+    // instead of a console call. Same dev-only gate as everything here.
+    if (new URLSearchParams(window.location.search).has('seed')) {
+      try {
+        seedAtlas();
+      } catch (error) {
+        console.warn('Demo atlas seed skipped:', error);
+      }
+    }
+
     // biome-ignore lint/suspicious/noExplicitAny: dev-only global test helper
     (window as any).testRouteVisualization = () => {
       const testCoordinates: number[][] = [
@@ -214,6 +287,7 @@ export class RunRealmApp {
   }
 
   private handleMapClick(): void {
+    if (!this.map) return;
     saveMapFocus(this.map, this.services.preferenceService);
   }
 
@@ -282,7 +356,10 @@ export class RunRealmApp {
 
   // Public API
 
-  getMap(): Map {
+  /** The live MapLibre map, or `null` when this platform can't render
+   *  one (no WebGL / no container). Callers must handle the null case
+   *  rather than assuming a map exists. */
+  getMap(): Map | null {
     return this.map;
   }
 
@@ -346,7 +423,7 @@ export class RunRealmApp {
   }
 
   fitMapToRoute(coordinates: number[][]): void {
-    if (!this.handles) return;
+    if (!this.handles || !this.map) return;
     fitMapToRoute(this.map, this.handles.maplibregl, coordinates);
   }
 

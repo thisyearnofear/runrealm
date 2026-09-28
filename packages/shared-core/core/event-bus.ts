@@ -242,7 +242,15 @@ export interface AppEvents extends Web3Events {
     distance: number;
     runId: string;
   };
-  'run:completed': { distance: number; duration: number; points: any[] };
+  'run:completed': {
+    distance: number;
+    duration: number;
+    points: any[];
+    /** Full session snapshot; the run-tracking emit carries this so
+     *  consumers can attest the run rather than re-deriving it. */
+    run?: RunSession;
+    territoryEligible?: boolean;
+  };
   'run:paused': { runId: string; timestamp: number; stats: any };
   'run:resumed': { runId: string; timestamp: number; stats: any };
   'run:cancelled': { runId: string; timestamp: number };
@@ -269,6 +277,12 @@ export interface AppEvents extends Web3Events {
     metadata: TerritoryMetadata;
   };
   'territory:nearbyUpdated': { count: number; territories: Territory[] };
+  /** The rival-claims feed observed new mints — repaint the fog layer. */
+  'territory:rivalsUpdated': { count: number };
+  /** MapLibre finished loading a style — initial load or a basemap
+   *  switch. A style change drops every custom source/layer, so
+   *  consumers re-add their surfaces on this event. */
+  'map:styleLoaded': {};
   'territory:claimed': {
     territory: Territory;
     transactionHash: string;
@@ -279,6 +293,15 @@ export interface AppEvents extends Web3Events {
   'ui:showDeedModal': {
     territory: Territory;
     transactionHash?: string;
+  };
+  'ui:deedRevealed': {
+    territoryId: string;
+  };
+  /** Request spectator-mode replay of a past ghost race (from the result
+   *  card's "Watch replay" button). The theater resolves the record via
+   *  GhostRunnerService.getRaceReplayRecord and verifies before playing. */
+  'ui:replayRaceRequested': {
+    raceId: string;
   };
   'relics:updated': {
     geojson: any;
@@ -529,6 +552,10 @@ export interface AppEvents extends Web3Events {
     ghostScore: number;
     userScore: number;
     winner: 'ghost' | 'user';
+    /** Replay record identity — resolve via GhostRunnerService.getRaceReplayRecord. */
+    raceId?: string;
+    /** FNV-1a of the replay record; committed into the race attestation. */
+    replayHash?: string;
   };
   // Territory Walk — GPS-verified visit to an owned territory
   'territoryWalk:startRequested': { territoryId: string };

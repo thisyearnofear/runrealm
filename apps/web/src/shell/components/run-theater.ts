@@ -17,9 +17,19 @@ import type { AppEvents, EventBus } from '@runrealm/shared-core/core/event-bus';
 import type { GhostRunnerService } from '@runrealm/shared-core/services/ghost-runner-service';
 import type { HapticsService } from '@runrealm/shared-core/services/haptics-service';
 import type { MapService } from '@runrealm/shared-core/services/map-service';
+import type { ReplayService } from '@runrealm/shared-core/services/replay-service';
 import type { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
 import type { SoundService } from '@runrealm/shared-core/services/sound-service';
 import type { TerritoryService } from '@runrealm/shared-core/services/territory-service';
+import {
+  leadChangeTicks,
+  type RaceFrame,
+  simulateRaceNarrative,
+} from '@runrealm/shared-core/utils/race-narrative';
+import {
+  type RaceReplayRecord,
+  verifyRaceReplayRecord,
+} from '@runrealm/shared-core/utils/race-replay';
 import {
   type ArcMilestone,
   actTitleFor,
@@ -42,6 +52,7 @@ export interface RunTheaterDeps {
   ghostRunnerService: GhostRunnerService;
   territoryService: TerritoryService;
   mapService: MapService;
+  replay: ReplayService;
 }
 
 type RunTheaterEvent = Extract<
@@ -56,6 +67,8 @@ type RunTheaterEvent = Extract<
   | 'ghost:completed'
   | 'territory:vulnerable'
   | 'territory:claimed'
+  | 'ui:deedRevealed'
+  | 'ui:replayRaceRequested'
 >;
 
 const REFRESH_MS = 1000;
@@ -86,6 +99,11 @@ export class RunTheater {
   private lastDistance = 0;
   private lastSessionId: string | null = null;
   private exitTimer: number | null = null;
+  private lastDeedRevealMs = 0;
+  private spectating = false;
+  private spectateCardTimer: number | null = null;
+  private spectateEscHandler: ((e: KeyboardEvent) => void) | null = null;
+  private lastSpectateMarkerMs = 0;
 
   constructor(private readonly deps: RunTheaterDeps) {}
 
@@ -131,6 +149,10 @@ export class RunTheater {
     this.root.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       if (target.closest('.theater-pocket-btn')) {
+        if (this.spectating) {
+          this.exitSpectator();
+          return;
+        }
         this.togglePocket();
         return;
       }
@@ -178,7 +200,19 @@ export class RunTheater {
     });
     this.on('ghost:completed', () => this.refreshGhostPresence());
     this.on('territory:vulnerable', () => this.showAct('overexpose'));
-    this.on('territory:claimed', () => this.showAct('develop'));
+    this.on('ui:deedRevealed', () => {
+      this.lastDeedRevealMs = Date.now();
+    });
+    this.on('territory:claimed', () => {
+      // The deed modal is the stronger artifact for this moment — when it
+      // auto-shows on the same claim, the Develop act yields. Deferred one
+      // macrotask so the modal's synchronous ui:deedRevealed has landed
+      // regardless of subscription order.
+      window.setTimeout(() => {
+        if (Date.now() - this.lastDeedRevealMs < 5000) return;
+        this.showAct('develop');
+      }, 0);
+    });
     this.on('location:changed', () => {
       const now = Date.now();
       if (now - this.lastLocationRender < LOCATION_RENDER_THROTTLE_MS) return;
@@ -186,6 +220,22 @@ export class RunTheater {
       this.fireOnce('expose');
       this.render();
     });
+
+    // Spectator replay requests (result card "Watch replay" button).
+    const replayHandler = (data: { raceId: string }) => {
+      const record = this.deps.ghostRunnerService.getRaceReplayRecord(data.raceId);
+      if (record) {
+        this.spectateRace(record);
+      } else {
+        this.deps.eventBus.emit('ui:toast', {
+          message: 'That race replay is no longer stored on this device.',
+          type: 'info',
+          duration: 3000,
+        } as never);
+      }
+    };
+    this.deps.eventBus.on('ui:replayRaceRequested', replayHandler as never);
+    this.handlers.push({ event: 'ui:replayRaceRequested', handler: replayHandler as () => void });
 
     // Late mount while a run is already recording (e.g. HMR, deep link).
     const current = this.deps.runTracking.getCurrentRun();
@@ -199,6 +249,7 @@ export class RunTheater {
       this.deps.eventBus.off(event, handler as never);
     }
     this.handlers = [];
+    if (this.spectating) this.exitSpectator();
     this.stopTimer();
     this.clearExitTimer();
     this.clearActState();
@@ -259,7 +310,7 @@ export class RunTheater {
 
   /** Queue an act title; each plays once per run (trace marks excepted). */
   private showAct(milestone: ArcMilestone): void {
-    if (!this.inTheater || !this.actEl) return;
+    if (!this.inTheater || !this.actEl || this.spectating) return;
     if (milestone !== 'trace' && this.shownActs.has(milestone)) return;
     this.shownActs.add(milestone);
     this.actQueue.push(milestone);
@@ -449,6 +500,179 @@ export class RunTheater {
       paceEl.textContent = formatPace(session.averageSpeed);
       distEl.textContent = formatDistance(session.totalDistance);
       timeEl.textContent = formatDuration(session.totalDuration);
+    }
+  }
+
+  /**
+   * Spectator mode: replay a past ghost race from its replay record.
+   * The record is verified first — a record whose inputs don't recompute
+   * to its stored outputs is refused, loudly, rather than animated.
+   * Reads nothing from live run state; everything comes from the record.
+   */
+  public spectateRace(record: RaceReplayRecord): void {
+    if (this.inTheater || !this.root) return;
+    if (!verifyRaceReplayRecord(record).ok) {
+      this.deps.eventBus.emit('ui:toast', {
+        message: '⚠️ Replay failed verification — this record does not recompute.',
+        type: 'error',
+        duration: 4000,
+      } as never);
+      return;
+    }
+
+    const frames = simulateRaceNarrative(record);
+    if (frames.length === 0) return;
+    const leadChanges = new Set(leadChangeTicks(frames));
+    const path = this.spectatorPath(record);
+
+    this.spectating = true;
+    this.inTheater = true;
+    document.body.classList.add('run-theater');
+    document.body.classList.remove('run-theater-reveal');
+    this.root.hidden = false;
+    if (this.pocketBtn) this.pocketBtn.textContent = '✕ Exit replay';
+    this.spectateEscHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') this.exitSpectator();
+    };
+    window.addEventListener('keydown', this.spectateEscHandler);
+
+    this.showSpectatorCard(
+      'Race replay',
+      `${record.ghost.name} vs You`,
+      'verified against the signed result'
+    );
+
+    void this.deps.replay.playFrames(frames, {
+      durationMs: 20_000,
+      onFrame: (frame) => this.renderSpectatorFrame(record, frame, leadChanges, path),
+      onComplete: () => this.finishSpectatorRace(record),
+    });
+  }
+
+  private renderSpectatorFrame(
+    record: RaceReplayRecord,
+    frame: RaceFrame,
+    leadChanges: Set<number>,
+    path: Array<{ lng: number; lat: number }> | null
+  ): void {
+    if (!this.spectating || !this.root) return;
+    const gap = Math.round(Math.abs(frame.ghostMeters - frame.userMeters));
+    const sentence =
+      frame.leader === 'tied'
+        ? `${record.ghost.name} and you are level — ${gap} m apart`
+        : frame.leader === 'ghost'
+          ? `${record.ghost.name} leads by ${gap} m`
+          : `You lead ${record.ghost.name} by ${gap} m`;
+    if (this.sentenceEl) this.sentenceEl.textContent = sentence;
+    const paceEl = this.root.querySelector('.theater-pace');
+    const distEl = this.root.querySelector('.theater-dist');
+    const timeEl = this.root.querySelector('.theater-time');
+    if (paceEl) paceEl.textContent = `${record.ghost.name} ${Math.round(frame.ghostMeters)} m`;
+    if (distEl) distEl.textContent = `You ${Math.round(frame.userMeters)} m`;
+    if (timeEl) timeEl.textContent = formatDuration(frame.tMs);
+
+    if (leadChanges.has(frame.tick) && !frame.finished) {
+      this.showSpectatorCard(
+        'Lead change',
+        frame.leader === 'user' ? 'You move ahead' : `${record.ghost.name} moves ahead`
+      );
+    }
+
+    // Map markers move along a synthesized loop around the territory —
+    // throttled so the map isn't repainted every animation frame.
+    const now = Date.now();
+    if (path && now - this.lastSpectateMarkerMs > 120) {
+      this.lastSpectateMarkerMs = now;
+      try {
+        const at = (meters: number) =>
+          path[Math.min(path.length - 1, Math.floor((meters / 5000) * path.length))];
+        const g = at(frame.ghostMeters);
+        const u = at(frame.userMeters);
+        this.deps.mapService.renderGhostMarkers([
+          { lng: g.lng, lat: g.lat, label: record.ghost.name },
+          { lng: u.lng, lat: u.lat, label: 'You' },
+        ]);
+      } catch {
+        /* map unavailable — the HUD still carries the race */
+      }
+    }
+  }
+
+  private finishSpectatorRace(record: RaceReplayRecord): void {
+    if (!this.spectating) return;
+    const won = record.result.winner === 'user';
+    this.showSpectatorCard(
+      'Finish',
+      won ? 'You held the territory' : `${record.ghost.name} takes it`,
+      `${record.result.userScore} – ${record.result.ghostScore}`
+    );
+    try {
+      if (won) this.deps.sound.playDeedRevealSound('common');
+      this.deps.haptics.trigger(won ? 'medium' : 'light');
+    } catch {
+      /* sensory cues optional */
+    }
+    window.setTimeout(() => this.exitSpectator(), 4000);
+  }
+
+  private exitSpectator(): void {
+    if (!this.spectating) return;
+    this.spectating = false;
+    this.deps.replay.stop();
+    if (this.spectateCardTimer !== null) {
+      window.clearTimeout(this.spectateCardTimer);
+      this.spectateCardTimer = null;
+    }
+    if (this.spectateEscHandler) {
+      window.removeEventListener('keydown', this.spectateEscHandler);
+      this.spectateEscHandler = null;
+    }
+    if (this.pocketBtn) this.pocketBtn.textContent = '🌙 Pocket';
+    this.exit();
+  }
+
+  /** Free-floating act card for spectator beats (not an arc milestone). */
+  private showSpectatorCard(kicker: string, title: string, sub = ''): void {
+    if (!this.actEl) return;
+    if (this.spectateCardTimer !== null) window.clearTimeout(this.spectateCardTimer);
+    this.actEl.innerHTML = `
+      <div class="act-kicker">${kicker}</div>
+      <div class="act-title">${title}</div>
+      <div class="act-sub">${sub}</div>
+    `;
+    this.actEl.hidden = false;
+    this.spectateCardTimer = window.setTimeout(() => {
+      this.spectateCardTimer = null;
+      if (this.actEl) this.actEl.hidden = true;
+    }, ACT_DISPLAY_MS);
+  }
+
+  /**
+   * A loop around the territory for the replay markers. Synthesized from
+   * the territory bounds (ghosts record no GPS); null when the territory
+   * isn't local — the HUD alone then carries the race.
+   */
+  private spectatorPath(record: RaceReplayRecord): Array<{ lng: number; lat: number }> | null {
+    try {
+      const territory = this.deps.territoryService
+        .getClaimedTerritories()
+        .find((t) => t.id === record.territoryId || t.geohash === record.territoryId);
+      const center = territory?.bounds?.center;
+      if (!center) return null;
+      const latRadius = territory ? Math.abs(territory.bounds.north - center.lat) * 0.6 : 0.0006;
+      const lngRadius = territory ? Math.abs(territory.bounds.east - center.lng) * 0.6 : 0.0006;
+      const points: Array<{ lng: number; lat: number }> = [];
+      // 64-point loop; trig is presentation-only (Tier B — never hashed).
+      for (let i = 0; i < 64; i++) {
+        const angle = (i / 64) * 2 * Math.PI;
+        points.push({
+          lng: center.lng + Math.cos(angle) * Math.max(lngRadius, 0.0003),
+          lat: center.lat + Math.sin(angle) * Math.max(latRadius, 0.0003),
+        });
+      }
+      return points;
+    } catch {
+      return null;
     }
   }
 

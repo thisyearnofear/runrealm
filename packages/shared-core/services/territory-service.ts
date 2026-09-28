@@ -206,6 +206,18 @@ export class TerritoryService extends BaseService {
           if (result.success && result.territory) {
             // Wire run ID → territory ID for downstream subscribers
             this.runToTerritory.set(run.id, result.territory.id);
+            // Auto-claim is still a claim: fire the same event the manual
+            // path does so the deed ceremony and run arc "Develop" act play.
+            this.safeEmit('territory:claimed', {
+              territory: result.territory,
+              transactionHash: result.transactionHash || '',
+            });
+          } else {
+            this.safeEmit('territory:claimFailed', {
+              error: result.error || 'Claim transaction failed',
+              territory: result.territory || territory,
+              runId: run.id,
+            });
           }
         } catch (error) {
           console.error('TerritoryService: Failed to auto-claim territory after run:', error);
