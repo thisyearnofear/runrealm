@@ -21,6 +21,7 @@
     "lint": "biome check --write .",
     "lint:check": "biome check .",
     "lint:errors": "biome check --diagnostic-level=error .",
+    "check:globals": "node scripts/check/no-window-runrealm.mjs",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "setup:env": "cp config/environment/config.env.example .env && cp config/environment/config.production.env.example .env.production",

@@ -12,20 +12,27 @@ import type { WidgetSystem } from '@runrealm/shared-core/components/widget-syste
 import type { RunRealmServiceRegistry } from '../../types/debug-globals';
 import { revealAction, revealDecryptScore } from './confidential-shield-reveal';
 
-function getShieldServices(): RunRealmServiceRegistry {
-  if (typeof window === 'undefined') return {};
-  return window.RunRealm?.services ?? {};
-}
-
 export class ConfidentialShieldWidget {
   private widgetSystem: WidgetSystem;
+  private services: RunRealmServiceRegistry;
 
-  constructor(widgetSystem: WidgetSystem) {
+  /**
+   * `services` is injected, not read from `window.RunRealm`.
+   *
+   * The read looked harmless but was not: `register()` runs during MainUI
+   * construction, and the global registry is populated by a later step in
+   * boot. Whether the widget rendered as "supported" therefore depended on
+   * boot ordering — and when it lost that race it rendered as *unsupported*
+   * rather than failing, which is a silent wrong answer on a security
+   * surface. An explicit dependency either arrives or does not.
+   */
+  constructor(widgetSystem: WidgetSystem, services: RunRealmServiceRegistry = {}) {
     this.widgetSystem = widgetSystem;
+    this.services = services;
   }
 
   register(): void {
-    const services = getShieldServices();
+    const services = this.services;
     const isSupported = this.isZamaSupported(services);
 
     this.widgetSystem.registerWidget({
@@ -151,7 +158,7 @@ export class ConfidentialShieldWidget {
     const output = document.getElementById('shield-output');
     if (!output) return;
 
-    const services = getShieldServices();
+    const services = this.services;
     try {
       const value = await services.confidentialTerritory?.myDefenseCipher(input.territoryId);
       if (value === null || value === undefined) {
@@ -171,8 +178,7 @@ export class ConfidentialShieldWidget {
     if (!output) return;
 
     try {
-      const services = getShieldServices();
-      await services.confidentialTerritory?.boostEncrypted(input.territoryId, input.amount);
+      await this.services.confidentialTerritory?.boostEncrypted(input.territoryId, input.amount);
       await revealAction(output, {
         glyph: '🚀',
         title: 'Boost submitted',
@@ -190,8 +196,7 @@ export class ConfidentialShieldWidget {
     if (!output) return;
 
     try {
-      const services = getShieldServices();
-      await services.confidentialTerritory?.contestEncrypted(input.territoryId, input.amount);
+      await this.services.confidentialTerritory?.contestEncrypted(input.territoryId, input.amount);
       await revealAction(output, {
         glyph: '⚔️',
         title: 'Contest submitted',

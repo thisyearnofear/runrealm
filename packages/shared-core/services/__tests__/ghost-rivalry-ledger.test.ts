@@ -6,6 +6,7 @@
  *
  * @jest-environment jsdom
  */
+import { clearServiceRegistry, registerServiceRegistry } from '../../core/service-registry';
 import { GhostRunnerService } from '../ghost-runner-service';
 
 const GHOST_ID = 'ghost-ledger-test';
@@ -39,22 +40,28 @@ function fakeLedger(races: Array<{ winner: 'ghost' | 'user'; endedAt: number }>)
 
 describe('GhostRunnerService ledger-first rivalry', () => {
   const service = GhostRunnerService.getInstance();
-  const w = window as unknown as { RunRealm?: { services?: Record<string, unknown> } };
+
+  // Services resolve siblings through the module registry, not through
+  // `window.RunRealm`. This used to assign a global, which meant the test
+  // was coupled to the wiring mechanism rather than to the behaviour it was
+  // written to pin — and would have kept passing if the service grew a
+  // second source of truth.
+  function withLedger(ledger: unknown): void {
+    registerServiceRegistry({ attestation: ledger });
+  }
 
   afterEach(() => {
-    delete w.RunRealm;
+    clearServiceRegistry();
   });
 
   it('reads the record from the attestation ledger when covered', () => {
-    w.RunRealm = {
-      services: {
-        attestation: fakeLedger([
-          { winner: 'ghost', endedAt: 1 },
-          { winner: 'user', endedAt: 2 },
-          { winner: 'ghost', endedAt: 3 },
-        ]),
-      },
-    };
+    withLedger(
+      fakeLedger([
+        { winner: 'ghost', endedAt: 1 },
+        { winner: 'user', endedAt: 2 },
+        { winner: 'ghost', endedAt: 3 },
+      ])
+    );
     const record = service.getRivalryRecord(GHOST_ID);
     expect(record.wins).toBe(2);
     expect(record.losses).toBe(1);
@@ -63,22 +70,20 @@ describe('GhostRunnerService ledger-first rivalry', () => {
   });
 
   it('computes streaks from ledger order, oldest first', () => {
-    w.RunRealm = {
-      services: {
-        attestation: fakeLedger([
-          { winner: 'user', endedAt: 1 },
-          { winner: 'ghost', endedAt: 2 },
-          { winner: 'ghost', endedAt: 3 },
-        ]),
-      },
-    };
+    withLedger(
+      fakeLedger([
+        { winner: 'user', endedAt: 1 },
+        { winner: 'ghost', endedAt: 2 },
+        { winner: 'ghost', endedAt: 3 },
+      ])
+    );
     const record = service.getRivalryRecord(GHOST_ID);
     expect(record.streak).toBe(2);
     expect(record.line).toContain('2 straight');
   });
 
   it('falls back to local history when the ledger has no races', () => {
-    w.RunRealm = { services: { attestation: fakeLedger([]) } };
+    withLedger(fakeLedger([]));
     expect(service.getRivalryProvenance(GHOST_ID)).toBe('local');
     expect(service.getRivalryRecord(GHOST_ID).line).toContain('awaits a first race');
   });

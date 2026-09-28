@@ -65,7 +65,22 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
       walletWidget,
       uiService,
       gamefiUI,
-      web3Service
+      web3Service,
+      // Injected rather than looked up on `window.RunRealm.services` when
+      // the widget initialises. The composer has already built it, so there
+      // is no reason for this component to know a registry exists.
+      app.getServices().enhancedRunControls,
+      // The confidential shield widget reads the Zama, wallet and encrypted
+      // contract services. Passing the composed services keeps MainUI
+      // constructible in a test without a global registry standing in for
+      // the dependency graph.
+      {
+        web3: web3Service,
+        zamaSupport: app.getServices().zamaSupport,
+        confidentialTerritory: app.getServices().confidentialTerritory,
+        ConfidentialContractService: app.getServices().confidentialContractService,
+        eventBus: app.getServices().eventBus,
+      }
     );
 
     // Import platform-specific ghost UI components.
@@ -342,14 +357,13 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
           'color: #00cc6a;'
         );
 
-        // Get services
-        const services = window.RunRealm?.services;
-        if (!services) {
-          console.error('❌ Services not available');
-          return;
-        }
-
-        const { web3, crossChain } = services;
+        // This runs inside the boot that already holds the app instance, so
+        // the services and the wallet widget are plain local variables. They
+        // used to be re-read off `window.RunRealm`, which meant the demo
+        // silently depended on the global registry having been populated by
+        // an earlier step of the very same function.
+        const services = app.getServices();
+        const { web3, crossChainService: crossChain, eventBus } = services;
 
         if (!web3 || !crossChain) {
           console.error('❌ Required services not available');
@@ -361,10 +375,7 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
           if (!web3.isConnected()) {
             console.log('🟡 Please connect your wallet to demo cross-chain functionality');
             // Show wallet connection UI
-            const walletWidget = window.RunRealm?.mainUI?.walletWidget;
-            if (walletWidget) {
-              walletWidget.showWalletModal();
-            }
+            walletWidget.showWalletModal();
             return;
           }
 
@@ -410,14 +421,11 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
           console.log('🗺️ Territory data:', mockTerritory);
 
           // 5. Emit cross-chain claim event
-          const eventBus = window.RunRealm?.services?.eventBus;
-          if (eventBus) {
-            console.log('📤 Sending cross-chain territory claim request...');
-            eventBus.emit('crosschain:territoryClaimRequested', {
-              territoryData: mockTerritory,
-              targetChainId: 7001, // ZetaChain testnet
-            });
-          }
+          console.log('📤 Sending cross-chain territory claim request...');
+          eventBus.emit('crosschain:territoryClaimRequested', {
+            territoryData: mockTerritory,
+            targetChainId: 7001, // ZetaChain testnet
+          });
 
           // 6. Show demo UI updates
           console.log('\n📱 UI Updates:');
@@ -428,13 +436,11 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
           // 7. Simulate cross-chain confirmation
           setTimeout(() => {
             console.log('\n✅ Simulating cross-chain confirmation...');
-            if (eventBus) {
-              eventBus.emit('web3:crossChainTerritoryClaimed', {
-                hash: `0x${Math.random().toString(16).substr(2, 10)}`,
-                geohash: mockTerritory.geohash,
-                originChainId: mockTerritory.originChainId,
-              });
-            }
+            eventBus.emit('web3:crossChainTerritoryClaimed', {
+              hash: `0x${Math.random().toString(16).substr(2, 10)}`,
+              geohash: mockTerritory.geohash,
+              originChainId: mockTerritory.originChainId,
+            });
 
             console.log('\n🎉 Cross-chain territory claim completed!');
             console.log('📊 Territory now owned on ZetaChain with cross-chain history');

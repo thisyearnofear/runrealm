@@ -28,6 +28,13 @@ pre-commit:
       run: bash scripts/secrets-scan.sh staged
       fail_text: "Hardcoded secret detected. See scripts/secrets-scan.sh output."
 
+    # `window.RunRealm` is a console debug handle, not a wiring mechanism.
+    # Runs on staged files only; the full-tree version runs pre-push.
+    no-window-runrealm:
+      run: node scripts/check/no-window-runrealm.mjs {staged_files}
+      glob: "**/*.{ts,tsx,js,jsx,mjs}"
+      fail_text: "Application code must not read window.RunRealm. Inject the dependency instead."
+
 # Pre-push hooks - run before pushing to remote
 pre-push:
   parallel: false
@@ -48,6 +55,12 @@ pre-push:
     lint-check:
       run: npm run lint:errors --silent
       fail_text: "Critical linting errors found. Please fix actual errors before pushing."
+
+    # Whole-tree version of the pre-commit check: catches a read that was
+    # already in the tree rather than introduced in this push.
+    no-window-runrealm-full:
+      run: node scripts/check/no-window-runrealm.mjs
+      fail_text: "Application code must not read window.RunRealm. Inject the dependency instead."
 
     # Type check with TypeScript compiler
     typecheck:

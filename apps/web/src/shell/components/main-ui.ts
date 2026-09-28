@@ -5,6 +5,7 @@
  */
 
 import { ContractService } from '@runrealm/shared-blockchain/services/contract-service';
+import type { EnhancedRunControls } from '@runrealm/shared-core/components/enhanced-run-controls';
 import { GameFiUI } from '@runrealm/shared-core/components/gamefi-ui';
 import { MobileWidgetService } from '@runrealm/shared-core/components/mobile-widget-service';
 import { RewardSystemUI } from '@runrealm/shared-core/components/reward-system-ui';
@@ -27,6 +28,7 @@ import { SensoryFeedbackService } from '@runrealm/shared-core/services/sensory-f
 import { UIService } from '@runrealm/shared-core/services/ui-service';
 import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
+import type { RunRealmServiceRegistry } from '../../types/debug-globals';
 import { EventHandler } from './main-ui/event-handlers/ui-event-handler';
 import { StatusManager } from './main-ui/status-managers/location-status-manager';
 import { UIEffectsManager } from './main-ui/ui-effects/ui-effects-manager';
@@ -56,6 +58,8 @@ export class MainUI extends BaseService {
   private contractService!: ContractService;
   private gamefiUI: GameFiUI;
   private web3Service: Web3Service;
+  private enhancedRunControls?: EnhancedRunControls;
+  private shieldServices: RunRealmServiceRegistry;
   private routeStateService: RouteStateService;
 
   // Modular components
@@ -72,7 +76,16 @@ export class MainUI extends BaseService {
     walletWidget: WalletWidget,
     uiService: UIService,
     gamefiUI: GameFiUI,
-    web3Service: Web3Service
+    web3Service: Web3Service,
+    // Injected rather than read from `window.RunRealm.services`. The run
+    // tracker has no reason to know that a service registry exists, and
+    // reaching into one made this component impossible to construct in a
+    // test without standing up the whole app.
+    enhancedRunControls?: EnhancedRunControls,
+    // The same slice the confidential shield widget needs. Kept as one
+    // dependency rather than four so the widget's needs are visible at the
+    // point where they are declared.
+    shieldServices: RunRealmServiceRegistry = {}
   ) {
     super();
     this.domService = domService;
@@ -81,6 +94,8 @@ export class MainUI extends BaseService {
     this.uiService = uiService;
     this.gamefiUI = gamefiUI;
     this.web3Service = web3Service;
+    this.enhancedRunControls = enhancedRunControls;
+    this.shieldServices = shieldServices;
     this.dragService = new DragService();
     this.visibilityService = new VisibilityService();
     this.animationService = new AnimationService();
@@ -136,7 +151,8 @@ export class MainUI extends BaseService {
       this.walletWidget,
       this.userDashboardService,
       this.widgetSystem,
-      this.visibilityService
+      this.visibilityService,
+      this.shieldServices
     );
 
     // Now set the widgetCreator reference in the eventHandler
@@ -333,13 +349,17 @@ export class MainUI extends BaseService {
    * Initialize run tracker widget after MainUI is ready
    */
   private initializeRunTrackerWidget(): void {
-    // Get the enhanced run controls service from global registry
-    const services = window.RunRealm?.services;
-
-    if (services?.enhancedRunControls) {
-      services.enhancedRunControls.initializeWidget();
+    if (this.enhancedRunControls) {
+      // MainUI owns the widget system, so it is MainUI that hands it over.
+      this.enhancedRunControls.initializeWidget(this.widgetSystem);
     } else {
-      console.error('MainUI: Could not find EnhancedRunControls service');
+      // A missing dependency is a wiring bug, not a runtime condition to
+      // swallow. Say so loudly — the run tracker is the first thing a
+      // runner touches.
+      console.error(
+        'MainUI: EnhancedRunControls was not injected — the run tracker will not appear. ' +
+          'Pass it as the seventh MainUI constructor argument in bootstrap.'
+      );
     }
   }
 

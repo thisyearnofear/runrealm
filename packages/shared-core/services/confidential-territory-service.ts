@@ -36,6 +36,7 @@
 import type { Signer } from 'ethers';
 import { getConfidentialNetworkConfig } from '../config/contracts';
 import { BaseService } from '../core/base-service';
+import { getRegisteredService } from '../core/service-registry';
 import { claimMissingLine, errorCopy, notOnChainLine } from '../utils/atlas-voice';
 import { type Territory, TerritoryService } from './territory-service';
 import { type ZamaCiphertext, ZamaRelayer } from './zama-relayer';
@@ -119,16 +120,13 @@ export class ConfidentialTerritoryService extends TerritoryService {
     if (ConfidentialTerritoryService.confidentialInstance) {
       return ConfidentialTerritoryService.confidentialInstance;
     }
-    let parent: TerritoryService | null = null;
-    if (typeof window !== 'undefined') {
-      const services = (window as any).RunRealm?.services;
-      if (services && services.territory) {
-        parent = services.territory as TerritoryService;
-      }
-    }
-    if (!parent) {
-      parent = TerritoryService.getInstance();
-    }
+    // Prefer the composed `TerritoryService` so this shares the instance the
+    // map is reading from; fall back to the singleton when the registry has
+    // not been built yet. Both used to be consulted, but the first was read
+    // off a browser global, so under SSR and on mobile only the fallback
+    // ever ran.
+    const composed = getRegisteredService('territory') as TerritoryService | undefined;
+    const parent = composed ?? TerritoryService.getInstance();
     ConfidentialTerritoryService.confidentialInstance = new ConfidentialTerritoryService(parent);
     return ConfidentialTerritoryService.confidentialInstance;
   }

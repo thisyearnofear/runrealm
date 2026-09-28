@@ -2,6 +2,7 @@ import { WidgetSystem } from '@runrealm/shared-core/components/widget-system';
 import { VisibilityService } from '@runrealm/shared-core/internal/_legacy-widget/visibility-service';
 import { LocationService } from '@runrealm/shared-core/services/location-service';
 import { UserDashboardService } from '@runrealm/shared-core/services/user-dashboard-service';
+import type { RunRealmServiceRegistry } from '../../../../types/debug-globals';
 import { ConfidentialShieldWidget } from '../../confidential-shield-widget';
 import { WalletWidget } from '../../wallet-widget';
 
@@ -45,7 +46,9 @@ export class WidgetCreator {
     walletWidget: WalletWidget,
     private userDashboardService: UserDashboardService,
     widgetSystem: WidgetSystem,
-    visibilityService: VisibilityService
+    visibilityService: VisibilityService,
+    /** Passed straight through to the confidential shield widget. */
+    private shieldServices: RunRealmServiceRegistry = {}
   ) {
     this.locationService = locationService;
     this.walletWidget = walletWidget;
@@ -145,7 +148,7 @@ export class WidgetCreator {
    */
   createConfidentialShieldWidget(): void {
     try {
-      const shield = new ConfidentialShieldWidget(this.widgetSystem);
+      const shield = new ConfidentialShieldWidget(this.widgetSystem, this.shieldServices);
       shield.register();
     } catch (error) {
       console.warn('ConfidentialShieldWidget registration skipped:', error);

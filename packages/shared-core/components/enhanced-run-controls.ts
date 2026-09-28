@@ -1,5 +1,6 @@
 import { BaseService } from '../core/base-service';
 import { RunSession } from '../services/run-tracking-service';
+import { UIService } from '../services/ui-service';
 import { claimReadyLine, errorCopy } from '../utils/atlas-voice';
 import {
   formatDuration,
@@ -52,7 +53,8 @@ export class EnhancedRunControls extends BaseService {
   /**
    * Initialize widget after MainUI is ready
    */
-  public initializeWidget(): void {
+  public initializeWidget(widgetSystem?: unknown): void {
+    if (widgetSystem) this.setWidgetSystem(widgetSystem);
     console.log('EnhancedRunControls: Initializing widget...');
     this.createWidget();
     // Ensure event handlers are attached after widget creation
@@ -61,26 +63,31 @@ export class EnhancedRunControls extends BaseService {
     }, 100);
   }
 
+  /**
+   * The widget system to register the run tracker with.
+   *
+   * Set by `initializeWidget(widgetSystem)`, which MainUI calls — MainUI is
+   * what owns a widget system, so it is also what knows about one. It used
+   * to dig one out of `window.runRealmApp` / `window.RunRealm`, which meant
+   * the tracker silently rendered nothing if it was initialised before
+   * MainUI assigned those globals.
+   */
+  private widgetSystem: any = null;
+
+  setWidgetSystem(widgetSystem: unknown): void {
+    this.widgetSystem = widgetSystem ?? null;
+  }
+
   private getWidgetSystem(): any {
-    return (
-      (window as any).runRealmApp?.mainUI?.widgetSystem ||
-      (window as any).RunRealm?.mainUI?.widgetSystem ||
-      null
-    );
+    return this.widgetSystem;
   }
 
   private getUIService(): any {
-    const globalWindow = window as any;
-    return (
-      globalWindow.runRealmApp?.ui ||
-      globalWindow.RunRealm?.ui ||
-      globalWindow.UIService?.getInstance?.() ||
-      null
-    );
+    return UIService.getInstance();
   }
 
   private getMapService(): any {
-    return (window as any).RunRealm?.services?.mapService || null;
+    return this.getSiblingService('mapService');
   }
 
   private setupEventListeners(): void {
@@ -181,10 +188,12 @@ export class EnhancedRunControls extends BaseService {
     const widgetSystem = this.getWidgetSystem();
 
     if (widgetSystem) {
-      const mobileWidgetService =
-        (window as any).RunRealm?.services?.mobileWidget ||
-        (window as any).runRealmApp?.mobileWidgetService;
-      const isMobile = mobileWidgetService?.isMobileDevice?.() || false;
+      // Viewport width, not a service lookup. `mobileWidget` was never in
+      // the registry, so this expression was always false and the tracker
+      // always started minimised — including on the phones it was written
+      // to start expanded on.
+      const isMobile =
+        typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches;
 
       widgetSystem.registerWidget({
         id: 'run-tracker',

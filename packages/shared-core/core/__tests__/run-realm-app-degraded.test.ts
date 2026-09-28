@@ -52,6 +52,10 @@ function stubServices(): StubServices {
     accountService: { initialize: jest.fn(async () => {}) },
     attestationService: { initialize: jest.fn(async () => {}) },
     screenWake: { initialize: jest.fn(async () => {}) },
+    // Re-supplied after the map boots, so the AI service has somewhere to
+    // ask "where is the runner?" for route generation. It used to dig that
+    // out of a browser global, which is why it worked only in a browser.
+    ai: { setLocationSource: jest.fn() },
     preferenceService: {
       getUseMetric: () => true,
       getLastOrDefaultFocus: () => ({ lat: 40.78, lng: -73.96, zoom: 12 }),

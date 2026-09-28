@@ -397,12 +397,12 @@ export class UserDashboard {
       case 'territory-walk': {
         const territoryId = target.getAttribute('data-territory-id');
         if (!territoryId) break;
-        const walkService = window.RunRealm?.services?.territoryWalkService;
-        if (walkService) {
-          void walkService.startWalk(territoryId);
-        } else {
-          this.eventBus.emit('territoryWalk:startRequested', { territoryId });
-        }
+        // The event, not a direct service call. `TerritoryWalkService` is
+        // already subscribed to it, so the two paths were the same path —
+        // but the event is the one that also works in a test and from a
+        // second dashboard instance, and it does not require reaching into
+        // `window.RunRealm` for a service this component does not own.
+        this.eventBus.emit('territoryWalk:startRequested', { territoryId });
         break;
       }
 

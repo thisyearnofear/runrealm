@@ -66,6 +66,7 @@ import {
 } from '../types/ui-interfaces';
 import { ConfigService } from './app-config';
 import { EventBus } from './event-bus';
+import { registerServiceRegistry } from './service-registry';
 
 export interface Services {
   config: ConfigService;
@@ -160,6 +161,17 @@ export function createServices(): Services {
   const orbisDirector = OrbisDirector.getInstance();
   const screenWake = ScreenWakeService.getInstance();
 
+  // The AI service needs somewhere to ask "where is the runner?" when it
+  // generates a route. It used to reach through `window.RunRealm` for this,
+  // and two of the three names it looked for were never assigned by
+  // anything — so the only reason it worked at all was a third global set
+  // during boot. The device position is available right here, so wire it
+  // here. `RunRealmApp` re-supplies the source after the map boots to add
+  // the map centre, which cannot exist yet at this point.
+  ai.setLocationSource({
+    getCurrentLocation: () => location.getCurrentLocation(),
+  });
+
   return {
     config,
     eventBus,
@@ -219,13 +231,26 @@ export interface PlatformUI {
   ghostManagement?: { initialize(container: HTMLElement): Promise<void> | void };
 }
 
+/**
+ * Build the service graph and publish it twice: once to the module registry
+ * that services resolve siblings through, and once to `window.RunRealm` for
+ * the console.
+ *
+ * The window half is a DEBUG HANDLE, not a wiring mechanism. It is
+ * genuinely useful — `window.RunRealm.services.territory` in a console on a
+ * live deployment is how you answer "is the map actually empty, or did
+ * nothing render?" without shipping a build — so it stays, in every
+ * environment, in production.
+ *
+ * No application code may read it. Consumers take their dependencies as
+ * constructor arguments, or resolve siblings through
+ * `core/service-registry`, which works the same in a browser, under SSR and
+ * in the mobile app. `scripts/check/no-window-runrealm.mjs` fails the build
+ * if a read creeps back, so this stays a handle rather than drifting into a
+ * dependency.
+ */
 export function registerGlobalServices(services: Services, platformUI: PlatformUI = {}): void {
-  if (typeof window === 'undefined') return;
-
-  // biome-ignore lint/suspicious/noExplicitAny: dev/debug global namespace used by vanilla widgets
-  const w = window as any;
-  w.RunRealm = w.RunRealm ?? {};
-  w.RunRealm.services = {
+  const registry = {
     config: services.config,
     eventBus: services.eventBus,
     preferenceService: services.preferenceService,
@@ -265,4 +290,17 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     worldState: services.worldState,
     orbisDirector: services.orbisDirector,
   };
+
+  // The registry services actually read. Published first and unconditionally:
+  // it has to work under SSR and in the mobile app, not only in a browser.
+  registerServiceRegistry(registry);
+
+  if (typeof window === 'undefined') return;
+
+  // biome-ignore lint/suspicious/noExplicitAny: dev/debug global namespace used by vanilla widgets
+  const w = window as any;
+  w.RunRealm = w.RunRealm ?? {};
+  // The same object, mirrored. Reading it is a debug affordance; writing to
+  // it from page script is not a supported way to change behaviour.
+  w.RunRealm.services = registry;
 }

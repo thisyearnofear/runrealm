@@ -150,6 +150,18 @@ export class RunRealmApp {
       const map = await this.bootMap();
       this.map = map;
 
+      // The map is the AI service's second location source: where the runner
+      // has panned, which is often not where they are. Re-supplying the
+      // source here (rather than in the composer) is deliberate — the map
+      // does not exist yet when services are composed, and a missing WebGL
+      // context is a supported degraded mode, so this may legitimately be
+      // null. `RunTrackingService`-style injection was already the pattern;
+      // this is the same seam for the service that generates routes.
+      this.services.ai.setLocationSource({
+        getCurrentLocation: () => this.services.location.getCurrentLocation(),
+        getMapCenter: () => this.map?.getCenter() ?? null,
+      });
+
       if (map) {
         this.services.mapService.setMap(map);
         this.services.territoryToggle.setMapService(this.services.mapService);

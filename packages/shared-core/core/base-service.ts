@@ -5,6 +5,7 @@
 
 import { ConfigService } from './app-config';
 import { EventBus } from './event-bus';
+import { getRegisteredService } from './service-registry';
 
 export interface WalletSnapshot {
   address: string;
@@ -203,20 +204,24 @@ export abstract class BaseService {
   }
 
   /**
-   * Resolve a sibling service from the global RunRealm registry.
+   * Resolve a sibling service from the registry.
+   *
    * Replaces per-service `getService(name)` boilerplate — every concrete
-   * service used to copy-paste the same `(window as any).RunRealm?.services`
-   * lookup. Returns `null` when the registry is not initialised (e.g.
-   * during boot or under SSR). Subclasses can narrow with `as`.
+   * service used to copy-paste the same global lookup. It reads
+   * `core/service-registry` rather than `window.RunRealm`, so it works
+   * identically in a browser, under SSR, and in the mobile app; the old
+   * version returned `null` in the latter two, which is why so many call
+   * sites carried a fallback they should never have needed.
+   *
+   * Returns `null` when the registry has not been composed yet. Subclasses
+   * can narrow with `as`.
    */
   protected getSiblingService(name: string): any {
-    if (typeof window === 'undefined') return null;
-    const services = (window as any).RunRealm?.services;
-    if (!services) {
-      console.warn(`[${this.constructor.name}] service registry not found; cannot access ${name}`);
-      return null;
+    const service = getRegisteredService(name);
+    if (service == null) {
+      console.warn(`[${this.constructor.name}] service registry has no ${name}`);
     }
-    return services[name];
+    return service;
   }
 
   /**

@@ -60,12 +60,39 @@ export interface AIGoals {
   priority?: string;
 }
 
+/**
+ * Where a generated route starts from. Both members are optional so a
+ * partial implementation is a valid thing to inject.
+ */
+export interface LocationSource {
+  getCurrentLocation?(): Promise<{ lat: number; lng: number } | null | undefined>;
+  getMapCenter?(): { lat: number; lng: number } | null | undefined;
+}
+
+/**
+ * Last resort when nothing knows where the runner is. Manawatu, NZ — the
+ * project's home ground, and unambiguously not a claim that anyone is there.
+ * The old comment said "Default to NYC" and the value was New York.
+ */
+const DEFAULT_ROUTE_ORIGIN = { lat: -40.5609, lng: 175.5041 } as const;
+
+/** `catch` gives `unknown`; a thrown string is as likely as an Error. */
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export class AIService extends BaseService {
   private static instance: AIService;
   private genAI: any = null;
   private model: any = null;
   private isEnabled = false;
   private connectionTested = false; // Track if we've tested the connection
+  /**
+   * Where route generation anchors: the runner's own position, then where
+   * they have panned the map. Injected by the composer rather than read off
+   * a global — see `resolveCurrentLocation` for why that matters.
+   */
+  private locationSource: LocationSource | null = null;
 
   private constructor() {
     super();
@@ -83,6 +110,60 @@ export class AIService extends BaseService {
       AIService.instance = new AIService();
     }
     return AIService.instance;
+  }
+
+  /**
+   * Give the service somewhere to ask "where is the runner?".
+   *
+   * Both fields are optional and either may be absent — a headless boot, a
+   * test, or a map that failed to come up all still have a service, and none
+   * of them should have to fake a `window` to make route planning work.
+   */
+  setLocationSource(source: LocationSource): void {
+    this.locationSource = source;
+  }
+
+  /**
+   * Resolve the origin for a generated route.
+   *
+   * Prefers the device's own position, falls back to the map centre, and
+   * only then to a fixed default — which is why this cannot be a plain
+   * property read. Every source here is explicitly injected and can fail;
+   * a route anchored on the wrong continent is worse than one that says it
+   * does not know where you are.
+   */
+  private async resolveCurrentLocation(): Promise<{ lat: number; lng: number }> {
+    const source = this.locationSource;
+
+    /** Coerce whatever a source returned into a usable point, or null. */
+    const point = (value: { lat?: number; lng?: number } | null | undefined) =>
+      value && Number.isFinite(value.lat) && Number.isFinite(value.lng)
+        ? { lat: value.lat as number, lng: value.lng as number }
+        : null;
+
+    if (source?.getCurrentLocation) {
+      try {
+        const located = point(await source.getCurrentLocation());
+        if (located) return located;
+      } catch (error) {
+        // Permission denied is the common case here and is not exceptional.
+        console.warn('AIService: device location unavailable:', errorMessage(error));
+      }
+    }
+
+    if (source?.getMapCenter) {
+      try {
+        const centered = point(source.getMapCenter());
+        if (centered) return centered;
+      } catch (error) {
+        console.warn('AIService: map centre unavailable:', errorMessage(error));
+      }
+    }
+
+    console.warn(
+      'AIService: no location source resolved — anchoring the route on the fallback point'
+    );
+    return { ...DEFAULT_ROUTE_ORIGIN };
   }
 
   /**
@@ -250,37 +331,15 @@ export class AIService extends BaseService {
             goals.priority = data.priority;
           }
 
-          // Get current location from multiple sources
-          let currentLocation = { lat: 40.7128, lng: -74.006 }; // Default to NYC
-
-          // Try to get from window.RunRealm first
-          if ((window as any)?.RunRealm?.currentLocation) {
-            currentLocation = (window as any).RunRealm.currentLocation;
-          }
-          // Try to get from LocationService
-          else if ((window as any)?.RunRealm?.locationService?.getCurrentLocation) {
-            try {
-              const locationInfo = await (
-                window as any
-              ).RunRealm.locationService.getCurrentLocation();
-              if (locationInfo?.lat && locationInfo.lng) {
-                currentLocation = { lat: locationInfo.lat, lng: locationInfo.lng };
-              }
-            } catch (_error) {
-              console.warn('AIService: Failed to get current location, using default');
-            }
-          }
-          // Try to get from map center as fallback
-          else if ((window as any)?.RunRealm?.map?.getCenter) {
-            try {
-              const center = (window as any).RunRealm.map.getCenter();
-              if (center?.lat && center.lng) {
-                currentLocation = { lat: center.lat, lng: center.lng };
-              }
-            } catch (_error) {
-              console.warn('AIService: Failed to get map center, using default');
-            }
-          }
+          // Where the runner is, for the route's origin. Both sources are
+          // injected (see `setLocationSource`) rather than read off a global:
+          // the previous version reached through `window.RunRealm.currentLocation`
+          // and `window.RunRealm.locationService`, neither of which is ever
+          // assigned anywhere in the codebase. Only the third branch —
+          // `window.RunRealm.map`, set by `exposeGlobals()` — could ever fire,
+          // so route planning silently depended on boot ordering and would
+          // have fallen back to New York for anyone who moved it.
+          const currentLocation = await this.resolveCurrentLocation();
 
           console.log('AIService: Using location for route generation:', currentLocation);
 

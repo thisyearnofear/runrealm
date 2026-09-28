@@ -119,6 +119,37 @@ RunRealm/
 - `BaseService`: Service lifecycle and event handling
 - `EventBus`: Pub/sub communication system
 - `AppConfig`: Configuration and API key management
+- `service-registry`: The service graph, for services resolving siblings
+
+#### How services find each other
+
+There are three ways, and they are not interchangeable.
+
+**Constructor injection** is the one to reach for. A component or service
+takes its dependencies as arguments, which is what makes it constructible in
+a test without standing up the rest of the app. `MainUI`, `RunTheater`,
+`RecoveredRunCard` and the confidential shield widget all work this way.
+
+**`getSiblingService(name)`** on `BaseService` reads the module registry
+(`core/service-registry`) when a service genuinely needs a sibling it was
+not given. The registry is populated by `createServices()`, so it works
+identically in a browser, under SSR, and in the mobile app. It is still
+global state and still a compromise — the real fix is injecting each
+service's dependencies, one service at a time.
+
+**`window.RunRealm.services` is a debug handle and nothing else.** It is
+still published, in production, because
+`window.RunRealm.services.territory` in a console against a live deployment
+is genuinely the fastest way to answer "is the map empty, or did nothing
+render?". But no application code reads it, and
+`npm run check:globals` fails the build if one tries to — it runs
+pre-commit over staged files and pre-push over the whole tree.
+
+That is not a style rule. Two of the reads it now blocks were not merely
+untidy but wrong: `AIService` looked for
+`window.RunRealm.currentLocation` and `window.RunRealm.locationService`,
+neither of which anything ever assigns, so route planning worked only
+because a third global happened to be set during boot.
 
 ## Smart Contract Architecture
 
