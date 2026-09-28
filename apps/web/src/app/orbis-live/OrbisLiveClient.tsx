@@ -173,8 +173,8 @@ function OrbisLiveExperience() {
     createEnvGlobal();
     document.body.classList.add('orbis-live-route');
 
-    const world = new WorldStateService();
-    const director = new OrbisDirector({ enabled: true, minDispatchIntervalMs: 1400 });
+    const world = WorldStateService.getInstance();
+    const director = OrbisDirector.getInstance({ enabled: true, minDispatchIntervalMs: 1400 });
     directorRef.current = director;
     const territoryStore = TerritoryService.getInstance();
 

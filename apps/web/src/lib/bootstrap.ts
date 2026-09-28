@@ -50,7 +50,10 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
     const { Web3Service } = await import('@runrealm/shared-core/services/web3-service');
     const { AnimationService } = await import('@runrealm/shared-core/services/animation-service');
 
-    const domService = new DOMService();
+    // The composed instance, not a second one. Four other places reach for
+    // `DOMService.getInstance()`, and a second DOMService means widgets built
+    // here and widgets built by those places disagree about what exists.
+    const domService = DOMService.getInstance();
     const locationService = LocationService.getInstance();
     // The composed instance, not a second one. `new UIService()` here built a
     // second toast container and a second timer map while the composer held

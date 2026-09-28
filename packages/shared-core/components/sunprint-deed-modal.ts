@@ -35,7 +35,7 @@ export class SunprintDeedModal extends BaseService {
 
   constructor(domService?: DOMService, options?: SunprintDeedModalOptions) {
     super();
-    this.domService = domService || new DOMService();
+    this.domService = domService || DOMService.getInstance();
     this.soundService = SoundService.getInstance();
     this.autoShowOnClaim = options?.autoShowOnClaim ?? true;
   }

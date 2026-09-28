@@ -35,6 +35,13 @@ pre-commit:
       glob: "**/*.{ts,tsx,js,jsx,mjs}"
       fail_text: "Application code must not read window.RunRealm. Inject the dependency instead."
 
+    # A service with a singleton must not be constructed directly: a second
+    # instance is a second answer about state the app is not consulting.
+    no-service-construction:
+      run: node scripts/check/no-service-construction.mjs {staged_files}
+      glob: "**/*.{ts,tsx,js,jsx,mjs}"
+      fail_text: "Do not construct a service that owns a singleton. Use getInstance()."
+
 # Pre-push hooks - run before pushing to remote
 pre-push:
   parallel: false
@@ -61,6 +68,12 @@ pre-push:
     no-window-runrealm-full:
       run: node scripts/check/no-window-runrealm.mjs
       fail_text: "Application code must not read window.RunRealm. Inject the dependency instead."
+
+    # Whole-tree version: catches a duplicate instance that was already in the
+    # tree rather than introduced in this push.
+    no-service-construction-full:
+      run: node scripts/check/no-service-construction.mjs
+      fail_text: "Do not construct a service that owns a singleton. Use getInstance()."
 
     # Type check with TypeScript compiler
     typecheck:

@@ -122,7 +122,7 @@ export function createServices(): Services {
   const eventBus = EventBus.getInstance();
   const preferenceService = new PreferenceService();
   const ui = UIService.getInstance();
-  const location = new LocationService();
+  const location = LocationService.getInstance();
   const web3 = Web3Service.getInstance();
   const ai = AIService.getInstance();
   const game = new GameService();

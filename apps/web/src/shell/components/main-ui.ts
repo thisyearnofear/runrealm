@@ -98,7 +98,7 @@ export class MainUI extends BaseService {
     this.shieldServices = shieldServices;
     this.dragService = new DragService();
     this.visibilityService = new VisibilityService();
-    this.animationService = new AnimationService();
+    this.animationService = AnimationService.getInstance();
     this.widgetStateService = new WidgetStateService();
     this.touchGestureService = new TouchGestureService();
     this.mobileWidgetService = new MobileWidgetService(this.touchGestureService);
@@ -144,7 +144,7 @@ export class MainUI extends BaseService {
       this.web3Service
     );
 
-    this.userDashboardService = new UserDashboardService();
+    this.userDashboardService = UserDashboardService.getInstance();
 
     this.widgetCreator = new WidgetCreator(
       this.locationService,
