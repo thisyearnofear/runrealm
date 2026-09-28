@@ -20,18 +20,6 @@
 import { GhostRunnerService } from '../ghost-runner-service';
 import { RunTrackingService } from '../run-tracking-service';
 
-const BALANCE_KEY = 'runrealm_realm_balance';
-
-function readBalance(): unknown {
-  const raw = window.localStorage.getItem(BALANCE_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw;
-  }
-}
-
 describe('GhostRunnerService progression', () => {
   beforeEach(() => {
     window.localStorage.clear();
