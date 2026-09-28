@@ -7,7 +7,11 @@
  *
  * @jest-environment jsdom
  */
-import { deserializeCheckpoint, serializeCheckpoint } from '../../utils/run-checkpoint';
+import {
+  deserializeCheckpoint,
+  recoveredRunSummary,
+  serializeCheckpoint,
+} from '../../utils/run-checkpoint';
 import { RunSession, RunTrackingService } from '../run-tracking-service';
 
 const KEY = 'runrealm-run-checkpoint-v1';
@@ -188,6 +192,65 @@ describe('RunTrackingService checkpoints', () => {
       // this run, so it does not develop ground.
       expect(finished?.territoryEligible).toBe(false);
       expect(finished?.status).toBe('completed');
+    });
+
+    it('ends the run at the last GPS fix, not at the moment it is recovered', () => {
+      // Found in a real browser: the card said "29 min" and the record said
+      // "40 min". An interrupted run is recovered long after it stopped, and
+      // the gap is time the runner was not running.
+      const dead = service();
+      const seeded = seedRecordingRun(dead);
+      const lastFix = seeded.points[seeded.points.length - 1].timestamp;
+      const trueSpan = lastFix - seeded.startTime;
+      dead.writeCheckpoint();
+
+      // Sit on the checkpoint for a quarter of an hour before the runner
+      // comes back and taps "Save this run".
+      jest.spyOn(Date, 'now').mockReturnValue(lastFix + 900_000);
+
+      const alive = service();
+      alive.adoptCheckpoint(alive.readCheckpoint() as RunSession);
+      const finished = alive.finalizeRecoveredRun();
+
+      expect(finished?.endTime).toBe(lastFix);
+      expect(finished?.totalDuration).toBe(trueSpan);
+    });
+
+    it('never reports a negative duration, whatever the points claim', () => {
+      const dead = service();
+      seedRecordingRun(dead);
+      dead.writeCheckpoint();
+
+      const alive = service();
+      const found = alive.readCheckpoint() as RunSession;
+      // A device whose clock jumped backwards mid-run. The floor keeps the
+      // duration at zero rather than inverting it.
+      found.points[found.points.length - 1].timestamp = found.startTime - 60_000;
+      alive.adoptCheckpoint(found);
+      const finished = alive.finalizeRecoveredRun();
+
+      expect(finished?.totalDuration).toBe(0);
+      expect(finished?.endTime).toBe(finished?.startTime);
+    });
+
+    it('agrees with the card the runner was shown', () => {
+      const dead = service();
+      const seeded = seedRecordingRun(dead);
+      const lastFix = seeded.points[seeded.points.length - 1].timestamp;
+      dead.writeCheckpoint();
+
+      jest.spyOn(Date, 'now').mockReturnValue(lastFix + 3_600_000);
+
+      const alive = service();
+      const found = alive.readCheckpoint() as RunSession;
+      alive.adoptCheckpoint(found);
+      const finished = alive.finalizeRecoveredRun();
+
+      // The card renders from `recoveredRunSummary`; the record is what ends
+      // up in history. Same run, same minute, or one of them is lying.
+      const shown = recoveredRunSummary(found);
+      expect(shown.durationLabel).toBe(`${Math.floor(finished!.totalDuration / 60_000)} min`);
+      expect(shown.distanceLabel).toBe(`${(finished!.totalDistance / 1000).toFixed(2)} km`);
     });
 
     it('clears the checkpoint once the run is filed, so it is never offered twice', () => {

@@ -847,14 +847,27 @@ export class RunTrackingService extends BaseService {
    * is not territory-eligible. It is still a run they did, and it belongs in
    * their history. Marking it eligible would be the tempting lie — a
    * "recovered" claim the runner never closed by their own hand.
+   *
+   * The run also ends at the last GPS fix, not at the moment this is called.
+   * An interrupted run is recovered minutes or hours after it stopped, and
+   * the gap is time the runner spent with the phone in a pocket or a crashed
+   * tab — not time spent running. Billing that to the run would inflate every
+   * recovered run's duration and average pace, and it would disagree with the
+   * recovery card, which has always reported the fix-to-fix span. The record
+   * and the pitch a runner read before tapping "Save this run" now agree.
    */
   public finalizeRecoveredRun(): RunSession | null {
     if (!this.currentRun) return null;
     if (this.currentRun.status !== 'paused') return null;
 
+    const lastFix = this.currentRun.points[this.currentRun.points.length - 1]?.timestamp;
+    // A run whose points are all older than its own startTime is nonsense, so
+    // the start is the floor rather than a value that can invert the duration.
+    const endTime = Math.max(this.currentRun.startTime, lastFix ?? this.currentRun.startTime);
+
     this.currentRun.status = 'completed';
-    this.currentRun.endTime = Date.now();
-    this.currentRun.totalDuration = this.currentRun.endTime - this.currentRun.startTime;
+    this.currentRun.endTime = endTime;
+    this.currentRun.totalDuration = endTime - this.currentRun.startTime;
     this.currentRun.territoryEligible = false;
 
     const finished = { ...this.currentRun };
