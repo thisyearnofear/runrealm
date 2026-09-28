@@ -16,6 +16,10 @@ interface MockAsyncStorageShape {
   setItem: jest.Mock;
   removeItem: jest.Mock;
   clear: jest.Mock;
+  getAllKeys: jest.Mock;
+  multiGet: jest.Mock;
+  multiSet: jest.Mock;
+  multiRemove: jest.Mock;
 }
 interface MockRunTrackingShape {
   startRun: jest.Mock;
@@ -25,7 +29,13 @@ interface MockRunTrackingShape {
   getCurrentRun: jest.Mock;
   getCurrentStats: jest.Mock;
   getRunHistory: jest.Mock;
+  getRunSessions: jest.Mock;
   setLocationService: jest.Mock;
+  setKeyValueStore: jest.Mock;
+  readCheckpoint: jest.Mock;
+  adoptCheckpoint: jest.Mock;
+  finalizeRecoveredRun: jest.Mock;
+  clearCheckpoint: jest.Mock;
 }
 
 jest.mock('@react-native-async-storage/async-storage', () => {
@@ -34,17 +44,12 @@ jest.mock('@react-native-async-storage/async-storage', () => {
     setItem: jest.fn(),
     removeItem: jest.fn(),
     clear: jest.fn(),
+    getAllKeys: jest.fn(() => Promise.resolve([] as string[])),
+    multiGet: jest.fn(() => Promise.resolve([] as [string, string | null][])),
+    multiSet: jest.fn(() => Promise.resolve()),
+    multiRemove: jest.fn(() => Promise.resolve()),
   };
-  (
-    globalThis as {
-      mockAsyncStorage?: {
-        getItem: jest.Mock;
-        setItem: jest.Mock;
-        removeItem: jest.Mock;
-        clear: jest.Mock;
-      };
-    }
-  ).mockAsyncStorage = obj;
+  (globalThis as { mockAsyncStorage?: MockAsyncStorageShape }).mockAsyncStorage = obj;
   return { __esModule: true, default: obj };
 });
 
@@ -57,7 +62,13 @@ jest.mock('@runrealm/shared-core/services/run-tracking-service', () => {
     getCurrentRun: jest.fn(),
     getCurrentStats: jest.fn(),
     getRunHistory: jest.fn(() => []),
+    getRunSessions: jest.fn(() => []),
     setLocationService: jest.fn(),
+    setKeyValueStore: jest.fn(),
+    readCheckpoint: jest.fn(() => null),
+    adoptCheckpoint: jest.fn(),
+    finalizeRecoveredRun: jest.fn(() => null),
+    clearCheckpoint: jest.fn(),
   };
   (globalThis as { mockRunTracking?: MockRunTrackingShape }).mockRunTracking = instance;
   return {
@@ -103,7 +114,21 @@ describe('MobileRunTrackingService', () => {
   beforeEach(() => {
     mockGetItem().mockReset();
     mockSetItem().mockReset();
+    // The shared singleton would otherwise leak one service's mock state into
+    // the next test, and a real test's checkpoint into the next real test.
+    MobileRunTrackingService.resetInstance();
+    // The mocked RunTrackingService is module-scoped, so its call history
+    // accumulates across every test in this file unless it is cleared.
+    for (const fn of Object.values(mockRunTrackingServiceInstance())) {
+      if (typeof fn === 'function' && 'mockClear' in fn) {
+        (fn as jest.Mock).mockClear();
+      }
+    }
     mobileService = new MobileRunTrackingService();
+  });
+
+  afterAll(() => {
+    MobileRunTrackingService.resetInstance();
   });
 
   describe('saveRunToHistory', () => {
@@ -219,6 +244,105 @@ describe('MobileRunTrackingService', () => {
       const result = mobileService.getCurrentStats();
       expect(result).toEqual(mockStats);
       expect(mockRunTrackingServiceInstance().getCurrentStats).toHaveBeenCalled();
+    });
+  });
+
+  describe('one instance for the whole app', () => {
+    it('hands the same object to every caller', () => {
+      // The bug this replaces: MapScreen and ProfileScreen each built their
+      // own RunTrackingService, so both read a run state that nothing wrote.
+      const first = MobileRunTrackingService.getInstance();
+      const second = MobileRunTrackingService.getInstance();
+      expect(second).toBe(first);
+    });
+
+    it('is the same instance the map and profile screens get', () => {
+      const viaMap = MobileRunTrackingService.getInstance();
+      const viaProfile = MobileRunTrackingService.getInstance();
+      expect(viaProfile.getCurrentRun).toBe(viaMap.getCurrentRun);
+    });
+  });
+
+  describe('persistence on a platform with no window', () => {
+    it('points the shared service at a real store', () => {
+      // Without this the service reaches for window.localStorage, throws a
+      // ReferenceError, and loses the run on every mobile launch.
+      expect(mockRunTrackingServiceInstance().setKeyValueStore).toHaveBeenCalledTimes(1);
+      const store = mockRunTrackingServiceInstance().setKeyValueStore.mock.calls[0][0];
+      expect(typeof store.getItem).toBe('function');
+      expect(typeof store.setItem).toBe('function');
+      expect(typeof store.removeItem).toBe('function');
+    });
+
+    it('answers a read synchronously, because a killed app cannot await one', () => {
+      // The whole reason the adapter mirrors rather than delegating to
+      // AsyncStorage: the checkpoint write happens while the process is being
+      // torn down, and a promise that has not settled is a run that is lost.
+      const store = mockRunTrackingServiceInstance().setKeyValueStore.mock.calls[0][0];
+      store.setItem('k', 'v');
+      expect(store.getItem('k')).toBe('v');
+    });
+  });
+
+  describe('recovering an interrupted run', () => {
+    it('reads back a checkpoint the device kept', () => {
+      const found = { ...mockRunSession, status: 'paused' as const };
+      (mockRunTrackingServiceInstance().readCheckpoint as jest.Mock).mockReturnValue(found);
+      expect(mobileService.readCheckpoint()).toEqual(found);
+    });
+
+    it('has nothing to offer when nothing was interrupted', () => {
+      (mockRunTrackingServiceInstance().readCheckpoint as jest.Mock).mockReturnValue(null);
+      expect(mobileService.readCheckpoint()).toBeNull();
+    });
+
+    it('files a kept run and clears the checkpoint', async () => {
+      const found = { ...mockRunSession, status: 'paused' as const };
+      (mockRunTrackingServiceInstance().finalizeRecoveredRun as jest.Mock).mockReturnValue({
+        ...found,
+        status: 'completed',
+      });
+      mockGetItem().mockResolvedValue(null);
+      mockSetItem().mockResolvedValue(undefined);
+
+      const finished = await mobileService.finalizeRecoveredRun();
+
+      expect(finished?.status).toBe('completed');
+      // A recovered run was never closed, so it must not earn a claim.
+      expect(finished?.territoryEligible).toBe(false);
+      // Clearing the checkpoint is the shared service's job, and is covered
+      // by its own tests rather than against a mock.
+    });
+
+    it('adopts a checkpoint as paused rather than as recording', () => {
+      const found = { ...mockRunSession, status: 'paused' as const };
+      (mockRunTrackingServiceInstance().adoptCheckpoint as jest.Mock).mockReturnValue(found);
+      expect(mobileService.adoptCheckpoint(found).status).toBe('paused');
+    });
+
+    it('drops the checkpoint without filing when the runner lets it go', () => {
+      mobileService.discardCheckpoint();
+      expect(mockRunTrackingServiceInstance().clearCheckpoint).toHaveBeenCalled();
+    });
+  });
+
+  describe('history comes from the recording service', () => {
+    it('prefers what the service actually recorded', async () => {
+      const recorded = [{ ...mockRunSession, id: 'run_recorded' }];
+      (mockRunTrackingServiceInstance().getRunSessions as jest.Mock).mockReturnValue(recorded);
+
+      const history = await mobileService.getRunHistory();
+
+      expect(history).toEqual(recorded);
+      // The private AsyncStorage copy is a fallback, not the source of truth.
+      expect(mockGetItem()).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the older list when the service has nothing', async () => {
+      (mockRunTrackingServiceInstance().getRunSessions as jest.Mock).mockReturnValue([]);
+      mockGetItem().mockResolvedValue(JSON.stringify([mockRunSession]));
+
+      await expect(mobileService.getRunHistory()).resolves.toEqual([mockRunSession]);
     });
   });
 });

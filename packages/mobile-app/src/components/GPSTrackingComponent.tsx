@@ -58,7 +58,10 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
   const buttonScaleAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  const mobileTrackingService = useRef(new MobileRunTrackingService()).current;
+  // The shared instance, not a private one. This component is where runs are
+  // started; a second instance here would be a second run state that the map
+  // and profile screens could not see.
+  const mobileTrackingService = useRef(MobileRunTrackingService.getInstance()).current;
   const backgroundTrackingService = useRef(BackgroundTrackingService.getInstance()).current;
 
   // Visual feedback functions

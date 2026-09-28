@@ -3,6 +3,11 @@ import { BaseService } from '../core/base-service';
 import { calculateDistance } from '../utils/distance-formatter';
 import { type HiddenAwareInterval, startHiddenAwareInterval } from '../utils/hidden-aware-interval';
 import {
+  browserKeyValueStore,
+  type KeyValueStore,
+  nullKeyValueStore,
+} from '../utils/key-value-store';
+import {
   CHECKPOINT_INTERVAL_MS,
   deserializeCheckpoint,
   serializeCheckpoint,
@@ -73,6 +78,29 @@ export interface RunTrackingConfig {
   smoothingFactor: number; // 0-1
   territoryMinDistance: number; // meters
   territoryMaxDeviation: number; // meters from start
+}
+
+/**
+ * Whether a parsed history entry is a run we can actually report on.
+ *
+ * History is the one place we read back something a longer-lived device
+ * wrote, possibly across an app version, so the same strictness as
+ * `deserializeCheckpoint` applies: a session missing its distance or its
+ * start time cannot be summed without inventing a number. Entries that fail
+ * are dropped rather than coerced, so one bad record cannot turn a runner's
+ * lifetime distance into `NaN`.
+ */
+function isStoredRun(value: unknown): value is RunSession {
+  if (!value || typeof value !== 'object') return false;
+  const run = value as Partial<RunSession>;
+  return (
+    typeof run.id === 'string' &&
+    Number.isFinite(run.startTime) &&
+    Number.isFinite(run.totalDistance) &&
+    Number.isFinite(run.totalDuration) &&
+    Array.isArray(run.points) &&
+    Array.isArray(run.segments)
+  );
 }
 
 /**
@@ -765,6 +793,7 @@ export class RunTrackingService extends BaseService {
     } catch (error) {
       console.error('Failed to save run:', error);
     }
+    this.appendToHistory(run);
   }
 
   // ── Checkpoints ──────────────────────────────────────────────
@@ -779,6 +808,38 @@ export class RunTrackingService extends BaseService {
    *  the completed run: a recovered run has not been earned yet, and mixing
    *  the two would let an unfinished run masquerade as a finished one. */
   private static readonly CHECKPOINT_KEY = 'runrealm-run-checkpoint-v1';
+
+  /** Finished runs, newest first. Distinct from the checkpoint key: a
+   *  checkpoint is an offer, history is a fact. */
+  private static readonly RUN_HISTORY_KEY = 'runrealm-run-history-v1';
+
+  /** How many finished runs are kept. Each entry stores its summary, and 200
+   *  is years of running on one device without becoming unbounded storage. */
+  private static readonly MAX_HISTORY_RUNS = 200;
+
+  /**
+   * Where runs are kept. Resolved once per instance: a browser gets
+   * `localStorage`, React Native injects an AsyncStorage-backed store, and
+   * anything with neither gets the null store so every caller below stays
+   * ordinary synchronous code.
+   */
+  private store: KeyValueStore | null = null;
+
+  /**
+   * Point persistence at a different store. React Native calls this once with
+   * an AsyncStorage adapter; without it the service would keep looking for a
+   * `window` that does not exist there and lose every run.
+   */
+  public setKeyValueStore(store: KeyValueStore): void {
+    this.store = store;
+  }
+
+  private kv(): KeyValueStore {
+    if (this.store === null) {
+      this.store = browserKeyValueStore() ?? nullKeyValueStore();
+    }
+    return this.store;
+  }
 
   /**
    * Write the in-progress run. Best-effort by design: a checkpoint that
@@ -795,7 +856,7 @@ export class RunTrackingService extends BaseService {
       const serialized = serializeCheckpoint(this.currentRun, Date.now());
       // null means the run was not worth writing (empty, or over quota).
       if (serialized === null) return;
-      window.localStorage?.setItem(RunTrackingService.CHECKPOINT_KEY, serialized);
+      this.kv().setItem(RunTrackingService.CHECKPOINT_KEY, serialized);
     } catch (error) {
       // A full quota is the common case here and is not worth escalating.
       console.warn('Run checkpoint not written:', error);
@@ -809,7 +870,7 @@ export class RunTrackingService extends BaseService {
    */
   public readCheckpoint(): RunSession | null {
     try {
-      const raw = window.localStorage?.getItem(RunTrackingService.CHECKPOINT_KEY) ?? null;
+      const raw = this.kv().getItem(RunTrackingService.CHECKPOINT_KEY);
       return deserializeCheckpoint(raw);
     } catch (error) {
       console.warn('Run checkpoint not readable:', error);
@@ -822,7 +883,7 @@ export class RunTrackingService extends BaseService {
    *  stale checkpoint would only offer to "recover" it a second time. */
   public clearCheckpoint(): void {
     try {
-      window.localStorage?.removeItem(RunTrackingService.CHECKPOINT_KEY);
+      this.kv().removeItem(RunTrackingService.CHECKPOINT_KEY);
     } catch (error) {
       console.warn('Run checkpoint not cleared:', error);
     }
@@ -910,7 +971,11 @@ export class RunTrackingService extends BaseService {
    * flushed through a stale object, silently writing nothing.
    */
   private installFlushListeners(): void {
-    if (typeof window === 'undefined' || this.flushHandlers) return;
+    // Browser only. React Native has its own suspend signal — `AppState` — and
+    // `MobileRunTrackingService` flushes on that, so binding DOM events here
+    // would be both impossible and redundant.
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    if (this.flushHandlers) return;
     const onPageHide = () => this.flushCheckpointOnSuspend();
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') this.flushCheckpointOnSuspend();
@@ -1083,20 +1148,68 @@ export class RunTrackingService extends BaseService {
   }
 
   /**
-   * Get run history from storage
+   * Get run history from storage.
+   *
+   * This was a stub that returned `[]` no matter what was stored, behind a
+   * `getSiblingService('PreferenceService')` call whose result was computed
+   * and then discarded. The cost was not an empty array in a debug view: every
+   * consumer that asked how much a runner had run concluded they had run
+   * nothing. Ghost unlocks key off `runs.length`, so no runner could ever
+   * unlock their second ghost.
+   *
+   * Returns the `{ distance, duration }` shape the callers were already coded
+   * against, derived from the full sessions kept under `RUN_HISTORY_KEY`.
    */
   public getRunHistory(): Array<{ distance: number; duration: number }> {
+    return this.getRunSessions().map((run) => ({
+      distance: run.totalDistance,
+      duration: run.totalDuration,
+    }));
+  }
+
+  /**
+   * The full stored sessions, newest first. This is what the mobile history
+   * and profile screens actually render, so they read the same source of
+   * truth rather than each keeping a private AsyncStorage copy that can drift
+   * from what the service recorded.
+   */
+  public getRunSessions(): RunSession[] {
     try {
-      const preferenceService = this.getSiblingService('PreferenceService');
-      if (!preferenceService) {
-        return [];
-      }
-      // Get last run from preference service and return as history
-      // This is a simplified version - in production you'd have a full history
-      return [];
+      const raw = this.kv().getItem(RunTrackingService.RUN_HISTORY_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(isStoredRun).sort((a, b) => b.startTime - a.startTime);
     } catch (error) {
       console.error('Failed to get run history:', error);
       return [];
+    }
+  }
+
+  /**
+   * Append a finished run to history, newest first and capped.
+   *
+   * Capped because the history is a record of recent form, not an archive:
+   * each entry carries its full point track, so an uncapped list is unbounded
+   * growth on a phone. A run already in the list is replaced rather than
+   * appended, so a retried save cannot double-count a run.
+   */
+  private appendToHistory(run: RunSession): void {
+    try {
+      const existing = this.getRunSessions();
+      const deduped = existing.filter((entry) => entry.id !== run.id);
+      const next = [run, ...deduped].slice(0, RunTrackingService.MAX_HISTORY_RUNS);
+
+      // The track is the bulk of the payload and nothing that reads history
+      // uses it; the summary is what a history view and the ghost math need.
+      const trimmed = next.map((entry) => ({
+        ...entry,
+        points: [],
+        segments: [],
+      }));
+      this.kv().setItem(RunTrackingService.RUN_HISTORY_KEY, JSON.stringify(trimmed));
+    } catch (error) {
+      console.error('Failed to append run to history:', error);
     }
   }
 }

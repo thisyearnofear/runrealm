@@ -1,9 +1,6 @@
 import type { NavigationProp, ParamListBase, RouteProp } from '@react-navigation/native';
 import { MapService } from '@runrealm/shared-core/services/map-service';
-import {
-  RunSession,
-  RunTrackingService,
-} from '@runrealm/shared-core/services/run-tracking-service';
+import { RunSession } from '@runrealm/shared-core/services/run-tracking-service';
 import { TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
 import {
@@ -15,11 +12,13 @@ import type { ComponentType } from 'react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { GPSTrackingProps } from '../components/GPSTrackingComponent';
+import RecoveredRunSheet from '../components/RecoveredRunSheet';
 import { RouteSuggestionCard } from '../components/RouteSuggestionCard';
 import { TerritoryClaimModal } from '../components/TerritoryClaimModal';
 import type { TerritoryMapViewProps } from '../components/TerritoryMapView';
 import type { WalletButtonProps } from '../components/WalletButton';
 import { MobileMapAdapter } from '../services/MobileMapAdapter';
+import MobileRunTrackingService from '../services/MobileRunTrackingService';
 import { MobileWeb3Adapter } from '../services/MobileWeb3Adapter';
 import { saveRunToHistory } from './HistoryScreen';
 
@@ -42,11 +41,17 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
     null
   );
+  // A run the device was still holding when the app was last closed. Null
+  // until startup has had a chance to read it back, so the sheet cannot flash
+  // an offer for a run that turns out to be stale.
+  const [recoveredRun, setRecoveredRun] = useState<RunSession | null>(null);
 
   // Initialize services
   const mapService = useMemo(() => new MapService(), []);
   const web3Service = useMemo(() => Web3Service.getInstance(), []);
-  const runTrackingService = useMemo(() => new RunTrackingService(), []);
+  // The instance that actually records. This screen used to build its own,
+  // which is why `getCurrentRun()` below was `null` for the whole run.
+  const runTrackingService = useMemo(() => MobileRunTrackingService.getInstance(), []);
   const territoryService = useMemo(() => TerritoryService.getInstance(), []);
 
   const mapAdapter = useMemo(() => new MobileMapAdapter(mapService), [mapService]);
@@ -63,6 +68,25 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
   useEffect(() => {
     mapAdapter.initialize().catch(console.error);
   }, [mapAdapter]);
+
+  // Offer back a run the OS killed mid-stride. This has to wait for the
+  // service's own initialize: the store is read from durable storage there,
+  // and asking earlier would report "nothing interrupted" and mean it.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        await runTrackingService.initialize();
+        if (cancelled) return;
+        setRecoveredRun(runTrackingService.readCheckpoint());
+      } catch (error) {
+        console.error('Failed to check for an interrupted run:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [runTrackingService]);
 
   // Load components in parallel for faster initialization
   useEffect(() => {
@@ -237,6 +261,16 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
           onSuccess={handleClaimSuccess}
         />
       )}
+      <RecoveredRunSheet
+        visible={recoveredRun !== null}
+        run={recoveredRun}
+        service={runTrackingService}
+        onClose={() => setRecoveredRun(null)}
+        onRecovered={(run) => {
+          setRecoveredRun(null);
+          setCompletedRunData(run);
+        }}
+      />
     </View>
   );
 };

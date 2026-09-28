@@ -2,7 +2,6 @@ import {
   Achievement,
   AchievementService,
 } from '@runrealm/shared-core/services/achievement-service';
-import { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
 import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import {
   emptyStateLine,
@@ -12,6 +11,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GhostManagement } from '../components/GhostManagement';
+import MobileRunTrackingService from '../services/MobileRunTrackingService';
 
 export const ProfileScreen: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -28,7 +28,9 @@ export const ProfileScreen: React.FC = () => {
 
   const [achievementService] = useState(() => new AchievementService());
   const [territoryService] = useState(() => TerritoryService.getInstance());
-  const [runTrackingService] = useState(() => new RunTrackingService());
+  // The shared recording instance, so the totals below reflect the runs this
+  // device actually recorded rather than an empty object of its own.
+  const [runTrackingService] = useState(() => MobileRunTrackingService.getInstance());
 
   const loadProfileData = useCallback(async () => {
     try {
@@ -49,10 +51,10 @@ export const ProfileScreen: React.FC = () => {
       setTerritories(claimedTerritories);
 
       // Calculate stats from actual data
-      const runHistory = runTrackingService.getRunHistory();
+      const runHistory = await runTrackingService.getRunHistory();
       const totalRuns = runHistory.length;
-      const totalDistance = runHistory.reduce((sum, run) => sum + run.distance, 0);
-      const totalTime = runHistory.reduce((sum, run) => sum + run.duration, 0);
+      const totalDistance = runHistory.reduce((sum, run) => sum + run.totalDistance, 0);
+      const totalTime = runHistory.reduce((sum, run) => sum + run.totalDuration, 0);
 
       setStats({
         totalRuns,

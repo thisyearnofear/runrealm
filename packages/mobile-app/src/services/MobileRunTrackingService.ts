@@ -18,6 +18,7 @@ import {
   RunTrackingService,
 } from '@runrealm/shared-core/services/run-tracking-service';
 import { AppState, type AppStateStatus } from 'react-native';
+import { createAsyncStorageKeyValueStore, hydrateMirror } from './AsyncStorageKeyValueStore';
 import { BackgroundTrackingService } from './BackgroundTrackingService';
 import { MobileLocationAdapter } from './MobileLocationAdapter';
 import { type RunSyncConfig, RunSyncService } from './RunSyncService';
@@ -44,15 +45,43 @@ export interface MobileRunTrackingConfig {
 }
 
 class MobileRunTrackingService {
+  private static instance: MobileRunTrackingService | null = null;
+
+  /**
+   * The one instance the app shares.
+   *
+   * There used to be three: one here, one built directly by `MapScreen`, and
+   * one by `ProfileScreen`. Only this one records, so the other two were
+   * reading a permanently empty run — `getCurrentRun()` on the map returned
+   * `null` for the entire duration of every run, and the profile's totals
+   * were always zero. Three objects, one truth, two liars.
+   */
+  static getInstance(config: MobileRunTrackingConfig = {}): MobileRunTrackingService {
+    if (!MobileRunTrackingService.instance) {
+      MobileRunTrackingService.instance = new MobileRunTrackingService(config);
+    }
+    return MobileRunTrackingService.instance;
+  }
+
+  /** Test seam. Does not tear anything down. */
+  static resetInstance(): void {
+    MobileRunTrackingService.instance = null;
+  }
+
   private readonly runTrackingService: RunTrackingService;
   private readonly backgroundTracker: BackgroundTrackingService;
   private readonly locationAdapter: MobileLocationAdapter;
   private readonly syncService: RunSyncService | null;
   private readonly enableBackgroundOnStart: boolean;
   private appStateSubscription: { remove: () => void } | null = null;
+  private initialized = false;
 
   constructor(config: MobileRunTrackingConfig = {}) {
     this.runTrackingService = new RunTrackingService();
+    // Without this the shared service looks for a `window.localStorage` that
+    // React Native does not have, throws, and loses the run — the whole
+    // reason this app needed its own store in the first place.
+    this.runTrackingService.setKeyValueStore(createAsyncStorageKeyValueStore());
     this.backgroundTracker = BackgroundTrackingService.getInstance();
     this.locationAdapter = new MobileLocationAdapter();
     this.syncService = config.sync ? new RunSyncService(config.sync) : null;
@@ -61,11 +90,19 @@ class MobileRunTrackingService {
 
   /**
    * Must be called once, typically from the screen that owns the run UI.
-   * Wires the shared RunTrackingService to the real expo-location adapter
-   * and starts watching foreground GPS.
+   * Idempotent: the shared instance may be reached from more than one screen,
+   * and re-initializing would stack a second location watcher on top of the
+   * first and double every point.
    */
   async initialize(): Promise<void> {
+    if (this.initialized) return;
+    this.initialized = true;
+
     this.runTrackingService.setLocationService(this.locationAdapter);
+
+    // Read what a previous session left behind before anything can overwrite
+    // it. Without this, a run interrupted by the OS killing the app is gone.
+    await hydrateMirror();
 
     await this.locationAdapter.startWatching((loc) => {
       // Forward foreground updates through the shared event bus the
@@ -154,6 +191,40 @@ class MobileRunTrackingService {
     return this.runTrackingService.getCurrentRun();
   }
 
+  /**
+   * An interrupted run, if there is one worth offering back.
+   *
+   * This is what mobile was missing entirely: the checkpoint the runner's
+   * phone kept through a crash or an OS kill, read back at the next launch.
+   * Same contract as the web card — null for anything stale, corrupt, or
+   * from an older build.
+   */
+  readCheckpoint(): RunSession | null {
+    return this.runTrackingService.readCheckpoint();
+  }
+
+  /** Take an interrupted run back as paused. The runner still decides. */
+  adoptCheckpoint(run: RunSession): RunSession {
+    return this.runTrackingService.adoptCheckpoint(run);
+  }
+
+  /**
+   * File an adopted run as history. It was never closed by the runner, so it
+   * is not territory-eligible — the same rule the web applies.
+   */
+  async finalizeRecoveredRun(): Promise<RunSession | null> {
+    const finished = this.runTrackingService.finalizeRecoveredRun();
+    if (finished) await this.saveRunToHistory(finished);
+    return finished;
+  }
+
+  /**
+   * Discard an interrupted run without filing it.
+   */
+  discardCheckpoint(): void {
+    this.runTrackingService.clearCheckpoint();
+  }
+
   async pendingUploads(): Promise<number> {
     return this.syncService ? this.syncService.pendingCount() : 0;
   }
@@ -223,9 +294,14 @@ class MobileRunTrackingService {
   }
 
   async getRunHistory(): Promise<RunSession[]> {
+    // The service's own history, not a private AsyncStorage copy. Two lists
+    // that disagree is how a runner ends up with a history screen that
+    // disagrees with the number of runs they have actually completed.
+    const recorded = this.runTrackingService.getRunSessions();
+    if (recorded.length > 0) return recorded;
     try {
       const raw = await AsyncStorage.getItem('runrealm_run_history');
-      return raw ? JSON.parse(raw) : [];
+      return raw ? (JSON.parse(raw) as RunSession[]) : [];
     } catch (e) {
       console.error('Failed to read run history:', e);
       return [];
