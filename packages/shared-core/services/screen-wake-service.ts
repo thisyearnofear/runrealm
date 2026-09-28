@@ -63,7 +63,6 @@ export class ScreenWakeService extends BaseService {
   private inFlight = false;
   /** True once the page has hidden, so we know the old lock is forfeit. */
   private droppedWhileHidden = false;
-  private visibilityHandler: (() => void) | null = null;
   private sentinelReleaseHandler: (() => void) | null = null;
 
   protected async onInitialize(): Promise<void> {
@@ -87,7 +86,6 @@ export class ScreenWakeService extends BaseService {
     };
     if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
       document.addEventListener('visibilitychange', handler);
-      this.visibilityHandler = handler;
       this.registerCleanup(() => document.removeEventListener('visibilitychange', handler));
     }
     this.registerCleanup(() => this.drop());
