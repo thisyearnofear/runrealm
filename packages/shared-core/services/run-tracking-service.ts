@@ -1,6 +1,11 @@
 import { LocationInfo } from '@runrealm/shared-types/location';
 import { BaseService } from '../core/base-service';
 import { calculateDistance } from '../utils/distance-formatter';
+import {
+  CHECKPOINT_INTERVAL_MS,
+  deserializeCheckpoint,
+  serializeCheckpoint,
+} from '../utils/run-checkpoint';
 import { territoryIdFromCenter } from '../utils/territory-id';
 
 export interface RunPoint {
@@ -81,6 +86,17 @@ export class RunTrackingService extends BaseService {
   private locationService: any = null; // Direct reference to avoid registry dependency
   private lastLapDistance: number = 0;
   private lastLapTime: number = 0;
+  /** Periodic in-progress checkpoint. Separate from `updateInterval` because
+   *  the two have opposite failure modes: one is cheap and runs often, the
+   *  other writes to disk and must not. */
+  private checkpointTimer: ReturnType<typeof setInterval> | null = null;
+  /** Guard so a re-entrant flush cannot write twice in one tick. */
+  private checkpointInFlight = false;
+  /** Suspend listeners for this instance, removed on cleanup. */
+  private flushHandlers: {
+    onPageHide: () => void;
+    onVisibilityChange: () => void;
+  } | null = null;
 
   constructor() {
     super();
@@ -200,6 +216,11 @@ export class RunTrackingService extends BaseService {
       // Start real-time updates
       this.startRealTimeUpdates();
 
+      // Start writing the run to disk. A run that lives only in memory is a
+      // run that a suspended tab can take with it.
+      this.startCheckpointing();
+      this.installFlushListeners();
+
       console.log('RunTrackingService: Run started successfully, emitting events');
       this.safeEmit('run:started' as any, {
         runId,
@@ -278,6 +299,11 @@ export class RunTrackingService extends BaseService {
       // Start real-time updates
       this.startRealTimeUpdates();
 
+      // Same reasoning as the plain start path: checkpoint from the first
+      // point, not from the first completed segment.
+      this.startCheckpointing();
+      this.installFlushListeners();
+
       console.log('RunTrackingService: Run with route started successfully, emitting events');
       this.safeEmit('run:started' as any, {
         runId,
@@ -341,6 +367,9 @@ export class RunTrackingService extends BaseService {
     this.currentRun.status = 'recording';
     this.startGPSTracking();
     this.startRealTimeUpdates();
+    // A resumed run — including one adopted from a checkpoint — is being
+    // recorded again, so it needs protecting again.
+    this.startCheckpointing();
 
     this.safeEmit('run:resumed', {
       runId: this.currentRun.id,
@@ -369,6 +398,7 @@ export class RunTrackingService extends BaseService {
 
     this.stopGPSTracking();
     this.stopRealTimeUpdates();
+    this.stopCheckpointing();
 
     // Canonical final stats pass: incremental updates keep live stats
     // O(1)-per-point; this one-time full recompute at completion guards
@@ -394,6 +424,8 @@ export class RunTrackingService extends BaseService {
 
     // Save run to storage
     this.saveRun(completedRun);
+    // The run is in history now; a checkpoint would only offer it twice.
+    this.clearCheckpoint();
 
     return completedRun;
   }
@@ -411,6 +443,8 @@ export class RunTrackingService extends BaseService {
 
     this.stopGPSTracking();
     this.stopRealTimeUpdates();
+    this.stopCheckpointing();
+    this.clearCheckpoint();
 
     this.safeEmit('run:cancelled', {
       runId,
@@ -722,6 +756,164 @@ export class RunTrackingService extends BaseService {
     } catch (error) {
       console.error('Failed to save run:', error);
     }
+  }
+
+  // ── Checkpoints ──────────────────────────────────────────────
+  //
+  // A run used to exist only in memory until it completed, so anything that
+  // killed the tab mid-stride took the whole thing with it. These methods
+  // write the in-progress run to storage on a slow cadence and, more
+  // importantly, on the two events that reliably fire just before a mobile
+  // browser suspends a tab.
+
+  /** Storage key for the in-progress run. Deliberately not the same key as
+   *  the completed run: a recovered run has not been earned yet, and mixing
+   *  the two would let an unfinished run masquerade as a finished one. */
+  private static readonly CHECKPOINT_KEY = 'runrealm-run-checkpoint-v1';
+
+  /**
+   * Write the in-progress run. Best-effort by design: a checkpoint that
+   * throws must never take the run down with it, so every failure is a
+   * console warning and nothing more.
+   */
+  public writeCheckpoint(): void {
+    if (!this.currentRun) return;
+    if (this.checkpointInFlight) return;
+    if (this.currentRun.status !== 'recording' && this.currentRun.status !== 'paused') return;
+    if (this.currentRun.points.length === 0) return;
+
+    try {
+      const serialized = serializeCheckpoint(this.currentRun, Date.now());
+      // null means the run was not worth writing (empty, or over quota).
+      if (serialized === null) return;
+      window.localStorage?.setItem(RunTrackingService.CHECKPOINT_KEY, serialized);
+    } catch (error) {
+      // A full quota is the common case here and is not worth escalating.
+      console.warn('Run checkpoint not written:', error);
+    }
+  }
+
+  /**
+   * Read back an interrupted run, if there is one worth offering. Returns
+   * null for anything stale, corrupt, or from a future build — the strictness
+   * lives in `deserializeCheckpoint`.
+   */
+  public readCheckpoint(): RunSession | null {
+    try {
+      const raw = window.localStorage?.getItem(RunTrackingService.CHECKPOINT_KEY) ?? null;
+      return deserializeCheckpoint(raw);
+    } catch (error) {
+      console.warn('Run checkpoint not readable:', error);
+      return null;
+    }
+  }
+
+  /** Drop the checkpoint. Called the moment a run completes, cancels, or is
+   *  explicitly discarded — after that point the run lives in history, and a
+   *  stale checkpoint would only offer to "recover" it a second time. */
+  public clearCheckpoint(): void {
+    try {
+      window.localStorage?.removeItem(RunTrackingService.CHECKPOINT_KEY);
+    } catch (error) {
+      console.warn('Run checkpoint not cleared:', error);
+    }
+  }
+
+  /**
+   * Take an interrupted run back into memory as a paused run. The runner
+   * decides whether to keep it; nothing is filed until they do.
+   */
+  public adoptCheckpoint(run: RunSession): RunSession {
+    this.currentRun = { ...run, status: 'paused' };
+    this.lastPoint = this.currentRun.points[this.currentRun.points.length - 1] ?? null;
+    this.lastLapDistance = this.currentRun.totalDistance;
+    this.lastLapTime = Date.now() - this.currentRun.startTime;
+    return this.currentRun;
+  }
+
+  /**
+   * File an adopted run as history and close it out.
+   *
+   * The honest part: an interrupted run was never closed by the runner, so it
+   * is not territory-eligible. It is still a run they did, and it belongs in
+   * their history. Marking it eligible would be the tempting lie — a
+   * "recovered" claim the runner never closed by their own hand.
+   */
+  public finalizeRecoveredRun(): RunSession | null {
+    if (!this.currentRun) return null;
+    if (this.currentRun.status !== 'paused') return null;
+
+    this.currentRun.status = 'completed';
+    this.currentRun.endTime = Date.now();
+    this.currentRun.totalDuration = this.currentRun.endTime - this.currentRun.startTime;
+    this.currentRun.territoryEligible = false;
+
+    const finished = { ...this.currentRun };
+    this.saveRun(finished);
+    this.clearCheckpoint();
+    this.stopCheckpointing();
+
+    this.safeEmit('run:completed' as any, {
+      run: finished,
+      stats: this.getCurrentStats(),
+      territoryEligible: false,
+    });
+
+    this.currentRun = null;
+    this.lastPoint = null;
+    return finished;
+  }
+
+  private startCheckpointing(): void {
+    if (this.checkpointTimer) return;
+    this.checkpointTimer = setInterval(() => this.writeCheckpoint(), CHECKPOINT_INTERVAL_MS);
+  }
+
+  private stopCheckpointing(): void {
+    if (!this.checkpointTimer) return;
+    clearInterval(this.checkpointTimer);
+    this.checkpointTimer = null;
+  }
+
+  /**
+   * The two events that actually fire when a mobile browser is about to
+   * suspend a tab. `pagehide` is the reliable one — `visibilitychange` to
+   * hidden fires first but the page can be killed before it completes, so
+   * both are wired and the write is synchronous and small.
+   *
+   * Listeners are per-instance and removed on cleanup. An earlier draft
+   * guarded this with a static flag, which looked like it prevented
+   * double-binding but in fact pinned the very first service instance's
+   * closure for the life of the page — every later instance would have
+   * flushed through a stale object, silently writing nothing.
+   */
+  private installFlushListeners(): void {
+    if (typeof window === 'undefined' || this.flushHandlers) return;
+    const onPageHide = () => this.flushCheckpointOnSuspend();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') this.flushCheckpointOnSuspend();
+    };
+    window.addEventListener('pagehide', onPageHide);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    this.flushHandlers = { onPageHide, onVisibilityChange };
+    // `BaseService.cleanup()` runs these on teardown, so a disposed service
+    // does not keep a listener alive on the page.
+    this.registerCleanup(() => this.removeFlushListeners());
+  }
+
+  private removeFlushListeners(): void {
+    if (!this.flushHandlers) return;
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('pagehide', this.flushHandlers.onPageHide);
+      document.removeEventListener('visibilitychange', this.flushHandlers.onVisibilityChange);
+    }
+    this.flushHandlers = null;
+  }
+
+  private flushCheckpointOnSuspend(): void {
+    if (!this.currentRun) return;
+    if (this.currentRun.status === 'completed' || this.currentRun.status === 'cancelled') return;
+    this.writeCheckpoint();
   }
 
   /**

@@ -600,6 +600,45 @@ export function onboardingWelcomeLine(): string {
   );
 }
 
+/**
+ * A run the device was still holding when the runner came back. The first
+ * rule is that it must not read as a finished run: the runner did not close
+ * this one, so it earns no claim, and the copy must not imply otherwise. The
+ * second is that it must not read as a failure either — the work happened,
+ * the phone simply went away mid-stride.
+ */
+export function runRecoveredLine(distanceLabel: string, durationLabel: string): string {
+  return pickLine(
+    [
+      `Last time out we got ${distanceLabel} in ${durationLabel} before the phone ran out of road. Kept, and still yours.`,
+      `There is an unfinished run from before — ${distanceLabel} over ${durationLabel}. The map kept it.`,
+    ],
+    `run:recovered:${distanceLabel}`
+  );
+}
+
+/** The runner chooses to file the interrupted run or let it go. */
+export function runRecoveredActionLine(): string {
+  return pickLine(['Keep it', 'Save this run'], 'run:recovered:action');
+}
+
+export function runRecoveredDiscardLine(): string {
+  return pickLine(['Let it go', 'Start fresh'], 'run:recovered:discard');
+}
+
+/** A recovered run cannot be claimed — it was never closed. */
+export function runRecoveredNoClaimLine(): string {
+  return pickLine(
+    ['That one was never closed, so it does not develop ground. Close a run and it will.'],
+    'run:recovered:no-claim'
+  );
+}
+
+/** Nothing was waiting to be recovered, said plainly and without fuss. */
+export function runRecoveredNoneLine(): string {
+  return pickLine(['No unfinished run to pick up. Fresh map.'], 'run:recovered:none');
+}
+
 // ─────────────────────────────────────────────────────────────
 // The phone. Same voice, no emoji, nothing shouting.
 // ─────────────────────────────────────────────────────────────
