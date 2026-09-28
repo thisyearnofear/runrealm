@@ -12,7 +12,19 @@
 >
 > **Voice contract:** the vocabulary rules below are enforced in code by
 > `packages/shared-core/utils/atlas-voice.ts`, and every player-facing string is
-> sourced from it. See [warmth-pass.md](warmth-pass.md).
+> sourced from it — including in `packages/mobile-app`, which is held to the
+> same contract. See [warmth-pass.md](warmth-pass.md).
+>
+> **Contrast contract:** the bone-paper surfaces this plan specifies
+> (`--rr-sunprint-bone` `#f3ead8`) are the worst case in the product for
+> legibility, and the palette was chosen for how it looks rather than how it
+> measures. Ink on bone is 13.04:1 and needs no help, but the accents do: coral
+> is 2.85:1, verdigris 2.26:1, amber 1.72:1. **Accent colours are decoration,
+> never text or focus rings on these surfaces** — a rule stated as colour
+> needs a word beside it, and a focus ring drawn in an accent needs to be drawn
+> in ink instead. Measure before shipping a tint; the deepened values used for
+> text live in `SUNPRINT_NOTE` (`ui-service.ts`) and inline in the card
+> stylesheets. See [warmth-pass.md](warmth-pass.md) §7.
 
 RunRealm should feel like entering a living cartographic medium, not using a
 fitness dashboard with a map behind it. The identity combines cyanotype prints,

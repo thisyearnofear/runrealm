@@ -9,6 +9,19 @@ This is the companion to the differentiation work. That pass made the protocol
 *visible*; this one makes it *legible and kind* — a game you can pick up without
 a manual, that talks to you like a person, and never dead-ends.
 
+**What shipped, in three commits on `feat/warmth-pass`:**
+
+| | | |
+|---|---|---|
+| §1–6 | The voice layer, the three surfaces, the copy sweep | [`321f8dd`] |
+| §6 | The phone, swept into the same voice | [`f98a63f`] |
+| §7 | Reachability — what happened when you are not looking | [`debbef5`] |
+
+The third one exists because the first one only checked how the new surfaces
+*looked*. Each of them turned out to be something that appeared on screen and
+could not be reached with a keyboard, or heard with a screen reader. Details
+and measured contrast ratios in §7.
+
 ---
 
 ## 0. Two bugs that were hiding a third
