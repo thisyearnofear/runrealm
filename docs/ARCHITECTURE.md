@@ -167,6 +167,17 @@ whole of every run. `UIService.getInstance()` and
 must be directly constructible (tests), the invariant it owns is enforced
 inside the class rather than trusted to the caller.
 
+`npm run check:singletons`
+(`scripts/check/no-service-construction.mjs`) fails the build on a direct
+construction of any singleton service. It discovers the singleton set from the
+source rather than listing it, so a service that grows `getInstance()` is
+covered the moment it does. It is paired with `npm run check:globals`, which
+blocks the `window.RunRealm` debug handle from being used as wiring; both run
+pre-commit over staged files and pre-push over the whole tree. Writing a new
+service that owns state and exposing `getInstance()` is what opts it into the
+second check — which is the point, because that is the moment it becomes a
+thing that can be duplicated.
+
 #### Where runs are stored
 
 `RunTrackingService` persists through a synchronous `KeyValueStore`

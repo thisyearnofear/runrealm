@@ -522,6 +522,30 @@ The reuse lives in `UIService` rather than at the call site. "One live region
 per document" is a property of the class, and should not depend on every
 caller being careful about it.
 
+### What a second ghost was hiding
+
+Fixing the history stub made `getRunHistory()` return real numbers, and the
+first thing that did anything with them fell over.
+
+`onRunCompleted` read `data.distance`. The `run:completed` payload is
+`{ run, stats, territoryEligible }` and has no top-level `distance` at all, so
+the reward was `Math.floor(undefined / 50)` = `NaN` on **every run**. The
+balance is persisted, and its versioned validator rejects non-finite values,
+so what a runner actually saw was their $REALM silently resetting to zero on
+the next launch. There was no error anywhere: `saveRealmBalance` succeeded. It
+wrote `NaN` faithfully.
+
+Worse, the check was not even wired to the event it described.
+`checkGhostUnlocks` was subscribed to `territory:claimed`, which is a different
+act from finishing a run — so a runner who ran and chose not to claim was
+never offered their first ghost, which is the entire reward for the first run.
+
+The lesson is specific and worth keeping: **fixing dead code makes it live, and
+live code that has never run is a liability, not a fix.** The right question
+after enabling anything is not "does it work now" but "what was written here
+while nobody could observe it". The reward had been wrong since the day it was
+written, and the only reason it was wrong was that it never ran.
+
 ### What is still unverified
 
 Stated plainly, because the section above is otherwise a list of things that
@@ -533,11 +557,14 @@ were checked and the temptation is to read it as a clean bill of health:
   API). The happy path was not: headless Chromium refuses screen locks with
   `NotAllowedError`. That is an environment limit rather than a bug, but it
   means the one behaviour this section of the doc was about is the one thing
-  never observed working.
+  never observed working. Two minutes on a real phone would close it.
 - **`RecoveredRunSheet` is unrendered by any test.** The service beneath it is
   covered; the component is not.
-- **The `AsyncStorage` flush-on-background path is untested against a real
-  suspend.**
+- **The `AsyncStorage` flush is now covered, but not against a real suspend.**
+  Eleven tests drive it against a fake `AppState` and a failing `multiSet`,
+  which covers the logic. What they cannot cover is whether a real iOS or
+  Android freeze gives the callback enough time to complete — that is a
+  device question.
 - **Boot time is unmeasured.** A dev-server reading suggested the map renders
   well before the splash clears, but the same run showed a 11.6-second
   `ethers` chunk that is almost certainly a dev-server compilation artifact
@@ -696,6 +723,15 @@ in production under HMR.
 - **One service means one instance.** A second `UIService` or
   `RunTrackingService` is not a harmless extra; it is a second answer about
   state nobody consults. Ask the registry, not the constructor.
+  `npm run check:singletons` fails the build if you do not.
+- **Fixing dead code makes it live.** Before shipping a fix, ask what was
+  written while nobody could observe it. The ghost reward had been `NaN` on
+  every run since it was written, and became wrong-and-visible the moment the
+  history stub stopped lying.
+- **A guard rail that has never been seen to fail is not one.** The obvious
+  test for a background flush — fire the event, assert nothing is pending —
+  passes even if the handler does nothing, because an empty queue is also
+  empty afterwards. Set the test up so there is genuinely work pending.
 - **State the number the user reads on the surface, not the one in the
   record.** The card said 29 minutes and the history said 40. When a
   calculation exists in two places, the honest one is the one that was
