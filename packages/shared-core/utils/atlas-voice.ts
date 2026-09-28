@@ -639,6 +639,34 @@ export function runRecoveredNoneLine(): string {
   return pickLine(['No unfinished run to pick up. Fresh map.'], 'run:recovered:none');
 }
 
+/**
+ * Pocket mode on a browser that cannot hold the screen awake. The runner
+ * asked for a dark screen and cues; this browser will keep dimming anyway, so
+ * the honest thing is to say so and point at the one thing that does work
+ * (haptics, which pocket mode also drives) rather than to promise a lit screen.
+ */
+export function pocketNoWakeLockLine(): string {
+  return pickLine(
+    [
+      'This browser will not hold the screen on, so the display may dim. The buzz still works.',
+      'No screen lock on this browser — the display can still sleep. Cues by buzz.',
+    ],
+    'pocket:no-wake-lock'
+  );
+}
+
+/**
+ * Pocket mode where wake lock does work. Said once, quietly, because the
+ * runner is about to put the phone away and this is the last thing they will
+ * read.
+ */
+export function pocketScreenHeldLine(): string {
+  return pickLine(
+    ['Screen stays awake now. Phone away — the buzz will find you.'],
+    'pocket:screen-held'
+  );
+}
+
 // ─────────────────────────────────────────────────────────────
 // The phone. Same voice, no emoji, nothing shouting.
 // ─────────────────────────────────────────────────────────────

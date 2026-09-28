@@ -51,6 +51,7 @@ function stubServices(): StubServices {
     },
     accountService: { initialize: jest.fn(async () => {}) },
     attestationService: { initialize: jest.fn(async () => {}) },
+    screenWake: { initialize: jest.fn(async () => {}) },
     preferenceService: {
       getUseMetric: () => true,
       getLastOrDefaultFocus: () => ({ lat: 40.78, lng: -73.96, zoom: 12 }),

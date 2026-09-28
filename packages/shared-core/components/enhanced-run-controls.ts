@@ -7,6 +7,7 @@ import {
   formatSpeed,
   getFormattedDistance,
 } from '../utils/distance-formatter';
+import { type HiddenAwareInterval, startHiddenAwareInterval } from '../utils/hidden-aware-interval';
 
 export interface RunStats {
   distance: number; // meters
@@ -29,6 +30,8 @@ export class EnhancedRunControls extends BaseService {
   private isPaused = false;
   private startTime: number = 0;
   private updateInterval: number | null = null;
+  /** Hidden-aware wrapper around the 1s duration readout. */
+  private updateLoop: HiddenAwareInterval | null = null;
   private boundClickHandler: (event: Event) => void;
 
   // Guards to avoid duplicate rendering and ensure idempotency
@@ -707,21 +710,29 @@ export class EnhancedRunControls extends BaseService {
   }
 
   private startRealTimeUpdates(): void {
-    this.updateInterval = window.setInterval(() => {
-      if (this.isRecording && this.currentStats) {
-        const currentTime = Date.now();
-        const elapsedTime = currentTime - this.startTime;
+    this.stopRealTimeUpdates();
+    // The duration readout is display-only, so it stops entirely while the
+    // tab is hidden and catches up with one tick on the way back.
+    this.updateLoop = startHiddenAwareInterval({
+      intervalMs: 1000,
+      onTick: () => {
+        if (this.isRecording && this.currentStats) {
+          const currentTime = Date.now();
+          const elapsedTime = currentTime - this.startTime;
 
-        // Update duration display
-        const durationEl = this.container?.querySelector('#duration-display');
-        if (durationEl) {
-          durationEl.textContent = this.formatDuration(elapsedTime);
+          // Update duration display
+          const durationEl = this.container?.querySelector('#duration-display');
+          if (durationEl) {
+            durationEl.textContent = this.formatDuration(elapsedTime);
+          }
         }
-      }
-    }, 1000);
+      },
+    });
   }
 
   private stopRealTimeUpdates(): void {
+    this.updateLoop?.stop();
+    this.updateLoop = null;
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
       this.updateInterval = null;

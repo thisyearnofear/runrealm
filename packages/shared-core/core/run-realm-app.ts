@@ -138,6 +138,12 @@ export class RunRealmApp {
       // `local` status otherwise.
       await this.services.attestationService.initialize();
 
+      // Screen wake lock (runner moments): listens for the tab coming back so
+      // a lock the browser dropped while the phone was in a pocket is taken
+      // again. A no-op where the Wake Lock API is missing; registered now so
+      // it is listening before the first run starts, not after.
+      await this.services.screenWake.initialize();
+
       const _tokenDeps = createTokenDependentServices(this.services.config);
       void _tokenDeps;
 

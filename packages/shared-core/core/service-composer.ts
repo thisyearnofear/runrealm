@@ -52,6 +52,7 @@ import { PreferenceService } from '../services/preference-service';
 import { ProgressionService } from '../services/progression-service';
 import { ReplayService } from '../services/replay-service';
 import { RunTrackingService } from '../services/run-tracking-service';
+import { ScreenWakeService } from '../services/screen-wake-service';
 import { SoundService } from '../services/sound-service';
 import { TerritoryService } from '../services/territory-service';
 import { TerritoryWalkService } from '../services/territory-walk-service';
@@ -107,6 +108,7 @@ export interface Services {
   rivalTerritoryService: RivalTerritoryService;
   worldState: WorldStateService;
   orbisDirector: OrbisDirector;
+  screenWake: ScreenWakeService;
 }
 
 export interface TokenDependentServices {
@@ -156,6 +158,7 @@ export function createServices(): Services {
   const rivalTerritoryService = RivalTerritoryService.getInstance();
   const worldState = WorldStateService.getInstance();
   const orbisDirector = OrbisDirector.getInstance();
+  const screenWake = ScreenWakeService.getInstance();
 
   return {
     config,
@@ -198,6 +201,7 @@ export function createServices(): Services {
     rivalTerritoryService,
     worldState,
     orbisDirector,
+    screenWake,
   };
 }
 

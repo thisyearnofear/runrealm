@@ -114,6 +114,7 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
         territoryService: services.territory,
         mapService: services.mapService,
         replay: services.replay,
+        screenWake: services.screenWake,
       });
       theater.initialize(document.body);
 

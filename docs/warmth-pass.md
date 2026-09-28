@@ -309,16 +309,96 @@ checkpoint intact, so it is offered again on the next boot.
 
 ### What is still open
 
-Phase 2 — **the pocket.** There is a `wakeLock` gap. You have pocket mode, a
-near-black veil, haptics and audio carrying the run for a phone in a pocket.
-But nothing in the codebase touches `visibilitychange` or the Wake Lock API,
-so on a real phone the screen sleeps, the browser throttles intervals to once
-a minute, and there is nothing keeping it alive.
+Phase 3 — **split the backend.** See `docs/roadmap.md` H11 and the migration
+notes at the foot of this file.
 
-The saving grace, found while measuring: `totalDuration = endTime -
-startTime` from wall clock, and GPS fixes are filtered by distance rather than
-tick count. So a throttled interval does *not* corrupt distance or duration.
-The design already survives this. What is missing is keeping the thing awake.
+---
+
+## 9. The pocket
+
+### The finding
+
+Pocket mode is good. `body.pocket-mode` drops a near-black veil, the sensory
+engine plays haptics and audio, and the runner can run with the phone away
+and their eyes somewhere else. The problem was what happened thirty seconds
+in: the display slept, the browser throttled every interval to about once a
+minute, and the cues that were supposed to carry the run stopped arriving.
+
+Measured before writing anything: `visibilitychange`, `document.hidden` and
+the Wake Lock API appeared **zero times** in the codebase. A mode built
+around an eyes-free run, with nothing keeping the device awake.
+
+The saving grace, from the same audit: `totalDuration = endTime - startTime`
+off the wall clock, and GPS fixes are filtered by distance rather than tick
+count. A throttled interval never corrupts distance or duration. The data
+was always safe; the experience was not.
+
+### Two fixes, not one
+
+**`ScreenWakeService`** (`packages/shared-core/services/screen-wake-service.ts`)
+holds `navigator.wakeLock.request('screen')` while a run is recording. It is
+composed like any other service and initialised during boot, before the first
+run, so it is already listening.
+
+The interesting part is not the acquire. It is that a screen lock is a
+promise the browser takes back:
+
+- Browsers drop it the moment the page hides. A lock acquired once and never
+  re-checked is a lock that stopped working at the first lock-screen or
+  notification. The service forgets the sentinel on hide and re-acquires on
+  return.
+- Chrome can revoke it outright for battery or policy, with no page event at
+  all. The sentinel's own `release` event is the only notice, so the service
+  listens for that too and takes the lock again.
+- On Firefox, older Safari, and any desktop, `navigator.wakeLock` does not
+  exist. Every path is a no-op and never throws. A missing wake lock
+  degrades the experience; it must not break the run.
+
+`RunTheater` holds the lock while in the theater and the run is recording,
+and keeps holding it through a *pause* if pocket mode is up — paused and
+pocketed is exactly the state the lock exists for. It releases on completion,
+cancellation, and teardown, so a finished run never leaves a phone glowing in
+a drawer.
+
+**`hidden-aware-interval.ts`** is the battery half. A hidden tab's timers are
+throttled, but throttled is not stopped: the work inside the tick still
+happens, re-rendering a screen nobody is reading. The helper suspends the
+timer outright while the document is hidden and fires one catch-up tick on the
+way back, so what the runner sees on unlock is current rather than up to an
+interval stale. It went into all three display loops — the run-theater HUD
+(1 s), `RunTrackingService` stats (2 s) and `UserDashboardService` (2 s) —
+plus the duration readout in `EnhancedRunControls` (1 s).
+
+`RunTrackingService` passes `keepTickingWhenHidden: () => recording`. That is
+the one deliberate exception: a recording run's stats feed subsystems, not
+only the HUD, and the wake lock is what stops the browser throttling it
+anyway. A paused or idle run stops dead when hidden.
+
+### Saying the true thing
+
+Pocket mode promises a dark screen with cues on. On a browser that cannot
+hold a lock, that promise is only half true — the display dims anyway. So
+`setPocket` checks `isSupported()` and, when it is false, toasts
+`pocketNoWakeLockLine()` ("this browser will not hold the screen on… the buzz
+still works") rather than letting a runner pocket their phone on a false
+promise. It still *enters* pocket mode: the runner asked for less screen, and
+haptics work everywhere.
+
+### What the tests found
+
+The visibility handler as first written only re-acquired when the sentinel's
+`release` event fired. In jsdom, and in any browser that does not surface a
+release for a hidden tab, the old sentinel still reported `released: false`,
+so the service believed it held a lock the browser had already taken. The
+tests failed; the fix was to mark the lock forfeit on hide rather than waiting
+to be told. That is the whole class of bug this phase is about: the browser
+quietly takes things away, and code that trusts its own state goes stale.
+
+Second finding was in the tests themselves — every service instance binds a
+`visibilitychange` listener on the one shared jsdom document, so an
+un-torn-down instance from an earlier test answered the next test's events.
+The suite now cleans up after itself, which is also what `cleanup()` has to do
+in production under HMR.
 
 ---
 
@@ -331,6 +411,11 @@ The design already survives this. What is missing is keeping the thing awake.
   their own toast channel.
 - A runner never loses a run. If the device was still holding one, say so on
   the next boot — and say plainly what the run can and cannot do.
+- A mode that cannot do what it says on a given device says so. Pocket mode
+  on a browser with no wake lock tells the runner, rather than showing a dark
+  screen and staying silent.
+- Anything the browser takes back quietly is re-checked, not assumed. A lock,
+  a permission, a connection.
 - Status is carried in words as well as colour. A rule down the edge of a
   note is decoration, not a signal.
 - A timed surface holds open while it is being read or driven from the

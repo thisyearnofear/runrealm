@@ -5,6 +5,7 @@
 
 import { BaseService } from '../core/base-service';
 import { WidgetStateService } from '../internal/_legacy-widget/widget-state-service';
+import { type HiddenAwareInterval, startHiddenAwareInterval } from '../utils/hidden-aware-interval';
 import { AIService } from './ai-service';
 import { GhostRunnerNFT, GhostRunnerService } from './ghost-runner-service';
 import { PlayerStats, ProgressionService } from './progression-service';
@@ -73,7 +74,8 @@ export class UserDashboardService extends BaseService {
   private updateInterval: number | null = null;
   private debouncedUpdate: (() => void) | null = null;
   private throttledRealTimeUpdate: (() => void) | null = null;
-  private realTimeUpdateInterval: NodeJS.Timeout | null = null;
+  /** Hidden-aware wrapper around the 2s update loop. */
+  private realTimeLoop: HiddenAwareInterval | null = null;
   private isDataLoaded: boolean = false;
 
   // Service references
@@ -353,19 +355,20 @@ export class UserDashboardService extends BaseService {
   }
 
   private startRealTimeUpdates(): void {
-    if (this.realTimeUpdateInterval) return;
+    if (this.realTimeLoop) return;
 
-    // Start interval for continuous real-time updates during active runs
-    this.realTimeUpdateInterval = setInterval(() => {
-      this.throttledRealTimeUpdate?.();
-    }, 2000); // Update every 2 seconds during active runs
+    // Every 2 seconds during a run. Suspends itself while the tab is
+    // hidden — the dashboard is not on screen to be stale — and fires one
+    // catch-up tick on the way back.
+    this.realTimeLoop = startHiddenAwareInterval({
+      intervalMs: 2000,
+      onTick: () => this.throttledRealTimeUpdate?.(),
+    });
   }
 
   private stopRealTimeUpdates(): void {
-    if (this.realTimeUpdateInterval) {
-      clearInterval(this.realTimeUpdateInterval);
-      this.realTimeUpdateInterval = null;
-    }
+    this.realTimeLoop?.stop();
+    this.realTimeLoop = null;
   }
 
   // Performance optimization methods

@@ -19,9 +19,14 @@ import type { HapticsService } from '@runrealm/shared-core/services/haptics-serv
 import type { MapService } from '@runrealm/shared-core/services/map-service';
 import type { ReplayService } from '@runrealm/shared-core/services/replay-service';
 import type { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
+import type { ScreenWakeService } from '@runrealm/shared-core/services/screen-wake-service';
 import type { SoundService } from '@runrealm/shared-core/services/sound-service';
 import type { TerritoryService } from '@runrealm/shared-core/services/territory-service';
-import { replayRefusedLine } from '@runrealm/shared-core/utils/atlas-voice';
+import { pocketNoWakeLockLine, replayRefusedLine } from '@runrealm/shared-core/utils/atlas-voice';
+import {
+  type HiddenAwareInterval,
+  startHiddenAwareInterval,
+} from '@runrealm/shared-core/utils/hidden-aware-interval';
 import {
   leadChangeTicks,
   type RaceFrame,
@@ -54,6 +59,7 @@ export interface RunTheaterDeps {
   territoryService: TerritoryService;
   mapService: MapService;
   replay: ReplayService;
+  screenWake: ScreenWakeService;
 }
 
 type RunTheaterEvent = Extract<
@@ -87,7 +93,7 @@ export class RunTheater {
   private veilSentenceEl: HTMLElement | null = null;
   private nudgeEl: HTMLElement | null = null;
   private nudgeTimer: number | null = null;
-  private timer: number | null = null;
+  private timer: HiddenAwareInterval | null = null;
   private lastLocationRender = 0;
   private inTheater = false;
   private pocketMode = false;
@@ -192,7 +198,10 @@ export class RunTheater {
 
     this.on('run:started', () => this.enter());
     this.on('run:resumed', () => this.enter());
-    this.on('run:paused', () => this.render());
+    this.on('run:paused', () => {
+      this.render();
+      this.syncWakeLock();
+    });
     this.on('run:completed', () => this.finish());
     this.on('run:cancelled', () => this.exit());
     this.on('ghost:deployed', () => {
@@ -261,6 +270,8 @@ export class RunTheater {
     this.actEl?.remove();
     this.introEl?.remove();
     document.body.classList.remove('run-theater', 'run-theater-reveal', 'pocket-mode');
+    this.pocketMode = false;
+    this.deps.screenWake.release();
   }
 
   private on(event: RunTheaterEvent, handler: () => void): void {
@@ -283,6 +294,29 @@ export class RunTheater {
     this.refreshGhostPresence();
     this.maybeShowIntro();
     this.maybeShowNudge();
+    this.syncWakeLock();
+  }
+
+  /**
+   * The screen lock follows the run, not the theater chrome.
+   *
+   * Held while recording, and while pocket mode is up even if the run is
+   * paused — pocket mode is exactly the state where nobody is looking at the
+   * display and the cues have to carry the run alone. Dropped on completion,
+   * cancellation, and teardown so a finished run never leaves a phone
+   * glowing in a drawer.
+   *
+   * Every call is a no-op on a browser without the Wake Lock API, which is why
+   * `setPocket` checks `isSupported()` before promising anything.
+   */
+  private syncWakeLock(): void {
+    const status = this.deps.runTracking.getCurrentRun()?.status;
+    const shouldHold = this.inTheater && (status === 'recording' || this.pocketMode);
+    if (shouldHold) {
+      void this.deps.screenWake.hold();
+    } else {
+      this.deps.screenWake.release();
+    }
   }
 
   /** Completed runs settle cinematically: final act, then exit. */
@@ -365,18 +399,23 @@ export class RunTheater {
     this.setPocket(false);
     document.body.classList.remove('run-theater', 'run-theater-reveal');
     if (this.root) this.root.hidden = true;
+    this.syncWakeLock();
   }
 
   private startTimer(): void {
     this.stopTimer();
-    this.timer = window.setInterval(() => this.render(), REFRESH_MS);
+    // A hidden tab gets no HUD, so re-rendering it once a second is a
+    // battery cost with no reader. The interval suspends itself while the
+    // theater is in the background and catches up on the way back.
+    this.timer = startHiddenAwareInterval({
+      intervalMs: REFRESH_MS,
+      onTick: () => this.render(),
+    });
   }
 
   private stopTimer(): void {
-    if (this.timer !== null) {
-      window.clearInterval(this.timer);
-      this.timer = null;
-    }
+    this.timer?.stop();
+    this.timer = null;
   }
 
   /**
@@ -689,7 +728,20 @@ export class RunTheater {
       this.pocketBtn.textContent = enabled ? '☀️ Wake' : '🌙 Pocket';
       this.pocketBtn.classList.toggle('active', enabled);
     }
-    if (enabled) this.soundcheck();
+    if (enabled) {
+      this.soundcheck();
+      // Say so when the browser cannot keep the screen lit. Pocket mode
+      // promises a dark screen with cues on; on Firefox that promise is only
+      // half-true, and the runner deserves to know before they pocket it.
+      if (!this.deps.screenWake.isSupported()) {
+        this.deps.eventBus.emit('ui:toast', {
+          message: pocketNoWakeLockLine(),
+          type: 'warning',
+          duration: 5000,
+        } as never);
+      }
+    }
+    this.syncWakeLock();
   }
 
   /**

@@ -104,6 +104,7 @@ describe('service-composer', () => {
       'rivalTerritoryService',
       'worldState',
       'orbisDirector',
+      'screenWake',
     ];
     for (const key of expectedKeys) {
       expect((services as unknown as Record<string, unknown>)[key]).toBeDefined();

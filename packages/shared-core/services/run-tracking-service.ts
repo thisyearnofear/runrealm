@@ -1,6 +1,7 @@
 import { LocationInfo } from '@runrealm/shared-types/location';
 import { BaseService } from '../core/base-service';
 import { calculateDistance } from '../utils/distance-formatter';
+import { type HiddenAwareInterval, startHiddenAwareInterval } from '../utils/hidden-aware-interval';
 import {
   CHECKPOINT_INTERVAL_MS,
   deserializeCheckpoint,
@@ -82,7 +83,8 @@ export class RunTrackingService extends BaseService {
   private currentRun: RunSession | null = null;
   private lastPoint: RunPoint | null = null;
   private runConfig: RunTrackingConfig;
-  private updateInterval: number | null = null;
+  /** The stats emitter loop. Suspends itself while the tab is hidden. */
+  private updateLoop: HiddenAwareInterval | null = null;
   private locationService: any = null; // Direct reference to avoid registry dependency
   private lastLapDistance: number = 0;
   private lastLapTime: number = 0;
@@ -693,24 +695,31 @@ export class RunTrackingService extends BaseService {
    * Start real-time updates with adaptive frequency
    */
   private startRealTimeUpdates(): void {
-    this.updateInterval = window.setInterval(() => {
-      if (this.currentRun?.status === 'recording') {
-        this.safeEmit('run:statsUpdated' as any, {
-          stats: this.getCurrentStats(),
-          runId: this.currentRun.id,
-        });
-      }
-    }, 2000); // Reduced from 1s to 2s for better battery life
+    this.stopRealTimeUpdates();
+    this.updateLoop = startHiddenAwareInterval({
+      intervalMs: 2000, // Reduced from 1s to 2s for better battery life
+      onTick: () => {
+        if (this.currentRun?.status === 'recording') {
+          this.safeEmit('run:statsUpdated' as any, {
+            stats: this.getCurrentStats(),
+            runId: this.currentRun.id,
+          });
+        }
+      },
+      // A recording run is the one case where the loop keeps going in the
+      // background: the stats feed subsystems, not only the HUD, and the
+      // wake lock is what stops the browser throttling it anyway. Paused or
+      // idle runs are pure display work and stop dead when hidden.
+      keepTickingWhenHidden: () => this.currentRun?.status === 'recording',
+    });
   }
 
   /**
    * Stop real-time updates
    */
   private stopRealTimeUpdates(): void {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
-      this.updateInterval = null;
-    }
+    this.updateLoop?.stop();
+    this.updateLoop = null;
   }
 
   /**
