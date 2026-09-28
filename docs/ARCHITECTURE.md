@@ -151,6 +151,38 @@ untidy but wrong: `AIService` looked for
 neither of which anything ever assigns, so route planning worked only
 because a third global happened to be set during boot.
 
+#### One service, one instance
+
+Reaching a sibling through the registry gets you *a* service. It does not stop
+you constructing a second one, and a second `UIService` or
+`RunTrackingService` is not a harmless extra object — both own real state (a
+toast container and a dismiss-timer map; a run in progress), so a duplicate is
+a second answer to "what is on screen right now" that nothing consults.
+
+Both have bitten. The web app shipped with two `role="log"` live regions on
+every page load, and mobile carried three `RunTrackingService` instances of
+which only one recorded, so the map read `getCurrentRun()` as `null` for the
+whole of every run. `UIService.getInstance()` and
+`MobileRunTrackingService.getInstance()` are the entry points; where a class
+must be directly constructible (tests), the invariant it owns is enforced
+inside the class rather than trusted to the caller.
+
+#### Where runs are stored
+
+`RunTrackingService` persists through a synchronous `KeyValueStore`
+(`utils/key-value-store`). This is not a stylistic indirection: the checkpoint
+is flushed from `pagehide`, and a promise that has not settled when the process
+is killed is a run that did not happen — so the interface cannot be async.
+The browser store is `localStorage`; React Native supplies an adapter that
+mirrors in memory for synchronous reads and flushes on `AppState` background,
+which is that runtime's equivalent event.
+
+The reason the abstraction exists is worth keeping in mind: the interface was
+`window.localStorage`, spelled inline, and React Native has no `window`. The
+write threw into a swallowing `try/catch` and **every run recorded on a phone
+was lost**, while every test — all of them running in jsdom, which has a
+`window` — passed.
+
 ## Smart Contract Architecture
 
 ### ZetaChain Universal Contract

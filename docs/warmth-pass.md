@@ -431,6 +431,121 @@ again.
 
 ---
 
+## 12. Driving it instead of reading it
+
+Everything above was written by reading code. This section is about what
+happened when the app was actually opened, planted with a checkpoint, and
+clicked through in a real browser. All three bugs below were invisible to the
+test suite, and the third was invisible to the reviewer who wrote the feature.
+
+### A recovered run was billed for time the runner was not running
+
+The recovery card read "3.00 km in 29 min". The record filed into history when
+the runner tapped "Save this run" read **40 minutes**. The cause was
+`finalizeRecoveredRun` stamping `endTime` with `Date.now()` — so every second
+between the run stopping and the runner deciding what to do about it was
+charged to the run. Minutes with the phone in a pocket, or hours after a tab
+was killed, all billed as running.
+
+This is the more serious half of the bug: the *card* was already honest. It
+reported the fix-to-fix span. Only the record lied, and the record is what
+feeds average pace and lifetime totals forever after.
+
+A run now ends at its last GPS fix, the same source `recoveredRunSummary`
+already used for the card, so the two agree by construction rather than by
+coincidence. The start time is the floor, so a device whose clock jumped
+backwards mid-run cannot produce a negative duration.
+
+### The checkpoint never reached the platform it was written for
+
+`RunTrackingService` wrote the checkpoint to `window.localStorage`, spelled
+inline. In a browser that is correct. In React Native there is no `window`, so
+the write threw a `ReferenceError`, the surrounding `try/catch` turned it into
+a console warning, and **every run recorded on a phone was lost.**
+
+Phase 1 of §8 shipped with tests, with docs, and with a promise that a runner
+never loses a run. It kept that promise on web. On mobile it did nothing at
+all, and nothing in the suite could have caught it — every test ran in jsdom,
+which has a `window`.
+
+The lesson is the boring one that keeps being the interesting one: **a
+guarantee that was only ever tested on one platform is not a guarantee.** The
+window was not a detail of the implementation, it was the whole failure.
+
+Persistence now goes through a small synchronous `KeyValueStore`. It is
+synchronous on purpose: the checkpoint is flushed from `pagehide`, where a
+promise that has not settled by the time the process is killed is a run that
+did not happen. The React Native adapter mirrors in memory, answers reads
+synchronously, and flushes on `AppState` background — the same callback the
+browser gets, in the same role. Nothing is special-cased at the call site
+anymore, so the next platform is a store rather than a patch.
+
+### The history was empty, so the second ghost was unreachable
+
+`getRunHistory()` returned `[]` unconditionally, behind a
+`getSiblingService('PreferenceService')` call whose result was computed and
+then thrown away. The comment said "this is a simplified version".
+
+That comment read as a known simplification. It was not: ghost unlocks key
+off the number of runs a runner has completed, so `runs.length` was always
+zero and **no runner could ever unlock a second ghost.** A feature three
+files away had been silently dead, on web as well as mobile, for as long as
+the stub had been there.
+
+It is now backed by a real, capped, deduplicated history. Entries that cannot
+be summed are dropped rather than coerced, so one bad record cannot turn a
+lifetime distance into `NaN`.
+
+There were also three separate `RunTrackingService` instances on mobile, of
+which exactly one recorded — so `MapScreen` read `getCurrentRun()` from an
+object nothing was writing to and got `null` for the entire duration of every
+run, and the profile's lifetime totals were permanently zero. Three objects,
+one truth, two liars. All three now share one instance.
+
+### Two live regions, on every page load
+
+`bootstrap.ts` built its own `UIService` while the composer held the
+singleton. `UIService` owns the toast container and the pending-dismiss timer
+map, so that was two answers to "is that note still showing", and only one of
+them was ever consulted.
+
+The browser showed the real cost: **two elements with `id="toast-container"`,
+both `role="log"`, both labelled "Run notes".** A second live region is not
+redundant, it is worse than none — a screen reader has no way to tell which
+is current, so a note can be announced twice, and the two regions drain
+independently, so what a runner hears drifts from what they can see. The
+warmth pass put real care into these toasts and the duplication was sitting
+underneath all of it, where no unit test could see it because each test
+correctly created exactly one container.
+
+The reuse lives in `UIService` rather than at the call site. "One live region
+per document" is a property of the class, and should not depend on every
+caller being careful about it.
+
+### What is still unverified
+
+Stated plainly, because the section above is otherwise a list of things that
+were checked and the temptation is to read it as a clean bill of health:
+
+- **Pocket-mode wake locking is still unverified on real hardware.** The logic
+  is unit-tested against a fake `navigator.wakeLock`, and the
+  unsupported-browser path is confirmed working (verified by deleting the
+  API). The happy path was not: headless Chromium refuses screen locks with
+  `NotAllowedError`. That is an environment limit rather than a bug, but it
+  means the one behaviour this section of the doc was about is the one thing
+  never observed working.
+- **`RecoveredRunSheet` is unrendered by any test.** The service beneath it is
+  covered; the component is not.
+- **The `AsyncStorage` flush-on-background path is untested against a real
+  suspend.**
+- **Boot time is unmeasured.** A dev-server reading suggested the map renders
+  well before the splash clears, but the same run showed a 11.6-second
+  `ethers` chunk that is almost certainly a dev-server compilation artifact
+  rather than a real cost. The number was not trusted enough to optimise
+  against, and the item was parked rather than acted on.
+
+---
+
 ## Deploying
 
 Two processes, two containers, one image.
@@ -574,16 +689,17 @@ in production under HMR.
 - Read the target platform's documentation before writing its config. Half of
   the Cloudflare plan was undone by one sentence in their docs about
   proxying external domains.
-- A signing key lives in a process that does nothing else. If a key is
-  needed, it gets its own entrypoint, its own container, and its own
-  environment.
-- An opt-in that restores a dangerous shape is spelled out in full, and warns
-  loudly when used.
-- A comment that claims a behaviour is a test that holds it. `sw.js` said it
-  was "never stuck on stale HTML" and was; the test now runs the real file.
-- Read the target platform's documentation before writing its config. Half of
-  the Cloudflare plan was undone by one sentence in their docs about
-  proxying external domains.
+- **A guarantee tested on one platform is not a guarantee.** The checkpoint
+  kept its promise in jsdom, which has a `window`, and silently did nothing on
+  the phone. If a promise is about a runner's real hardware, a test that only
+  runs in a browser does not discharge it.
+- **One service means one instance.** A second `UIService` or
+  `RunTrackingService` is not a harmless extra; it is a second answer about
+  state nobody consults. Ask the registry, not the constructor.
+- **State the number the user reads on the surface, not the one in the
+  record.** The card said 29 minutes and the history said 40. When a
+  calculation exists in two places, the honest one is the one that was
+  written first and the other is a bug.
 - Status is carried in words as well as colour. A rule down the edge of a
   note is decoration, not a signal.
 - A timed surface holds open while it is being read or driven from the
