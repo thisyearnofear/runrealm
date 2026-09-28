@@ -6,7 +6,12 @@ import type { RouteData } from '@runrealm/shared-core/services/route-state-servi
 import { RouteStateService } from '@runrealm/shared-core/services/route-state-service';
 import { UIService } from '@runrealm/shared-core/services/ui-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
-import type { ActionPayload, UIAction } from '@runrealm/shared-core/ui/action-router';
+import {
+  type ActionPayload,
+  ActionRouter,
+  type UIAction,
+} from '@runrealm/shared-core/ui/action-router';
+import { errorCopy, routeReadyLine, widgetModeLine } from '@runrealm/shared-core/utils/atlas-voice';
 import { WalletWidget } from '../../wallet-widget';
 import { GPSPermissionModal } from '../modals/gps-permission-modal';
 import { WidgetCreator } from '../widget-managers/widget-creator';
@@ -270,11 +275,22 @@ export class EventHandler {
 
     this.subscribe('ai:routeFailed', (data: { message: string }) => {
       const errorMessage = data?.message || 'Unknown error occurred';
-      this.uiService.showToast('🤖 AI route failed', { type: 'error' });
-      const tip = `<div class="widget-tip">🤖 Could not generate a route. ${
+      // Failure is never a dead end: the note carries the way forward, and the
+      // button actually re-runs the same request the widget button would.
+      const copy = errorCopy('routeFailed');
+      this.uiService.showToast(copy.message, {
+        type: 'error',
+        ...(copy.action && {
+          action: {
+            text: copy.action,
+            callback: () => ActionRouter.dispatch('ai.requestRoute', { goals: ['exploration'] }),
+          },
+        }),
+      });
+      const tip = `<div class="widget-tip">Could not draw a route just now. ${
         errorMessage.includes('API key')
-          ? 'Please check your AI configuration.'
-          : 'Try again in a moment or adjust your goals.'
+          ? 'Check the AI configuration, then ask again.'
+          : 'Try again in a moment, or loosen the goals a little.'
       }</div>`;
       this.widgetSystem.updateWidget('territory-info', tip);
     });
@@ -506,7 +522,7 @@ export class EventHandler {
               : ''
           }
           <div class="widget-tip success">
-            🎉 Route ready! Click "Start Run" to begin.
+            ${routeReadyLine()}
           </div>
           <div class="widget-buttons">
             <button class="widget-button primary" data-action="ai.startRun" data-payload='{"coordinates":${JSON.stringify(
@@ -590,7 +606,7 @@ export class EventHandler {
         btnText.textContent = newState ? 'GameFi ON' : 'GameFi OFF';
       }
 
-      this.uiService.showToast(newState ? 'GameFi features enabled' : 'GameFi features disabled', {
+      this.uiService.showToast(widgetModeLine(newState), {
         type: 'info',
       });
     });

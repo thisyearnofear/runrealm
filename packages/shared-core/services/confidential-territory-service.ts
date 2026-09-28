@@ -36,6 +36,7 @@
 import type { Signer } from 'ethers';
 import { getConfidentialNetworkConfig } from '../config/contracts';
 import { BaseService } from '../core/base-service';
+import { claimMissingLine, errorCopy, notOnChainLine } from '../utils/atlas-voice';
 import { type Territory, TerritoryService } from './territory-service';
 import { type ZamaCiphertext, ZamaRelayer } from './zama-relayer';
 
@@ -219,7 +220,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const tokenId = territory.tokenId;
     if (!tokenId) {
       this.safeEmit('ui:toast', {
-        message: '❌ Territory not on chain yet — claim it first before boosting.',
+        message: notOnChainLine('boost'),
         type: 'error',
       });
       return null;
@@ -232,7 +233,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const provider = this.getInjectedProvider();
     if (!provider) {
       this.safeEmit('ui:toast', {
-        message: '❌ No wallet provider found for encryption.',
+        message: errorCopy('walletFailed').message,
         type: 'error',
       });
       return null;
@@ -260,9 +261,11 @@ export class ConfidentialTerritoryService extends TerritoryService {
     } | null;
 
     if (!confidentialContractService) {
+      console.warn(
+        'Confidential contract service not registered. Wire ConfidentialContractService in app bootstrap.'
+      );
       this.safeEmit('ui:toast', {
-        message:
-          '❌ Confidential contract service not registered. Wire ConfidentialContractService in app bootstrap.',
+        message: errorCopy('generic').message,
         type: 'error',
       });
       return null;
@@ -302,7 +305,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const tokenId = territory.tokenId;
     if (!tokenId) {
       this.safeEmit('ui:toast', {
-        message: '❌ Territory not on chain yet — claim it first before contesting.',
+        message: notOnChainLine('contest'),
         type: 'error',
       });
       return null;
@@ -312,7 +315,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const provider = this.getInjectedProvider();
     if (!provider) {
       this.safeEmit('ui:toast', {
-        message: '❌ No wallet provider found for encryption.',
+        message: errorCopy('walletFailed').message,
         type: 'error',
       });
       return null;
@@ -337,9 +340,11 @@ export class ConfidentialTerritoryService extends TerritoryService {
     } | null;
 
     if (!confidentialContractService) {
+      console.warn(
+        'Confidential contract service not registered. Wire ConfidentialContractService in app bootstrap.'
+      );
       this.safeEmit('ui:toast', {
-        message:
-          '❌ Confidential contract service not registered. Wire ConfidentialContractService in app bootstrap.',
+        message: errorCopy('generic').message,
         type: 'error',
       });
       return null;
@@ -380,7 +385,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const tokenId = territory.tokenId;
     if (!tokenId) {
       this.safeEmit('ui:toast', {
-        message: '❌ Territory not on chain yet — claim it first before reading its defense.',
+        message: notOnChainLine('reads'),
         type: 'error',
       });
       return null;
@@ -391,9 +396,11 @@ export class ConfidentialTerritoryService extends TerritoryService {
     } | null;
 
     if (!confidentialContractService) {
+      console.warn(
+        'Confidential contract service not registered. Wire ConfidentialContractService in app bootstrap.'
+      );
       this.safeEmit('ui:toast', {
-        message:
-          '❌ Confidential contract service not registered. Wire ConfidentialContractService in app bootstrap.',
+        message: errorCopy('generic').message,
         type: 'error',
       });
       return null;
@@ -402,7 +409,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const provider = this.getInjectedProvider();
     if (!provider) {
       this.safeEmit('ui:toast', {
-        message: '❌ No wallet provider found for decryption.',
+        message: errorCopy('walletFailed').message,
         type: 'error',
       });
       return null;
@@ -457,7 +464,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const territory = this.claimedTerritoriesMap.get(territoryId);
     if (!territory) {
       this.safeEmit('ui:toast', {
-        message: '❌ Territory not found',
+        message: claimMissingLine(),
         type: 'error',
       });
       return { ok: false };
@@ -466,7 +473,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const wallet = this.getWalletSnapshot();
     if (!wallet || !wallet.connected) {
       this.safeEmit('ui:toast', {
-        message: '❌ Wallet not connected',
+        message: errorCopy('walletFailed').message,
         type: 'error',
       });
       return { ok: false };
@@ -477,16 +484,18 @@ export class ConfidentialTerritoryService extends TerritoryService {
     // fail closed with a clear message — a wallet must opt in
     // explicitly to the encrypted surface.
     if (!this.zamaSupport) {
+      console.warn(
+        'Zama support not wired. Call ConfidentialTerritoryService.setZamaSupport() in app bootstrap.'
+      );
       this.safeEmit('ui:toast', {
-        message:
-          '❌ Zama support not wired. Call ConfidentialTerritoryService.setZamaSupport() in app bootstrap.',
+        message: errorCopy('generic').message,
         type: 'error',
       });
       return { ok: false };
     }
     if (!this.zamaSupport.chainSupportsZama(wallet.chainId)) {
       this.safeEmit('ui:toast', {
-        message: '🔒 Confidential shield unavailable on this chain',
+        message: 'The confidential shield does not reach this chain. Switch network and it opens.',
         type: 'info',
       });
       this.safeEmit('web3:zamaUnsupported' as any, {
@@ -499,7 +508,7 @@ export class ConfidentialTerritoryService extends TerritoryService {
     const contractService = this.getSiblingService('ContractService');
     if (!contractService) {
       this.safeEmit('ui:toast', {
-        message: '❌ Contract service not ready',
+        message: errorCopy('generic').message,
         type: 'error',
       });
       return { ok: false };

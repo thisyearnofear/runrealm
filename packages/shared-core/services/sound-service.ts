@@ -121,6 +121,77 @@ export class SoundService extends BaseService {
   }
 
   /**
+   * Level-up flourish: a rising major arpeggio that gains a note per tier
+   * (capped at six), so the moment sounds like an ascent rather than a beep.
+   */
+  public playLevelUpSound(level: number = 1): void {
+    if (!this.isEnabled || !this.audioContext) return;
+
+    try {
+      const now = this.audioContext.currentTime;
+      const scale = [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98];
+      const steps = Math.max(3, Math.min(scale.length, 2 + Math.floor(level / 5)));
+
+      for (let i = 0; i < steps; i++) {
+        const at = now + i * 0.09;
+        const osc = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(scale[i] ?? scale[0], at);
+
+        gain.gain.setValueAtTime(0, at);
+        gain.gain.linearRampToValueAtTime(this.volume * 0.22, at + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, at + 0.6);
+
+        osc.start(at);
+        osc.stop(at + 0.62);
+      }
+    } catch (error) {
+      console.warn('SoundService: Failed to play level-up sound:', error);
+    }
+  }
+
+  /**
+   * Achievement stamp: a low note, then a higher one — a stamp coming down and
+   * the paper accepting it. Distinct from the level-up ascent on purpose.
+   */
+  public playAchievementSound(): void {
+    if (!this.isEnabled || !this.audioContext) return;
+
+    try {
+      const now = this.audioContext.currentTime;
+      const notes = [
+        { freq: 392.0, at: 0, gain: 0.18, length: 0.18 },
+        { freq: 587.33, at: 0.12, gain: 0.2, length: 0.5 },
+      ];
+
+      for (const note of notes) {
+        const osc = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(note.freq, now + note.at);
+
+        gain.gain.setValueAtTime(0, now + note.at);
+        gain.gain.linearRampToValueAtTime(this.volume * note.gain, now + note.at + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + note.at + note.length);
+
+        osc.start(now + note.at);
+        osc.stop(now + note.at + note.length + 0.02);
+      }
+    } catch (error) {
+      console.warn('SoundService: Failed to play achievement sound:', error);
+    }
+  }
+
+  /**
    * Play proximity radar pulse (for relics or nearby territory boundaries)
    */
   public playProximityPulse(urgency: number = 0.5): void {

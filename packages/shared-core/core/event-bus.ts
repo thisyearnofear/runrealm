@@ -210,7 +210,14 @@ export interface Web3Events {
 // Combined event interface
 export interface AppEvents extends Web3Events {
   'run:started': { startPoint: any };
-  'run:pointAdded': { point: any; totalDistance: number };
+  'run:pointAdded': {
+    point: any;
+    /** Canonical shape from RunTrackingService: live stats + the segment. */
+    stats?: import('../components/enhanced-run-controls').RunStats;
+    segment?: any;
+    /** Legacy flat field, still emitted by older call sites. */
+    totalDistance?: number;
+  };
   'run:pointRemoved': { totalDistance: number };
   'run:cleared': { runId: string };
   'run:loaded': { run: any };
@@ -243,9 +250,13 @@ export interface AppEvents extends Web3Events {
     runId: string;
   };
   'run:completed': {
-    distance: number;
-    duration: number;
-    points: any[];
+    /** Legacy flat fields: the demo emitters use these, RunTrackingService does
+     *  not (it sends the session + stats). All optional because of that split. */
+    distance?: number;
+    duration?: number;
+    points?: any[];
+    /** Live stats snapshot at completion. */
+    stats?: import('../components/enhanced-run-controls').RunStats;
     /** Full session snapshot; the run-tracking emit carries this so
      *  consumers can attest the run rather than re-deriving it. */
     run?: RunSession;
@@ -255,7 +266,19 @@ export interface AppEvents extends Web3Events {
   'run:resumed': { runId: string; timestamp: number; stats: any };
   'run:cancelled': { runId: string; timestamp: number };
   'run:statusChanged': { status: string };
-  'run:statsUpdated': { distance: number; duration: number; speed: number };
+  /**
+   * Live run stats. RunTrackingService emits the canonical `{ stats, runId }`
+   * shape; the Orbis live demo still emits flat `{ distance, duration, speed }`.
+   * Consumers must read `stats` first and fall back — three of them used to
+   * read only the flat fields and so never fired at runtime.
+   */
+  'run:statsUpdated': {
+    stats?: import('../components/enhanced-run-controls').RunStats;
+    runId?: string;
+    distance?: number;
+    duration?: number;
+    speed?: number;
+  };
   'world:stateChanged': WorldStateChange;
   'orbis:promptQueued': { intent: OrbisPromptIntent };
   'orbis:promptDispatched': { intent: OrbisPromptIntent };
@@ -263,7 +286,15 @@ export interface AppEvents extends Web3Events {
   'ui:settingsOpened': Record<string, never>;
   'ui:settingsClosed': Record<string, never>;
   'ui:unitsToggled': { useMetric: boolean };
-  'ui:toast': { message: string; type: string; duration?: number };
+  'ui:toast': {
+    message: string;
+    type: string;
+    duration?: number;
+    /** Milestone moments (level-up, achievement) get the ceremonious note
+     *  instead of the everyday one. Platforms that ignore this still get a
+     *  readable toast, which is why it is optional rather than another event. */
+    ceremony?: 'level-up' | 'achievement';
+  };
   'ui:showRunControls': Record<string, never>;
   'ui:hideRunControls': Record<string, never>;
   'map:styleChanged': { style: string };

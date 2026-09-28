@@ -217,4 +217,38 @@ describe('event-wiring', () => {
     bus.emit('territory:rivalsUpdated', { count: 3 });
     expect(services.mapService.renderRivalTerritories).toHaveBeenCalled();
   });
+
+  // ~20 features emit `ui:toast` and before the warmth pass nothing in the
+  // repo listened, so all of it went into an empty room. These pin the bridge.
+  it('ui:toast reaches the toast surface with its type and duration', () => {
+    wireEvents({ services, handles: null, getMap: () => map, onMapClick: jest.fn() });
+    bus.emit('ui:toast', { message: 'The deed is filed.', type: 'success', duration: 4000 });
+
+    expect(services.ui.showToast).toHaveBeenCalledWith('The deed is filed.', {
+      type: 'success',
+      duration: 4000,
+      ceremony: undefined,
+    });
+  });
+
+  it('ui:toast carries the ceremony flag through to a milestone note', () => {
+    wireEvents({ services, handles: null, getMap: () => map, onMapClick: jest.fn() });
+    bus.emit('ui:toast', { message: 'Level 4.', type: 'success', ceremony: 'level-up' });
+
+    expect(services.ui.showToast).toHaveBeenCalledWith('Level 4.', {
+      type: 'success',
+      duration: undefined,
+      ceremony: 'level-up',
+    });
+  });
+
+  it('ui:toast is delivered even when no atlas is loaded', () => {
+    wireEvents({ services, handles: null, getMap: () => null, onMapClick: jest.fn() });
+    bus.emit('ui:toast', { message: 'Ghost posted.', type: 'success' });
+
+    expect(services.ui.showToast).toHaveBeenCalledWith(
+      'Ghost posted.',
+      expect.objectContaining({ type: 'success' })
+    );
+  });
 });

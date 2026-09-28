@@ -19,6 +19,7 @@ import {
   TerritoryDashboard as TerritoryDashboardInterface,
   WalletWidget as WalletWidgetInterface,
 } from '../types/ui-interfaces';
+import { errorCopy } from '../utils/atlas-voice';
 import { seedDemoAtlas } from '../utils/dev-atlas-seed';
 import { wireEvents } from './event-wiring';
 import { initializeGameFi } from './gamefi-bootstrap';
@@ -189,10 +190,18 @@ export class RunRealmApp {
       this.handOffAnimation();
       this.initialized = true;
     } catch (error) {
+      // The console keeps the technical detail; the runner gets something warm
+      // and a button that actually helps.
       console.error('Failed to initialize RunRealm:', error);
-      const detail = error instanceof Error ? error.message : String(error);
-      this.services.ui.showToast(`Failed to initialize application: ${detail}`, {
+      const copy = errorCopy('generic');
+      this.services.ui.showToast(copy.message, {
         type: 'error',
+        action: {
+          text: 'Reload',
+          callback: () => {
+            if (typeof window !== 'undefined') window.location.reload();
+          },
+        },
       });
       throw error;
     }

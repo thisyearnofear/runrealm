@@ -10,6 +10,7 @@ import { AnimationService } from '@runrealm/shared-core/services/animation-servi
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { UIService } from '@runrealm/shared-core/services/ui-service';
 import { WalletInfo, Web3Service } from '@runrealm/shared-core/services/web3-service';
+import { errorCopy } from '@runrealm/shared-core/utils/atlas-voice';
 
 export interface WalletProvider {
   id: string;
@@ -162,14 +163,14 @@ export class WalletWidget extends BaseService {
         status: 'connected',
         wallet: data as WalletInfo,
       });
-      this.uiService.showToast('🎉 Wallet connected successfully!', {
+      this.uiService.showToast('Wallet connected. The ledger knows you now.', {
         type: 'success',
       });
     });
 
     this.subscribe('web3:walletDisconnected', () => {
       this.updateWalletState({ status: 'disconnected', wallet: undefined });
-      this.uiService.showToast('👋 Wallet disconnected', { type: 'info' });
+      this.uiService.showToast('Wallet disconnected. Your claims stay yours.', { type: 'info' });
     });
 
     this.subscribe('web3:networkChanged', (data) => {
@@ -281,7 +282,9 @@ export class WalletWidget extends BaseService {
   public async connectWallet(providerId: string): Promise<void> {
     const provider = this.walletProviders.find((p) => p.id === providerId);
     if (!provider) {
-      this.uiService.showToast('Wallet provider not found', { type: 'error' });
+      // The picker is right there in the modal, so no "try again" button:
+      // another button that reopens what you are already looking at is noise.
+      this.uiService.showToast(errorCopy('walletFailed').message, { type: 'error' });
       return;
     }
 
@@ -311,7 +314,7 @@ export class WalletWidget extends BaseService {
       this.updateWalletState({ status: 'disconnected', wallet: undefined });
     } catch (error) {
       console.error('Failed to disconnect wallet:', error);
-      this.uiService.showToast('Failed to disconnect wallet', {
+      this.uiService.showToast('The wallet did not let go. It usually does eventually.', {
         type: 'error',
       });
     }
@@ -456,7 +459,7 @@ export class WalletWidget extends BaseService {
 
   private async retryConnection(): Promise<void> {
     if (this.retryCount >= this.maxRetries) {
-      this.uiService.showToast('Maximum retry attempts reached', {
+      this.uiService.showToast('The wallet stayed quiet after several tries.', {
         type: 'error',
       });
       return;
@@ -465,7 +468,7 @@ export class WalletWidget extends BaseService {
     this.retryCount++;
     const lastProvider = this.walletState.lastProvider || 'metamask';
 
-    this.uiService.showToast(`Retrying connection... (${this.retryCount}/${this.maxRetries})`, {
+    this.uiService.showToast(`Trying the wallet again (${this.retryCount}/${this.maxRetries}).`, {
       type: 'info',
     });
     await this.connectWallet(lastProvider);
@@ -478,12 +481,14 @@ export class WalletWidget extends BaseService {
       // Switch to ZetaChain testnet (primary network)
       await this.web3Service.switchNetwork(7001);
 
-      this.uiService.showToast('Network switched successfully!', {
+      this.uiService.showToast('Chain switched. The map follows.', {
         type: 'success',
       });
     } catch (error) {
       console.error('Failed to switch network:', error);
-      this.uiService.showToast('Failed to switch network', { type: 'error' });
+      this.uiService.showToast('The chain switch did not take. Worth another try.', {
+        type: 'error',
+      });
       this.updateWalletState({ status: 'connected' }); // Revert status
     }
   }
@@ -493,16 +498,18 @@ export class WalletWidget extends BaseService {
       typeof error === 'object' && error !== null
         ? (error as { code?: number; message?: string })
         : {};
-    let errorMessage = 'Failed to connect wallet';
+    // Every branch says the same two things: nothing was lost, and here is the
+    // next move. The raw code stays out of the message.
+    let errorMessage = errorCopy('walletFailed').message;
 
     if (code === 4001) {
-      errorMessage = 'Connection rejected by user';
+      errorMessage = 'You closed the wallet window. Nothing was lost — try again when ready.';
     } else if (code === -32002) {
-      errorMessage = 'Connection request already pending';
+      errorMessage = 'The wallet already has a request waiting. Finish that one and this follows.';
     } else if (message?.includes('network')) {
-      errorMessage = 'Network connection issue';
+      errorMessage = 'The wallet cannot reach the network just now. Worth another go in a moment.';
     } else if (message?.includes('unauthorized')) {
-      errorMessage = 'Wallet authorization failed';
+      errorMessage = 'The wallet did not recognize the request. Reconnect and it sorts itself out.';
     }
 
     this.updateWalletState({
@@ -511,7 +518,16 @@ export class WalletWidget extends BaseService {
       lastProvider: provider.id,
     });
 
-    this.uiService.showToast(errorMessage, { type: 'error' });
+    // The note carries a real way forward: the same provider, one tap away.
+    this.uiService.showToast(errorMessage, {
+      type: 'error',
+      action: {
+        text: 'Try again',
+        callback: () => {
+          void this.connectWallet(provider.id);
+        },
+      },
+    });
   }
 
   private showInstallPrompt(provider: WalletProvider): void {
@@ -551,7 +567,7 @@ export class WalletWidget extends BaseService {
   private async connectWalletConnect(): Promise<void> {
     // throw new Error('WalletConnect integration coming soon!');
     this.uiService.showToast(
-      'WalletConnect integration is currently in beta. Please use MetaMask for the best experience.',
+      'WalletConnect is still settling in. MetaMask is the smoother road for now.',
       { type: 'info' }
     );
 
@@ -564,7 +580,7 @@ export class WalletWidget extends BaseService {
   private async connectCoinbase(): Promise<void> {
     // throw new Error('Coinbase Wallet integration coming soon!');
     this.uiService.showToast(
-      'Coinbase Wallet integration is currently in beta. Please use MetaMask for the best experience.',
+      'Coinbase Wallet is still settling in. MetaMask is the smoother road for now.',
       { type: 'info' }
     );
 

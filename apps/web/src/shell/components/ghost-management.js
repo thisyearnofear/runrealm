@@ -2,6 +2,7 @@ import { BaseService } from '@runrealm/shared-core/core/base-service';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { GhostRunnerService } from '@runrealm/shared-core/services/ghost-runner-service';
 import { TerritoryService } from '@runrealm/shared-core/services/territory-service';
+import { ghostDeployedLine, ghostDeployFailedLine } from '@runrealm/shared-core/utils/atlas-voice';
 
 export class GhostManagement extends BaseService {
   constructor() {
@@ -236,15 +237,17 @@ export class GhostManagement extends BaseService {
       this.territoryService.updateTerritoryActivity(territoryId, 50); // +50 points
 
       this.safeEmit('ui:toast', {
-        message: '👻 Ghost deployed successfully!',
+        message: ghostDeployedLine(),
         type: 'success',
       });
 
       this.hideDetails();
       this.render();
     } catch (error) {
+      // Raw error text goes to the console; the runner gets something warm.
+      console.error('Ghost deployment failed:', error);
       this.safeEmit('ui:toast', {
-        message: `❌ ${error.message}`,
+        message: ghostDeployFailedLine(),
         type: 'error',
       });
     }

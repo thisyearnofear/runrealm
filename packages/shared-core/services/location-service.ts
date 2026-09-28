@@ -5,6 +5,7 @@
 
 import { BaseService } from '../core/base-service';
 import { GeocodingService } from '../services/geocoding-service';
+import { errorCopy, locationTroubleLine } from '../utils/atlas-voice';
 import { DOMService } from './dom-service';
 import { PreferenceService } from './preference-service';
 import { UIService } from './ui-service';
@@ -142,7 +143,7 @@ export class LocationService extends BaseService {
   public async requestLocationPermission(): Promise<boolean> {
     if (!navigator.geolocation) {
       const uiService = UIService.getInstance();
-      uiService.showToast('📍 Geolocation is not supported by this browser', {
+      uiService.showToast('This browser cannot place you on a map.', {
         type: 'error',
         duration: 4000,
       });
@@ -345,7 +346,7 @@ export class LocationService extends BaseService {
           promptModal.remove();
           const granted = await this.requestLocationPermission();
           if (granted && uiService) {
-            uiService.showToast('✅ Location access enabled!', {
+            uiService.showToast('You are on the map now.', {
               type: 'success',
               duration: 3000,
             });
@@ -383,7 +384,7 @@ export class LocationService extends BaseService {
         this.showPermissionBlockedInstructions(uiService);
       } else {
         // Permission might be in prompt state - show standard message with action button
-        uiService.showToast('📍 Location access needed. Click to enable location.', {
+        uiService.showToast('The atlas needs your location to place you. One tap.', {
           type: 'warning',
           duration: 6000,
           action: {
@@ -394,7 +395,7 @@ export class LocationService extends BaseService {
       }
     } catch (_error) {
       // Fallback to standard message if check fails
-      uiService.showToast('📍 Location access needed. Enable location in your browser settings.', {
+      uiService.showToast('Location is switched off in this browser, so the map stays blank.', {
         type: 'warning',
         duration: 5000,
       });
@@ -414,10 +415,10 @@ export class LocationService extends BaseService {
         <div class="location-permission-blocked-modal">
           <div class="blocked-header">
             <span class="blocked-icon">🔒</span>
-            <h3>Location Access Blocked</h3>
+            <h3>The map cannot see you yet</h3>
           </div>
           <div class="blocked-content">
-            <p>Location permission has been blocked by your browser. To enable it:</p>
+            <p>Your browser is holding your location back. Nothing is broken — here is the whole fix:</p>
             <div class="instructions">
               <div class="instruction-step">
                 <strong>1.</strong> Click the <strong>🔒 lock icon</strong> or <strong>⚙️ settings icon</strong> in your browser's address bar
@@ -440,10 +441,10 @@ export class LocationService extends BaseService {
           </div>
           <div class="blocked-actions">
             <button class="blocked-btn primary" id="dismiss-blocked-instructions-btn">
-              Got It
+              Got it
             </button>
             <button class="blocked-btn secondary" id="try-again-location-btn">
-              Try Again After Enabling
+              Done that — try again
             </button>
           </div>
         </div>
@@ -626,7 +627,7 @@ export class LocationService extends BaseService {
         setTimeout(async () => {
           const granted = await this.requestLocationPermission();
           if (granted) {
-            uiService.showToast('✅ Location access enabled!', {
+            uiService.showToast('You are on the map now.', {
               type: 'success',
               duration: 3000,
             });
@@ -706,7 +707,7 @@ export class LocationService extends BaseService {
         },
         (error) => {
           // Handle errors gracefully without throwing
-          let message = 'Failed to get location';
+          let message = errorCopy('locationMissing').message;
           let errorType = 'unknown';
 
           switch (error.code) {
@@ -715,11 +716,11 @@ export class LocationService extends BaseService {
               errorType = 'permission_denied';
               break;
             case error.POSITION_UNAVAILABLE:
-              message = 'Location information unavailable';
+              message = locationTroubleLine('unavailable');
               errorType = 'position_unavailable';
               break;
             case error.TIMEOUT:
-              message = 'Location request timed out';
+              message = locationTroubleLine('timeout');
               errorType = 'timeout';
               break;
           }
@@ -736,7 +737,7 @@ export class LocationService extends BaseService {
                 // Check if permission is permanently blocked and show helpful instructions
                 this.checkAndHandleBlockedPermission(uiService);
               } else {
-                uiService.showToast(`📍 ${message}`, {
+                uiService.showToast(message, {
                   type: 'info',
                   duration: 4000,
                 });
@@ -1048,8 +1049,9 @@ export class LocationService extends BaseService {
         gpsBtn.textContent = '🛰️ Use GPS Location';
         gpsBtn.disabled = false;
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        alert(`Failed to get GPS location: ${errorMessage}`);
+        console.error('Failed to get GPS location:', error);
+        // No alert(): a browser dialog is the least warm surface there is.
+        UIService.getInstance().showToast(errorCopy('locationMissing').message, { type: 'info' });
         const gpsBtn = document.getElementById('use-gps-btn') as HTMLButtonElement;
         gpsBtn.textContent = '🛰️ Use GPS Location';
         gpsBtn.disabled = false;

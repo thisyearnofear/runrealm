@@ -7,6 +7,7 @@ import { BaseService } from '../core/base-service';
 import { AnimationService } from '../services/animation-service';
 import { DOMService } from '../services/dom-service';
 import { UIService } from '../services/ui-service';
+import { onboardingWelcomeLine } from '../utils/atlas-voice';
 
 export interface OnboardingStep {
   id: string;
@@ -75,17 +76,17 @@ export class EnhancedOnboarding extends BaseService {
     this.steps = [
       {
         id: 'welcome',
-        title: '🏃‍♂️ Welcome to RunRealm!',
+        title: 'Welcome to RunRealm',
         description:
-          'Transform your runs into an epic Web3 adventure. Claim territories, earn rewards, and compete with runners worldwide.',
+          'Every run reveals a little more of the map. Walk somewhere new and the atlas fills in behind you.',
         position: 'center',
         skippable: true,
       },
       {
         id: 'location-setup',
-        title: '📍 Enable Location Services',
+        title: 'Let the atlas find you',
         description:
-          'We need your location to track your runs and help you claim territories. Your privacy is protected.',
+          'Location is how the map knows where you are standing. It is asked once, and it stays on your device.',
         target: '#location-info',
         position: 'bottom',
         action: {
@@ -96,9 +97,9 @@ export class EnhancedOnboarding extends BaseService {
       },
       {
         id: 'wallet-connect',
-        title: '🦊 Connect Your Wallet',
+        title: 'Connect a wallet',
         description:
-          'Connect your Web3 wallet to claim territories as NFTs and earn $REALM tokens. You can do this now or later.',
+          'A wallet is what makes a claim yours on the map. Connect one whenever you like — nothing before then needs it.',
         target: '#wallet-info',
         position: 'bottom',
         action: {
@@ -109,25 +110,25 @@ export class EnhancedOnboarding extends BaseService {
       },
       {
         id: 'run-controls',
-        title: '🎮 Run Controls',
+        title: 'Starting a run',
         description:
-          'Use these controls to start tracking your runs. GPS accuracy and real-time stats help you optimize performance.',
+          'Press start and the trace begins. Distance, pace, and the ground you cover all record themselves.',
         target: '.run-controls-widget',
         position: 'top',
       },
       {
         id: 'territory-system',
-        title: '🏆 Territory System',
+        title: 'Claiming ground',
         description:
-          'Complete runs to become eligible for territory claims. Each territory is a unique NFT with special rewards!',
+          'Finish a run and the ground you traced is yours to claim — a deed drawn on the map, and a claim that keeps earning.',
         target: '#ai-coach',
         position: 'left',
       },
       {
         id: 'ready-to-run',
-        title: '🚀 Ready to Run!',
+        title: 'Ready when you are',
         description:
-          "You're all set! Start your first run to begin your RunRealm journey. Remember: every step counts!",
+          'That is the whole tour. Start a run and the map begins filling in — the first one is the best one.',
         position: 'center',
         skippable: false,
       },
@@ -459,7 +460,7 @@ export class EnhancedOnboarding extends BaseService {
 
     // Show completion message
     if (!skipped) {
-      this.uiService.showToast('🎉 Welcome to RunRealm! Ready to start your adventure?', {
+      this.uiService.showToast(onboardingWelcomeLine(), {
         type: 'success',
         duration: 4000,
       });

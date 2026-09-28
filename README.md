@@ -40,6 +40,7 @@ Optional: the network pace-band leaderboard needs an attestation-oracle quorum. 
 | [Orbis Live](docs/orbis-live.md) | Wallet-free live demo slice (`/orbis-live`) |
 | [Zama Builder Track](docs/zama-builder-track.md) | FHE submission: demo flow, deploys, pitch assets |
 | [Experience Differentiation](docs/experience-differentiation.md) | The four bets that make the protocol visible: claim ceremony, fog-of-war, race replays, leaderboards |
+| [The Warmth Pass](docs/warmth-pass.md) | The voice layer, run companionship, return warmth, milestone ceremony, intuitive clarity |
 
 ## Status
 

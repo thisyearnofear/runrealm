@@ -19,6 +19,7 @@ import {
 import { GhostRunnerService } from '@runrealm/shared-core/services/ghost-runner-service';
 import { NavigationService } from '@runrealm/shared-core/services/navigation-service';
 import { NetworkLeaderboardService } from '@runrealm/shared-core/services/network-leaderboard-service';
+import { emptyStateLine } from '@runrealm/shared-core/utils/atlas-voice';
 import {
   formatPaceBand,
   type PaceBandEntry,
@@ -158,8 +159,8 @@ export default class LeaderboardScreen {
     const body =
       rows.length === 0
         ? `<p class="leaderboard-empty">
-             No signed performances yet. Finish a run to enter the board — your
-             pace *band* is recorded, never your exact time or route.
+             ${emptyStateLine('leaderboard')} Finish a run to enter — your pace
+             <em>band</em> is recorded, never your exact time or route.
            </p>`
         : `<table class="leaderboard-table">
              <thead>

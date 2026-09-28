@@ -19,6 +19,12 @@ import {
   UserDashboardService,
 } from '@runrealm/shared-core/services/user-dashboard-service';
 import {
+  achievementLine,
+  claimReadyLine,
+  claimTakenLine,
+  levelUpLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
+import {
   describeShield,
   type ShieldDescription,
 } from '@runrealm/shared-core/utils/shield-presentation';
@@ -372,7 +378,7 @@ export class UserDashboard {
             this.render();
           } else {
             this.eventBus.emit('ui:toast', {
-              message: 'Please select a ghost to deploy',
+              message: 'Pick a ghost first — nothing was deployed.',
               type: 'warning',
             });
           }
@@ -1028,25 +1034,27 @@ export class UserDashboard {
 
     if (notifications.territoryEligible) {
       notificationItems.push(
-        '<div class="notification territory-eligible">Territory eligible for claiming!</div>'
+        `<div class="notification territory-eligible">${claimReadyLine()}</div>`
       );
     }
 
     if (notifications.territoryClaimed) {
       notificationItems.push(
-        '<div class="notification territory-claimed">Territory claimed successfully!</div>'
+        `<div class="notification territory-claimed">${claimTakenLine()}</div>`
       );
     }
 
     if (notifications.achievementUnlocked) {
       notificationItems.push(
-        `<div class="notification achievement-unlocked">Achievement unlocked: ${notifications.achievementUnlocked}</div>`
+        `<div class="notification achievement-unlocked">${achievementLine(
+          notifications.achievementUnlocked
+        )}</div>`
       );
     }
 
     if (notifications.levelUp) {
       notificationItems.push(
-        `<div class="notification level-up">Level up! You are now level ${notifications.levelUp}</div>`
+        `<div class="notification level-up">${levelUpLine(notifications.levelUp)}</div>`
       );
     }
 

@@ -118,6 +118,7 @@ ship; promote remaining ones into numbered phases when picked up.
 | H6 | Notification digest philosophy | ✅ Escalation tier shipped (watch vs urgent). |
 | H7 | Non-color status encoding | 🟡 Model carries icon+pattern keys; dashboard uses text+emoji. Open: CSS pattern rendering, deed/claim-reveal `prefers-reduced-motion` audit. |
 | H8 | Experience differentiation | ✅ Claim development ceremony (map expose→bloom, deed wash→fix), visible fog-of-war (rival silhouettes from `TerritoryCreated`), deterministic shareable race replays (seeded RNG, verified spectator mode, `?race=` links), pace-band leaderboard (local + oracle network ledger). See `docs/experience-differentiation.md`. |
+| H9 | Warmth pass | ✅ `atlas-voice.ts` as the single source of player-facing copy; `ui:toast` bridge (≈20 call sites were broadcasting into an empty room); `run:statsUpdated` / `run:pointAdded` payload-drift fix; rewritten run companion; "while you were away" return card; level-up/achievement ceremony; next-action chip. See `docs/warmth-pass.md`. |
 
 ## What we are NOT doing
 

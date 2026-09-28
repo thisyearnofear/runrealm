@@ -1,5 +1,6 @@
 import { BaseService } from '../core/base-service';
 import { RunSession } from '../services/run-tracking-service';
+import { claimReadyLine, errorCopy } from '../utils/atlas-voice';
 import {
   formatDuration,
   formatPace,
@@ -101,22 +102,26 @@ export class EnhancedRunControls extends BaseService {
       this.handleRunCancelled(data);
     });
 
+    // Read the canonical `stats` shape first: the tracker sends that, and this
+    // handler used to read only the flat legacy fields, which meant the HUD
+    // never updated during a real run.
     this.subscribe('run:statsUpdated', (data) => {
+      const stats = data.stats;
       this.updateStats({
-        distance: data.distance,
-        duration: data.duration,
-        averageSpeed: data.speed,
-        maxSpeed: data.speed,
-        pointCount: 0,
-        segmentCount: 0,
-        status: '',
-        territoryEligible: false,
+        distance: stats?.distance ?? data.distance ?? 0,
+        duration: stats?.duration ?? data.duration ?? 0,
+        averageSpeed: stats?.averageSpeed ?? data.speed ?? 0,
+        maxSpeed: stats?.maxSpeed ?? data.speed ?? 0,
+        pointCount: stats?.pointCount ?? 0,
+        segmentCount: stats?.segmentCount ?? 0,
+        status: stats?.status ?? '',
+        territoryEligible: stats?.territoryEligible ?? false,
       });
     });
 
     this.subscribe('run:pointAdded', (data) => {
       this.updateStats({
-        distance: data.totalDistance,
+        distance: data.stats?.distance ?? data.totalDistance ?? 0,
         duration: 0,
         averageSpeed: 0,
         maxSpeed: 0,
@@ -513,7 +518,7 @@ export class EnhancedRunControls extends BaseService {
       const hasGPS = await this.checkGPSAvailability();
       if (!hasGPS) {
         console.log('EnhancedRunControls: GPS not available');
-        this.showFeedback('❌ GPS not available. Please enable location services.', 'error');
+        this.showFeedback(errorCopy('locationMissing').message, 'error');
         return;
       }
 
@@ -521,10 +526,7 @@ export class EnhancedRunControls extends BaseService {
       this.safeEmit('run:startRequested', {});
     } catch (error) {
       console.error('EnhancedRunControls: Error starting run:', error);
-      this.showFeedback(
-        `❌ Failed to start run: ${error instanceof Error ? error.message : String(error)}`,
-        'error'
-      );
+      this.showFeedback(errorCopy('generic').message, 'error');
     }
   }
 
@@ -738,7 +740,7 @@ export class EnhancedRunControls extends BaseService {
   }
 
   private showTerritoryEligibleNotification(_data: any): void {
-    this.showFeedback('🏆 Territory eligible! Complete your run to claim.', 'success');
+    this.showFeedback(claimReadyLine(), 'success');
     this.renderWidget(); // Re-render to show territory indicator
 
     // Add haptic feedback for territory eligibility

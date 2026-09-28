@@ -5,6 +5,7 @@
 
 import type { CurrentRun } from '@runrealm/shared-utils/current-run';
 import { BaseService } from '../core/base-service';
+import { errorCopy } from '../utils/atlas-voice';
 import { RunPoint } from './run-tracking-service';
 // Dynamically import Google Generative AI to reduce initial bundle size
 // import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
@@ -416,7 +417,7 @@ export class AIService extends BaseService {
         } catch (err) {
           console.error('AI route request failed', err);
           this.safeEmit('ai:routeFailed', {
-            message: 'Failed to generate route. Please try again.',
+            message: errorCopy('routeFailed').message,
           });
         }
       }

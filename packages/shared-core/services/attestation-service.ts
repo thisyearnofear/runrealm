@@ -255,7 +255,7 @@ export class AttestationService extends BaseService {
 
     this.subscribe(
       'run:completed',
-      async (data: { run?: RunSession; distance: number; duration: number; points: any[] }) => {
+      async (data: { run?: RunSession; stats?: { distance?: number } }) => {
         const run = data.run as RunSession | undefined;
         if (!run || !run.territoryEligible) return;
         try {

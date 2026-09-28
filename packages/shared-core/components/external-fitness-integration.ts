@@ -2,6 +2,7 @@ import { BaseService } from '../core/base-service';
 import { ExternalFitnessService } from '../services/external-fitness-service';
 import { ExternalActivity } from '../services/run-tracking-service';
 import { TerritoryPreview } from '../services/territory-service';
+import { syncFailedLine } from '../utils/atlas-voice';
 
 export class ExternalFitnessIntegration extends BaseService {
   private container: HTMLElement;
@@ -153,11 +154,10 @@ export class ExternalFitnessIntegration extends BaseService {
       }, 1000);
     } catch (error) {
       console.error('Failed to connect Strava:', error);
-      status.textContent = 'Failed';
+      status.textContent = 'Not connected';
       stravaCard.classList.remove('connecting');
 
-      // Show user-friendly error
-      this.showError(error instanceof Error ? error.message : 'Connection failed');
+      this.showError(syncFailedLine('Strava'));
     }
   }
 
@@ -166,9 +166,11 @@ export class ExternalFitnessIntegration extends BaseService {
     const status = serviceCard.querySelector('.service-status') as HTMLElement;
 
     serviceCard.classList.remove('connecting');
-    status.textContent = 'Failed';
+    status.textContent = 'Not connected';
 
-    this.showError(`Failed to connect to ${source}: ${error}`);
+    // The technical reason goes to the console; the card gets one warm line.
+    console.warn(`External fitness connection failed (${source}):`, error);
+    this.showError(syncFailedLine(source === 'strava' ? 'Strava' : source));
   }
 
   private onServiceConnected(source: string): void {
@@ -190,7 +192,7 @@ export class ExternalFitnessIntegration extends BaseService {
       }
     } catch (error) {
       console.error('Failed to load activities:', error);
-      this.showError('Failed to load activities');
+      this.showError(syncFailedLine('Strava'));
     }
   }
 
@@ -399,7 +401,7 @@ export class ExternalFitnessIntegration extends BaseService {
     errorDiv.className = 'fitness-error-persistent';
     errorDiv.innerHTML = `
       <div class="error-content">
-        <span class="error-icon">⚠️</span>
+        <span class="error-icon" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#e85d5d;flex-shrink:0;"></span>
         <span class="error-message">${message}</span>
         <button class="close-error">×</button>
       </div>

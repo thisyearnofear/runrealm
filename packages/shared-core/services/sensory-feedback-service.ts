@@ -53,17 +53,32 @@ export class SensoryFeedbackService extends BaseService {
       this.soundService.playSuccessSound();
     });
 
-    this.subscribe('run:statsUpdated', (data: { distance: number }) => {
-      this.handleDistanceMilestone(data.distance);
+    // Canonical shape first, legacy flat field second: the tracker sends
+    // `{ stats }`, so the kilometre buzz never actually fired before this.
+    this.subscribe('run:statsUpdated', (data) => {
+      this.handleDistanceMilestone(data.stats?.distance ?? data.distance ?? 0);
     });
 
-    // 3. Territory claims & rewards
+    // 3. Milestones — a level-up climbs, an achievement stamps. Until now both
+    //    arrived as a status note, which made the game's biggest moments sound
+    //    like everything else.
+    this.subscribe('game:levelUp', (data: { newLevel?: number }) => {
+      this.vibrate([90, 50, 90, 50, 180]);
+      this.soundService.playLevelUpSound(data?.newLevel ?? 1);
+    });
+
+    this.subscribe('game:achievementUnlocked', () => {
+      this.vibrate([60, 40, 120]);
+      this.soundService.playAchievementSound();
+    });
+
+    // 4. Territory claims & rewards
     this.subscribe('territory:claimed', () => {
       this.vibrate([120, 60, 120, 60, 250]);
       // Note: SoundService.playDeedRevealSound is also invoked in SunprintDeedModal
     });
 
-    // 4. Relic collected
+    // 5. Relic collected
     this.subscribe('relic:collected', () => {
       this.vibrate([80, 40, 140]);
     });

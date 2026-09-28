@@ -10,6 +10,15 @@ import { DOMService } from '../services/dom-service';
 import { Territory } from '../services/territory-service';
 import { UIService } from '../services/ui-service';
 import { Web3Service } from '../services/web3-service';
+import {
+  claimedLine,
+  claimingLine,
+  ledgerFailedLine,
+  nothingStakedLine,
+  nothingToClaimLine,
+  unstakedLine,
+  unstakingLine,
+} from '../utils/atlas-voice';
 
 export interface RewardData {
   totalEarned: number;
@@ -176,7 +185,10 @@ export class RewardSystemUI extends BaseService {
     );
 
     this.subscribe('run:completed', (data) => {
-      const reward = this.calculateRunReward(data.distance, data.duration);
+      // Canonical stats shape first; the demo emitters still send flat fields.
+      const distance = data.stats?.distance ?? data.distance ?? 0;
+      const duration = data.stats?.duration ?? data.duration ?? 0;
+      const reward = this.calculateRunReward(distance, duration);
       this.addRunningReward(reward);
     });
 
@@ -404,12 +416,12 @@ export class RewardSystemUI extends BaseService {
 
   public async claimRewards(): Promise<void> {
     if (this.rewardData.availableToClaim <= 0) {
-      this.uiService.showToast('No rewards available to claim', { type: 'warning' });
+      this.uiService.showToast(nothingToClaimLine(), { type: 'warning' });
       return;
     }
 
     try {
-      this.uiService.showToast('⏳ Claiming rewards...', { type: 'info' });
+      this.uiService.showToast(claimingLine(), { type: 'info' });
 
       // Simulate claiming transaction
       const claimAmount = this.rewardData.availableToClaim;
@@ -435,17 +447,14 @@ export class RewardSystemUI extends BaseService {
         this.updateRewardDisplay();
         this.saveRewardData();
 
-        this.uiService.showToast(
-          `🎉 Successfully claimed ${this.formatTokenAmount(claimAmount)} REALM!`,
-          {
-            type: 'success',
-            duration: 5000,
-          }
-        );
+        this.uiService.showToast(claimedLine(this.formatTokenAmount(claimAmount)), {
+          type: 'success',
+          duration: 5000,
+        });
       }, 2000);
     } catch (error) {
       console.error('Failed to claim rewards:', error);
-      this.uiService.showToast('Failed to claim rewards', { type: 'error' });
+      this.uiService.showToast(ledgerFailedLine('claim'), { type: 'error' });
     }
   }
 
@@ -534,12 +543,12 @@ export class RewardSystemUI extends BaseService {
 
   private async unstakeTokens(): Promise<void> {
     if (!this.stakingInfo || this.stakingInfo.amount <= 0) {
-      this.uiService.showToast('No tokens currently staked', { type: 'warning' });
+      this.uiService.showToast(nothingStakedLine(), { type: 'warning' });
       return;
     }
 
     try {
-      this.uiService.showToast('⏳ Unstaking tokens...', { type: 'info' });
+      this.uiService.showToast(unstakingLine(), { type: 'info' });
 
       // Simulate unstaking transaction
       setTimeout(() => {
@@ -555,7 +564,10 @@ export class RewardSystemUI extends BaseService {
         this.saveRewardData();
 
         this.uiService.showToast(
-          `🎉 Unstaked ${this.formatTokenAmount(unstakedAmount || 0)} REALM + ${this.formatTokenAmount(pendingReward || 0)} rewards!`,
+          unstakedLine(
+            this.formatTokenAmount(unstakedAmount || 0),
+            this.formatTokenAmount(pendingReward || 0)
+          ),
           {
             type: 'success',
             duration: 5000,
@@ -564,7 +576,7 @@ export class RewardSystemUI extends BaseService {
       }, 2000);
     } catch (error) {
       console.error('Failed to unstake tokens:', error);
-      this.uiService.showToast('Failed to unstake tokens', { type: 'error' });
+      this.uiService.showToast(ledgerFailedLine('unstake'), { type: 'error' });
     }
   }
 

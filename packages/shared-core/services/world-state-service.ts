@@ -68,7 +68,10 @@ export class WorldStateService extends BaseService {
       );
     });
     this.subscribe('run:statsUpdated', (data) => {
-      const paceBand = derivePaceBand(data.speed);
+      // Canonical shape first: the tracker's `stats`, with the legacy flat
+      // field as a fallback. Reading only the flat field meant paceBand — and
+      // therefore the whole Orbis scene — never changed during a run.
+      const paceBand = derivePaceBand(data.stats?.averageSpeed ?? data.speed ?? 0);
       if (paceBand !== this.snapshot.paceBand) this.update({ paceBand }, 'pace-changed');
     });
 

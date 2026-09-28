@@ -10,6 +10,7 @@ import {
 } from '@runrealm/shared-core/services/demo-ghost-director';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { UIService } from '@runrealm/shared-core/services/ui-service';
+import { widgetModeLine } from '@runrealm/shared-core/utils/atlas-voice';
 
 /** Shape of the welcome tooltips handed to the (stubbed) sequence runner. */
 interface WelcomeTooltip {
@@ -385,13 +386,13 @@ export class UIEffectsManager {
       // Enable GameFi mode (widgets displayed in dashboard)
       document.body.classList.add('gamefi-mode');
       updateGameFiToggle(true);
-      this.uiService.showToast('🎮 GameFi enabled', { type: 'success' });
+      this.uiService.showToast(widgetModeLine(true), { type: 'success' });
       console.log('UIEffectsManager: GameFi mode enabled');
     } else {
       // Disable GameFi mode
       document.body.classList.remove('gamefi-mode');
       updateGameFiToggle(false);
-      this.uiService.showToast('🎮 GameFi disabled', { type: 'info' });
+      this.uiService.showToast(widgetModeLine(false), { type: 'info' });
       console.log('UIEffectsManager: GameFi mode disabled');
     }
 

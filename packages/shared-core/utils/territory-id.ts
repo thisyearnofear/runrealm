@@ -66,6 +66,21 @@ export function territoryIdFromBounds(bounds: TerritoryBoundsLike): string {
 }
 
 /**
+ * Inverse of `territoryIdFromCenter`: recover the centre the id encodes.
+ * Returns `null` for anything that is not a `{lat}_{lng}` pair in range, so
+ * callers can treat a malformed id as "no location" instead of a crash.
+ */
+export function centerFromTerritoryId(id: string): TerritoryCenterPoint | null {
+  const parts = id.split('_');
+  if (parts.length !== 2) return null;
+  const lat = Number.parseFloat(parts[0]);
+  const lng = Number.parseFloat(parts[1]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng };
+}
+
+/**
  * Primary H3 cell containing a center point. Additive metadata; the
  * on-chain identifier remains the synthetic string above until the
  * H3 migration ships.

@@ -219,7 +219,7 @@ export class RelicService extends BaseService {
     // Emit reward & toast events
     this.safeEmit('relic:collected', { relic });
     this.safeEmit('ui:toast', {
-      message: `✨ ${relic.name} Discovered! +${relic.reward.realmTokens} $REALM unlocked.`,
+      message: `${relic.name} found — and +${relic.reward.realmTokens} $REALM with it.`,
       type: 'success',
       duration: 5000,
     });

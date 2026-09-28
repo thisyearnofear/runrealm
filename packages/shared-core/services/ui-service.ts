@@ -1,4 +1,28 @@
+import {
+  type ErrorKind,
+  errorCopy,
+  pickLine,
+  runCompleteLine,
+  WORKING_LINES,
+} from '../utils/atlas-voice';
 import { DOMService } from './dom-service';
+
+/**
+ * Sunprint note styling for toasts, mirroring `apps/web/src/styles/design-tokens.css`.
+ * Shared core can render off the web app, so the values are inlined with the
+ * token names recorded here rather than read from CSS custom properties.
+ */
+const TOAST_STYLE_ID = 'runrealm-toast-styles';
+
+const SUNPRINT_NOTE = {
+  ink: '#102633',
+  paper: 'linear-gradient(180deg, rgba(243, 234, 216, 0.98), rgba(243, 234, 216, 0.92))',
+  verdigris: '#4fae8b',
+  amber: '#f2a541',
+  coral: '#e85d5d',
+  cyan: '#63b3c8',
+  muted: '#607c86',
+} as const;
 
 export interface ToastOptions {
   type?: 'info' | 'success' | 'warning' | 'error' | 'loading';
@@ -8,6 +32,8 @@ export interface ToastOptions {
   celebration?: boolean;
   haptic?: boolean;
   sound?: boolean;
+  /** Milestone note: bigger paper, display type, confetti, lingers longer. */
+  ceremony?: 'level-up' | 'achievement';
   action?: {
     text: string;
     callback: () => void;
@@ -27,32 +53,17 @@ export class UIService {
   private domService: DOMService;
   private toastContainer: HTMLElement | null = null;
   private celebrationEffects: HTMLElement[] = [];
+  /** Working copy, sourced from the single voice module so the loading bank and
+   *  the tone everywhere else can never drift apart. */
   private contextualMessages = {
-    aiRoute: [
-      '🤖 AI is crafting your perfect route...',
-      '🧠 Analyzing terrain and your preferences...',
-      '🗺️ Finding the most scenic path for you...',
-      '⚡ Optimizing route for maximum enjoyment...',
-    ],
-    walletConnect: [
-      '🦊 Connecting to your wallet...',
-      '🔐 Establishing secure connection...',
-      '🌐 Syncing with blockchain...',
-      '✨ Almost ready to go...',
-    ],
-    territoryLoad: [
-      '🗺️ Loading nearby territories...',
-      '🏆 Scanning for claimable areas...',
-      '📍 Mapping your running realm...',
-      '🌟 Discovering opportunities...',
-    ],
-    crossChain: [
-      '🌐 Processing cross-chain magic...',
-      '⚡ Bridging between networks...',
-      '🔗 Synchronizing across chains...',
-      '🚀 Universal contract working...',
-    ],
+    aiRoute: WORKING_LINES.aiRoute,
+    walletConnect: WORKING_LINES.walletConnect,
+    territoryLoad: WORKING_LINES.territoryLoad,
+    crossChain: WORKING_LINES.crossChain,
   };
+
+  /** Rotates the working bank so repeats read as variety, deterministically. */
+  private contextualRotation = 0;
 
   constructor() {
     this.domService = DOMService.getInstance();
@@ -80,28 +91,72 @@ export class UIService {
       },
     });
     document.body.appendChild(this.toastContainer);
+    this.ensureStyles();
+  }
+
+  /**
+   * The notes above are styled inline so shared core survives without the web
+   * stylesheet; the ceremony variant needs a real rule (pseudo-element seal,
+   * display type), so it gets one stylesheet of its own.
+   */
+  private ensureStyles(): void {
+    if (typeof document === 'undefined' || document.getElementById(TOAST_STYLE_ID)) return;
+    const style = document.createElement('style');
+    style.id = TOAST_STYLE_ID;
+    style.textContent = `
+      .toast-message { line-height: 1.45; }
+      .toast-ceremony {
+        padding: 18px 20px;
+        border-left-width: 6px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      }
+      .toast-ceremony .toast-message {
+        font-family: var(--rr-font-display, "Fraunces", Georgia, serif);
+        font-size: var(--rr-text-md, 16px);
+        letter-spacing: var(--rr-track-tight, -0.02em);
+      }
+      .toast-ceremony::after {
+        content: "";
+        position: absolute;
+        right: 14px;
+        bottom: -6px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #f2a541, #c9791f);
+        box-shadow: inset 0 0 0 2px rgba(16, 38, 51, 0.18);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .toast-ceremony::after { box-shadow: none; }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   public showToast(message: string, options: ToastOptions = {}): void {
-    // Enhanced contextual messages
+    // Contextual messages: the caller passes a bank key and we pick the line.
+    // Rotation, not randomness — the same session always reads the same way.
     if (
       options.contextual &&
       this.contextualMessages[message as keyof typeof this.contextualMessages]
     ) {
       const messages = this.contextualMessages[message as keyof typeof this.contextualMessages];
-      message = messages[Math.floor(Math.random() * messages.length)];
+      message = messages[this.contextualRotation++ % messages.length];
     }
     if (!this.toastContainer) return;
 
     const {
       type = 'info',
-      duration = 5000,
       showProgress = false,
       celebration = false,
       haptic = false,
       sound = false,
+      ceremony,
       action,
     } = options;
+    // A milestone is allowed to stay on screen longer than a status note.
+    const duration = options.duration ?? (ceremony ? 7000 : 5000);
+    const isCeremony = ceremony !== undefined;
 
     // Enhanced feedback effects
     if (haptic && 'vibrate' in navigator) {
@@ -118,27 +173,32 @@ export class UIService {
       this.playContextualSound(type);
     }
 
+    // A note filed on the atlas: bone paper, ink text, one coloured rule for
+    // status. Quieter than a glassy dashboard card, and it survives on a map.
+    const accent = this.getToastAccent(type);
     const toast = this.domService.createElement('div', {
-      className: `toast toast-${type} ${celebration ? 'celebrating' : ''}`,
+      className: `toast toast-${type} ${celebration ? 'celebrating' : ''}${
+        ceremony ? ` toast-ceremony toast-ceremony-${ceremony}` : ''
+      }`,
       style: {
-        maxWidth: '350px',
-        padding: '16px 20px',
-        borderRadius: '12px',
-        boxShadow: this.getEnhancedShadow(type),
+        maxWidth: '360px',
+        padding: '14px 16px',
+        borderRadius: 'var(--rr-r-3, 8px)',
+        boxShadow: 'var(--rr-sh-2, 0 4px 12px rgba(0, 0, 0, 0.4))',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
         opacity: '0',
         transform: 'translateX(100%)',
-        transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        transition: 'all 0.3s cubic-bezier(0.2, 0.7, 0.2, 1)',
+        fontFamily: 'var(--rr-font-body, system-ui, sans-serif)',
         fontSize: '14px',
         fontWeight: '500',
-        color: this.getEnhancedTextColor(type),
-        background: this.getEnhancedBackground(type),
-        border: `2px solid ${this.getToastBorderColor(type)}`,
-        borderLeft: `4px solid ${this.getToastBorderColor(type)}`,
-        backdropFilter: 'blur(16px)',
+        lineHeight: '1.45',
+        color: SUNPRINT_NOTE.ink,
+        background: SUNPRINT_NOTE.paper,
+        border: '1px solid rgba(16, 38, 51, 0.16)',
+        borderLeft: `4px solid ${accent}`,
       },
     });
 
@@ -151,7 +211,7 @@ export class UIService {
           bottom: '0',
           left: '0',
           height: '3px',
-          background: this.getToastBorderColor(type),
+          background: accent,
           borderRadius: '0 0 12px 12px',
           animation: 'toastProgress 3s linear',
         },
@@ -160,17 +220,23 @@ export class UIService {
       toast.appendChild(progressBar);
     }
 
-    // Add icon based on type
-    const icon = this.domService.createElement('div', {
-      innerHTML: this.getToastIcon(type),
+    // A small survey mark carries the status, not an emoji sticker — the note
+    // reads as filed paper rather than a notification tray.
+    const mark = this.domService.createElement('div', {
+      className: 'toast-mark',
       style: {
-        fontSize: '20px',
+        width: '8px',
+        height: '8px',
+        borderRadius: '2px',
+        background: accent,
+        boxShadow: '0 0 0 1px rgba(16, 38, 51, 0.14)',
         flexShrink: '0',
       },
     });
 
     // Add message
     const messageEl = this.domService.createElement('div', {
+      className: 'toast-message',
       textContent: message,
       style: {
         flex: '1',
@@ -178,7 +244,7 @@ export class UIService {
       },
     });
 
-    toast.appendChild(icon);
+    toast.appendChild(mark);
     toast.appendChild(messageEl);
 
     // Add action button if provided
@@ -186,13 +252,14 @@ export class UIService {
       const actionBtn = this.domService.createElement('button', {
         textContent: action.text,
         style: {
-          background: 'none',
-          border: 'none',
-          color: this.getToastBorderColor(type),
+          background: 'rgba(16, 38, 51, 0.06)',
+          border: '1px solid rgba(16, 38, 51, 0.16)',
+          color: SUNPRINT_NOTE.ink,
+          fontFamily: 'inherit',
           fontWeight: 'bold',
           cursor: 'pointer',
-          padding: '4px 8px',
-          borderRadius: '4px',
+          padding: '6px 10px',
+          borderRadius: 'var(--rr-r-2, 4px)',
           flexShrink: '0',
         },
       });
@@ -213,7 +280,7 @@ export class UIService {
         border: 'none',
         fontSize: '20px',
         cursor: 'pointer',
-        color: '#999',
+        color: 'rgba(16, 38, 51, 0.55)',
         padding: '0',
         width: '24px',
         height: '24px',
@@ -237,7 +304,7 @@ export class UIService {
       toast.style.transform = 'translateX(0)';
 
       // Add celebration effects if requested
-      if (celebration) {
+      if (celebration || isCeremony) {
         this.createCelebrationEffect(toast);
       }
     }, 10);
@@ -250,77 +317,20 @@ export class UIService {
     }
   }
 
-  private getEnhancedBackground(type: string): string {
+  /** The single coloured rule on a note, carrying the status. Every other
+   *  surface of the toast is shared paper, so status never shouts. */
+  private getToastAccent(type: string): string {
     switch (type) {
       case 'success':
-        return 'linear-gradient(135deg, rgba(40, 167, 69, 0.85), rgba(32, 201, 151, 0.75))';
+        return SUNPRINT_NOTE.verdigris;
       case 'warning':
-        return 'linear-gradient(135deg, rgba(255, 193, 7, 0.85), rgba(253, 126, 20, 0.75))';
+        return SUNPRINT_NOTE.amber;
       case 'error':
-        return 'linear-gradient(135deg, rgba(220, 53, 69, 0.85), rgba(231, 76, 60, 0.75))';
+        return SUNPRINT_NOTE.coral;
       case 'loading':
-        return 'linear-gradient(135deg, rgba(0, 123, 255, 0.85), rgba(13, 202, 240, 0.75))';
+        return SUNPRINT_NOTE.cyan;
       default:
-        return 'linear-gradient(135deg, rgba(23, 162, 184, 0.85), rgba(13, 202, 240, 0.75))';
-    }
-  }
-
-  private getEnhancedTextColor(type: string): string {
-    switch (type) {
-      case 'success':
-        return '#ffffff';
-      case 'warning':
-        return '#ffffff';
-      case 'error':
-        return '#ffffff';
-      case 'loading':
-        return '#ffffff';
-      default:
-        return '#ffffff';
-    }
-  }
-
-  private getEnhancedShadow(type: string): string {
-    const baseShallow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-    switch (type) {
-      case 'success':
-        return `${baseShallow}, 0 0 20px rgba(40, 167, 69, 0.2)`;
-      case 'warning':
-        return `${baseShallow}, 0 0 20px rgba(255, 193, 7, 0.2)`;
-      case 'error':
-        return `${baseShallow}, 0 0 20px rgba(220, 53, 69, 0.2)`;
-      case 'loading':
-        return `${baseShallow}, 0 0 20px rgba(0, 123, 255, 0.2)`;
-      default:
-        return baseShallow;
-    }
-  }
-
-  private getToastBorderColor(type: string): string {
-    switch (type) {
-      case 'success':
-        return '#00bd00';
-      case 'warning':
-        return '#ffb300';
-      case 'error':
-        return '#ff5252';
-      default:
-        return '#5f6368';
-    }
-  }
-
-  private getToastIcon(type: string): string {
-    switch (type) {
-      case 'success':
-        return '✅';
-      case 'warning':
-        return '⚠️';
-      case 'error':
-        return '❌';
-      case 'loading':
-        return '⏳';
-      default:
-        return 'ℹ️';
+        return SUNPRINT_NOTE.muted;
     }
   }
 
@@ -366,93 +376,74 @@ export class UIService {
   }
 
   /**
-   * Enhanced error message with helpful solutions
+   * Error message with a way forward. Pass `onRetry` and the note carries a
+   * real button; without one no button is drawn, because a button that only
+   * logs to the console is worse than no button at all.
    */
-  public showContextualError(context: string, originalError?: string): void {
+  public showContextualError(context: string, originalError?: string, onRetry?: () => void): void {
     const errorInfo = this.getErrorMessage(context, originalError);
     this.showToast(errorInfo.message, {
       type: 'error',
       duration: 8000,
       haptic: true,
       sound: true,
-      action: errorInfo.actionText
-        ? {
-            text: errorInfo.actionText,
-            callback: () => console.log('Error action:', errorInfo.action),
-          }
-        : undefined,
+      action:
+        errorInfo.actionText && onRetry
+          ? { text: errorInfo.actionText, callback: onRetry }
+          : undefined,
     });
   }
 
   private getContextualMessage(context: string): string {
-    const messages = this.contextualMessages[context as keyof typeof this.contextualMessages] || [
-      '⏳ Working on it...',
-      '🔄 Processing your request...',
-      '✨ Making magic happen...',
+    const messages = this.contextualMessages[context as keyof typeof this.contextualMessages] ?? [
+      'Working on it.',
+      'One moment — nearly there.',
+      'Still going, nothing is stuck.',
     ];
-    return messages[Math.floor(Math.random() * messages.length)];
+    return pickLine(messages, `working:${context}:${this.contextualRotation++}`);
   }
 
   private getSuccessMessage(context: string, data?: SuccessMessageData): string {
-    const successMessages = {
-      territoryClaimedFirst: "🎉 First Territory Claimed! You're now a true RunRealm explorer!",
-      territoryClaimed: `🏆 Territory Claimed! ${
-        data?.territoryName || 'New territory'
-      } is now part of your running realm.`,
-      runCompleted: `💪 Run Completed! Great job covering ${
-        data?.distance || 'some distance'
-      } in ${data?.time || 'your time'}!`,
-      aiRouteGenerated: `🤖 Perfect Route Found! AI crafted a ${
-        data?.distance || 'custom'
-      } route optimized for your goals.`,
-      walletConnected: `🦊 Wallet Connected! Successfully connected ${
-        data?.walletType || 'your wallet'
-      }.`,
-      crossChainSuccess:
-        '🌐 Cross-Chain Success! Your transaction completed successfully across networks!',
-    };
-    return (
-      successMessages[context as keyof typeof successMessages] ||
-      '✅ Success! Operation completed successfully!'
-    );
+    switch (context) {
+      case 'territoryClaimedFirst':
+        return 'Your first territory. The map is a little more yours than it was.';
+      case 'territoryClaimed':
+        return `${data?.territoryName || 'The new ground'} is yours. Worth a look on the next outing.`;
+      case 'runCompleted':
+        return runCompleteLine({
+          distanceLabel: data?.distance || 'The run',
+          durationLabel: data?.time || 'your time',
+        });
+      case 'aiRouteGenerated':
+        return `Route found${data?.distance ? ` — ${data.distance}` : ''}. It looks like a good afternoon.`;
+      case 'walletConnected':
+        return `${data?.walletType || 'Your wallet'} is connected. The ledger knows you now.`;
+      case 'crossChainSuccess':
+        return 'The deed crossed the bridge and landed on the other side.';
+      default:
+        return 'Done, and filed.';
+    }
   }
 
+  /**
+   * Map a legacy context key onto the shared voice's error bank, so every
+   * failure reads from one place. `originalError` is kept for diagnostics but
+   * never shown raw — technical strings are not the runner's problem.
+   */
   private getErrorMessage(
     context: string,
     originalError?: string
-  ): { message: string; action?: string; actionText?: string } {
-    const errorMessages = {
-      aiServiceDown: {
-        message:
-          '🤖 AI Coach Taking a Break. Try manual route planning or check back in a few minutes.',
-        action: 'Try manual route planning',
-        actionText: 'Plan Manually',
-      },
-      walletNotFound: {
-        message:
-          '🦊 Wallet Not Detected. Install MetaMask or connect your preferred wallet to access GameFi features.',
-        action: 'Install MetaMask',
-        actionText: 'Get MetaMask',
-      },
-      locationDenied: {
-        message:
-          '📍 Location Access Needed. Enable location in your browser settings for territory features.',
-        action: 'Enable location access',
-        actionText: 'How to Enable',
-      },
-      networkError: {
-        message: '🌐 Connection Issue. Check your internet connection and try again.',
-        action: 'Check connection and retry',
-        actionText: 'Retry',
-      },
+  ): { message: string; actionText?: string } {
+    const kindByContext: Record<string, ErrorKind> = {
+      aiServiceDown: 'routeFailed',
+      walletNotFound: 'walletFailed',
+      locationDenied: 'locationMissing',
+      claimFailed: 'claimFailed',
+      networkError: 'offline',
     };
-    return (
-      errorMessages[context as keyof typeof errorMessages] || {
-        message: originalError || '⚠️ Something went wrong. Please try again.',
-        action: 'Try again',
-        actionText: 'Retry',
-      }
-    );
+    const copy = errorCopy(kindByContext[context] ?? 'generic');
+    if (originalError) console.debug(`ui-service: ${context} —`, originalError);
+    return { message: copy.message, actionText: copy.action };
   }
 
   private playContextualSound(type: string): void {
@@ -495,8 +486,11 @@ export class UIService {
   }
 
   private createCelebrationEffect(element: HTMLElement): void {
-    const colors = ['#00ff00', '#00cc00', '#00ff88', '#ffffff', '#ffff00'];
-    const particleCount = 15;
+    // Paper confetti in the atlas palette. Reduced motion means no confetti at
+    // all — the note itself still lands, which is the actual information.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const colors = [SUNPRINT_NOTE.verdigris, SUNPRINT_NOTE.amber, SUNPRINT_NOTE.cyan, '#f8f4e8'];
+    const particleCount = 12;
 
     for (let i = 0; i < particleCount; i++) {
       const particle = document.createElement('div');
@@ -504,8 +498,8 @@ export class UIService {
         position: absolute;
         width: 6px;
         height: 6px;
-        background: ${colors[Math.floor(Math.random() * colors.length)]};
-        border-radius: 50%;
+        background: ${colors[(i * 7) % colors.length]};
+        border-radius: 1px;
         pointer-events: none;
         z-index: 10000;
         animation: celebrationFloat 1.5s ease-out forwards;

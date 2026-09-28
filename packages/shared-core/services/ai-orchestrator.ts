@@ -6,6 +6,7 @@
 import { EventBus } from '../core/event-bus';
 import { SoundService } from '../services/sound-service';
 import { UserContextService } from '../services/user-context-service';
+import { errorCopy } from '../utils/atlas-voice';
 import { RouteStateService } from './route-state-service';
 import { UIService } from './ui-service';
 
@@ -65,7 +66,7 @@ export class AIOrchestrator {
       // Dismiss loading toast
       // this.uiService.dismissToast();
       // Show success notification
-      this.uiService.showToast('📍 Route generated successfully!', {
+      this.uiService.showToast('Route drawn. It looks like a good afternoon.', {
         type: 'success',
         duration: 5000,
       });
@@ -95,7 +96,7 @@ export class AIOrchestrator {
       // Dismiss loading toast
       // this.uiService.dismissToast();
       // Show error notification
-      this.uiService.showToast(`Route generation failed: ${data.message}`, {
+      this.uiService.showToast(errorCopy('routeFailed').message, {
         type: 'error',
         duration: 5000,
       });
@@ -113,7 +114,7 @@ export class AIOrchestrator {
       // Dismiss loading toast
       // this.uiService.dismissToast();
       // Show success notification
-      this.uiService.showToast(`👻 ${data.runner.name} is ready to race!`, {
+      this.uiService.showToast(`${data.runner.name} is ready to race.`, {
         type: 'success',
         duration: 5000,
       });
@@ -132,7 +133,7 @@ export class AIOrchestrator {
       // Dismiss loading toast
       // this.uiService.dismissToast();
       // Show error notification
-      this.uiService.showToast(`Ghost runner failed: ${data.message}`, {
+      this.uiService.showToast(errorCopy('generic').message, {
         type: 'error',
         duration: 5000,
       });
@@ -179,9 +180,12 @@ export class AIOrchestrator {
     this.createRequestStatus(requestId, 'route', 'pending', 0);
 
     // Show loading toast
-    const _loadingToast = this.uiService.showToast('🤖 Generating your route...', {
-      type: 'info',
+    // `contextual` resolves the key against the working bank, so the route
+    // spinner speaks the same voice as everything else.
+    const _loadingToast = this.uiService.showToast('aiRoute', {
+      type: 'loading',
       duration: 0, // Don't auto-hide
+      contextual: true,
     });
 
     try {
@@ -204,7 +208,7 @@ export class AIOrchestrator {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.handleRequestError(requestId, 'route', errorMessage);
-      this.uiService.showToast(`Route generation failed: ${errorMessage}`, {
+      this.uiService.showToast(errorCopy('routeFailed').message, {
         type: 'error',
         action: {
           text: 'Retry',
@@ -243,7 +247,7 @@ export class AIOrchestrator {
     this.createRequestStatus(requestId, 'ghostRunner', 'pending', 0);
 
     // Show loading toast
-    this.uiService.showToast('👻 Summoning your ghost runner...', {
+    this.uiService.showToast('Waking your ghost. It remembers the route better than you do.', {
       type: 'info',
       duration: 0, // Don't auto-hide
     });
@@ -257,7 +261,7 @@ export class AIOrchestrator {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.handleRequestError(requestId, 'ghostRunner', errorMessage);
-      this.uiService.showToast(`Ghost runner summoning failed: ${errorMessage}`, {
+      this.uiService.showToast(errorCopy('generic').message, {
         type: 'error',
         action: {
           text: 'Retry',

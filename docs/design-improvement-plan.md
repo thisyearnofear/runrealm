@@ -9,6 +9,10 @@
 > **Experience differentiation initiatives:** [experience-differentiation.md](experience-differentiation.md)
 > (claim ceremony, fog-of-war, race replays, leaderboards) — this contract stays
 > canonical for tokens, motion, and vocabulary.
+>
+> **Voice contract:** the vocabulary rules below are enforced in code by
+> `packages/shared-core/utils/atlas-voice.ts`, and every player-facing string is
+> sourced from it. See [warmth-pass.md](warmth-pass.md).
 
 RunRealm should feel like entering a living cartographic medium, not using a
 fitness dashboard with a map behind it. The identity combines cyanotype prints,

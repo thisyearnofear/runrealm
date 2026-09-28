@@ -86,7 +86,7 @@ export class DeferredClaimService extends BaseService {
     this.saveToStorage();
 
     this.safeEmit('ui:toast', {
-      message: `📜 "${name}" logged to Local Atlas! Connect wallet anytime to register on-chain.`,
+      message: `"${name}" is filed in your local atlas. Connect a wallet whenever you like to register it.`,
       type: 'info',
       duration: 6000,
     });
@@ -106,7 +106,7 @@ export class DeferredClaimService extends BaseService {
       const totalTokens = pending.reduce((sum, d) => sum + d.rewardTokens, 0);
 
       this.safeEmit('ui:toast', {
-        message: `🎉 Wallet connected! You have ${pending.length} unminted deeds (+${totalTokens} $REALM) waiting in your Atlas.`,
+        message: `Welcome in. ${pending.length} deeds (+${totalTokens} $REALM) have been waiting in your atlas.`,
         type: 'success',
         duration: 8000,
       });

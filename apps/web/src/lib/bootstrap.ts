@@ -1,5 +1,6 @@
 // Clean, modular entry point for RunRealm
 import { RunRealmApp } from '@runrealm/shared-core/core/run-realm-app';
+import { replayLinkBadLine } from '@runrealm/shared-core/utils/atlas-voice';
 import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
 import AccountScreen from '../shell/components/account-screen';
 import { MainUI } from '../shell/components/main-ui';
@@ -126,7 +127,7 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
           theater.spectateRace(record);
         } else {
           app.getEventBus().emit('ui:toast', {
-            message: 'That replay link is malformed.',
+            message: replayLinkBadLine(),
             type: 'error',
             duration: 4000,
           } as never);
@@ -210,6 +211,30 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
       new LeaderboardScreen().initialize(leaderboardContainer);
     } catch (err) {
       console.warn('Leaderboard screen not available:', err);
+    }
+
+    // Return warmth: the "while you were away" card, drawn from the offline
+    // catch-up crossings TerritoryService already computes on load.
+    try {
+      const { default: WhileYouWereAway } = await import('../shell/components/while-you-were-away');
+      const returnCardContainer = document.createElement('div');
+      returnCardContainer.id = 'return-card-root';
+      document.body.appendChild(returnCardContainer);
+      new WhileYouWereAway().initialize(returnCardContainer);
+    } catch (err) {
+      console.warn('Return card not available:', err);
+    }
+
+    // Intuitive clarity: one quiet line naming the single most useful thing to
+    // do, and nothing at all when there is no next move.
+    try {
+      const { default: NextActionHint } = await import('../shell/components/next-action-hint');
+      const nextActionContainer = document.createElement('div');
+      nextActionContainer.id = 'next-action-root';
+      document.body.appendChild(nextActionContainer);
+      new NextActionHint().initialize(nextActionContainer);
+    } catch (err) {
+      console.warn('Next action hint not available:', err);
     }
 
     // Mount the React wallet flow. The legacy WalletWidget still owns

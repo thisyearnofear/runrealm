@@ -326,13 +326,16 @@ export class RouteInfoPanel {
     contentContainer.innerHTML = '';
 
     // Add error message
+    // Sunprint register: ink on bone, one coral rule for the trouble, and a
+    // retry that reads as the obvious next move rather than a green button.
     const errorTitle = this.domService.createElement('h2', {
-      textContent: 'Route Generation Failed',
+      textContent: 'No line drawn this time',
       style: {
-        margin: '0 0 15px 0',
-        color: '#ff0000',
+        margin: '0 0 12px 0',
+        color: 'var(--rr-ink, #102633)',
+        fontFamily: 'var(--rr-font-display, Georgia, serif)',
         fontSize: '20px',
-        fontWeight: 'bold',
+        fontWeight: '600',
       },
     });
 
@@ -340,18 +343,20 @@ export class RouteInfoPanel {
       textContent: message,
       style: {
         margin: '0 0 20px 0',
-        color: '#666',
+        color: 'var(--rr-muted, #5b6b73)',
         fontSize: '14px',
         lineHeight: '1.5',
+        borderLeft: '3px solid var(--rr-coral, #e85d5d)',
+        paddingLeft: '10px',
       },
     });
 
     const retryBtn = this.domService.createElement('button', {
-      textContent: 'Try Again',
+      textContent: 'Try another line',
       style: {
         padding: '12px',
-        backgroundColor: '#00bd00',
-        color: 'white',
+        backgroundColor: 'var(--rr-verdigris, #4fae8b)',
+        color: 'var(--rr-ink, #102633)',
         border: 'none',
         borderRadius: '8px',
         cursor: 'pointer',

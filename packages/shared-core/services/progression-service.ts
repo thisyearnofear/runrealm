@@ -5,6 +5,7 @@
 
 import { BaseService } from '../core/base-service';
 import { EventBus } from '../core/event-bus';
+import { achievementLine, challengeCompleteLine, levelUpLine } from '../utils/atlas-voice';
 
 export interface Challenge {
   id: string;
@@ -374,11 +375,13 @@ export class ProgressionService extends BaseService {
       // Check for level-based achievements
       this.checkLevelAchievements();
 
-      // Show level up notification
+      // Voiced, and flagged as a milestone so surfaces that can render a
+      // bigger note do. The chime and buzz live in SensoryFeedbackService,
+      // which listens to `game:levelUp` — one owner per sense.
       this.safeEmit('ui:toast', {
-        message: `🎉 Level Up! You're now level ${this.stats.level}`,
+        message: levelUpLine(this.stats.level),
         type: 'success',
-        duration: 4000,
+        ceremony: 'level-up',
       });
     }
   }
@@ -514,11 +517,11 @@ export class ProgressionService extends BaseService {
       },
     });
 
-    // Show notification
+    // Voiced, and flagged as a milestone (see the level-up note above).
     this.safeEmit('ui:toast', {
-      message: `🏆 Achievement Unlocked: ${achievement.name}`,
+      message: achievementLine(achievement.name),
       type: 'success',
-      duration: 5000,
+      ceremony: 'achievement',
     });
 
     this.saveStats();
@@ -686,7 +689,7 @@ export class ProgressionService extends BaseService {
         challenge.completed = true;
 
         this.safeEmit('ui:toast', {
-          message: `🎯 Challenge Complete: ${challenge.title}`,
+          message: challengeCompleteLine(challenge.title),
           type: 'success',
         });
       }

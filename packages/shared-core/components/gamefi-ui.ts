@@ -81,11 +81,12 @@ export class GameFiUI extends BaseService {
     // Territory preview interactions
     this.subscribe('run:pointAdded', (data) => {
       // Emit event for MainUI to update territory widget content
+      const totalDistance = data.stats?.distance ?? data.totalDistance ?? 0;
       this.safeEmit('ui:territoryPreview', {
         point: data.point,
-        totalDistance: data.totalDistance,
+        totalDistance,
       });
-      this.updateRewardEstimate(data.totalDistance);
+      this.updateRewardEstimate(totalDistance);
     });
 
     this.subscribe('web3:walletConnected', (_data) => {

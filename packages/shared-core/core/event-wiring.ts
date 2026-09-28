@@ -8,6 +8,8 @@
  */
 
 import { DemoGhostDirector } from '../services/demo-ghost-director';
+import type { ToastOptions } from '../services/ui-service';
+import { errorCopy } from '../utils/atlas-voice';
 import { coordsToCell, type TerritoryCell } from '../utils/h3-territory';
 import { fitMapToRoute, type MaplibreHandles } from './map-bootstrap';
 import type { Services } from './service-composer';
@@ -24,11 +26,23 @@ export interface EventWiringOptions {
 export function wireEvents(opts: EventWiringOptions): void {
   const { services, getMap } = opts;
 
+  // The toast surface. Every feature emits `ui:toast`, but nothing listened:
+  // deferred claims, relics, ghost deploys, the run companion and ~15 more call
+  // sites were broadcasting into an empty room. One bridge, and it sits above
+  // the map-dependent wiring so it still runs on a boot with no atlas.
+  services.eventBus.on('ui:toast', (data) => {
+    services.ui.showToast(data.message, {
+      type: data.type as ToastOptions['type'],
+      duration: data.duration,
+      ceremony: data.ceremony,
+    });
+  });
+
   services.eventBus.on('territory:claimRequested', (data) => {
     if (services.territory) {
       services.eventBus.emit('territory:claimRequested', data);
     } else {
-      services.ui.showToast('Territory service not available', { type: 'error' });
+      services.ui.showToast(errorCopy('generic').message, { type: 'error' });
     }
   });
 
@@ -160,8 +174,9 @@ export function wireEvents(opts: EventWiringOptions): void {
     }
   });
 
+  // No toast here: `run:started` is narrated by the run companion a moment
+  // later, and two notes for one step reads as noise rather than welcome.
   services.eventBus.on('run:startRequested', () => {
-    services.ui.showToast('Starting new run...', { type: 'info' });
     services.sound.playNotificationSound();
   });
 
@@ -262,7 +277,7 @@ export function wireEvents(opts: EventWiringOptions): void {
   services.eventBus.on('territory:claimed', renderOwnedTerritories);
 
   services.eventBus.on('territory:claimStarted', (data) => {
-    services.ui.showToast(`Claiming territory at ${data.territoryName}…`, {
+    services.ui.showToast(`Drawing up the deed for ${data.territoryName}…`, {
       type: 'info',
       duration: 4000,
     });

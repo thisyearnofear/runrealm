@@ -21,6 +21,7 @@ import type { ReplayService } from '@runrealm/shared-core/services/replay-servic
 import type { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
 import type { SoundService } from '@runrealm/shared-core/services/sound-service';
 import type { TerritoryService } from '@runrealm/shared-core/services/territory-service';
+import { replayRefusedLine } from '@runrealm/shared-core/utils/atlas-voice';
 import {
   leadChangeTicks,
   type RaceFrame,
@@ -513,7 +514,7 @@ export class RunTheater {
     if (this.inTheater || !this.root) return;
     if (!verifyRaceReplayRecord(record).ok) {
       this.deps.eventBus.emit('ui:toast', {
-        message: '⚠️ Replay failed verification — this record does not recompute.',
+        message: replayRefusedLine(),
         type: 'error',
         duration: 4000,
       } as never);

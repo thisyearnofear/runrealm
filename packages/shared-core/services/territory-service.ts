@@ -1,5 +1,13 @@
 import { GAME_RULES } from '../config/game-rules';
 import { BaseService } from '../core/base-service';
+import {
+  boostConfirmedLine,
+  boostFailedLine,
+  boostUsedTodayLine,
+  claimMissingLine,
+  errorCopy,
+  notOnChainLine,
+} from '../utils/atlas-voice';
 import { calculateDistance } from '../utils/distance-formatter';
 import {
   H3_RESOLUTION,
@@ -169,7 +177,7 @@ export class TerritoryService extends BaseService {
     // Listen for completed runs — create territory if eligible
     this.subscribe(
       'run:completed',
-      async (data: { run?: RunSession; distance: number; duration: number; points: any[] }) => {
+      async (data: { run?: RunSession; stats?: { distance?: number } }) => {
         const run = data.run as RunSession | undefined;
         if (!run || !run.territoryEligible || !run.geohash) {
           console.log('Run completed but not territory-eligible');
@@ -1443,7 +1451,7 @@ export class TerritoryService extends BaseService {
     const territory = this.claimedTerritories.get(territoryId);
     if (!territory) {
       this.safeEmit('ui:toast', {
-        message: '❌ Territory not found',
+        message: claimMissingLine(),
         type: 'error',
       });
       return;
@@ -1453,16 +1461,18 @@ export class TerritoryService extends BaseService {
     const web3Service = this.getSiblingService('Web3Service');
     if (!contractService || !web3Service || !web3Service.isConnected()) {
       this.safeEmit('ui:toast', {
-        message: '❌ Wallet not connected',
+        message: errorCopy('walletFailed').message,
         type: 'error',
       });
       return;
     }
 
     if (!contractService.isBoostReady()) {
+      // Developer wiring, not runner-facing: the toast stays friendly and the
+      // actionable detail goes to the console.
+      console.warn('Boost unavailable: set RUNREALM_BOOST_ADDRESS and reconnect the wallet.');
       this.safeEmit('ui:toast', {
-        message:
-          '❌ Boost contract not deployed. Set RUNREALM_BOOST_ADDRESS in env and reconnect wallet.',
+        message: errorCopy('generic').message,
         type: 'error',
       });
       return;
@@ -1471,7 +1481,7 @@ export class TerritoryService extends BaseService {
     const tokenId = territory.tokenId;
     if (!tokenId) {
       this.safeEmit('ui:toast', {
-        message: '❌ Territory not on chain yet — claim it first before boosting.',
+        message: notOnChainLine('boost'),
         type: 'error',
       });
       return;
@@ -1480,7 +1490,7 @@ export class TerritoryService extends BaseService {
     const wallet = web3Service.getCurrentWallet();
     if (!wallet) {
       this.safeEmit('ui:toast', {
-        message: '❌ Wallet not connected',
+        message: errorCopy('walletFailed').message,
         type: 'error',
       });
       return;
@@ -1494,7 +1504,7 @@ export class TerritoryService extends BaseService {
     const lastDay = await contractService.getLastBoostDay(wallet.address, tokenId);
     if (lastDay >= today) {
       this.safeEmit('ui:toast', {
-        message: '⏳ Boost already used today. Try again after midnight UTC.',
+        message: boostUsedTodayLine(),
         type: 'info',
       });
       return;
@@ -1516,8 +1526,9 @@ export class TerritoryService extends BaseService {
     try {
       const receipt = await contractService.boostTerritoryActivity(tokenId);
       if (receipt.status !== 1) {
+        console.warn(`Boost reverted on-chain (tx ${receipt.transactionHash})`);
         this.safeEmit('ui:toast', {
-          message: `❌ Boost reverted on-chain (tx ${receipt.transactionHash})`,
+          message: boostFailedLine(),
           type: 'error',
         });
         return;
@@ -1538,13 +1549,13 @@ export class TerritoryService extends BaseService {
       });
 
       this.safeEmit('ui:toast', {
-        message: `✨ Territory boosted! +${boostPoints} defense points`,
+        message: boostConfirmedLine(boostPoints),
         type: 'success',
       });
     } catch (error) {
       console.error('Territory boost failed:', error);
       this.safeEmit('ui:toast', {
-        message: `❌ Boost failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: boostFailedLine(),
         type: 'error',
       });
     }
