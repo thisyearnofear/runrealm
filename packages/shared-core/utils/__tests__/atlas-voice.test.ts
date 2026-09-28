@@ -13,11 +13,19 @@ import {
   boostFailedLine,
   boostUsedTodayLine,
   challengeCompleteLine,
+  challengeRewardFailedLine,
+  challengeRewardLine,
+  claimConfirmPromptLine,
+  claimEligibleLine,
   claimedLine,
+  claimFiledLine,
   claimingLine,
   claimMissingLine,
+  claimNeedsWalletLine,
   claimReadyLine,
   claimTakenLine,
+  coachQuietLine,
+  coachTroubleLine,
   defenseChangedLine,
   type ErrorKind,
   emptyStateLine,
@@ -25,13 +33,21 @@ import {
   formatAbsence,
   ghostDeployedLine,
   ghostDeployFailedLine,
+  ghostRosterFailedLine,
+  ghostUpgradedLine,
+  ghostUpgradeFailedLine,
   ledgerFailedLine,
   levelUpLine,
   locationTroubleLine,
+  MOBILE_ONBOARDING,
+  MOBILE_TITLES,
   milestoneLine,
+  mobileTitle,
   type NextActionKind,
+  nearbyClaimsCountLine,
   nearbyTerritoryLine,
   nextActionHint,
+  noPostWorthTakingLine,
   nothingStakedLine,
   nothingToClaimLine,
   notOnChainLine,
@@ -44,15 +60,24 @@ import {
   returnQuiet,
   returnSummary,
   routeReadyLine,
+  routeSearchFailedLine,
+  routeSearchLine,
   runCompleteLine,
+  runNotFiledLine,
   runStartLine,
+  stravaLinkedLine,
+  stravaLinkFailedLine,
   syncFailedLine,
   type TerritoryFeel,
+  trackingStartFailedLine,
+  trackingStopFailedLine,
   unstakedLine,
   unstakingLine,
   VOICE_BANNED_TERMS,
   VOICE_MAX_LINE,
   WORKING_LINES,
+  walletConnectFailedLine,
+  walletConnectingLine,
   widgetModeLine,
   workingLine,
 } from '../atlas-voice';
@@ -178,6 +203,41 @@ function sweep(): Array<{ source: string; line: string }> {
   out.push({ source: 'onboarding:welcome', line: onboardingWelcomeLine() });
   out.push({ source: 'challenge', line: challengeCompleteLine('Canal Runner') });
   out.push({ source: 'claim:ready', line: claimReadyLine() });
+
+  // The phone. Same rules, so the mobile build is held to the same contract.
+  for (const level of [2, 4]) {
+    out.push({ source: `ghost:upgraded:${level}`, line: ghostUpgradedLine(level) });
+  }
+  out.push({ source: 'ghost:upgrade-failed', line: ghostUpgradeFailedLine() });
+  out.push({ source: 'ghost:roster-failed', line: ghostRosterFailedLine() });
+  out.push({ source: 'ghost:no-post', line: noPostWorthTakingLine() });
+  out.push({ source: 'wallet:connecting', line: walletConnectingLine() });
+  out.push({ source: 'wallet:connect-failed', line: walletConnectFailedLine() });
+  out.push({ source: 'strava:linked', line: stravaLinkedLine() });
+  out.push({ source: 'strava:link-failed', line: stravaLinkFailedLine() });
+  out.push({ source: 'coach:quiet', line: coachQuietLine() });
+  out.push({ source: 'coach:trouble', line: coachTroubleLine() });
+  out.push({ source: 'route:search', line: routeSearchLine() });
+  out.push({ source: 'route:search-failed', line: routeSearchFailedLine() });
+  out.push({ source: 'run:not-filed', line: runNotFiledLine() });
+  out.push({ source: 'tracking:start-failed', line: trackingStartFailedLine() });
+  out.push({ source: 'tracking:stop-failed', line: trackingStopFailedLine() });
+  out.push({ source: 'claim:needs-wallet', line: claimNeedsWalletLine() });
+  out.push({ source: 'claim:confirm-prompt', line: claimConfirmPromptLine() });
+  out.push({ source: 'claim:eligible', line: claimEligibleLine() });
+  for (const name of ['Harbour Cell', 'Unnamed Territory']) {
+    out.push({ source: `claim:filed:${name}`, line: claimFiledLine(name) });
+  }
+  for (const count of [1, 4]) {
+    out.push({ source: `nearby:count:${count}`, line: nearbyClaimsCountLine(count) });
+  }
+  for (const amount of [100, 250]) {
+    out.push({ source: `challenge:reward:${amount}`, line: challengeRewardLine(amount, 'xp') });
+  }
+  out.push({ source: 'challenge:reward-failed', line: challengeRewardFailedLine() });
+  for (const step of MOBILE_ONBOARDING) {
+    out.push({ source: `onboarding:${step.id}`, line: `${step.title}. ${step.description}` });
+  }
   return out;
 }
 
@@ -234,6 +294,30 @@ describe('atlas voice register', () => {
         clean: true,
       });
       expect({ source, terminated: /[.!?]$/.test(line) }).toEqual({ source, terminated: true });
+    }
+  });
+
+  it('keeps the phone titles in the same register, and free of emoji', () => {
+    // Titles are not sentences, so they are swept separately — but they are
+    // still held to the banned register, and the old build hung emoji on
+    // every one of them.
+    for (const kind of Object.keys(MOBILE_TITLES) as Array<keyof typeof MOBILE_TITLES>) {
+      const title = mobileTitle(kind);
+      expect({ kind, titled: title.length > 0 && title === title.trim() }).toEqual({
+        kind,
+        titled: true,
+      });
+      expect({ kind, hasEmoji: /\p{Extended_Pictographic}/u.test(title) }).toEqual({
+        kind,
+        hasEmoji: false,
+      });
+      for (const banned of VOICE_BANNED_TERMS) {
+        expect({ kind, banned, found: title.toLowerCase().includes(banned) }).toEqual({
+          kind,
+          banned,
+          found: false,
+        });
+      }
     }
   });
 

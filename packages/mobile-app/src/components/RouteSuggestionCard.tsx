@@ -4,6 +4,12 @@
  */
 
 import { AIService, RouteOptimization } from '@runrealm/shared-core/services/ai-service';
+import {
+  mobileTitle,
+  routeReadyLine,
+  routeSearchFailedLine,
+  routeSearchLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -68,17 +74,17 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
               : 'Hard'
           : String(route.difficulty || 'Medium');
       setSuggestedRoute({
-        name: 'AI Suggested Route',
+        name: 'A line worth trying',
         coordinates: route.coordinates,
         distance: route.distance,
         estimatedTime: Math.round((route.distance / 1000) * 6), // ~6 min/km
         difficulty: difficultyLabel,
-        description: route.reasoning || 'A route tuned for your location.',
+        description: route.reasoning || 'Drawn from where you are standing.',
         landmarks: [],
       });
     } catch (error) {
       console.error('Failed to load route suggestion:', error);
-      setError('Route suggestions unavailable');
+      setError(routeSearchFailedLine());
     } finally {
       setLoading(false);
     }
@@ -104,7 +110,7 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>📍 Suggested Route</Text>
+        <Text style={styles.title}>{mobileTitle('route')}</Text>
         <TouchableOpacity onPress={loadRouteSuggestion} style={styles.refreshButton}>
           <Text style={styles.refreshButtonText}>↻</Text>
         </TouchableOpacity>
@@ -113,7 +119,7 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color="#00ff88" />
-          <Text style={styles.loadingText}>Finding route...</Text>
+          <Text style={styles.loadingText}>{routeSearchLine()}</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
@@ -140,7 +146,8 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
 
           {suggestedRoute.landmarks && suggestedRoute.landmarks.length > 0 && (
             <View style={styles.landmarksSection}>
-              <Text style={styles.landmarksTitle}>📍 Landmarks</Text>
+              {' '}
+              <Text style={styles.landmarksTitle}>Landmarks</Text>
               {suggestedRoute.landmarks.slice(0, 3).map((landmark: string) => (
                 <Text key={landmark} style={styles.landmarkText}>
                   • {landmark}
@@ -150,7 +157,7 @@ export const RouteSuggestionCard: React.FC<RouteSuggestionCardProps> = ({
           )}
 
           <TouchableOpacity style={styles.useRouteButton} onPress={handleUseRoute}>
-            <Text style={styles.useRouteButtonText}>Use This Route</Text>
+            <Text style={styles.useRouteButtonText}>{routeReadyLine()}</Text>
           </TouchableOpacity>
         </>
       ) : null}

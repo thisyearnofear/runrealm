@@ -7,6 +7,12 @@ import {
   GhostRunnerService,
 } from '@runrealm/shared-core/services/ghost-runner-service';
 import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
+import {
+  ghostDeployedLine,
+  ghostDeployFailedLine,
+  ghostUpgradedLine,
+  mobileTitle,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { GhostManagement } from '../GhostManagement';
@@ -106,7 +112,7 @@ describe('GhostManagement', () => {
   it('should not render when visible is false', () => {
     const { queryByText } = render(<GhostManagement visible={false} onClose={jest.fn()} />);
 
-    expect(queryByText('👻 Ghost Runners')).toBeNull();
+    expect(queryByText(mobileTitle('ghosts'))).toBeNull();
   });
 
   it('should render ghost list when visible', async () => {
@@ -180,9 +186,9 @@ describe('GhostManagement', () => {
       expect(mockGhostService.deployGhost).toHaveBeenCalledWith('ghost-1', 'territory-1');
     });
 
-    // Check for success alert
+    // Check for the posted-ghost note
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Success', 'Ghost deployed successfully!');
+      expect(Alert.alert).toHaveBeenCalledWith('Ghost posted', ghostDeployedLine());
     });
   });
 
@@ -212,9 +218,9 @@ describe('GhostManagement', () => {
       expect(mockGhostService.upgradeGhost).toHaveBeenCalledWith('ghost-1');
     });
 
-    // Check for success alert
+    // Check for the sharpened-ghost note (level 3 becomes 4)
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Success', 'Ghost upgraded successfully!');
+      expect(Alert.alert).toHaveBeenCalledWith('Ghost sharpened', ghostUpgradedLine(4));
     });
   });
 
@@ -254,10 +260,10 @@ describe('GhostManagement', () => {
     // Deploy to territory
     fireEvent.press(getByText('Test Territory'));
 
-    // Wait for error alert
+    // Wait for the error note — the raw service error is logged, not shown.
     await waitFor(
       () => {
-        expect(Alert.alert).toHaveBeenCalledWith('Deployment Failed', 'Insufficient REALM balance');
+        expect(Alert.alert).toHaveBeenCalledWith('Ghost post', ghostDeployFailedLine());
       },
       { timeout: 3000 }
     );

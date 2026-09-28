@@ -6,6 +6,7 @@
  * PERFORMANT: Optimized rendering with React.memo and selective updates
  */
 
+import { errorCopy, nearbyClaimsCountLine } from '@runrealm/shared-core/utils/atlas-voice';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -298,7 +299,7 @@ const TerritoryMapView: React.FC<TerritoryMapViewProps> = React.memo(
         {mapState.territoryPreviews.length > 0 && (
           <View style={styles.infoOverlay}>
             <Text style={styles.infoText}>
-              🏰 {mapState.territoryPreviews.length} territories nearby
+              {nearbyClaimsCountLine(mapState.territoryPreviews.length)}
             </Text>
           </View>
         )}
@@ -306,8 +307,7 @@ const TerritoryMapView: React.FC<TerritoryMapViewProps> = React.memo(
         {/* Permission denied overlay (non-blocking) */}
         {permissionDenied && (
           <View style={styles.permissionOverlay}>
-            <Text style={styles.permissionIcon}>📍</Text>
-            <Text style={styles.permissionText}>Location permission needed for tracking</Text>
+            <Text style={styles.permissionText}>{errorCopy('locationMissing').message}</Text>
           </View>
         )}
       </View>

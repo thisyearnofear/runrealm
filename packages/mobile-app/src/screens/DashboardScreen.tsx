@@ -4,6 +4,13 @@ import {
   DashboardData,
   UserDashboardService,
 } from '@runrealm/shared-core/services/user-dashboard-service';
+import {
+  claimEligibleLine,
+  coachQuietLine,
+  emptyStateLine,
+  mobileTitle,
+  nextActionHint,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -107,7 +114,7 @@ export const DashboardScreen: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#00ff88" />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
+        <Text style={styles.loadingText}>{emptyStateLine('dashboard')}</Text>
       </View>
     );
   }
@@ -120,9 +127,13 @@ export const DashboardScreen: React.FC = () => {
       }
     >
       <View style={styles.headerRow}>
-        <Text style={styles.title}>🎮 User Dashboard</Text>
-        <TouchableOpacity style={styles.ghostButton} onPress={() => setShowGhostManagement(true)}>
-          <Text style={styles.ghostButtonText}>👻</Text>
+        <Text style={styles.title}>{mobileTitle('dashboard')}</Text>
+        <TouchableOpacity
+          style={styles.ghostButton}
+          onPress={() => setShowGhostManagement(true)}
+          accessibilityLabel={mobileTitle('ghosts')}
+        >
+          <Text style={styles.ghostButtonText}>›</Text>
         </TouchableOpacity>
       </View>
 
@@ -130,7 +141,7 @@ export const DashboardScreen: React.FC = () => {
       {dashboardData?.userStats && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>📊 Player Stats</Text>
+            <Text style={styles.sectionTitle}>{mobileTitle('stats')}</Text>
           </View>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
@@ -159,7 +170,7 @@ export const DashboardScreen: React.FC = () => {
       {dashboardData?.currentRun && dashboardData.currentRun.status !== 'completed' && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🏃 Current Run</Text>
+            <Text style={styles.sectionTitle}>{mobileTitle('currentRun')}</Text>
           </View>
           <View style={styles.runStats}>
             <View style={styles.runStat}>
@@ -183,7 +194,7 @@ export const DashboardScreen: React.FC = () => {
           </View>
           {dashboardData.currentRun.territoryEligible && (
             <View style={styles.notificationBanner}>
-              <Text style={styles.notificationText}>🏆 Territory eligible for claiming!</Text>
+              <Text style={styles.notificationText}>{claimEligibleLine()}</Text>
             </View>
           )}
         </View>
@@ -193,13 +204,12 @@ export const DashboardScreen: React.FC = () => {
       {dashboardData?.recentActivity && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🔥 Recent Activity</Text>
+            <Text style={styles.sectionTitle}>{mobileTitle('activity')}</Text>
           </View>
           {dashboardData.recentActivity.lastRun ? (
             <View style={styles.activityItem}>
-              <Text style={styles.activityIcon}>🏃</Text>
               <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Completed Run</Text>
+                <Text style={styles.activityTitle}>Run finished</Text>
                 <Text style={styles.activityDescription}>
                   {formatDistance(dashboardData.recentActivity.lastRun.totalDistance)} in{' '}
                   {formatDuration(dashboardData.recentActivity.lastRun.totalDuration)}
@@ -207,15 +217,14 @@ export const DashboardScreen: React.FC = () => {
               </View>
             </View>
           ) : (
-            <Text style={styles.emptyText}>No recent activity</Text>
+            <Text style={styles.emptyText}>{emptyStateLine('dashboard')}</Text>
           )}
 
           {dashboardData.recentActivity.recentAchievements &&
             dashboardData.recentActivity.recentAchievements.length > 0 && (
               <View style={styles.activityItem}>
-                <Text style={styles.activityIcon}>🏆</Text>
                 <View style={styles.activityContent}>
-                  <Text style={styles.activityTitle}>Achievement Unlocked</Text>
+                  <Text style={styles.activityTitle}>Something earned</Text>
                   <Text style={styles.activityDescription}>
                     {dashboardData.recentActivity.recentAchievements.slice(-1)[0]}
                   </Text>
@@ -229,7 +238,7 @@ export const DashboardScreen: React.FC = () => {
       {dashboardData?.territories && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🏰 Territories</Text>
+            <Text style={styles.sectionTitle}>{mobileTitle('territories')}</Text>
             <Text style={styles.sectionSubtitle}>{dashboardData.territories.length} owned</Text>
           </View>
           {dashboardData.territories.length > 0 ? (
@@ -275,7 +284,7 @@ export const DashboardScreen: React.FC = () => {
               </View>
             </>
           ) : (
-            <Text style={styles.emptyText}>No territories claimed yet</Text>
+            <Text style={styles.emptyText}>{emptyStateLine('claims')}</Text>
           )}
         </View>
       )}
@@ -284,7 +293,7 @@ export const DashboardScreen: React.FC = () => {
       {dashboardData?.walletInfo ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>💰 Wallet</Text>
+            <Text style={styles.sectionTitle}>{mobileTitle('wallet')}</Text>
           </View>
           <View style={styles.walletInfo}>
             <View style={styles.walletRow}>
@@ -312,9 +321,9 @@ export const DashboardScreen: React.FC = () => {
       ) : (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>💰 Wallet</Text>
+            <Text style={styles.sectionTitle}>{mobileTitle('wallet')}</Text>
           </View>
-          <Text style={styles.emptyText}>Connect wallet to view info</Text>
+          <Text style={styles.emptyText}>{nextActionHint('connect-wallet')}</Text>
         </View>
       )}
 
@@ -322,7 +331,7 @@ export const DashboardScreen: React.FC = () => {
       {challenges.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🎯 Challenges</Text>
+            <Text style={styles.sectionTitle}>{mobileTitle('challenges')}</Text>
           </View>
           {challenges.map((challenge) => (
             <ChallengeCard
@@ -339,42 +348,39 @@ export const DashboardScreen: React.FC = () => {
       {dashboardData?.aiInsights && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🤖 AI Insights</Text>
+            <Text style={styles.sectionTitle}>{mobileTitle('insights')}</Text>
           </View>
           {dashboardData.aiInsights.suggestedRoute ? (
             <View style={styles.insightItem}>
-              <Text style={styles.insightIcon}>📍</Text>
               <View style={styles.insightContent}>
-                <Text style={styles.insightTitle}>Route Suggestion</Text>
+                <Text style={styles.insightTitle}>A line worth trying</Text>
                 <Text style={styles.insightDescription}>
-                  {(dashboardData.aiInsights.suggestedRoute.distance / 1000).toFixed(1)}km route
-                  available
+                  {(dashboardData.aiInsights.suggestedRoute.distance / 1000).toFixed(1)} km, drawn
+                  from where you are.
                 </Text>
               </View>
             </View>
           ) : dashboardData.aiInsights.territoryAnalysis ? (
             <View style={styles.insightItem}>
-              <Text style={styles.insightIcon}>🏰</Text>
               <View style={styles.insightContent}>
-                <Text style={styles.insightTitle}>Territory Analysis</Text>
+                <Text style={styles.insightTitle}>Your ground</Text>
                 <Text style={styles.insightDescription}>
-                  Analysis available for claimed territories
+                  A read on how the claims you hold are holding up.
                 </Text>
               </View>
             </View>
           ) : dashboardData.aiInsights.personalizedTips &&
             dashboardData.aiInsights.personalizedTips.length > 0 ? (
             <View style={styles.insightItem}>
-              <Text style={styles.insightIcon}>💡</Text>
               <View style={styles.insightContent}>
-                <Text style={styles.insightTitle}>Personalized Tip</Text>
+                <Text style={styles.insightTitle}>Worth knowing</Text>
                 <Text style={styles.insightDescription}>
                   {dashboardData.aiInsights.personalizedTips[0]}
                 </Text>
               </View>
             </View>
           ) : (
-            <Text style={styles.emptyText}>No AI insights available</Text>
+            <Text style={styles.emptyText}>{coachQuietLine()}</Text>
           )}
         </View>
       )}

@@ -4,6 +4,11 @@
  */
 
 import { Challenge, ProgressionService } from '@runrealm/shared-core/services/progression-service';
+import {
+  challengeRewardFailedLine,
+  challengeRewardLine,
+  claimingLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import React, { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -26,14 +31,11 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
     try {
       setClaiming(true);
       await progressionService.claimChallengeReward(challenge.id);
-      Alert.alert(
-        'Success',
-        `Reward claimed: ${challenge.reward.amount} ${challenge.reward.type.toUpperCase()}`
-      );
+      Alert.alert('Challenge', challengeRewardLine(challenge.reward.amount, challenge.reward.type));
       onClaimed?.();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to claim reward';
-      Alert.alert('Error', errorMessage);
+      console.error('Challenge reward did not land:', error);
+      Alert.alert('Challenge', challengeRewardFailedLine());
     } finally {
       setClaiming(false);
     }
@@ -58,7 +60,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
   const getTimeRemaining = (): string => {
     const now = Date.now();
     const diff = challenge.expiresAt - now;
-    if (diff <= 0) return 'Expired';
+    if (diff <= 0) return 'Closed';
 
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -103,7 +105,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
       </View>
 
       <View style={styles.rewardSection}>
-        <Text style={styles.rewardLabel}>Reward:</Text>
+        <Text style={styles.rewardLabel}>Worth</Text>
         <Text style={styles.rewardValue}>
           {challenge.reward.amount} {challenge.reward.type.toUpperCase()}
         </Text>
@@ -111,13 +113,13 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
 
       {challenge.completed && !challenge.claimed && (
         <TouchableOpacity style={styles.claimButton} onPress={handleClaim} disabled={claiming}>
-          <Text style={styles.claimButtonText}>{claiming ? 'Claiming...' : 'Claim Reward'}</Text>
+          <Text style={styles.claimButtonText}>{claiming ? claimingLine() : 'Claim it'}</Text>
         </TouchableOpacity>
       )}
 
       {challenge.claimed && (
         <View style={styles.claimedBadge}>
-          <Text style={styles.claimedText}>✓ Claimed</Text>
+          <Text style={styles.claimedText}>Collected</Text>
         </View>
       )}
     </View>

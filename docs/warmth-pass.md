@@ -118,9 +118,38 @@ dashboard notifications, and the GameFi/widget mode toggle. Developer-facing
 wiring problems now `console.warn` with the actionable detail and toast
 something kind.
 
-**Out of scope, deliberately:** `packages/mobile-app` still carries the old
-register (emoji section headers, "Success" alerts). It is a separate surface
-with its own design, and it was not touched here.
+### The phone came along too
+
+`packages/mobile-app` was originally left alone on the grounds that it is a
+separate surface. That turned out to be the wrong call: the warmth is not a
+web-only promise, and a runner who picks up the phone should meet the same
+voice. It has since been swept into the same register.
+
+What changed there:
+
+- **Emoji left the headings.** `👻 Ghost Runners`, `🤖 AI Coach`, `⚙️ Settings`
+  and the rest became plain titles from `MOBILE_TITLES`. Emoji in a title is
+  decoration; a title should name the place. The one place emoji survives is
+  user-authored content — a ghost's own avatar, a challenge's own icon.
+- **Alerts stopped shouting titles.** `Alert.alert('Success', …)` and
+  `Alert.alert('Error', …)` are gone. A success has a name
+  (`'Ghost posted'`, `'Challenge'`); a failure says what happened and what is
+  still true, and the raw service error goes to the console instead of the
+  screen.
+- **Every error now names a next step**, the same rule the web surfaces follow.
+  A claim that did not land says the run is safe. A wallet that did not answer
+  says nothing moved.
+- **A dead button came off.** The Settings logout button called
+  `console.error('not implemented')`. A button that does nothing is not a
+  button.
+- **Defence status reads as a word.** `🛡️ / ⚠️ / 🔶 / 🚨` became "Holding
+  well / Holding / Fading / Open" — a badge a screen reader can read out.
+- **The tour was rewritten** into `MOBILE_ONBOARDING`, so the phone opens with
+  the same promise as the web app rather than an "epic Web3 adventure".
+
+The mobile copy is swept by the same test as everything else, plus one extra
+assertion: no title in `MOBILE_TITLES` may contain emoji, so the old headers
+cannot creep back.
 
 ---
 

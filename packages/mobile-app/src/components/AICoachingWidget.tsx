@@ -5,6 +5,12 @@
 
 import { AIService } from '@runrealm/shared-core/services/ai-service';
 import { RunSession } from '@runrealm/shared-core/services/run-tracking-service';
+import {
+  coachQuietLine,
+  coachTroubleLine,
+  mobileTitle,
+  workingLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -71,7 +77,7 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
       setCoachingData(coaching);
     } catch (error) {
       console.error('Failed to load AI coaching:', error);
-      setError('AI coaching unavailable');
+      setError(coachTroubleLine());
     } finally {
       setLoading(false);
     }
@@ -123,7 +129,7 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#00ff88" />
-            <Text style={styles.loadingText}>Getting AI coaching...</Text>
+            <Text style={styles.loadingText}>{workingLine('aiRoute')}</Text>
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
@@ -132,7 +138,7 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
         ) : coachingData ? (
           <>
             <View style={styles.header}>
-              <Text style={styles.title}>🤖 AI Coach</Text>
+              <Text style={styles.title}>{mobileTitle('coach')}</Text>
               {onDismiss && (
                 <TouchableOpacity onPress={onDismiss} style={styles.dismissButton}>
                   <Text style={styles.dismissButtonText}>×</Text>
@@ -146,9 +152,15 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
               </View>
             )}
 
+            {!coachingData.motivation &&
+              !coachingData.tips?.length &&
+              !coachingData.warnings?.length && (
+                <Text style={styles.motivationText}>{coachQuietLine()}</Text>
+              )}
+
             {coachingData.tips && coachingData.tips.length > 0 && (
               <View style={styles.tipsSection}>
-                <Text style={styles.tipsTitle}>💡 Tips</Text>
+                <Text style={styles.tipsTitle}>Worth knowing</Text>
                 {coachingData.tips.slice(0, 2).map((tip) => (
                   <Text key={tip} style={styles.tipText}>
                     • {tip}
@@ -159,7 +171,7 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
 
             {coachingData.warnings && coachingData.warnings.length > 0 && (
               <View style={styles.warningsSection}>
-                <Text style={styles.warningsTitle}>⚠️ Warnings</Text>
+                <Text style={styles.warningsTitle}>Worth watching</Text>
                 {coachingData.warnings.map((warning) => (
                   <Text key={warning} style={styles.warningText}>
                     • {warning}
@@ -170,7 +182,7 @@ export const AICoachingWidget: React.FC<AICoachingWidgetProps> = ({
 
             {coachingData.paceRecommendation > 0 && (
               <View style={styles.paceSection}>
-                <Text style={styles.paceLabel}>Recommended Pace:</Text>
+                <Text style={styles.paceLabel}>Comfortable pace</Text>
                 <Text style={styles.paceValue}>
                   {formatPace(coachingData.paceRecommendation)}/km
                 </Text>

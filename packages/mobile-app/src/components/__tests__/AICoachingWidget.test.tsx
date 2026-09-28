@@ -4,6 +4,11 @@
 
 import { AIService } from '@runrealm/shared-core/services/ai-service';
 import { RunSession } from '@runrealm/shared-core/services/run-tracking-service';
+import {
+  coachTroubleLine,
+  mobileTitle,
+  workingLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { AICoachingWidget } from '../AICoachingWidget';
 
@@ -47,7 +52,7 @@ describe('AICoachingWidget', () => {
       <AICoachingWidget currentRun={mockRunSession} visible={false} />
     );
 
-    expect(queryByText('🤖 AI Coach')).toBeNull();
+    expect(queryByText(mobileTitle('coach'))).toBeNull();
   });
 
   it('should render loading state initially', () => {
@@ -55,7 +60,7 @@ describe('AICoachingWidget', () => {
 
     const { getByText } = render(<AICoachingWidget currentRun={mockRunSession} visible={true} />);
 
-    expect(getByText('Getting AI coaching...')).toBeTruthy();
+    expect(getByText(workingLine('aiRoute'))).toBeTruthy();
   });
 
   it('should display coaching data when loaded', async () => {
@@ -67,9 +72,9 @@ describe('AICoachingWidget', () => {
 
     await waitFor(() => {
       expect(getByText('Keep up the great pace!')).toBeTruthy();
-      expect(getByText('💡 Tips')).toBeTruthy();
+      expect(getByText('Worth knowing')).toBeTruthy();
       expect(getByText('• Maintain steady breathing')).toBeTruthy();
-      expect(getByText('⚠️ Warnings')).toBeTruthy();
+      expect(getByText('Worth watching')).toBeTruthy();
       expect(getByText('• Watch for traffic')).toBeTruthy();
     });
   });
@@ -82,7 +87,7 @@ describe('AICoachingWidget', () => {
     const { getByText } = render(<AICoachingWidget currentRun={mockRunSession} visible={true} />);
 
     await waitFor(() => {
-      expect(getByText('Recommended Pace:')).toBeTruthy();
+      expect(getByText('Comfortable pace')).toBeTruthy();
       expect(getByText(/5:00\/km/)).toBeTruthy();
     });
   });
@@ -109,7 +114,7 @@ describe('AICoachingWidget', () => {
     const { getByText } = render(<AICoachingWidget currentRun={mockRunSession} visible={true} />);
 
     await waitFor(() => {
-      expect(getByText('AI coaching unavailable')).toBeTruthy();
+      expect(getByText(coachTroubleLine())).toBeTruthy();
     });
   });
 

@@ -601,6 +601,229 @@ export function onboardingWelcomeLine(): string {
 }
 
 // ─────────────────────────────────────────────────────────────
+// The phone. Same voice, no emoji, nothing shouting.
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Section and screen titles, without the emoji the old build hung on them.
+ * Emoji in a title reads as decoration; a title should just name the place.
+ */
+export const MOBILE_TITLES = {
+  ghosts: 'Ghost runners',
+  coach: 'Coach',
+  route: 'Suggested route',
+  claim: 'Claim this ground',
+  profile: 'Your record',
+  settings: 'Settings',
+  history: 'Run history',
+  dashboard: 'Your survey',
+  stats: 'Your figures',
+  currentRun: 'This run',
+  activity: 'Recent ground',
+  territories: 'Territories',
+  wallet: 'Wallet',
+  challenges: 'Challenges',
+  insights: 'Coach notes',
+  achievements: 'Achievements',
+  units: 'Units',
+  notifications: 'Notifications',
+  fitness: 'Fitness link',
+  about: 'About',
+  map: 'Map',
+} as const;
+
+export function mobileTitle(kind: keyof typeof MOBILE_TITLES): string {
+  return MOBILE_TITLES[kind];
+}
+
+/** The mobile tour — four cards, same promise as the web one. */
+export const MOBILE_ONBOARDING = [
+  {
+    id: 'mobile-welcome',
+    title: 'Welcome to the realm',
+    description: 'Run, and the world around you starts to show itself.',
+  },
+  {
+    id: 'mobile-gps',
+    title: 'Finding you',
+    description: 'Location is a one-time ask. It is what lets the map draw itself.',
+  },
+  {
+    id: 'mobile-first-run',
+    title: 'Your first run',
+    description: 'Press start and go. A loop is usually enough to trace your first claim.',
+  },
+  {
+    id: 'mobile-territories',
+    title: 'Ground you develop',
+    description: 'A claim is a deed — yours to develop, and yours to defend.',
+  },
+] as const;
+
+/** A wallet that is mid-handshake. */
+export function walletConnectingLine(): string {
+  return pickLine(
+    ['Opening the ledger. One moment.', 'Checking your keys, quietly.'],
+    'wallet:connecting'
+  );
+}
+
+export function walletConnectFailedLine(): string {
+  return pickLine(
+    ['The wallet did not answer. Nothing moved — worth another go.'],
+    'wallet:connect-failed'
+  );
+}
+
+/** A ghost spent REALM and got stronger. */
+export function ghostUpgradedLine(level: number): string {
+  return pickLine(
+    [
+      `The ghost came back sharper — level ${level} now.`,
+      `Level ${level}. It moves a little lighter on its feet.`,
+    ],
+    `ghost:upgraded:${level}`
+  );
+}
+
+export function ghostUpgradeFailedLine(): string {
+  return pickLine(
+    ['The upgrade did not take. Your balance is unchanged — try again when you like.'],
+    'ghost:upgrade-failed'
+  );
+}
+
+/** The ghost roster could not be read. */
+export function ghostRosterFailedLine(): string {
+  return pickLine(
+    ['The ghost roster would not open. Pull to try again — nothing is lost.'],
+    'ghost:roster-failed'
+  );
+}
+
+/** No claim is fading, so there is no post worth filing. */
+export function noPostWorthTakingLine(): string {
+  return pickLine(
+    ['Nothing of yours is fading right now, so there is no post to fill.'],
+    'ghost:no-post'
+  );
+}
+
+/** Strava and friends. */
+export function stravaLinkedLine(): string {
+  return pickLine(['Strava is linked. Your runs will walk over on their own.'], 'strava:linked');
+}
+
+export function stravaLinkFailedLine(): string {
+  return pickLine(
+    ['Strava did not link up. Nothing was shared — try again when you are ready.'],
+    'strava:link-failed'
+  );
+}
+
+/** The coach on the run screen, and the route it would draw for you. */
+export function coachQuietLine(): string {
+  return pickLine(
+    [
+      'The coach has nothing to say. That is usually a good sign.',
+      'Nothing to add from the coach this time.',
+    ],
+    'coach:quiet'
+  );
+}
+
+export function coachTroubleLine(): string {
+  return pickLine(
+    ['The coach is out of earshot for a moment. The run is unaffected.'],
+    'coach:trouble'
+  );
+}
+
+export function routeSearchLine(): string {
+  return pickLine(
+    [
+      'Reading the ground between here and where you want to be.',
+      'Looking for a line worth the paper it is drawn on.',
+    ],
+    'route:search'
+  );
+}
+
+export function routeSearchFailedLine(): string {
+  return pickLine(
+    ['No line came back this time. Your position is fine — try again in a moment.'],
+    'route:search-failed'
+  );
+}
+
+/** A run finished but the device could not file it yet. */
+export function runNotFiledLine(): string {
+  return pickLine(
+    ['The run is finished, but the device would not file it. It is safe here and will catch up.'],
+    'run:not-filed'
+  );
+}
+
+export function trackingStartFailedLine(): string {
+  return pickLine(
+    ['The run would not start. Location is the usual reason — worth a look in settings.'],
+    'tracking:start-failed'
+  );
+}
+
+export function trackingStopFailedLine(): string {
+  return pickLine(
+    ['Stopping was awkward, but the run is still on the device. Nothing was lost.'],
+    'tracking:stop-failed'
+  );
+}
+
+/** The claim sheet, from preview to signed. */
+export function claimNeedsWalletLine(): string {
+  return pickLine(
+    ['A wallet is needed to hold a deed. Connect one and the claim is a tap away.'],
+    'claim:needs-wallet'
+  );
+}
+
+export function claimConfirmPromptLine(): string {
+  return pickLine(['Confirm in your wallet and the ground becomes yours.'], 'claim:confirm-prompt');
+}
+
+export function claimFiledLine(name: string): string {
+  return pickLine(
+    [`${name} is yours. It will need walking to keep it bright.`],
+    `claim:filed:${name}`
+  );
+}
+
+/** A run long enough to trace a claim. */
+export function claimEligibleLine(): string {
+  return pickLine(['Enough ground to claim. The deed is ready when you are.'], 'claim:eligible');
+}
+
+/** Claims within reach of where the runner is standing. */
+export function nearbyClaimsCountLine(count: number): string {
+  return count === 1 ? 'One claim within reach.' : `${count} claims within reach.`;
+}
+
+/** A challenge reward landed. `type` is whatever the challenge calls it. */
+export function challengeRewardLine(amount: number, type: string): string {
+  return pickLine(
+    [`Collected — ${amount} ${type.toUpperCase()} is yours.`],
+    `challenge:reward:${amount}:${type}`
+  );
+}
+
+/** A challenge reward did not land. The work still counts. */
+export function challengeRewardFailedLine(): string {
+  return pickLine(
+    ['The reward did not arrive. The work still counts — it will be there next time.'],
+    'challenge:reward-failed'
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // Ugh — failures. Never a dead end, never the runner's fault.
 // ─────────────────────────────────────────────────────────────
 

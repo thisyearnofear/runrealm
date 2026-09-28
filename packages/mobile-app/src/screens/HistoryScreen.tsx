@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RunSession } from '@runrealm/shared-core/services/run-tracking-service';
+import { emptyStateLine, mobileTitle } from '@runrealm/shared-core/utils/atlas-voice';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -86,7 +87,7 @@ export const HistoryScreen: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#00ff88" />
-        <Text style={styles.loadingText}>Loading run history...</Text>
+        <Text style={styles.loadingText}>{emptyStateLine('dashboard')}</Text>
       </View>
     );
   }
@@ -98,13 +99,12 @@ export const HistoryScreen: React.FC = () => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00ff88" />
       }
     >
-      <Text style={styles.title}>🏃 Run History</Text>
+      <Text style={styles.title}>{mobileTitle('history')}</Text>
 
       {runs.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📊</Text>
-          <Text style={styles.emptyText}>No runs yet</Text>
-          <Text style={styles.emptySubtext}>Complete a run to see it here</Text>
+          <Text style={styles.emptyText}>{emptyStateLine('dashboard')}</Text>
+          <Text style={styles.emptySubtext}>The first one is always the odd one.</Text>
         </View>
       ) : (
         <View style={styles.runsList}>
@@ -114,7 +114,7 @@ export const HistoryScreen: React.FC = () => {
                 <Text style={styles.runDate}>{formatDate(run.startTime)}</Text>
                 {run.territoryEligible && (
                   <View style={styles.territoryBadge}>
-                    <Text style={styles.territoryBadgeText}>🏰</Text>
+                    <Text style={styles.territoryBadgeText}>Claimable</Text>
                   </View>
                 )}
               </View>

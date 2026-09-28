@@ -4,6 +4,15 @@
  */
 
 import { RunSession } from '@runrealm/shared-core';
+import {
+  claimEligibleLine,
+  errorCopy,
+  locationTroubleLine,
+  mobileTitle,
+  runStartLine,
+  trackingStartFailedLine,
+  trackingStopFailedLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -75,11 +84,11 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
           {
-            title: 'RunRealm Location Permission',
-            message: 'RunRealm needs access to your location to track your runs.',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'OK',
+            title: 'Location, so the map knows where you are',
+            message: 'One ask, and the ground around you starts drawing itself.',
+            buttonNeutral: 'Not now',
+            buttonNegative: 'No thanks',
+            buttonPositive: 'Allow',
           }
         );
         if (granted === PermissionsAndroid.RESULTS.GRANTED) {
@@ -99,12 +108,12 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
           } catch (error) {
             console.error('Error getting initial location:', error);
             setIsLoadingGPS(false);
-            Alert.alert('Location Error', 'Unable to get your location. Please check permissions.');
+            Alert.alert('Location', locationTroubleLine('unavailable'));
           }
         } else {
           console.log('Location permission denied');
           setIsLoadingGPS(false);
-          Alert.alert('Permission Denied', 'Location permission is required for GPS tracking.');
+          Alert.alert('Location', errorCopy('locationMissing').message);
         }
       } catch (err) {
         console.warn('Permission request error:', err);
@@ -195,7 +204,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
       !!onRunStart && onRunStart();
     } catch (error) {
       console.error('Failed to start run:', error);
-      Alert.alert('Error', 'Failed to start run. Please check location permissions.');
+      Alert.alert('Run', trackingStartFailedLine());
     }
   };
 
@@ -265,7 +274,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
       onRunStop?.(runData);
     } catch (error) {
       console.error('Failed to stop run:', error);
-      Alert.alert('Error', 'Failed to stop run.');
+      Alert.alert('Run', trackingStopFailedLine());
     }
   };
 
@@ -366,13 +375,13 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
               },
             ]}
           >
-            <Text style={styles.eligibilityText}>🏰 Territory Eligible!</Text>
+            <Text style={styles.eligibilityText}>{claimEligibleLine()}</Text>
           </Animated.View>
         )}
       </View>
 
       <View style={styles.statsContainer}>
-        <Text style={styles.statsTitle}>Current Run</Text>
+        <Text style={styles.statsTitle}>{mobileTitle('currentRun')}</Text>
         <View style={styles.statsRow}>
           <Text style={styles.statLabel}>Distance:</Text>
           <Text style={styles.statValue}>{(distance / 1000).toFixed(2)} km</Text>
@@ -386,7 +395,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
           <Text style={styles.statValue}>{(speed * 3.6).toFixed(1)} km/h</Text>
         </View>
         <Text style={styles.locationText}>
-          📍 {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+          {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
         </Text>
       </View>
 
@@ -398,7 +407,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
               onPress={handleStartRun}
               activeOpacity={0.8}
             >
-              <Text style={styles.primaryButtonText}>🏃‍♂️ Start Run</Text>
+              <Text style={styles.primaryButtonText}>{runStartLine()}</Text>
             </TouchableOpacity>
           </Animated.View>
         ) : (
@@ -409,7 +418,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
                 onPress={handlePauseRun}
                 activeOpacity={0.8}
               >
-                <Text style={styles.secondaryButtonText}>⏸️ Pause</Text>
+                <Text style={styles.secondaryButtonText}>Pause</Text>
               </TouchableOpacity>
             </Animated.View>
 
@@ -419,7 +428,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
                 onPress={handleStopRun}
                 activeOpacity={0.8}
               >
-                <Text style={styles.stopButtonText}>⏹️ Stop Run</Text>
+                <Text style={styles.stopButtonText}>Finish run</Text>
               </TouchableOpacity>
             </Animated.View>
           </View>
@@ -432,7 +441,8 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
               onPress={handleResumeRun}
               activeOpacity={0.8}
             >
-              <Text style={styles.resumeButtonText}>▶️ Resume</Text>
+              {' '}
+              <Text style={styles.resumeButtonText}>Carry on</Text>
             </TouchableOpacity>
           </Animated.View>
         )}
@@ -451,7 +461,7 @@ const GPSTrackingComponent: React.FC<GPSTrackingProps> = ({ onRunStart, onRunSto
           style={styles.aiCoachingToggle}
           onPress={() => setShowAICoaching(!showAICoaching)}
         >
-          <Text style={styles.aiCoachingToggleText}>{showAICoaching ? '🤖' : '🤖'}</Text>
+          <Text style={styles.aiCoachingToggleText}>Coach</Text>
         </TouchableOpacity>
       )}
     </View>

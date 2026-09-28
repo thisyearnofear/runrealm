@@ -5,6 +5,10 @@
  * PERFORMANT: React.memo optimized
  */
 
+import {
+  walletConnectFailedLine,
+  walletConnectingLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MobileWalletState, MobileWeb3Adapter } from '../services/MobileWeb3Adapter';
@@ -35,7 +39,7 @@ export const WalletButton: React.FC<WalletButtonProps> = React.memo(
         const walletInfo = await web3Adapter.connectWallet();
         onConnect?.(walletInfo.address);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to connect wallet';
+        const errorMessage = error instanceof Error ? error.message : walletConnectFailedLine();
         console.error('Wallet connection failed:', error);
         onError?.(errorMessage);
       }
@@ -55,7 +59,7 @@ export const WalletButton: React.FC<WalletButtonProps> = React.memo(
       return (
         <TouchableOpacity style={[styles.button, styles.connecting, style]} disabled>
           <ActivityIndicator color="#fff" size="small" />
-          <Text style={styles.buttonText}>Connecting...</Text>
+          <Text style={styles.buttonText}>{walletConnectingLine()}</Text>
         </TouchableOpacity>
       );
     }
@@ -91,8 +95,7 @@ export const WalletButton: React.FC<WalletButtonProps> = React.memo(
           onPress={handleConnect}
           activeOpacity={0.8}
         >
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.buttonText}>Retry Connection</Text>
+          <Text style={styles.buttonText}>Try again</Text>
         </TouchableOpacity>
       );
     }
@@ -104,8 +107,7 @@ export const WalletButton: React.FC<WalletButtonProps> = React.memo(
         onPress={handleConnect}
         activeOpacity={0.8}
       >
-        <Text style={styles.walletIcon}>🦊</Text>
-        <Text style={styles.buttonText}>Connect Wallet</Text>
+        <Text style={styles.buttonText}>Connect a wallet</Text>
       </TouchableOpacity>
     );
   }

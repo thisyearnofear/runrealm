@@ -12,6 +12,7 @@ import {
   WalletInfo,
   Web3Service,
 } from '@runrealm/shared-core/services/web3-service';
+import { walletConnectFailedLine } from '@runrealm/shared-core/utils/atlas-voice';
 
 /**
  * Mobile-specific wallet connection state
@@ -135,7 +136,7 @@ export class MobileWeb3Adapter extends BaseService {
 
       return walletInfo;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to connect wallet';
+      const errorMessage = error instanceof Error ? error.message : walletConnectFailedLine();
       this.updateState({
         connecting: false,
         error: errorMessage,
@@ -164,7 +165,7 @@ export class MobileWeb3Adapter extends BaseService {
     try {
       await this.web3Service.switchNetwork(chainId);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to switch network';
+      const errorMessage = error instanceof Error ? error.message : walletConnectFailedLine();
       this.updateState({ error: errorMessage });
       throw error;
     }

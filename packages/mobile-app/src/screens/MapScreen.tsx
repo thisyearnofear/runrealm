@@ -6,6 +6,11 @@ import {
 } from '@runrealm/shared-core/services/run-tracking-service';
 import { TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
+import {
+  routeReadyLine,
+  runNotFiledLine,
+  workingLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import type { ComponentType } from 'react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
@@ -115,7 +120,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
         await saveRunToHistory(completedRun);
       } catch (error) {
         console.error('Failed to save run to history:', error);
-        Alert.alert('Warning', 'Run completed but failed to save to history');
+        Alert.alert('Run history', runNotFiledLine());
       }
 
       setCompletedRunData(completedRun);
@@ -161,7 +166,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
           backgroundColor: '#1a1a1a',
         }}
       >
-        <Text style={{ color: '#fff', fontSize: 18 }}>Loading map...</Text>
+        <Text style={{ color: '#fff', fontSize: 18 }}>{workingLine('territoryLoad')}</Text>
       </View>
     );
   }
@@ -178,7 +183,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
       }));
       mapAdapter.drawSuggestedRoute(runPoints);
     }
-    Alert.alert('Route Selected', `Route of ${(route.distance / 1000).toFixed(1)}km has been set`);
+    Alert.alert('Route', routeReadyLine());
   };
 
   return (

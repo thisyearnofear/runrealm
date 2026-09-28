@@ -7,6 +7,14 @@
 
 import { RunSession } from '@runrealm/shared-core/services/run-tracking-service';
 import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
+import {
+  claimConfirmPromptLine,
+  claimFiledLine,
+  claimingLine,
+  claimNeedsWalletLine,
+  errorCopy,
+  mobileTitle,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -38,9 +46,7 @@ export const TerritoryClaimModal: React.FC<TerritoryClaimModalProps> = React.mem
     const handleClaim = async () => {
       // Check wallet connection
       if (!web3Adapter.isConnected()) {
-        Alert.alert('Wallet Not Connected', 'Please connect your wallet to claim territories.', [
-          { text: 'OK' },
-        ]);
+        Alert.alert('A deed needs a holder', claimNeedsWalletLine(), [{ text: 'Understood' }]);
         return;
       }
 
@@ -60,13 +66,16 @@ export const TerritoryClaimModal: React.FC<TerritoryClaimModalProps> = React.mem
             handleClose();
           }, 2000);
         } else {
-          throw new Error(claimResult.error || 'Failed to claim territory');
+          throw new Error(claimResult.error || 'claim did not go through');
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to claim territory';
+        const errorMessage = error instanceof Error ? error.message : 'claim did not go through';
         console.error('Territory claim failed:', error);
 
-        Alert.alert('Claim Failed', errorMessage, [{ text: 'OK', onPress: handleClose }]);
+        // The claim did not go through — say so without blaming the runner.
+        Alert.alert('The claim', errorCopy('claimFailed').message, [
+          { text: 'Close', onPress: handleClose },
+        ]);
 
         onError?.(errorMessage);
         setClaiming(false);
@@ -98,7 +107,7 @@ export const TerritoryClaimModal: React.FC<TerritoryClaimModalProps> = React.mem
           <View style={styles.modal}>
             {claimStep === 'preview' && (
               <>
-                <Text style={styles.title}>🏰 Claim Territory</Text>
+                <Text style={styles.title}>{mobileTitle('claim')}</Text>
 
                 <ScrollView style={styles.content}>
                   <View style={styles.infoCard}>
@@ -151,8 +160,8 @@ export const TerritoryClaimModal: React.FC<TerritoryClaimModalProps> = React.mem
 
                   <View style={styles.notice}>
                     <Text style={styles.noticeText}>
-                      ⚠️ Claiming requires a blockchain transaction. Make sure your wallet is
-                      connected.
+                      A deed is written to the chain, so your wallet signs it. Nothing is spent
+                      until you do.
                     </Text>
                   </View>
                 </ScrollView>
@@ -171,7 +180,7 @@ export const TerritoryClaimModal: React.FC<TerritoryClaimModalProps> = React.mem
                     onPress={handleClaim}
                     disabled={claiming}
                   >
-                    <Text style={styles.claimButtonText}>Claim Territory</Text>
+                    <Text style={styles.claimButtonText}>Claim it</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -180,18 +189,15 @@ export const TerritoryClaimModal: React.FC<TerritoryClaimModalProps> = React.mem
             {claimStep === 'claiming' && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#4CAF50" />
-                <Text style={styles.loadingTitle}>Claiming Territory...</Text>
-                <Text style={styles.loadingText}>
-                  Please confirm the transaction in your wallet
-                </Text>
+                <Text style={styles.loadingTitle}>{claimingLine()}</Text>
+                <Text style={styles.loadingText}>{claimConfirmPromptLine()}</Text>
               </View>
             )}
 
             {claimStep === 'success' && (
               <View style={styles.successContainer}>
-                <Text style={styles.successIcon}>🎉</Text>
-                <Text style={styles.successTitle}>Territory Claimed!</Text>
-                <Text style={styles.successText}>{territoryPreview.name} is now yours</Text>
+                <Text style={styles.successTitle}>The deed is yours</Text>
+                <Text style={styles.successText}>{claimFiledLine(territoryPreview.name)}</Text>
               </View>
             )}
           </View>

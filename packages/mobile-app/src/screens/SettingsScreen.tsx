@@ -1,5 +1,12 @@
 import { ExternalFitnessService } from '@runrealm/shared-core/services/external-fitness-service';
-import React, { useCallback, useEffect, useState } from 'react';
+import {
+  mobileTitle,
+  stravaLinkedLine,
+  stravaLinkFailedLine,
+  syncFailedLine,
+  workingLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -20,10 +27,6 @@ export const SettingsScreen: React.FC = () => {
   const [fitnessService] = useState(() => new ExternalFitnessService());
   const [preferenceService] = useState(() => new MobilePreferenceService());
 
-  const handleLogout = useCallback(() => {
-    console.error('not implemented');
-  }, []);
-
   // Load preferences on mount
   useEffect(() => {
     // Handle Strava OAuth callback via deep linking
@@ -35,7 +38,7 @@ export const SettingsScreen: React.FC = () => {
           const error = url.searchParams.get('error');
 
           if (error) {
-            Alert.alert('Connection Failed', `Strava error: ${error}`);
+            Alert.alert('Strava', syncFailedLine('Strava'));
             return;
           }
 
@@ -43,10 +46,11 @@ export const SettingsScreen: React.FC = () => {
             fitnessService
               .completeStravaConnection(event.url)
               .then(() => {
-                Alert.alert('Success', 'Strava connected successfully!');
+                Alert.alert('Strava', stravaLinkedLine());
               })
               .catch((err) => {
-                Alert.alert('Error', `Failed to complete connection: ${err.message}`);
+                console.error('Strava connection did not complete:', err);
+                Alert.alert('Strava', stravaLinkFailedLine());
               });
           }
         }
@@ -111,10 +115,8 @@ export const SettingsScreen: React.FC = () => {
       // Open Strava OAuth in browser - callback will be handled via deep linking
       Linking.openURL(authUrl);
     } catch (error) {
-      Alert.alert(
-        'Error',
-        `Failed to connect to Strava: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      console.error('Strava auth could not start:', error);
+      Alert.alert('Strava', stravaLinkFailedLine());
     }
   };
 
@@ -129,19 +131,19 @@ export const SettingsScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>⚙️ Settings</Text>
-        <Text style={styles.loadingText}>Loading settings...</Text>
+        <Text style={styles.title}>{mobileTitle('settings')}</Text>
+        <Text style={styles.loadingText}>{workingLine('walletConnect')}</Text>
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>⚙️ Settings</Text>
+      <Text style={styles.title}>{mobileTitle('settings')}</Text>
 
       {/* Units Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📏 Units</Text>
+        <Text style={styles.sectionTitle}>{mobileTitle('units')}</Text>
         <View style={styles.settingRow}>
           <Text style={styles.settingLabel}>Metric (km, m)</Text>
           <Switch value={units === 'metric'} onValueChange={handleUnitsChange} />
@@ -154,29 +156,29 @@ export const SettingsScreen: React.FC = () => {
 
       {/* Notifications Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🔔 Notifications</Text>
+        <Text style={styles.sectionTitle}>{mobileTitle('notifications')}</Text>
         <View style={styles.settingRow}>
-          <Text style={styles.settingLabel}>Enable Notifications</Text>
+          <Text style={styles.settingLabel}>Milestone notes</Text>
           <Switch value={notifications} onValueChange={handleNotificationsChange} />
         </View>
         <View style={styles.settingRow}>
-          <Text style={styles.settingLabel}>Background Tracking</Text>
+          <Text style={styles.settingLabel}>Keep tracing with the screen off</Text>
           <Switch value={backgroundTracking} onValueChange={handleBackgroundTrackingChange} />
         </View>
       </View>
 
       {/* Fitness Integration Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🏃 Fitness Integration</Text>
+        <Text style={styles.sectionTitle}>{mobileTitle('fitness')}</Text>
         <TouchableOpacity style={styles.settingRow} onPress={handleStravaConnect}>
-          <Text style={styles.settingLabel}>Connect Strava</Text>
+          <Text style={styles.settingLabel}>Link Strava</Text>
           <Text style={styles.settingValue}>↗️</Text>
         </TouchableOpacity>
       </View>
 
       {/* About Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ℹ️ About</Text>
+        <Text style={styles.sectionTitle}>{mobileTitle('about')}</Text>
         <TouchableOpacity style={styles.settingRow} onPress={handlePrivacyPolicy}>
           <Text style={styles.settingLabel}>Privacy Policy</Text>
           <Text style={styles.settingValue}>↗️</Text>
@@ -190,11 +192,6 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.settingValue}>1.0.0</Text>
         </View>
       </View>
-
-      {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>🚪 Logout</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 };

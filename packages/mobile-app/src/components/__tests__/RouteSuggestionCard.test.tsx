@@ -3,6 +3,12 @@
  */
 
 import { AIService } from '@runrealm/shared-core/services/ai-service';
+import {
+  mobileTitle,
+  routeReadyLine,
+  routeSearchFailedLine,
+  routeSearchLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { RouteSuggestionCard } from '../RouteSuggestionCard';
 
@@ -42,7 +48,7 @@ describe('RouteSuggestionCard', () => {
   it('should not render when location is null', () => {
     const { queryByText } = render(<RouteSuggestionCard currentLocation={null} />);
 
-    expect(queryByText('📍 Suggested Route')).toBeNull();
+    expect(queryByText(mobileTitle('route'))).toBeNull();
   });
 
   it('should render loading state initially', () => {
@@ -50,7 +56,7 @@ describe('RouteSuggestionCard', () => {
 
     const { getByText } = render(<RouteSuggestionCard currentLocation={mockLocation} />);
 
-    expect(getByText('Finding route...')).toBeTruthy();
+    expect(getByText(routeSearchLine())).toBeTruthy();
   });
 
   it('should display route information when loaded', async () => {
@@ -74,7 +80,7 @@ describe('RouteSuggestionCard', () => {
     );
 
     await waitFor(() => {
-      fireEvent.press(getByText('Use This Route'));
+      fireEvent.press(getByText(routeReadyLine()));
       expect(onRouteSelected).toHaveBeenCalledWith({
         coordinates: mockRoute.suggestedRoute.coordinates.map(([lng, lat]) => ({ lat, lng })),
         distance: mockRoute.suggestedRoute.distance,
@@ -90,7 +96,7 @@ describe('RouteSuggestionCard', () => {
     const { getByText } = render(<RouteSuggestionCard currentLocation={mockLocation} />);
 
     await waitFor(() => {
-      expect(getByText('Route suggestions unavailable')).toBeTruthy();
+      expect(getByText(routeSearchFailedLine())).toBeTruthy();
     });
   });
 

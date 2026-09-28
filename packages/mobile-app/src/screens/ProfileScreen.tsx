@@ -4,6 +4,11 @@ import {
 } from '@runrealm/shared-core/services/achievement-service';
 import { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
 import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
+import {
+  emptyStateLine,
+  mobileTitle,
+  nextActionHint,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GhostManagement } from '../components/GhostManagement';
@@ -79,7 +84,7 @@ export const ProfileScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>👤 Your Profile</Text>
+      <Text style={styles.title}>{mobileTitle('profile')}</Text>
 
       {/* Stats Overview */}
       <View style={styles.statsContainer}>
@@ -104,7 +109,7 @@ export const ProfileScreen: React.FC = () => {
       {/* Achievements */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🏆 Achievements</Text>
+          <Text style={styles.sectionTitle}>{mobileTitle('achievements')}</Text>
           <Text style={styles.sectionSubtitle}>{unlockedAchievements.length} unlocked</Text>
         </View>
         {unlockedAchievements.length > 0 ? (
@@ -120,8 +125,8 @@ export const ProfileScreen: React.FC = () => {
           </View>
         ) : (
           <View style={styles.emptySection}>
-            <Text style={styles.emptyText}>No achievements yet</Text>
-            <Text style={styles.emptySubtext}>Complete runs to unlock achievements</Text>
+            <Text style={styles.emptyText}>{emptyStateLine('leaderboard')}</Text>
+            <Text style={styles.emptySubtext}>{nextActionHint('start-run')}</Text>
           </View>
         )}
       </View>
@@ -129,7 +134,7 @@ export const ProfileScreen: React.FC = () => {
       {/* Territories */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🏰 Territories</Text>
+          <Text style={styles.sectionTitle}>{mobileTitle('territories')}</Text>
           <Text style={styles.sectionSubtitle}>{territories.length} claimed</Text>
         </View>
         {territories.length > 0 ? (
@@ -155,7 +160,7 @@ export const ProfileScreen: React.FC = () => {
                       ]}
                     >
                       <Text style={styles.defenseBadgeText}>
-                        {getDefenseIcon(territory.defenseStatus)} {territory.defenseStatus}
+                        {getDefenseLabel(territory.defenseStatus ?? 'unknown')}
                       </Text>
                     </View>
                   )}
@@ -177,7 +182,7 @@ export const ProfileScreen: React.FC = () => {
                       ]}
                     />
                     <Text style={styles.activityText}>
-                      {territory.activityPoints}/1000 activity points
+                      {territory.activityPoints}/1000 — a walk through it tops this up
                     </Text>
                   </View>
                 )}
@@ -186,8 +191,8 @@ export const ProfileScreen: React.FC = () => {
           </View>
         ) : (
           <View style={styles.emptySection}>
-            <Text style={styles.emptyText}>No territories claimed</Text>
-            <Text style={styles.emptySubtext}>Complete eligible runs to claim territories</Text>
+            <Text style={styles.emptyText}>{emptyStateLine('claims')}</Text>
+            <Text style={styles.emptySubtext}>{nextActionHint('claim-ground')}</Text>
           </View>
         )}
       </View>
@@ -256,7 +261,7 @@ export const ProfileScreen: React.FC = () => {
                       setShowGhostManagement(true);
                     }}
                   >
-                    <Text style={styles.ghostDeployButtonText}>👻 Deploy Ghost</Text>
+                    <Text style={styles.ghostDeployButtonText}>Post a ghost</Text>
                   </TouchableOpacity>
                 </ScrollView>
               </>
@@ -274,18 +279,19 @@ export const ProfileScreen: React.FC = () => {
   );
 };
 
-const getDefenseIcon = (status: string): string => {
+/** Defense state as a word, not a symbol — the badge has to read out loud. */
+const getDefenseLabel = (status: string): string => {
   switch (status) {
     case 'strong':
-      return '🛡️';
+      return 'Holding well';
     case 'moderate':
-      return '⚠️';
+      return 'Holding';
     case 'vulnerable':
-      return '🔶';
+      return 'Fading';
     case 'claimable':
-      return '🚨';
+      return 'Open';
     default:
-      return '📍';
+      return 'Unsurveyed';
   }
 };
 

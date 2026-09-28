@@ -3,6 +3,10 @@
  */
 
 import { Challenge, ProgressionService } from '@runrealm/shared-core/services/progression-service';
+import {
+  challengeRewardFailedLine,
+  challengeRewardLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { ChallengeCard } from '../ChallengeCard';
@@ -68,7 +72,7 @@ describe('ChallengeCard', () => {
       <ChallengeCard challenge={completedChallenge} progressionService={mockProgressionService} />
     );
 
-    expect(getByText('Claim Reward')).toBeTruthy();
+    expect(getByText('Claim it')).toBeTruthy();
   });
 
   it('should not show claim button when challenge is claimed', () => {
@@ -77,8 +81,8 @@ describe('ChallengeCard', () => {
       <ChallengeCard challenge={claimedChallenge} progressionService={mockProgressionService} />
     );
 
-    expect(queryByText('Claim Reward')).toBeNull();
-    expect(getByText('✓ Claimed')).toBeTruthy();
+    expect(queryByText('Claim it')).toBeNull();
+    expect(getByText('Collected')).toBeTruthy();
   });
 
   it('should call claimChallengeReward when claim button is pressed', async () => {
@@ -93,7 +97,7 @@ describe('ChallengeCard', () => {
       />
     );
 
-    const claimButton = getByText('Claim Reward');
+    const claimButton = getByText('Claim it');
     fireEvent.press(claimButton);
 
     await waitFor(() => {
@@ -101,7 +105,7 @@ describe('ChallengeCard', () => {
     });
   });
 
-  it('should show success alert after successful claim', async () => {
+  it('should show the collected note after a successful claim', async () => {
     const completedChallenge = { ...mockChallenge, completed: true };
     (mockProgressionService.claimChallengeReward as jest.Mock).mockResolvedValue(undefined);
 
@@ -109,14 +113,14 @@ describe('ChallengeCard', () => {
       <ChallengeCard challenge={completedChallenge} progressionService={mockProgressionService} />
     );
 
-    fireEvent.press(getByText('Claim Reward'));
+    fireEvent.press(getByText('Claim it'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Success', 'Reward claimed: 100 XP');
+      expect(Alert.alert).toHaveBeenCalledWith('Challenge', challengeRewardLine(100, 'xp'));
     });
   });
 
-  it('should show error alert on claim failure', async () => {
+  it('should say the claim did not land, without blaming the runner', async () => {
     const completedChallenge = { ...mockChallenge, completed: true };
     const error = new Error('Insufficient balance');
     (mockProgressionService.claimChallengeReward as jest.Mock).mockRejectedValue(error);
@@ -125,10 +129,10 @@ describe('ChallengeCard', () => {
       <ChallengeCard challenge={completedChallenge} progressionService={mockProgressionService} />
     );
 
-    fireEvent.press(getByText('Claim Reward'));
+    fireEvent.press(getByText('Claim it'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Insufficient balance');
+      expect(Alert.alert).toHaveBeenCalledWith('Challenge', challengeRewardFailedLine());
     });
   });
 

@@ -5,6 +5,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MOBILE_ONBOARDING, onboardingWelcomeLine } from '@runrealm/shared-core/utils/atlas-voice';
 import React, { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -26,31 +27,9 @@ const MobileOnboarding: React.FC<MobileOnboardingProps> = ({ onComplete, onSkip 
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
-  // Mobile onboarding steps - defined directly in component for simplicity
-  const steps: OnboardingStep[] = [
-    {
-      id: 'mobile-welcome',
-      title: 'Welcome to RunRealm Mobile! 📱',
-      description: 'Track runs, claim territories, earn rewards.',
-    },
-    {
-      id: 'mobile-gps',
-      title: 'GPS Tracking 🛰️',
-      description: 'Grant location permission to track your runs and discover nearby territories.',
-    },
-    {
-      id: 'mobile-first-run',
-      title: 'Start Your First Run 🏃‍♂️',
-      description:
-        'Tap "Start Run" to begin tracking. Complete loops to become eligible for territory claiming!',
-    },
-    {
-      id: 'mobile-territories',
-      title: 'Claim Territories 🏰',
-      description:
-        'Run in loops to create claimable territories. Territories are NFTs on the ZetaChain blockchain.',
-    },
-  ];
+  // The tour copy lives with every other player-facing line, so the phone
+  // says the same thing the web app does.
+  const steps: OnboardingStep[] = MOBILE_ONBOARDING.map((step) => ({ ...step }));
 
   useEffect(() => {
     (async () => {
@@ -113,6 +92,9 @@ const MobileOnboarding: React.FC<MobileOnboardingProps> = ({ onComplete, onSkip 
         <View style={styles.content}>
           <Text style={styles.title}>{step.title}</Text>
           <Text style={styles.description}>{step.description}</Text>
+          {currentStep === steps.length - 1 && (
+            <Text style={styles.description}>{onboardingWelcomeLine()}</Text>
+          )}
         </View>
 
         {/* Navigation */}
@@ -129,12 +111,12 @@ const MobileOnboarding: React.FC<MobileOnboardingProps> = ({ onComplete, onSkip 
           <View style={styles.spacer} />
 
           <TouchableOpacity style={[styles.button, styles.skipButton]} onPress={skipOnboarding}>
-            <Text style={styles.skipButtonText}>Skip</Text>
+            <Text style={styles.skipButtonText}>Not now</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={nextStep}>
             <Text style={styles.primaryButtonText}>
-              {currentStep === steps.length - 1 ? 'Get Started!' : 'Next'}
+              {currentStep === steps.length - 1 ? 'Start walking' : 'Next'}
             </Text>
           </TouchableOpacity>
         </View>

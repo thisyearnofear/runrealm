@@ -9,6 +9,15 @@ import {
   GhostRunnerService,
 } from '@runrealm/shared-core/services/ghost-runner-service';
 import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
+import {
+  ghostDeployedLine,
+  ghostDeployFailedLine,
+  ghostRosterFailedLine,
+  ghostUpgradedLine,
+  ghostUpgradeFailedLine,
+  mobileTitle,
+  noPostWorthTakingLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -60,7 +69,7 @@ export const GhostManagement: React.FC<GhostManagementProps> = ({ visible, onClo
       setTerritories(vulnerableTerritories);
     } catch (error) {
       console.error('Failed to load ghost data:', error);
-      Alert.alert('Error', 'Failed to load ghost data');
+      Alert.alert('Ghost runners', ghostRosterFailedLine());
     } finally {
       setLoading(false);
     }
@@ -71,27 +80,28 @@ export const GhostManagement: React.FC<GhostManagementProps> = ({ visible, onClo
       setDeploying(true);
       await ghostService.deployGhost(ghostId, territoryId);
 
-      Alert.alert('Success', 'Ghost deployed successfully!');
+      Alert.alert('Ghost posted', ghostDeployedLine());
       await loadData(); // Refresh data
       setSelectedGhost(null); // Close details
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to deploy ghost';
-      Alert.alert('Deployment Failed', errorMessage);
+      console.error('Failed to deploy ghost:', error);
+      Alert.alert('Ghost post', ghostDeployFailedLine());
     } finally {
       setDeploying(false);
     }
   };
 
   const handleUpgrade = async (ghostId: string) => {
+    const from = ghosts.find((g) => g.id === ghostId);
     try {
       setDeploying(true);
       await ghostService.upgradeGhost(ghostId);
 
-      Alert.alert('Success', 'Ghost upgraded successfully!');
+      Alert.alert('Ghost sharpened', ghostUpgradedLine((from?.level ?? 1) + 1));
       await loadData(); // Refresh data
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upgrade ghost';
-      Alert.alert('Upgrade Failed', errorMessage);
+      console.error('Failed to upgrade ghost:', error);
+      Alert.alert('Ghost upgrade', ghostUpgradeFailedLine());
     } finally {
       setDeploying(false);
     }
@@ -135,9 +145,8 @@ export const GhostManagement: React.FC<GhostManagementProps> = ({ visible, onClo
         <View style={styles.modal}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>👻 Ghost Runners</Text>
+            <Text style={styles.title}>{mobileTitle('ghosts')}</Text>
             <View style={styles.balanceContainer}>
-              <Text style={styles.balanceIcon}>💎</Text>
               <Text style={styles.balanceAmount}>{realmBalance.toFixed(0)} REALM</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -213,12 +222,10 @@ export const GhostManagement: React.FC<GhostManagementProps> = ({ visible, onClo
                 </View>
               ) : (
                 <View style={styles.deploySection}>
-                  <Text style={styles.deployTitle}>Deploy to Territory</Text>
+                  <Text style={styles.deployTitle}>Post to a claim</Text>
                   <Text style={styles.deployCost}>Cost: {selectedGhost.deployCost} REALM</Text>
                   {territories.length === 0 ? (
-                    <Text style={styles.noTerritoriesText}>
-                      No vulnerable territories available
-                    </Text>
+                    <Text style={styles.noTerritoriesText}>{noPostWorthTakingLine()}</Text>
                   ) : (
                     <ScrollView style={styles.territoriesList}>
                       {territories.map((territory) => (
@@ -246,9 +253,10 @@ export const GhostManagement: React.FC<GhostManagementProps> = ({ visible, onClo
             <ScrollView style={styles.content}>
               {ghosts.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyIcon}>🏃</Text>
                   <Text style={styles.emptyText}>No ghost runners yet</Text>
-                  <Text style={styles.emptySubtext}>Complete runs to unlock ghost runners!</Text>
+                  <Text style={styles.emptySubtext}>
+                    Finish a run and the first one joins the roll.
+                  </Text>
                 </View>
               ) : (
                 <View style={styles.ghostList}>
