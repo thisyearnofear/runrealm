@@ -56,6 +56,34 @@ export interface GhostRaceResult {
   completedAt: number;
 }
 
+/**
+ * How far a completed run actually was, in metres.
+ *
+ * The `run:completed` payload has carried two shapes: `{ run, stats,
+ * territoryEligible }` from `RunTrackingService`, and `{ distance, duration }`
+ * from the replay/demo emitters. Rather than pick one and be wrong on the
+ * other, this reads the first non-finite-avoiding number it finds and returns
+ * `0` when there is none — so a malformed payload earns nothing instead of
+ * poisoning a persisted balance with `NaN`.
+ */
+export function readCompletedRunDistance(data: unknown): number {
+  if (!data || typeof data !== 'object') return 0;
+  const payload = data as Record<string, unknown>;
+
+  const candidates: unknown[] = [
+    (payload.run as Record<string, unknown> | undefined)?.totalDistance,
+    (payload.stats as Record<string, unknown> | undefined)?.distance,
+    payload.distance,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'number' && Number.isFinite(candidate) && candidate > 0) {
+      return candidate;
+    }
+  }
+  return 0;
+}
+
 export class GhostRunnerService extends BaseService {
   private static instance: GhostRunnerService;
   private aiService: AIService;
@@ -96,7 +124,8 @@ export class GhostRunnerService extends BaseService {
 
   private setupEventListeners(): void {
     this.subscribe('run:completed', (data) => this.onRunCompleted(data));
-    this.subscribe('territory:claimed', () => this.checkGhostUnlocks());
+    // Claiming land can also tip the run count, so it stays a trigger — but
+    // `onRunCompleted` is where the first-run unlock actually happens.
     // Bounty winnings credit the single local runner (Phase A escrow).
     this.subscribe('bounty:claimed', (data) => {
       void this.creditRealm(data.amountRealm, 'bounty_claimed');
@@ -629,25 +658,51 @@ export class GhostRunnerService extends BaseService {
     }
   }
 
-  private async onRunCompleted(data: any): Promise<void> {
-    // Award REALM tokens for completing runs (~100 REALM per 5K)
-    const realmEarned = Math.floor(data.distance / GAME_RULES.economy.realmPer50Meters);
-    this.userRealmBalance += realmEarned;
-    await this.saveRealmBalance();
+  /**
+   * Award REALM for a finished run, and check what the run count has earned.
+   *
+   * Two things were wrong here and both are the same mistake.
+   *
+   * The reward read `data.distance`. The `run:completed` payload is
+   * `{ run, stats, territoryEligible }` — there is no top-level `distance` — so
+   * the award was `Math.floor(undefined / 50)` = `NaN` on *every* run. The
+   * balance is persisted and its validator rejects non-finite values, so the
+   * effect was that a runner's balance was quietly reset to zero on the next
+   * launch. Nobody saw an error, because `saveRealmBalance` succeeded: it
+   * wrote `NaN` faithfully.
+   *
+   * The unlock check was subscribed to `territory:claimed`, which is a
+   * different act from finishing a run. A runner who ran and chose not to
+   * claim was never offered their first ghost, which is the whole reward for
+   * the first run.
+   */
+  private async onRunCompleted(data: unknown): Promise<void> {
+    const distance = readCompletedRunDistance(data);
+    // Guard rather than trust: a negative or absent distance is not a reward,
+    // and adding NaN to a persisted balance is unrecoverable.
+    if (distance > 0) {
+      const realmEarned = Math.floor(distance / GAME_RULES.economy.realmPer50Meters);
+      this.userRealmBalance += realmEarned;
+      await this.saveRealmBalance();
+      this.safeEmit('realm:earned', { amount: realmEarned, reason: 'run_completed' });
+    }
 
-    this.safeEmit('realm:earned', { amount: realmEarned, reason: 'run_completed' });
+    this.checkGhostUnlocks();
   }
 
   private checkGhostUnlocks(): void {
     const runs = this.runTrackingService.getRunHistory();
 
     // Unlock all-rounder after first run
-    if (runs.length === 1 && !this.hasGhostType('allrounder')) {
-      this.unlockGhost('allrounder', 'First run completed');
+    if (runs.length >= 1 && !this.hasGhostType('allrounder')) {
+      void this.unlockGhost('allrounder', 'First run completed');
     }
 
-    // Unlock specialist after 10 runs
-    if (runs.length === 10 && this.ghosts.size === 1) {
+    // Offer the specialist choice once there is real history behind it. The
+    // count is `>=` rather than `===` so a runner who installed the app with
+    // history already stored is offered the same thing as one who got here
+    // one run at a time, and a re-check can never skip past the threshold.
+    if (runs.length >= 10 && this.ghosts.size >= 1) {
       this.safeEmit('ghost:unlockAvailable', {
         message: 'Choose your specialist ghost!',
         types: ['sprinter', 'endurance', 'hill'],
