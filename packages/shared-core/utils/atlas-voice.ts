@@ -1069,6 +1069,22 @@ export const NEIGHBOURHOOD_COPY = {
   subline: 'One neighbourhood. Three kinds of outing.',
   instruction: 'Move 500m to collect the cells you visit. No loop needed.',
   honestNote: 'Atlas saved locally; not registered ownership.',
+  emptyAtlasNote:
+    'A qualifying real outing can be saved on this device; previews and samples do not count. This is not registered ownership.',
+  savedStatus: (outings: number, cells: number) =>
+    `${outings} credited outing${outings === 1 ? '' : 's'} · ${cells} collected block${cells === 1 ? '' : 's'} saved on this device.`,
+  ownershipTitle: 'What do I own?',
+  ownershipExplanation:
+    'Collected blocks are a local atlas on this device, not NFTs. Registered territories use a separate eligible-run and wallet flow. Advanced tools shows territory features, but these neighbourhood outings do not register or mint blocks. Linking a wallet or passkey does not sync this atlas to another device.',
+  receiptCredit: (newCells: number, revisited: number) =>
+    `${newCells} new block${newCells === 1 ? '' : 's'} · ${revisited} revisited`,
+  receiptNoCredit: 'No blocks credited this outing.',
+  receiptSaved: 'Atlas saved on this device. It does not transfer with a phone link.',
+  receiptOwnership: 'Neighbourhood blocks are not registered ownership or NFTs.',
+  receiptNotSaved:
+    'Atlas not saved on this device. Keep this page open if you want to review the result.',
+  runCreditNote:
+    'Only GPS fixes accurate within 50m can credit blocks. Complete at least 500m, then finish your outing.',
   notSavedNote: 'Kept in memory but not saved on this device.',
   legendLabel: 'Map legend',
   legend: {
@@ -1099,7 +1115,7 @@ export const NEIGHBOURHOOD_COPY = {
     headline: 'Your neighbourhood is uncharted.',
     lede: 'Every street you run develops onto this map. Start with one outing — no loop, no route to plan.',
     requirement:
-      'Start asks for your location. Cover 500m with a clear GPS signal to collect the cells you pass.',
+      'Previewing is optional. Start run asks for location. Finish at least 500m with enough GPS fixes accurate within 50m to collect blocks you visit. Your first qualifying run sets your neighbourhood.',
   },
   desktop: {
     invitation: 'Outings happen on your phone. Explore the map here first.',
@@ -1162,7 +1178,8 @@ export const NEIGHBOURHOOD_COPY = {
   gpsStatus: {
     fix: (meters: number) => `GPS ±${Math.round(meters)}m`,
     unknown: 'GPS accuracy unknown',
-    poor: (meters: number) => `GPS ±${Math.round(meters)}m — weak fix`,
+    poor: (meters: number) =>
+      `GPS ±${Math.round(meters)}m — weak fix. Only fixes within 50m count toward collected blocks; wait for a clearer signal.`,
     stale: (seconds: number) => `Last fix ${Math.round(seconds)}s ago`,
     waiting: 'Waiting for GPS…',
   },

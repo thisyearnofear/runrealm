@@ -342,6 +342,15 @@ export class NeighbourhoodExperience {
     this.renderGoalLocks();
     const next = this.root.querySelector('.nh-nextstep');
     if (next) next.textContent = this.nextStepLine();
+    const saved = this.root.querySelector('.nh-saved-status');
+    if (saved) saved.textContent = this.savedStatusLine();
+    const honest = this.root.querySelector('.nh-honest');
+    if (honest) {
+      honest.textContent =
+        this.isFirstVisit() && this.state.persisted
+          ? NEIGHBOURHOOD_COPY.emptyAtlasNote
+          : this.honestLine();
+    }
   }
 
   private recommendedGoal(): NeighbourhoodGoal {
@@ -357,6 +366,19 @@ export class NeighbourhoodExperience {
 
   private honestLine(): string {
     return this.state.persisted ? NEIGHBOURHOOD_COPY.honestNote : NEIGHBOURHOOD_COPY.notSavedNote;
+  }
+
+  private savedStatusLine(): string {
+    return this.state.persisted
+      ? NEIGHBOURHOOD_COPY.savedStatus(this.state.qualifyingRuns, this.state.collectedCount)
+      : NEIGHBOURHOOD_COPY.notSavedNote;
+  }
+
+  private ownershipBlock(): string {
+    return `<details class="nh-ownership">
+      <summary>${NEIGHBOURHOOD_COPY.ownershipTitle}</summary>
+      <p>${NEIGHBOURHOOD_COPY.ownershipExplanation}</p>
+    </details>`;
   }
 
   private referenceBlock(): string {
@@ -411,6 +433,7 @@ export class NeighbourhoodExperience {
         <div class="nh-guide-body">
           ${laterGoals}
           <div class="nh-ghostline"></div>
+          ${this.ownershipBlock()}
           <button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tourAgain}</button>
           <div class="nh-legend" aria-label="${NEIGHBOURHOOD_COPY.legendLabel}">
             <span class="nh-swatch nh-swatch--unvisited"></span>${NEIGHBOURHOOD_COPY.legend.unvisited}
@@ -446,6 +469,7 @@ export class NeighbourhoodExperience {
             <p class="nh-progress">${NEIGHBOURHOOD_COPY.progressLine(this.state.qualifyingRuns)}</p>
           </header>
           <p class="nh-instruction">${NEIGHBOURHOOD_COPY.instruction}</p>
+          <p class="nh-saved-status">${this.savedStatusLine()}</p>
           <p class="nh-nextstep">${this.nextStepLine()}</p>
           ${this.referenceBlock()}
           <div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${goals
@@ -492,7 +516,7 @@ export class NeighbourhoodExperience {
             }
           </div>
           <div class="nh-celldetail" hidden></div>
-          <p class="nh-honest">${this.honestLine()}</p>
+          <p class="nh-honest">${firstVisit && this.state.persisted ? NEIGHBOURHOOD_COPY.emptyAtlasNote : this.honestLine()}</p>
           ${this.guideBlock(firstVisit)}
           ${firstVisit && !this.tourPromptDismissed ? `<div class="nh-tour-invite"><button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tour}</button><button type="button" class="nh-secondary" data-action="dismiss-tour" aria-label="Dismiss tour invitation">Not now</button></div>` : ''}
           <div class="nh-footer">
@@ -711,6 +735,7 @@ export class NeighbourhoodExperience {
           </div>
           <p class="nh-goalprogress"></p>
           <p class="nh-gps"></p>
+          <p class="nh-run-note">${NEIGHBOURHOOD_COPY.runCreditNote}</p>
           <p class="nh-error" role="alert" hidden></p>
         </div>
         <div class="nh-dock">
@@ -857,7 +882,19 @@ export class NeighbourhoodExperience {
           formatDuration(summary.durationMs)
         )
       : '';
-    const persistedNote = summary && !summary.persisted ? NEIGHBOURHOOD_COPY.notSavedNote : '';
+    const persistedNote = summary?.persisted
+      ? NEIGHBOURHOOD_COPY.receiptSaved
+      : NEIGHBOURHOOD_COPY.receiptNotSaved;
+    const credited = summary
+      ? summary.newCellIds.length + summary.strengthenedCellIds.length > 0
+      : false;
+    const creditLine =
+      summary && credited
+        ? NEIGHBOURHOOD_COPY.receiptCredit(
+            summary.newCellIds.length,
+            summary.strengthenedCellIds.length
+          )
+        : NEIGHBOURHOOD_COPY.receiptNoCredit;
     const challengeBlock =
       summary?.challenge && this.phase === 'summary'
         ? `<p class="nh-challenge">${NEIGHBOURHOOD_COPY.challengeLine(
@@ -891,10 +928,13 @@ export class NeighbourhoodExperience {
           <h2 class="nh-headline">${NEIGHBOURHOOD_COPY.summaryTitle}</h2>
           ${firstGround}
           <p class="nh-summary-meta">${meta}</p>
-          <p class="nh-summary-line">${line}</p>
+          <p class="nh-receipt-credit">${creditLine}</p>
+          ${!credited ? `<p class="nh-summary-line">${line}</p>` : ''}
           ${challengeBlock}
-          <p class="nh-honest">${persistedNote || this.honestLine()}</p>
+          <p class="nh-receipt-save">${persistedNote}</p>
+          <p class="nh-honest">${NEIGHBOURHOOD_COPY.receiptOwnership}</p>
           <p class="nh-nextstep">${this.nextStepLine()}</p>
+          ${this.ownershipBlock()}
           <p class="nh-error" role="alert" hidden></p>
         </div>
         <div class="nh-dock">${dock}</div>

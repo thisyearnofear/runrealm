@@ -25,17 +25,17 @@ const TIER_DISPLAY = {
   guest: {
     icon: '🏃',
     label: 'Guest',
-    copy: 'Your progress is saved on this device. Add a passkey to make it recoverable.',
+    copy: 'Your neighbourhood atlas is saved in this browser only. A passkey does not restore it on another device.',
   },
   passkey: {
     icon: '🔑',
     label: 'Passkey',
-    copy: 'Protected by your device biometrics. No seed phrase, nothing to memorize.',
+    copy: 'Passkey added to this account on this device. Your neighbourhood atlas remains in this browser and cannot be restored from the passkey.',
   },
   wallet: {
     icon: '👛',
     label: 'Wallet linked',
-    copy: 'An external wallet is linked for trading and withdrawals.',
+    copy: 'Wallet linked for trading and withdrawals. Your neighbourhood atlas remains in this browser; linking a wallet does not sync it.',
   },
 } as const;
 

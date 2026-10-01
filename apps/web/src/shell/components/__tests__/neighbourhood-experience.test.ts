@@ -147,6 +147,12 @@ describe('NeighbourhoodExperience', () => {
     expect(requirement).toContain('location');
     expect(requirement).toContain('500m');
     expect(requirement).toContain('GPS');
+    expect(requirement).toContain('50m');
+    expect(requirement.toLowerCase()).toContain('finish');
+    expect(root.querySelector('.nh-honest')?.textContent).toContain(
+      'previews and samples do not count'
+    );
+    expect(root.querySelector('.nh-ownership summary')?.textContent).toBe('What do I own?');
 
     const mainGoals = root.querySelectorAll('.nh-goals:not(.nh-goals--later) .nh-goal');
     expect(mainGoals).toHaveLength(1);
@@ -176,6 +182,9 @@ describe('NeighbourhoodExperience', () => {
       },
     });
     expect(root.querySelector('.nh-progress')?.textContent).toContain('1 outing');
+    expect(root.querySelector('.nh-saved-status')?.textContent).toContain(
+      '3 collected blocks saved on this device'
+    );
     expect(root.querySelectorAll('.nh-goals:not(.nh-goals--later) .nh-goal')).toHaveLength(3);
     expect(root.querySelector('.nh-goals--later')).toBeNull();
     expect(root.querySelector('.nh-requirement')).toBeNull();
@@ -381,6 +390,18 @@ describe('NeighbourhoodExperience', () => {
     expect(root.querySelector('.nh-gps')?.textContent).toContain('Last fix');
   });
 
+  it('explains weak GPS before an outing is finished', () => {
+    const { deps, root } = mount();
+    deps.runTracking.__setRun({
+      status: 'recording',
+      points: [{ lat: 1, lng: 1, accuracy: 75, timestamp: Date.now() }],
+      totalDistance: 100,
+    });
+    deps.bus.emit('run:started', { startPoint: {} } as never);
+    expect(root.querySelector('.nh-gps')?.textContent).toContain('Only fixes within 50m count');
+    expect(root.querySelector('.nh-run-note')?.textContent).toContain('Complete at least 500m');
+  });
+
   it('files an honest finish summary — collected cells, never a claim', () => {
     const { deps, root } = mount();
     deps.bus.emit('neighbourhood:runCompleted', {
@@ -399,9 +420,13 @@ describe('NeighbourhoodExperience', () => {
     } as never);
 
     const text = root.textContent ?? '';
-    expect(text).toContain('2 new cells collected');
-    expect(text).toContain('1 revisited');
-    expect(text).toContain('not registered ownership');
+    expect(root.querySelector('.nh-receipt-credit')?.textContent).toBe(
+      '2 new blocks · 1 revisited'
+    );
+    expect(root.querySelector('.nh-receipt-save')?.textContent).toContain('saved on this device');
+    expect(root.querySelector('.nh-honest')?.textContent).toContain('not registered ownership');
+    expect(root.querySelector('.nh-ownership')?.textContent).toContain('not NFTs');
+    expect(root.querySelector('.nh-ownership')?.textContent).toContain('do not register or mint');
     expect(text).toContain('800 m');
     expect(text).not.toContain('claimed');
     const title = root.querySelector<HTMLElement>('.nh-headline');
@@ -429,7 +454,10 @@ describe('NeighbourhoodExperience', () => {
       },
       state: baseState({ persisted: false }),
     } as never);
-    expect(root.textContent).toContain('not saved on this device');
+    expect(root.querySelector('.nh-receipt-save')?.textContent).toContain(
+      'not saved on this device'
+    );
+    expect(root.querySelector('.nh-receipt-credit')?.textContent).toContain('1 new block');
   });
 
   it('formats challenge pace as m:ss/km, not distorted distance math', () => {
@@ -1006,6 +1034,10 @@ describe('NeighbourhoodExperience arrival and first reward', () => {
     expect(primary.dataset.action).toBe('continue');
     expect(root.querySelector('.nh-summary-celebrate')).toBeNull();
     expect(root.textContent).toContain('too short');
+    expect(root.querySelector('.nh-receipt-credit')?.textContent).toBe(
+      'No blocks credited this outing.'
+    );
+    expect(root.querySelector('.nh-receipt-save')?.textContent).toContain('saved on this device');
     shell.destroy();
   });
 

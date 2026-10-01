@@ -30,6 +30,6 @@ Choose **New here? Take the tour** or open **How it works** and choose **Take th
 
 ## What changes your atlas
 
-A preview, route sketch, or sample does not count as an outing and does not register NFT ownership. Only a qualifying completed real run can develop the local neighbourhood atlas. That ledger is stored on the current device. The app keeps local collection separate from registered territory ownership.
+A preview, route sketch, or sample does not count as an outing or register NFT ownership. Start run requests your location; complete at least 500 m with enough GPS fixes accurate within 50 m to credit blocks in your neighbourhood. A weak signal, short outing, or route outside the ring can leave a run saved without credited blocks. The finish receipt explains what counted and whether the atlas was saved on this device. Your first qualifying run anchors the local atlas. Registered territories use a separate eligible-run and wallet flow; neighbourhood outings do not mint blocks. A passkey or wallet does not sync or restore this atlas on another device.
 
 The Realm tab also links to a free wallet- and GPS-free storyboard at [`/orbis-live`](https://runrealm-psi.vercel.app/orbis-live/). Live Realm generation is optional and uses Reactor credits.

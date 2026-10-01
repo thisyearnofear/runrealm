@@ -136,6 +136,52 @@ body.neighbourhood-mode .theater-pocket-btn {
   margin: 10px 0 0;
 }
 
+.nh-saved-status,
+.nh-run-note,
+.nh-receipt-credit,
+.nh-receipt-save,
+.nh-ownership p {
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.nh-saved-status,
+.nh-receipt-save {
+  color: #3f6372;
+}
+
+.nh-receipt-credit {
+  font-family: var(--rr-font-display);
+  font-size: 0.95rem;
+  margin: 10px 0 0;
+}
+
+.nh-run-note {
+  margin: 8px 0;
+  color: #3f6372;
+}
+
+.nh-ownership {
+  margin: 10px 0;
+}
+
+.nh-ownership summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-family: var(--rr-font-display);
+}
+
+.nh-ownership summary:focus-visible {
+  outline: 2px solid var(--rr-sunprint-ink);
+  outline-offset: 2px;
+}
+
+.nh-ownership p {
+  margin: 2px 0 10px;
+}
+
 .nh-goals {
   display: flex;
   flex-direction: column;
