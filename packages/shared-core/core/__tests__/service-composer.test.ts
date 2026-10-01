@@ -71,6 +71,7 @@ describe('service-composer', () => {
       'dom',
       'location',
       'runTracking',
+      'neighbourhood',
       'web3',
       'ai',
       'game',
@@ -121,6 +122,7 @@ describe('service-composer', () => {
     expect(w.RunRealm?.services?.mapService).toBe(services.mapService);
     expect(w.RunRealm?.services?.worldState).toBe(services.worldState);
     expect(w.RunRealm?.services?.orbisDirector).toBe(services.orbisDirector);
+    expect(w.RunRealm?.services?.neighbourhood).toBe(services.neighbourhood);
   });
 
   it('registerGlobalServices is idempotent — second call preserves prior service refs', () => {
