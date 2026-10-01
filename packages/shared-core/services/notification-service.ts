@@ -1,6 +1,9 @@
+import { GAME_RULES } from '../config/game-rules';
 import { BaseService } from '../core/base-service';
+import { ghostLostNeedsWalkLine, ghostNeedsWalkLine } from '../utils/atlas-voice';
 import { decayDigestFor } from '../utils/shield-presentation';
 import { openVersioned } from '../utils/versioned-store';
+import { GhostRunnerService, type GhostTrainingState } from './ghost-runner-service';
 
 const DECAY_SUMMARY_KEY = 'runrealm_last_decay_summary';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -97,8 +100,17 @@ export class NotificationService extends BaseService {
   /**
    * Show a local notification. Falls back to an event-bus toast when
    * permission is missing so the message is never silently dropped.
+   * `action` rides the notification click: a click on a notification is a
+   * user gesture, so it may start flows (GPS prompts, permission asks) a
+   * plain toast button could not. The fallback toast therefore stays
+   * button-less — a button that only dead-ends is worse than none.
    */
-  notify(title: string, body: string, tag?: string): void {
+  notify(
+    title: string,
+    body: string,
+    tag?: string,
+    action?: { text: string; callback: () => void }
+  ): void {
     if (this.permission !== 'granted') {
       this.safeEmit('ui:toast', { message: `${title} — ${body}`, type: 'info', duration: 5000 });
       return;
@@ -113,6 +125,10 @@ export class NotificationService extends BaseService {
       notification.onclick = () => {
         window.focus();
         notification.close();
+        if (action) {
+          action.callback();
+          return;
+        }
         // Reopening focuses the map; open the dashboard territories tab
         // so context is one tap away.
         this.safeEmit('dashboard:open', { widgetId: 'territories' });
@@ -135,11 +151,24 @@ export class NotificationService extends BaseService {
     this.subscribe(
       'territory:vulnerable',
       (data: { territory: TerritoryLike & { name?: string } }) => {
-        const name = data.territory?.name ?? data.territory?.geohash ?? 'a territory';
+        const territory = data.territory;
+        const name = territory?.name ?? territory?.geohash ?? 'a territory';
+        // Desk→runner conversion: when the fading ground has a ghost on
+        // watch whose training bonus is still banked (or already lapsed),
+        // the honest line names the walk as the rescue instead of a run —
+        // that is the one defense the desk manager can do from a chair.
+        const onWatch = territory?.id ? this.ghostHoldingTraining(territory.id) : null;
+        if (territory?.id && onWatch) {
+          this.maybeNudgeWalk(
+            { territoryId: territory.id, territoryName: name, ghostName: onWatch.name },
+            'vulnerable'
+          );
+          return;
+        }
         this.notify(
           '🛡️ Territory under threat',
           `${name} defenses are fading. Run it again to hold your land.`,
-          `vulnerable-${data.territory?.id}`
+          `vulnerable-${territory?.id}`
         );
       }
     );
@@ -151,7 +180,10 @@ export class NotificationService extends BaseService {
     this.subscribe(
       'ghost:raceCompleted',
       (data: {
+        ghostId: string;
         ghostName: string;
+        territoryId: string;
+        territoryName?: string;
         ghostScore: number;
         userScore: number;
         winner: 'ghost' | 'user';
@@ -161,6 +193,12 @@ export class NotificationService extends BaseService {
             ? `Your run held the line (${data.userScore} vs ${data.ghostScore}).`
             : `${data.ghostName} took it (${data.ghostScore} vs ${data.userScore}).`;
         this.notify('👻 Ghost race result', outcome, 'ghost-race');
+        // Desk→runner conversion: a managed ghost lost, so the manager's
+        // attachment has somewhere to go — a GPS-verified walk (+walkPoints)
+        // on the same territory. Walking counts; running is optional.
+        // Throttled per territory per day next to the decay summary, so a
+        // losing streak reads as one invitation, not a nag.
+        if (data.winner === 'user') this.maybeNudgeWalk(data, 'loss');
       }
     );
 
@@ -174,6 +212,86 @@ export class NotificationService extends BaseService {
         );
       }
     );
+  }
+
+  private static readonly WALK_NUDGE_PREFIX = 'runrealm_walk_nudge_';
+
+  /**
+   * The ghost posted to this territory holding an unspent desk-training
+   * bonus — banked and fresh, or banked but expired (the manager trained,
+   * then never raced: the walking-off signal). `null` when no ghost is on
+   * that ground or nothing is banked. Reads through the registry; a
+   * missing ghost service means no nudge, never a throw.
+   */
+  private ghostHoldingTraining(territoryId: string): { id: string; name: string } | null {
+    try {
+      const ghosts = this.getSiblingService('ghostRunnerService') as
+        | GhostRunnerService
+        | {
+            getGhosts?: () => Array<{
+              id: string;
+              name: string;
+              lastDeployedTerritory: string | null;
+            }>;
+            getGhostTraining?: (id: string) => GhostTrainingState | undefined;
+          }
+        | null;
+      const posted = ghosts?.getGhosts?.().find((g) => g.lastDeployedTerritory === territoryId);
+      if (!posted) return null;
+      const training = ghosts?.getGhostTraining?.(posted.id);
+      return training ? { id: posted.id, name: posted.name } : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * The desk→runner invitation: the rescue a manager can actually do —
+   * a GPS-verified walk on ground they are attached to. Fired from two
+   * places: a managed ghost lost its race, and a ghost-defended territory
+   * drifted vulnerable while its training bonus sat unspent. One nudge per
+   * territory per day across both triggers (localStorage guard), so a
+   * losing streak reads as one invitation, not a nag. The invitation carries
+   * a one-tap "Walk there" action that deep-links into the Territory Walk —
+   * honest about distance, since the walk service verifies GPS on arrival.
+   * Silent in private mode.
+   */
+  private maybeNudgeWalk(
+    data: { territoryId: string; territoryName?: string; ghostName: string },
+    kind: 'loss' | 'vulnerable'
+  ): void {
+    try {
+      const key = NotificationService.WALK_NUDGE_PREFIX + data.territoryId;
+      const last = Number(localStorage.getItem(key) ?? 0);
+      if (Date.now() - last < DAY_MS) return;
+      const line =
+        kind === 'loss'
+          ? ghostLostNeedsWalkLine(
+              data.ghostName,
+              data.territoryName ?? data.territoryId,
+              GAME_RULES.economy.walkPoints
+            )
+          : ghostNeedsWalkLine(
+              data.ghostName,
+              data.territoryName ?? data.territoryId,
+              GAME_RULES.economy.walkPoints
+            );
+      this.notify(line.title, line.body, `walk-nudge-${data.territoryId}`, {
+        // One-tap rescue: the same `territoryWalk:startRequested` event the
+        // dashboard and return-card walk buttons use, not a direct service
+        // call — one path for every walk start. The walk service answers
+        // honestly (GPS-verified +150 within arrival radius, a plain readable
+        // reason when not), so the tap can never fake a defense. Only the
+        // granted-permission path gets the button: a notification click is a
+        // user gesture, which is what the GPS prompt needs to appear.
+        text: 'Walk there',
+        callback: () =>
+          this.safeEmit('territoryWalk:startRequested', { territoryId: data.territoryId }),
+      });
+      localStorage.setItem(key, String(Date.now()));
+    } catch {
+      // Storage unavailable — skip silently.
+    }
   }
 
   /**

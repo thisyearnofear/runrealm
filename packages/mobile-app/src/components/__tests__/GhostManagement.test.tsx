@@ -10,6 +10,7 @@ import { Territory, TerritoryService } from '@runrealm/shared-core/services/terr
 import {
   ghostDeployedLine,
   ghostDeployFailedLine,
+  ghostTrainedLine,
   ghostUpgradedLine,
   mobileTitle,
 } from '@runrealm/shared-core/utils/atlas-voice';
@@ -88,6 +89,15 @@ describe('GhostManagement', () => {
     getRealmBalance: jest.fn(() => 1000),
     deployGhost: jest.fn(),
     upgradeGhost: jest.fn(),
+    trainGhost: jest.fn(() =>
+      Promise.resolve({
+        regimen: 'intervals',
+        bonus: 20,
+        trainedDay: '2026-10-01',
+        expiresAt: Date.now() + 48 * 3600_000,
+      })
+    ),
+    getGhostTraining: jest.fn(() => null),
   } as unknown as GhostRunnerService;
 
   const mockTerritoryService = {
@@ -236,6 +246,77 @@ describe('GhostManagement', () => {
     await waitFor(() => {
       expect(getByText(/⏰/)).toBeTruthy();
     });
+  });
+
+  it('should train a ghost from the detail sheet', async () => {
+    (mockGhostService.trainGhost as jest.Mock) = jest.fn(() =>
+      Promise.resolve({
+        regimen: 'intervals',
+        bonus: 20,
+        trainedDay: '2026-10-01',
+        expiresAt: Date.now() + 48 * 3600_000,
+      })
+    );
+
+    const { getByText } = render(<GhostManagement visible={true} onClose={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(getByText('Speed Demon')).toBeTruthy();
+    });
+    fireEvent.press(getByText('Speed Demon'));
+
+    await waitFor(() => {
+      expect(getByText('Train today')).toBeTruthy();
+    });
+    fireEvent.press(getByText('Intervals'));
+
+    await waitFor(() => {
+      expect(mockGhostService.trainGhost).toHaveBeenCalledWith('ghost-1', 'intervals');
+      expect(Alert.alert).toHaveBeenCalledWith('Ghost trained', ghostTrainedLine('intervals'));
+    });
+  });
+
+  it('should show the banked training state on the detail sheet', async () => {
+    (mockGhostService.getGhostTraining as jest.Mock) = jest.fn(() => ({
+      regimen: 'hills',
+      bonus: 20,
+      trainedDay: '2026-10-01',
+      expiresAt: Date.now() + 48 * 3600_000,
+    }));
+
+    const { getByText } = render(<GhostManagement visible={true} onClose={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(getByText('Speed Demon')).toBeTruthy();
+    });
+    fireEvent.press(getByText('Speed Demon'));
+
+    await waitFor(() => {
+      expect(getByText('+20 banked for its next race')).toBeTruthy();
+    });
+  });
+
+  it('should not re-train once today is banked', async () => {
+    (mockGhostService.getGhostTraining as jest.Mock) = jest.fn(() => ({
+      regimen: 'intervals',
+      bonus: 20,
+      trainedDay: '2026-10-01',
+      expiresAt: Date.now() + 48 * 3600_000,
+    }));
+
+    const { getByText } = render(<GhostManagement visible={true} onClose={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(getByText('Speed Demon')).toBeTruthy();
+    });
+    fireEvent.press(getByText('Speed Demon'));
+
+    await waitFor(() => {
+      expect(getByText('Intervals')).toBeTruthy();
+    });
+    fireEvent.press(getByText('Intervals'));
+
+    expect(mockGhostService.trainGhost).not.toHaveBeenCalled();
   });
 
   it('should handle deployment errors', async () => {

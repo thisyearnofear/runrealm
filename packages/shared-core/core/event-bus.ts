@@ -311,6 +311,10 @@ export interface AppEvents extends Web3Events {
      *  instead of the everyday one. Platforms that ignore this still get a
      *  readable toast, which is why it is optional rather than another event. */
     ceremony?: 'level-up' | 'achievement';
+    /** One labelled button on the note: runs the callback and dismisses the
+     *  toast. Optional — surfaces that cannot render a button still show the
+     *  message itself, so no feature depends on the button existing. */
+    action?: { text: string; callback: () => void };
   };
   'ui:showRunControls': Record<string, never>;
   'ui:hideRunControls': Record<string, never>;
@@ -603,6 +607,9 @@ export interface AppEvents extends Web3Events {
     ghostName: string;
     avatar?: string;
     territoryId: string;
+    /** Human territory name when the registry could resolve one; optional so
+     *  older emitters stay valid — consumers fall back to the raw id. */
+    territoryName?: string;
     ghostScore: number;
     userScore: number;
     winner: 'ghost' | 'user';

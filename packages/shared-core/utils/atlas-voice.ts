@@ -569,6 +569,53 @@ export function ghostDeployFailedLine(): string {
   );
 }
 
+/**
+ * A managed ghost lost a race — the desk→runner conversion nudge. Names the
+ * ghost (attachment), names the territory (ground), and names the rescue
+ * (a Territory Walk, +walkPoints) without pressure: walking counts, running
+ * is optional. Carries the territory id so the UI can offer a one-tap walk.
+ */
+export function ghostLostNeedsWalkLine(
+  ghostName: string,
+  territoryName: string,
+  walkPoints: number
+): { title: string; body: string } {
+  return {
+    title: `${ghostName} could not hold ${territoryName}`,
+    body: pickLine(
+      [
+        `Your ghost gave ground. A 20-minute walk defends it (+${walkPoints}) — no run needed.`,
+        `The post is slipping. Walking there tops it up (+${walkPoints}) whenever you like.`,
+      ],
+      `ghost:lost:${ghostName}:${territoryName}`
+    ),
+  };
+}
+
+/**
+ * The other half of the desk→runner nudge: a ghost-defended territory
+ * drifted vulnerable while its training bonus sat unspent. Same shape as
+ * the loss line — the ghost by name, the ground, the walk — but the
+ * failure is the defence fading, not a lost race, so the ghost is not
+ * scolded for it.
+ */
+export function ghostNeedsWalkLine(
+  ghostName: string,
+  territoryName: string,
+  walkPoints: number
+): { title: string; body: string } {
+  return {
+    title: `${territoryName} needs feet`,
+    body: pickLine(
+      [
+        `${ghostName} is holding ${territoryName} alone. A walk there backs it up (+${walkPoints}).`,
+        `Ground is thin at ${territoryName}. Walking there defends it (+${walkPoints}) — no run needed.`,
+      ],
+      `ghost:needs-walk:${ghostName}:${territoryName}`
+    ),
+  };
+}
+
 /** A desk manager trained a ghost; the regimen banks a bonus for its next race. */
 export function ghostTrainedLine(regimen: 'intervals' | 'hills' | 'rest'): string {
   return pickLine(

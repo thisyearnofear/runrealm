@@ -36,6 +36,7 @@ export function wireEvents(opts: EventWiringOptions): void {
       type: data.type as ToastOptions['type'],
       duration: data.duration,
       ceremony: data.ceremony,
+      action: data.action,
     });
   });
 

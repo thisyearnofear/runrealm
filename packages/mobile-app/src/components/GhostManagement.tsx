@@ -7,12 +7,16 @@
 import {
   GhostRunnerNFT,
   GhostRunnerService,
+  GhostTrainingRegimen,
+  GhostTrainingState,
 } from '@runrealm/shared-core/services/ghost-runner-service';
 import { Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import {
   ghostDeployedLine,
   ghostDeployFailedLine,
   ghostRosterFailedLine,
+  ghostTrainedLine,
+  ghostTrainFailedLine,
   ghostUpgradedLine,
   ghostUpgradeFailedLine,
   mobileTitle,
@@ -42,6 +46,8 @@ export const GhostManagement: React.FC<GhostManagementProps> = ({ visible, onClo
   const [territories, setTerritories] = useState<Territory[]>([]);
   const [loading, setLoading] = useState(false);
   const [deploying, setDeploying] = useState(false);
+  const [training, setTraining] = useState<GhostTrainingState | null>(null);
+  const [trainingBusy, setTrainingBusy] = useState(false);
 
   const ghostService = useMemo(() => GhostRunnerService.getInstance(), []);
   const territoryService = useMemo(() => TerritoryService.getInstance(), []);
@@ -104,6 +110,30 @@ export const GhostManagement: React.FC<GhostManagementProps> = ({ visible, onClo
       Alert.alert('Ghost upgrade', ghostUpgradeFailedLine());
     } finally {
       setDeploying(false);
+    }
+  };
+
+  /** Open the detail sheet with the ghost's desk-training state beside it. */
+  const openGhost = (ghost: GhostRunnerNFT) => {
+    setSelectedGhost(ghost);
+    setTraining(ghostService.getGhostTraining(ghost.id) ?? null);
+  };
+
+  const handleTrain = async (ghostId: string, regimen: GhostTrainingRegimen) => {
+    try {
+      setTrainingBusy(true);
+      await ghostService.trainGhost(ghostId, regimen);
+      setTraining(ghostService.getGhostTraining(ghostId) ?? null);
+      Alert.alert('Ghost trained', ghostTrainedLine(regimen));
+    } catch (error) {
+      console.error('Failed to train ghost:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      Alert.alert(
+        'Ghost training',
+        ghostTrainFailedLine(message.includes('already trained today') ? 'already' : 'unknown')
+      );
+    } finally {
+      setTrainingBusy(false);
     }
   };
 
@@ -199,6 +229,36 @@ export const GhostManagement: React.FC<GhostManagementProps> = ({ visible, onClo
                 <Text style={styles.specialAbility}>✨ {selectedGhost.specialAbility}</Text>
               </View>
 
+              {/* Desk training — the same one-regimen-per-day drill the web
+                  ghost panel drives against trainGhost(). No GPS, no run. */}
+              <View style={styles.trainingSection}>
+                <Text style={styles.deployTitle}>Train today</Text>
+                <Text style={styles.trainingNote}>
+                  {training
+                    ? training.bonus > 0
+                      ? `+${training.bonus} banked for its next race`
+                      : 'Resting today — nothing banked, nothing lost.'
+                    : 'One drill a day, no run needed.'}
+                </Text>
+                <View style={styles.trainingRow}>
+                  {(['intervals', 'hills', 'rest'] as GhostTrainingRegimen[]).map((regimen) => (
+                    <TouchableOpacity
+                      key={regimen}
+                      style={[
+                        styles.trainingButton,
+                        (trainingBusy || training !== null) && styles.trainingButtonDisabled,
+                      ]}
+                      onPress={() => handleTrain(selectedGhost.id, regimen)}
+                      disabled={trainingBusy || training !== null}
+                    >
+                      <Text style={styles.trainingButtonText}>
+                        {regimen.charAt(0).toUpperCase() + regimen.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
               {selectedGhost.level < 5 && (
                 <TouchableOpacity
                   style={[
@@ -264,7 +324,7 @@ export const GhostManagement: React.FC<GhostManagementProps> = ({ visible, onClo
                     <TouchableOpacity
                       key={ghost.id}
                       style={styles.ghostCard}
-                      onPress={() => setSelectedGhost(ghost)}
+                      onPress={() => openGhost(ghost)}
                     >
                       <View style={styles.ghostCardHeader}>
                         <Text style={styles.ghostAvatar}>{ghost.avatar || '👻'}</Text>
@@ -563,6 +623,36 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  trainingSection: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  trainingNote: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 12,
+  },
+  trainingRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  trainingButton: {
+    flex: 1,
+    backgroundColor: '#333',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  trainingButtonDisabled: {
+    opacity: 0.5,
+  },
+  trainingButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
   territoriesList: {
     maxHeight: 200,

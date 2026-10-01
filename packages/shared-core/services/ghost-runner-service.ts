@@ -485,6 +485,7 @@ export class GhostRunnerService extends BaseService {
       ghostName: ghost.name,
       avatar: ghost.avatar,
       territoryId,
+      territoryName: this.territoryNameFor(territoryId),
       ghostScore,
       userScore,
       winner,
@@ -605,6 +606,7 @@ export class GhostRunnerService extends BaseService {
       ghostName: race.ghostName,
       avatar: race.avatar,
       territoryId: race.territoryId,
+      territoryName: race.territoryName,
       ghostScore: race.ghostScore,
       userScore: race.userScore,
       winner: race.winner,
@@ -612,6 +614,27 @@ export class GhostRunnerService extends BaseService {
     });
 
     return ghostRun;
+  }
+
+  /**
+   * Human name for a raced territory, for the loss nudge. Reads the
+   * territory registry when it is reachable and falls back to the raw id —
+   * a sibling lookup that must never throw into a deploy.
+   */
+  private territoryNameFor(territoryId: string): string | undefined {
+    try {
+      const territories = this.getSiblingService('territory') as {
+        getClaimedTerritories?: () => Array<{
+          id: string;
+          metadata?: { name?: string };
+          geohash?: string;
+        }>;
+      } | null;
+      const found = territories?.getClaimedTerritories?.().find((t) => t.id === territoryId);
+      return found?.metadata?.name ?? found?.geohash ?? undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   async upgradeGhost(ghostId: string): Promise<GhostRunnerNFT> {

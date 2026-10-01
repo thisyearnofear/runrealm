@@ -228,6 +228,7 @@ describe('event-wiring', () => {
       type: 'success',
       duration: 4000,
       ceremony: undefined,
+      action: undefined,
     });
   });
 
@@ -239,7 +240,23 @@ describe('event-wiring', () => {
       type: 'success',
       duration: undefined,
       ceremony: 'level-up',
+      action: undefined,
     });
+  });
+
+  it('ui:toast carries an action button through to the toast surface', () => {
+    wireEvents({ services, handles: null, getMap: () => map, onMapClick: jest.fn() });
+    const callback = jest.fn();
+    bus.emit('ui:toast', {
+      message: 'Kestrel could not hold the post.',
+      type: 'info',
+      action: { text: 'Walk there', callback },
+    });
+
+    expect(services.ui.showToast).toHaveBeenCalledWith(
+      'Kestrel could not hold the post.',
+      expect.objectContaining({ action: { text: 'Walk there', callback } })
+    );
   });
 
   it('ui:toast is delivered even when no atlas is loaded', () => {
