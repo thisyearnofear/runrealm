@@ -215,3 +215,4 @@ fhevmTemp/
 # Netlify CLI local link/state (never commit)
 .netlify/
 apps/*/.netlify/
+.vercel
