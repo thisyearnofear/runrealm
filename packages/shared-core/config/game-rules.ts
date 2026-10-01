@@ -145,6 +145,23 @@ export const GAME_RULES = {
       winsForHeat: 3,
       heatPoints: 50,
     },
+    /**
+     * Desk-manager training — the H17 ghost-manager mode lets a desk player
+     * train one ghost per day without running. A regimen adds a small flat
+     * score bonus to the ghost's NEXT race only (consumed on deploy), so legs
+     * stay strictly superior: +20 for intervals/hills vs a typical race
+     * score of several hundred. Rest banks nothing — it is a free pass to
+     * skip a day without penalty. Desk movement (pedometer/treadmill steps)
+     * may also train ghosts but can never claim ground; that stays a UI
+     * concern, not a scoring one. Off-chain only — no Solidity sibling.
+     */
+    training: {
+      /** Flat score bonus to the ghost's next race after a training day. */
+      intervalsBonus: 20,
+      hillsBonus: 20,
+      /** A training bonus expires if the ghost is not raced within 48h. */
+      bonusExpiryHours: 48,
+    },
   },
 
   // ---------------------------------------------------------------------

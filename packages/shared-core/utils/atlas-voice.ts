@@ -569,6 +569,28 @@ export function ghostDeployFailedLine(): string {
   );
 }
 
+/** A desk manager trained a ghost; the regimen banks a bonus for its next race. */
+export function ghostTrainedLine(regimen: 'intervals' | 'hills' | 'rest'): string {
+  return pickLine(
+    regimen === 'rest'
+      ? ['A quiet day for the ghost. It will be fresh when the post calls.']
+      : [
+          'Drills done. The ghost carries a small edge into its next race.',
+          'Training banked — a small edge, saved for the next race.',
+        ],
+    `ghost:trained:${regimen}`
+  );
+}
+
+export function ghostTrainFailedLine(reason: 'already' | 'unknown'): string {
+  return pickLine(
+    reason === 'already'
+      ? ['That ghost has already trained today. Tomorrow it goes again.']
+      : ['That training did not take. Nothing was banked — try again.'],
+    `ghost:train-failed:${reason}`
+  );
+}
+
 /** A route finished drawing. */
 export function routeReadyLine(): string {
   return pickLine(['Route drawn. Press start when you are ready to walk it.'], 'route:ready');

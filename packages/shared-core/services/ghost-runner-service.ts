@@ -26,6 +26,24 @@ export interface GhostRunnerNFT extends GhostRunner {
   lastDeployedTerritory: string | null;
 }
 
+/**
+ * Desk-manager training state — H17 ghost-manager mode. A desk player picks
+ * one regimen per ghost per day (no GPS required). The regimen banks a small
+ * flat bonus on the ghost's NEXT race, consumed on deploy; `lastTrainingDay`
+ * is a `YYYY-MM-DD` UTC date so the once-per-day rule is timezone-stable.
+ */
+export type GhostTrainingRegimen = 'intervals' | 'hills' | 'rest';
+
+export interface GhostTrainingState {
+  regimen: GhostTrainingRegimen;
+  /** Flat score added to the ghost's next race; 0 for rest. */
+  bonus: number;
+  /** Day the regimen was picked, `YYYY-MM-DD` UTC. */
+  trainedDay: string;
+  /** Epoch ms after which an unconsumed bonus expires. */
+  expiresAt: number;
+}
+
 export interface GhostRun {
   ghostId: string;
   territoryId: string;
@@ -119,6 +137,7 @@ export class GhostRunnerService extends BaseService {
     await this.loadRealmBalance();
     await this.loadRaceHistory();
     await this.loadRaceRecords();
+    await this.loadTraining();
     this.setupEventListeners();
   }
 
@@ -439,12 +458,26 @@ export class GhostRunnerService extends BaseService {
   ): { result: GhostRaceResult; replayHash: string } {
     const stats = this.getUserStats();
     const historyTail = this.raceHistory.slice(-rubberBandWindow()).map((r) => r.winner);
-    const { ghostScore, userScore, winner } = computeRaceScores({
+    const scored = computeRaceScores({
       ghostPace: ghost.pace,
       ghostLevel: ghost.level,
       userStats: stats,
       historyTail,
     });
+
+    // Desk-manager training: a banked regimen adds its flat bonus to the
+    // ghost's side of this race only, then is consumed whatever happens.
+    // Expired bonuses are dropped silently — a missed window is not progress.
+    // The score cap still applies, so training can never push past it.
+    const banked = this.training.get(ghost.id);
+    const trainingBonus = banked && banked.bonus > 0 && banked.expiresAt > nowMs ? banked.bonus : 0;
+    if (banked) {
+      this.training.delete(ghost.id);
+      void this.saveTraining();
+    }
+    const ghostScore = Math.min(GAME_RULES.ghosts.ghostScoreCap, scored.ghostScore + trainingBonus);
+    const winner: GhostRaceResult['winner'] = scored.userScore >= ghostScore ? 'user' : 'ghost';
+    const { userScore } = scored;
 
     const result: GhostRaceResult = {
       raceId: `race_${ghost.id}_${ghost.totalRuns}`,
@@ -600,6 +633,120 @@ export class GhostRunnerService extends BaseService {
 
     this.safeEmit('ghost:upgraded', { ghost });
     return ghost;
+  }
+
+  /**
+   * Desk-manager training — H17 ghost-manager mode (v0). A desk player picks
+   * one regimen per ghost per day with no run and no GPS required.
+   * Intervals/hills bank a small flat bonus on the ghost's NEXT race
+   * (consumed on deploy, expires after
+   * `GAME_RULES.ghosts.training.bonusExpiryHours`); rest records the day so
+   * the manager can skip without penalty and banks nothing.
+   *
+   * Anti-grind: one regimen per ghost per UTC day — a second pick the same
+   * day throws, and training never touches territory, deploy costs, or
+   * cooldowns. The bonus is a flat +20 against typical race scores in the
+   * hundreds, so a manager's mouse stays strictly worse than legs.
+   */
+  private training: Map<string, GhostTrainingState> = new Map();
+
+  async trainGhost(
+    ghostId: string,
+    regimen: GhostTrainingRegimen,
+    nowMs: number = Date.now()
+  ): Promise<GhostTrainingState> {
+    const ghost = this.ghosts.get(ghostId);
+    if (!ghost) throw new Error('Ghost not found');
+    if (regimen !== 'intervals' && regimen !== 'hills' && regimen !== 'rest') {
+      throw new Error('Unknown training regimen');
+    }
+
+    const today = GhostRunnerService.trainingDay(nowMs);
+    const existing = this.training.get(ghostId);
+    if (existing && existing.trainedDay === today) {
+      throw new Error('Ghost already trained today');
+    }
+
+    const training = GAME_RULES.ghosts.training;
+    const state: GhostTrainingState = {
+      regimen,
+      bonus:
+        regimen === 'intervals'
+          ? training.intervalsBonus
+          : regimen === 'hills'
+            ? training.hillsBonus
+            : 0,
+      trainedDay: today,
+      expiresAt: nowMs + training.bonusExpiryHours * 60 * 60 * 1000,
+    };
+    this.training.set(ghostId, state);
+    await this.saveTraining();
+    this.safeEmit('ghost:trained', {
+      ghost,
+      regimen,
+      bonus: state.bonus,
+      trainedDay: today,
+    });
+    return state;
+  }
+
+  /** Banked desk-training state for one ghost (undefined when none). */
+  getGhostTraining(ghostId: string): GhostTrainingState | undefined {
+    return this.training.get(ghostId);
+  }
+
+  private static trainingDay(nowMs: number): string {
+    return new Date(nowMs).toISOString().slice(0, 10);
+  }
+
+  private async loadTraining(): Promise<void> {
+    const key = 'runrealm_ghost_training';
+    try {
+      const raw = await StorageAdapter.getItem(key);
+      const opened = openVersioned<Record<string, GhostTrainingState>>(raw, {
+        floor: 1,
+        head: 1,
+        steps: [
+          {
+            toVersion: 1,
+            note: 'base ghost training map',
+            migrate: (v) => v as Record<string, GhostTrainingState>,
+            validate: (v) => {
+              if (!v || typeof v !== 'object' || Array.isArray(v)) {
+                throw new RangeError('training: expected a record');
+              }
+              return v as Record<string, GhostTrainingState>;
+            },
+          },
+        ],
+        fresh: () => ({}),
+      });
+      if (opened.status !== 'ok' && opened.status !== 'fresh') {
+        console.warn(`GhostRunnerService: training storage ${opened.status} (${opened.reason})`);
+      }
+      if (opened.status === 'corrupt' && raw !== null) {
+        await StorageAdapter.setItem(quarantineKey(key), raw);
+      }
+      // No read-only latch: training is a soft daily bonus — a stale build
+      // losing it is a missed +20, never a corrupted ledger. Corrupt saves
+      // degrade to "no training", same as fresh.
+      for (const [ghostId, state] of Object.entries(opened.state)) {
+        if (state && typeof state.bonus === 'number') this.training.set(ghostId, state);
+      }
+    } catch (error) {
+      console.error('Failed to load ghost training:', error);
+    }
+  }
+
+  private async saveTraining(): Promise<void> {
+    try {
+      await StorageAdapter.setItem(
+        'runrealm_ghost_training',
+        writeVersioned(1, Object.fromEntries(this.training), Date.now())
+      );
+    } catch (error) {
+      console.error('Failed to save ghost training:', error);
+    }
   }
 
   private async simulateGhostRun(ghost: GhostRunnerNFT, territoryId: string): Promise<GhostRun> {

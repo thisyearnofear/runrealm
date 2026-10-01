@@ -2,7 +2,12 @@ import { BaseService } from '@runrealm/shared-core/core/base-service';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { GhostRunnerService } from '@runrealm/shared-core/services/ghost-runner-service';
 import { TerritoryService } from '@runrealm/shared-core/services/territory-service';
-import { ghostDeployedLine, ghostDeployFailedLine } from '@runrealm/shared-core/utils/atlas-voice';
+import {
+  ghostDeployedLine,
+  ghostDeployFailedLine,
+  ghostTrainedLine,
+  ghostTrainFailedLine,
+} from '@runrealm/shared-core/utils/atlas-voice';
 
 export class GhostManagement extends BaseService {
   constructor() {
@@ -160,6 +165,15 @@ export class GhostManagement extends BaseService {
         </div>
 
         <div class="ghost-actions">
+          <div class="train-section">
+            <label>Train from your desk (one regimen a day, no run needed):</label>
+            <div class="train-buttons">
+              <button class="train-btn" data-regimen="intervals">Intervals</button>
+              <button class="train-btn" data-regimen="hills">Hills</button>
+              <button class="train-btn" data-regimen="rest">Rest</button>
+            </div>
+            <div class="train-state">${this.trainingLine(ghost.id)}</div>
+          </div>
           ${
             ghost.level < 5
               ? `
@@ -204,12 +218,40 @@ export class GhostManagement extends BaseService {
     this.domService.delegate(detailsEl, '.back-btn', 'click', () => this.hideDetails());
     this.domService.delegate(detailsEl, '.upgrade-btn', 'click', () => this.upgradeGhost(ghostId));
     this.domService.delegate(detailsEl, '.deploy-btn', 'click', () => this.deployGhost(ghostId));
+    this.domService.delegate(detailsEl, '.train-btn', 'click', (e) =>
+      this.trainGhost(ghostId, e.currentTarget.dataset.regimen)
+    );
   }
 
   hideDetails() {
     this.container.querySelector('.ghost-details').classList.add('hidden');
     this.container.querySelector('.ghost-list').classList.remove('hidden');
     this.selectedGhost = null;
+  }
+
+  trainingLine(ghostId) {
+    const state = this.ghostService.getGhostTraining(ghostId);
+    if (!state) return 'No training banked — pick a regimen for today.';
+    if (state.regimen === 'rest') return 'Resting today — fresh for the next post.';
+    return `Banked +${state.bonus} for the next race (${state.regimen}).`;
+  }
+
+  async trainGhost(ghostId, regimen) {
+    try {
+      await this.ghostService.trainGhost(ghostId, regimen);
+      this.safeEmit('ui:toast', {
+        message: ghostTrainedLine(regimen),
+        type: 'success',
+      });
+      this.showGhostDetails(ghostId);
+    } catch (error) {
+      console.error('Ghost training failed:', error);
+      const already = /already trained today/i.test(error?.message ?? '');
+      this.safeEmit('ui:toast', {
+        message: ghostTrainFailedLine(already ? 'already' : 'unknown'),
+        type: 'error',
+      });
+    }
   }
 
   async upgradeGhost(ghostId) {

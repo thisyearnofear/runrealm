@@ -562,6 +562,12 @@ export interface AppEvents extends Web3Events {
   'strava:athlete:deauthorized': { athleteId: number; eventTime: number };
   // Ghost runner events
   'ghost:unlocked': { ghost: GhostRunner; reason: string };
+  'ghost:trained': {
+    ghost: GhostRunner;
+    regimen: 'intervals' | 'hills' | 'rest';
+    bonus: number;
+    trainedDay: string;
+  };
   'ghost:deployed': { ghost: GhostRunner; territoryId: string };
   'ghost:completed': {
     ghostRun: {
