@@ -1,0 +1,58 @@
+.nh-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(13, 43, 62, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+}
+
+.nh-tour-card {
+  width: min(440px, 100%);
+  max-height: min(75dvh, 700px);
+  overflow: auto;
+  padding: 22px;
+  border-radius: 16px;
+  background: var(--rr-sunprint-bone);
+  color: var(--rr-sunprint-ink);
+  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.3);
+}
+
+.nh-tour-count {
+  font-family: var(--rr-font-mono);
+  font-size: 0.75rem;
+}
+
+.nh-tour-card h2 {
+  font-family: var(--rr-font-display);
+}
+.nh-tour-body {
+  line-height: 1.5;
+}
+.nh-tour-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nh-tour-buttons button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--rr-sunprint-ink);
+  color: var(--rr-sunprint-ink);
+  background: var(--rr-sunprint-bone);
+  cursor: pointer;
+}
+
+.nh-tour-buttons button:focus-visible {
+  outline: 3px solid var(--rr-sunprint-amber);
+  outline-offset: 2px;
+}
+
+.nh-tour-target {
+  outline: 3px solid var(--rr-sunprint-amber);
+  outline-offset: 2px;
+}

@@ -105,7 +105,9 @@ function LivingRealmExperience({
   restoreDirectorEnabled,
 }: LivingRealmDeps) {
   const reactor = useViskoOrbisDynamic();
-  const [view, setView] = useState<'realm' | 'map'>('realm');
+  // Map first: the splash resolves onto the ground a runner can act on. The
+  // realm is an opt-in second view, never the arrival.
+  const [view, setView] = useState<'realm' | 'map'>('map');
   const [modelState, setModelState] = useState<ViskoOrbisDynamicStateMessage | null>(null);
   const [framesEmitted, setFramesEmitted] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
@@ -440,22 +442,15 @@ function LivingRealmExperience({
       setRunActive(true);
       setView('map');
     };
-    const onRunPaused = () => {
-      setRunActive(false);
-      setView('realm');
-    };
-    const onRunCancelled = () => {
-      setRunActive(false);
-      setView('realm');
-    };
+    // Pausing, cancelling or finishing keeps the map in view: jumping away
+    // mid-outing disorients, and a finished run's reveal plays on the map.
+    const onRunPaused = () => setRunActive(false);
+    const onRunCancelled = () => setRunActive(false);
     const onRunResumed = () => {
       setRunActive(true);
       setView('map');
     };
-    const onRunCompleted = () => {
-      setRunActive(false);
-      setView('realm');
-    };
+    const onRunCompleted = () => setRunActive(false);
     const onMapViewRequested = () => setView('map');
     eventBus.on('world:stateChanged', onWorld);
     eventBus.on('neighbourhood:updated', onNhUpdated);
@@ -674,6 +669,7 @@ function LivingRealmExperience({
         <button
           type="button"
           className="living-realm-tab"
+          data-tour="realm"
           aria-pressed={view === 'realm'}
           onClick={openRealm}
         >
@@ -689,19 +685,24 @@ function LivingRealmExperience({
         </button>
       </nav>
 
-      <div className="living-realm-hud" aria-live="polite">
-        <span className={`living-realm-dot living-realm-dot--${live ? 'live' : 'idle'}`} />
-        <span className="living-realm-status">{statusLabel}</span>
-        {sessionActive && (
-          <button
-            type="button"
-            className="living-realm-disconnect"
-            onClick={() => void disconnectNow()}
-          >
-            {COPY.disconnect}
-          </button>
-        )}
-      </div>
+      {/* Live-generation status belongs to the realm; on the map it only
+          appears while a session is actually running (so Disconnect stays
+          reachable). */}
+      {(view === 'realm' || sessionActive) && (
+        <div className="living-realm-hud" aria-live="polite">
+          <span className={`living-realm-dot living-realm-dot--${live ? 'live' : 'idle'}`} />
+          <span className="living-realm-status">{statusLabel}</span>
+          {sessionActive && (
+            <button
+              type="button"
+              className="living-realm-disconnect"
+              onClick={() => void disconnectNow()}
+            >
+              {COPY.disconnect}
+            </button>
+          )}
+        </div>
+      )}
 
       {(uiError || stalledNow) && (
         <div className="living-realm-notice" aria-live="polite">
@@ -752,6 +753,9 @@ function LivingRealmExperience({
             </p>
           )}
           <p className="living-realm-poster-hint">{COPY.connectHint}</p>
+          <a className="living-realm-storyboard" href="/orbis-live" data-tour="storyboard">
+            {COPY.freeStoryboard}
+          </a>
           <button type="button" className="living-realm-connect" onClick={() => void connect()}>
             {connectedOnce || uiError ? COPY.retry : COPY.connect}
           </button>

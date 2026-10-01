@@ -107,12 +107,39 @@ Local-only collection slice for the default web experience
   and atlas list remain usable without the map.
 - Map consequences: a dedicated renderer
   (`apps/web/src/shell/components/neighbourhood-map-renderer.ts`) owns the cell
-  layers and animates transient values through MapLibre feature state — cells
-  flash exposure amber the first time a run touches them, develop
-  amber → verdigris on collection (staggered in encounter order), press deeper
-  on strengthening, and tapping a cell opens a detail strip naming the block,
-  its status and its visits. A finished outing can be reviewed with
-  **"See ground on map"**, which replays only the map's explanation and never
-  re-awards progress. All motion settles instantly under
-  `prefers-reduced-motion`, and the animation layer never writes back to the
-  ledger.
+  layers and animates transient values through MapLibre feature state. Cells
+  flash exposure amber the first time a run touches them, develop amber to
+  verdigris on collection (staggered in encounter order), press deeper on
+  strengthening, and open a detail strip when tapped. A finished outing can be
+  reviewed with **"See ground on map"**, which replays the explanation without
+  re-awarding progress. All motion settles instantly under
+  `prefers-reduced-motion`; the animation layer never writes to the ledger.
+
+### Desktop exploration and optional neighbourhood tour
+
+For visitor instructions, see [Exploring RunRealm before your first outing](neighbourhood-exploration.md).
+
+The neighbourhood map is the first interactive view after the loading sequence.
+Before a real outing anchors the atlas, visitors can preview a 19-cell area by
+requesting a lower-accuracy browser location or choosing **Pick a spot** and
+clicking the map. Preview cells are display-only; they do not change the saved
+anchor, cell ledger, or qualifying-run count. The app remembers the preview
+centre on that device. The first qualifying real outing still sets the atlas
+anchor.
+
+Visitors can watch a roughly 22-second sample route inside the preview ring.
+Its runner, route, and cell overlays are separate from the saved atlas, and the
+sample is labelled as not part of the user's atlas. Reduced-motion settings
+show the settled state immediately. A visitor can also sketch a route on the
+map, see its approximate distance and cells inside or outside the preview ring,
+and add points using the map centre from the keyboard controls. Sketches stay
+in local storage. The optional phone handoff encodes the exact route and a
+rounded preview centre in the URL, so sharing it also shares that route and
+approximate location; no atlas progress is transferred.
+
+The **Realm** tab links to the free `/orbis-live` storyboard before offering
+optional live generation, which uses Reactor credits. The neighbourhood tour is
+opt-in, has eight steps, can be skipped or closed with Escape, and never starts
+a real run. It explains the preview, sample route, goals, planning, Realm,
+advanced tools, and phone handoff. Preview and sample activity never award
+progress or register territory ownership.

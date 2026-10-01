@@ -1,7 +1,9 @@
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import type { NeighbourhoodState } from '@runrealm/shared-core/types/neighbourhood';
 import { gridDisk, latLngToCell } from 'h3-js';
+import { announceReveal, REVEAL_EVENT } from '../../../lib/reveal';
 import { NeighbourhoodExperience } from '../neighbourhood-experience';
+import { NeighbourhoodMapRenderer } from '../neighbourhood-map-renderer';
 
 jest.mock('maplibre-gl', () => ({
   Marker: class {
@@ -127,13 +129,76 @@ describe('NeighbourhoodExperience', () => {
   });
 
   it('renders the idle shell with goals, start, atlas and honest framing', () => {
-    const { root } = mount();
+    const { root } = mount({ state: { collectedCount: 2, qualifyingRuns: 1 } });
     expect(root.querySelector('.nh-headline')?.textContent).toBe('Your neighbourhood');
     expect(root.textContent).toContain('Move 500m');
     expect(root.textContent).toContain('not registered ownership');
     expect(root.querySelector('[data-action="start"]')).toBeTruthy();
     expect(root.querySelectorAll('.nh-goal')).toHaveLength(3);
     expect(root.querySelector('.nh-goal--locked')).toBeTruthy();
+  });
+
+  it('opens a first visit as an invitation with one Explore goal and the rules folded away', () => {
+    const { root } = mount();
+    expect(root.querySelector('.nh-headline')?.textContent).toBe(
+      'Your neighbourhood is uncharted.'
+    );
+    const requirement = root.querySelector('.nh-requirement')?.textContent ?? '';
+    expect(requirement).toContain('location');
+    expect(requirement).toContain('500m');
+    expect(requirement).toContain('GPS');
+
+    const mainGoals = root.querySelectorAll('.nh-goals:not(.nh-goals--later) .nh-goal');
+    expect(mainGoals).toHaveLength(1);
+    expect((mainGoals[0] as HTMLElement).dataset.goal).toBe('explore');
+
+    const guide = root.querySelector<HTMLDetailsElement>('details.nh-guide');
+    expect(guide).toBeTruthy();
+    expect(guide?.open).toBe(false);
+    expect(guide?.querySelector('.nh-goal[data-goal="strengthen"]')).toBeTruthy();
+    expect(guide?.querySelector('.nh-goal[data-goal="challenge"]')).toBeTruthy();
+    expect(guide?.querySelector('.nh-legend')).toBeTruthy();
+    expect(guide?.querySelector('.nh-ghostline')).toBeTruthy();
+
+    // Honesty stays in plain sight, never folded into the guide.
+    const honest = root.querySelector('.nh-honest');
+    expect(honest?.textContent).toContain('not registered ownership');
+    expect(guide?.contains(honest as Node)).toBe(false);
+  });
+
+  it('shows returning runners every goal with the legend folded into the guide', () => {
+    const { root } = mount({
+      state: { collectedCount: 3, qualifyingRuns: 1 },
+      availability: {
+        explore: { available: true },
+        strengthen: { available: true },
+        challenge: { available: false },
+      },
+    });
+    expect(root.querySelector('.nh-progress')?.textContent).toContain('1 outing');
+    expect(root.querySelectorAll('.nh-goals:not(.nh-goals--later) .nh-goal')).toHaveLength(3);
+    expect(root.querySelector('.nh-goals--later')).toBeNull();
+    expect(root.querySelector('.nh-requirement')).toBeNull();
+    expect(root.querySelector('details.nh-guide .nh-legend')).toBeTruthy();
+  });
+
+  it('keeps the guide open across re-renders', () => {
+    const { root } = mount();
+    const guide = root.querySelector<HTMLDetailsElement>('details.nh-guide') as HTMLDetailsElement;
+    guide.open = true;
+    guide.dispatchEvent(new Event('toggle'));
+    root.querySelector<HTMLButtonElement>('[data-action="atlas"]')?.click();
+    expect(root.querySelector<HTMLDetailsElement>('details.nh-guide')?.open).toBe(true);
+  });
+
+  it('redraws from invitation to ledger once ground is collected', () => {
+    const { deps, root } = mount();
+    expect(root.querySelector('.nh-requirement')).toBeTruthy();
+    deps.bus.emit('neighbourhood:updated', {
+      state: baseState({ collectedCount: 2, qualifyingRuns: 1 }),
+    } as never);
+    expect(root.querySelector('.nh-requirement')).toBeNull();
+    expect(root.querySelector('.nh-headline')?.textContent).toBe('Your neighbourhood');
   });
 
   it('keeps the primary start in a dock that survives scroll', () => {
@@ -426,6 +491,8 @@ describe('NeighbourhoodExperience', () => {
         challenge: { available: true },
       },
       state: {
+        collectedCount: 4,
+        qualifyingRuns: 2,
         referenceRun: { id: 'r2', distanceMeters: 1500, durationMs: 900_000 },
       },
     });
@@ -496,6 +563,7 @@ function fakeMap() {
     getZoom: jest.fn(() => 12),
     getBearing: jest.fn(() => 0),
     resize: jest.fn(),
+    getCenter: jest.fn(() => ({ lat: 37.7749, lng: -122.4194 })),
     setFeatureState: jest.fn(),
     getFeatureState: jest.fn(() => ({})),
     getCanvas: jest.fn(() => null),
@@ -545,6 +613,73 @@ function fakeMap() {
   };
 }
 
+describe('NeighbourhoodExperience desktop exploration', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    EventBus.getInstance().clear();
+  });
+
+  it('lets a visitor pick a preview without filing an outing or setting the atlas anchor', () => {
+    const map = fakeMap();
+    const { root, deps, shell } = mount({ map });
+    root.querySelector<HTMLButtonElement>('[data-action="pick-spot"]')?.click();
+    expect(root.querySelector('[data-action="pick-spot"]')?.getAttribute('aria-pressed')).toBe(
+      'true'
+    );
+    map.fire('click', { lngLat: { lat: 37.7749, lng: -122.4194 } });
+    expect(root.querySelector('.nh-preview-status')?.textContent).toContain('Preview only');
+    expect(map.source.setData.mock.calls.at(-1)?.[0].features).toHaveLength(19);
+    expect(deps.neighbourhood.setGoal).not.toHaveBeenCalled();
+    expect(deps.neighbourhood.getState().anchorCell).toBeNull();
+    expect(deps.neighbourhood.getState().qualifyingRuns).toBe(0);
+    expect(root.querySelector('[data-action="start"]')).toBeTruthy();
+    shell.destroy();
+  });
+
+  it('supports keyboard route points without a GPS request', () => {
+    const map = fakeMap();
+    const { root, deps, shell } = mount({ map });
+    root.querySelector<HTMLButtonElement>('[data-action="sketch"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="add-centre"]')?.click();
+    expect(root.querySelector('.nh-sketch-status')?.textContent).toContain('planned');
+    expect(deps.location.getCurrentLocation).not.toHaveBeenCalled();
+    expect(deps.runTracking.startRun).not.toHaveBeenCalled();
+    shell.destroy();
+  });
+
+  it('starts a sample from the map centre with no location request or run start', () => {
+    const map = fakeMap();
+    const { root, deps, shell } = mount({ map });
+    root.querySelector<HTMLButtonElement>('[data-action="sample"]')?.click();
+    expect(root.querySelector('.nh-sample-status')?.textContent).toContain('Sample');
+    expect(deps.location.getCurrentLocation).not.toHaveBeenCalled();
+    expect(deps.runTracking.startRun).not.toHaveBeenCalled();
+    root.querySelector<HTMLButtonElement>('[data-action="skip-sample"]')?.click();
+    expect(root.querySelector<HTMLElement>('.nh-sample-status')?.hidden).toBe(true);
+    shell.destroy();
+  });
+
+  it('opens the optional tour, keeps the run untouched, and restores focus on Escape', () => {
+    const map = fakeMap();
+    const { root, deps, shell } = mount({ map });
+    const trigger = root.querySelector<HTMLButtonElement>(
+      '.nh-tour-invite [data-action="tour"]'
+    ) as HTMLButtonElement;
+    trigger.focus();
+    trigger.click();
+    expect(document.querySelector('.nh-tour-count')?.textContent).toBe('1 of 8');
+    (document.querySelector('[data-tour-action="next"]') as HTMLButtonElement).click();
+    expect(document.querySelector('.nh-tour-count')?.textContent).toBe('2 of 8');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(deps.runTracking.startRun).not.toHaveBeenCalled();
+    expect(document.querySelector('.nh-tour')).toBeNull();
+    // The invitation is dismissed on close, so its removed trigger cannot
+    // receive focus again; return to the persistent Start control instead.
+    expect(document.activeElement).toBe(root.querySelector('[data-action="start"]'));
+    shell.destroy();
+  });
+});
+
 describe('NeighbourhoodExperience regressions', () => {
   beforeEach(() => {
     EventBus.getInstance().clear();
@@ -564,6 +699,8 @@ describe('NeighbourhoodExperience regressions', () => {
     const { root } = mount({
       state: baseState({
         goal: 'challenge',
+        collectedCount: 2,
+        qualifyingRuns: 2,
         referenceRun: { id: 'r1', distanceMeters: 800, durationMs: 300_000 },
       }),
       availability: {
@@ -720,8 +857,10 @@ describe('NeighbourhoodExperience regressions', () => {
     deps.runTracking.__setRun({ status: 'recording', points: [], totalDistance: 0 });
     deps.bus.emit('run:started', { startPoint: {} } as never);
     expect(map.source.setData).toHaveBeenCalled();
-    const data = map.source.setData.mock.calls.at(-1)?.[0];
-    expect(data.features).toHaveLength(19);
+    const data = map.source.setData.mock.calls
+      .map((call) => call[0])
+      .find((value) => value.features?.length === 19);
+    expect(data?.features).toHaveLength(19);
     expect(
       data.features.every(
         (f: { properties: { status: string } }) => f.properties.status === 'unvisited'
@@ -750,5 +889,139 @@ describe('NeighbourhoodExperience regressions', () => {
     second.destroy();
     expect(pending.off).toHaveBeenCalledWith('load', expect.any(Function));
     pending.fire('load');
+  });
+});
+
+function collectedSummary(runId: string, newCellIds: string[]) {
+  return {
+    runId,
+    goal: 'explore',
+    distanceMeters: 800,
+    durationMs: 300_000,
+    newCellIds,
+    strengthenedCellIds: [],
+    outsideCellCount: 0,
+    reason: 'collected',
+    persisted: true,
+  };
+}
+
+describe('NeighbourhoodExperience arrival and first reward', () => {
+  const originalMatchMedia = window.matchMedia;
+
+  beforeEach(() => {
+    EventBus.getInstance().clear();
+    delete document.documentElement.dataset.rrRevealed;
+  });
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+    delete document.documentElement.dataset.rrRevealed;
+    jest.restoreAllMocks();
+  });
+
+  it('waits for the splash to lift, then makes its entrance exactly once', () => {
+    const { root, shell } = mount();
+    expect(root.classList.contains('nh-shell--arriving')).toBe(false);
+    announceReveal();
+    expect(root.classList.contains('nh-shell--arriving')).toBe(true);
+
+    root.dispatchEvent(new Event('animationend'));
+    expect(root.classList.contains('nh-shell--arriving')).toBe(false);
+    window.dispatchEvent(new Event(REVEAL_EVENT));
+    expect(root.classList.contains('nh-shell--arriving')).toBe(false);
+    shell.destroy();
+  });
+
+  it('arrives immediately when it mounts after the splash already lifted', () => {
+    announceReveal();
+    const { root, shell } = mount();
+    expect(root.classList.contains('nh-shell--arriving')).toBe(true);
+    shell.destroy();
+  });
+
+  it('skips the entrance motion under reduced motion', () => {
+    window.matchMedia = jest.fn(() => ({ matches: true }) as MediaQueryList);
+    const { root, shell } = mount();
+    announceReveal();
+    expect(root.classList.contains('nh-shell--arriving')).toBe(false);
+    shell.destroy();
+  });
+
+  it('ripples the drawn neighbourhood on arrival, but never mid-run', () => {
+    const ripple = jest.spyOn(NeighbourhoodMapRenderer.prototype, 'playArrival');
+    const map = fakeMap();
+    const ids = gridDisk(latLngToCell(37.7749, -122.4194, 9), 2);
+    const { deps, shell } = mount({ map });
+    deps.neighbourhood.activeRingCellIds.mockReturnValue(ids);
+    deps.bus.emit('neighbourhood:updated', { state: deps.neighbourhood.getState() } as never);
+    announceReveal();
+    expect(ripple).toHaveBeenCalledTimes(1);
+    expect(ripple.mock.results[0].value).toBe(true);
+    shell.destroy();
+
+    ripple.mockClear();
+    delete document.documentElement.dataset.rrRevealed;
+    const running = mount({ map: fakeMap() });
+    running.deps.runTracking.__setRun({ status: 'recording', points: [], totalDistance: 0 });
+    running.deps.bus.emit('run:started', { startPoint: {} } as never);
+    announceReveal();
+    expect(ripple).not.toHaveBeenCalled();
+    running.shell.destroy();
+  });
+
+  it('stops listening for the reveal once destroyed', () => {
+    const { root, shell } = mount();
+    shell.destroy();
+    announceReveal();
+    expect(root.classList.contains('nh-shell--arriving')).toBe(false);
+  });
+
+  it('leads the summary with the map once ground changed, and marks the first ground', () => {
+    const map = fakeMap();
+    const ids = gridDisk(latLngToCell(37.7749, -122.4194, 9), 2);
+    const { deps, root, shell } = mount({ map });
+    deps.neighbourhood.activeRingCellIds.mockReturnValue(ids);
+    deps.bus.emit('neighbourhood:runCompleted', {
+      summary: collectedSummary('r20', [ids[0]]),
+      state: baseState({ collectedCount: 1, qualifyingRuns: 1 }),
+    } as never);
+    const primary = root.querySelector('.nh-dock .nh-start') as HTMLElement;
+    expect(primary.dataset.action).toBe('see-ground');
+    expect(root.querySelector('[data-action="continue"]')?.className).toBe('nh-secondary');
+    expect(root.querySelector('.nh-summary-celebrate')?.textContent).toBe(
+      'Your first ground is on the map.'
+    );
+    shell.destroy();
+  });
+
+  it('keeps an outing that collected nothing calm, with Continue first', () => {
+    const map = fakeMap();
+    const { deps, root, shell } = mount({ map });
+    deps.bus.emit('neighbourhood:runCompleted', {
+      summary: { ...collectedSummary('r21', []), distanceMeters: 200, reason: 'short' },
+      state: baseState(),
+    } as never);
+    const primary = root.querySelector('.nh-dock .nh-start') as HTMLElement;
+    expect(primary.dataset.action).toBe('continue');
+    expect(root.querySelector('.nh-summary-celebrate')).toBeNull();
+    expect(root.textContent).toContain('too short');
+    shell.destroy();
+  });
+
+  it('does not repeat the first-ground line on later outings', () => {
+    const map = fakeMap();
+    const ids = gridDisk(latLngToCell(37.7749, -122.4194, 9), 2);
+    const { deps, root, shell } = mount({ map });
+    deps.neighbourhood.activeRingCellIds.mockReturnValue(ids);
+    deps.bus.emit('neighbourhood:runCompleted', {
+      summary: collectedSummary('r22', [ids[3]]),
+      state: baseState({ collectedCount: 4, qualifyingRuns: 3 }),
+    } as never);
+    expect(root.querySelector('.nh-summary-celebrate')).toBeNull();
+    expect((root.querySelector('.nh-dock .nh-start') as HTMLElement).dataset.action).toBe(
+      'see-ground'
+    );
+    shell.destroy();
   });
 });

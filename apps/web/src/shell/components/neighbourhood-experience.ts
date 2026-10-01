@@ -11,9 +11,16 @@ import {
 import { NEIGHBOURHOOD_COPY } from '@runrealm/shared-core/utils/atlas-voice';
 import { formatDistance, formatDuration, formatPace } from '@runrealm/shared-core/utils/run-status';
 import type { Map as MaplibreMap } from 'maplibre-gl';
+import { hasRevealed, REVEAL_EVENT } from '../../lib/reveal';
+import { prefersReducedMotion } from './cell-transition-scheduler';
+import { handoffUrl, isDesk } from './desk-mode';
 import { NeighbourhoodMapController } from './neighbourhood-map-controller';
 import { NeighbourhoodMapRenderer } from './neighbourhood-map-renderer';
 import type { CellRecord } from './neighbourhood-map-types';
+import { type PreviewPoint, previewCells, readPreview, savePreview } from './neighbourhood-preview';
+import { NeighbourhoodTour, tourDismissed } from './neighbourhood-tour';
+import { RouteSketch, sketchStats } from './route-sketch';
+import { SampleOuting } from './sample-outing';
 
 export interface NeighbourhoodExperienceDeps {
   neighbourhood: NeighbourhoodService;
@@ -28,6 +35,7 @@ export interface NeighbourhoodExperienceDeps {
 type ShellPhase = 'idle' | 'recording' | 'paused' | 'summary';
 
 const STALE_FIX_MS = 30000;
+const ARRIVAL_RIPPLE_WINDOW_MS = 4000;
 
 function escapeHtml(value: string): string {
   return value
@@ -69,6 +77,26 @@ export class NeighbourhoodExperience {
   private exposedCellIds = new Set<string>();
   /** A finished outing awaiting a look at the map. */
   private pendingReview: NeighbourhoodRunSummary | null = null;
+  /** Whether "How it works" is expanded; kept across re-renders. */
+  private guideOpen = false;
+  /** Which idle layout is on screen; null until the idle panel first renders. */
+  private renderedFirstVisit: boolean | null = null;
+  private arrived = false;
+  private onReveal: (() => void) | null = null;
+  /** Until when a late-drawn neighbourhood may still get its arrival ripple. */
+  private arrivalRippleUntil = 0;
+  private previewPoint: PreviewPoint | null = readPreview();
+  private previewRing: string[] = this.previewPoint ? previewCells(this.previewPoint) : [];
+  private pickingSpot = false;
+  private mapPickHandler: ((event: { lngLat: { lat: number; lng: number } }) => void) | null = null;
+  private sketch: RouteSketch | null = null;
+  private sample: SampleOuting | null = null;
+  private sampleActive = false;
+  private sampleDone = false;
+  private sampleVisited = 0;
+  private handoffOpen = false;
+  private tour: NeighbourhoodTour | null = null;
+  private tourPromptDismissed = tourDismissed();
 
   constructor(private readonly deps: NeighbourhoodExperienceDeps) {
     this.state = deps.neighbourhood.getState();
@@ -103,6 +131,12 @@ export class NeighbourhoodExperience {
       else this.pendingReview = payload.summary;
     });
     this.on('run:started', () => {
+      this.tour?.close();
+      this.stopPicking();
+      this.sketch?.stop();
+      this.mapController?.stopSampleFollow();
+      this.sample?.stop();
+      this.sampleActive = false;
       this.phase = 'recording';
       this.lastRawFix = null;
       this.exposedCellIds.clear();
@@ -149,7 +183,12 @@ export class NeighbourhoodExperience {
     this.on('ghost:unlocked', () => this.renderGhost());
     this.on('map:styleLoaded', () => this.syncMap());
     this.on('ui:realmViewChanged', (data) => {
-      if ((data as { view: string }).view !== 'map') return;
+      if ((data as { view: string }).view !== 'map') {
+        this.stopPicking();
+        this.sketch?.stop();
+        this.stopSample();
+        return;
+      }
       this.reviewPendingOutcome();
     });
 
@@ -165,13 +204,86 @@ export class NeighbourhoodExperience {
       location: this.deps.location,
       eventBus: this.deps.eventBus,
       getPanel: () => this.root?.querySelector<HTMLElement>('.nh-panel') ?? null,
-      getNeighbourhoodCells: () => this.deps.neighbourhood.activeRingCellIds(),
+      getNeighbourhoodCells: () => this.activeCells(),
       getRun: () => this.deps.runTracking.getCurrentRun(),
     });
     this.mapController.initialize(document.body, this.root);
+    this.mapController.refreshArea();
+    if (this.previewPoint && !this.deps.neighbourhood.activeRingCellIds().length) {
+      this.mapController.frameCells(this.previewRing);
+    }
+    this.sketch = new RouteSketch(this.deps.map, () => {
+      this.updateSketchStatus();
+      if (this.handoffOpen) void this.renderHandoff();
+    });
+    this.updateSketchStatus();
+    this.sample = new SampleOuting(
+      this.deps.map,
+      (done, count) => {
+        this.sampleVisited = count;
+        this.sampleDone = done;
+        if (done) this.mapController?.stopSampleFollow();
+        this.updateSampleStatus();
+      },
+      (point) => this.mapController?.followSample(point)
+    );
+
+    if (hasRevealed()) {
+      this.arrive();
+    } else {
+      this.onReveal = () => this.arrive();
+      window.addEventListener(REVEAL_EVENT, this.onReveal, { once: true });
+    }
+  }
+
+  /**
+   * The splash has lifted: the panel makes its entrance (once) and the drawn
+   * neighbourhood ripples. Both are decoration over controls that are already
+   * live — nothing waits on them.
+   */
+  private arrive(): void {
+    this.detachReveal();
+    if (this.arrived || !this.root) return;
+    this.arrived = true;
+    if (!prefersReducedMotion()) {
+      const root = this.root;
+      root.classList.add('nh-shell--arriving');
+      root.addEventListener('animationend', () => root.classList.remove('nh-shell--arriving'), {
+        once: true,
+      });
+    }
+    this.arrivalRippleUntil = Date.now() + ARRIVAL_RIPPLE_WINDOW_MS;
+    this.tryArrivalRipple();
+  }
+
+  /**
+   * The ripple needs cells on the map. If the style or ring lands a moment
+   * after the reveal, `syncMap` retries within a short window — never later,
+   * so it cannot fire out of nowhere minutes into a session.
+   */
+  private tryArrivalRipple(): void {
+    if (!this.arrivalRippleUntil || Date.now() > this.arrivalRippleUntil) {
+      this.arrivalRippleUntil = 0;
+      return;
+    }
+    if (this.phase !== 'idle' || !this.isMapVisible()) return;
+    if (this.mapRenderer?.playArrival()) this.arrivalRippleUntil = 0;
+  }
+
+  private detachReveal(): void {
+    if (this.onReveal) window.removeEventListener(REVEAL_EVENT, this.onReveal);
+    this.onReveal = null;
   }
 
   destroy(): void {
+    this.detachReveal();
+    this.tour?.dispose();
+    this.tour = null;
+    this.stopPicking();
+    this.sample?.dispose();
+    this.sketch?.dispose();
+    this.sample = null;
+    this.sketch = null;
     this.mapController?.destroy();
     this.mapController = null;
     this.mapRenderer?.dispose();
@@ -217,6 +329,12 @@ export class NeighbourhoodExperience {
 
   private renderIdleBits(): void {
     if (this.phase !== 'idle' || !this.root) return;
+    // Crossing from invitation to ledger (or back, after a reset) changes the
+    // layout, not just text — redraw rather than patch.
+    if (this.renderedFirstVisit !== null && this.renderedFirstVisit !== this.isFirstVisit()) {
+      this.render();
+      return;
+    }
     const progress = this.root.querySelector('.nh-progress');
     if (progress) {
       progress.textContent = NEIGHBOURHOOD_COPY.progressLine(this.state.qualifyingRuns);
@@ -256,36 +374,73 @@ export class NeighbourhoodExperience {
     )}</p>`;
   }
 
+  /** No outing has collected anything yet: the panel is an invitation, not a ledger. */
+  private isFirstVisit(): boolean {
+    return this.state.qualifyingRuns === 0 && this.state.collectedCount === 0;
+  }
+
+  private goalButton(goal: NeighbourhoodGoal): string {
+    const availability = this.deps.neighbourhood.goalAvailability();
+    const meta = NEIGHBOURHOOD_COPY.goals[goal];
+    const available = availability[goal].available;
+    const selected = this.state.goal === goal;
+    const locked = 'locked' in meta && !available ? meta.locked : '';
+    return `
+      <button type="button"
+        class="nh-goal${selected ? ' nh-goal--selected' : ''}${available ? '' : ' nh-goal--locked'}"
+        data-goal="${goal}"
+        aria-pressed="${selected}"
+        ${available ? '' : 'aria-disabled="true"'}>
+        <span class="nh-goal-label">${available ? meta.label : `${NEIGHBOURHOOD_COPY.lockedPrefix} · ${meta.label}`}</span>
+        <span class="nh-goal-hint">${locked || meta.hint}</span>
+      </button>`;
+  }
+
+  /**
+   * The rulebook, folded away: later goals (first visit only), the ghost line
+   * and the legend. Open state survives re-renders.
+   */
+  private guideBlock(firstVisit: boolean): string {
+    const laterGoals = firstVisit
+      ? `<p class="nh-guide-heading">${NEIGHBOURHOOD_COPY.laterGoalsLabel}</p>
+         <div class="nh-goals nh-goals--later" role="group" aria-label="${NEIGHBOURHOOD_COPY.laterGoalsLabel}">${this.goalButton('strengthen')}${this.goalButton('challenge')}</div>`
+      : '';
+    return `
+      <details class="nh-guide"${this.guideOpen ? ' open' : ''}>
+        <summary class="nh-guide-summary">${NEIGHBOURHOOD_COPY.guideLabel}</summary>
+        <div class="nh-guide-body">
+          ${laterGoals}
+          <div class="nh-ghostline"></div>
+          <button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tourAgain}</button>
+          <div class="nh-legend" aria-label="${NEIGHBOURHOOD_COPY.legendLabel}">
+            <span class="nh-swatch nh-swatch--unvisited"></span>${NEIGHBOURHOOD_COPY.legend.unvisited}
+            <span class="nh-swatch nh-swatch--collected"></span>${NEIGHBOURHOOD_COPY.legend.collected}
+            <span class="nh-swatch nh-swatch--strengthened"></span>${NEIGHBOURHOOD_COPY.legend.strengthened}
+          </div>
+        </div>
+      </details>`;
+  }
+
   private renderIdle(): void {
     if (!this.root) return;
-    const availability = this.deps.neighbourhood.goalAvailability();
+    const firstVisit = this.isFirstVisit();
+    this.renderedFirstVisit = firstVisit;
     const goals: NeighbourhoodGoal[] = ['explore', 'strengthen', 'challenge'];
-    const goalButtons = goals
-      .map((goal) => {
-        const meta = NEIGHBOURHOOD_COPY.goals[goal];
-        const available = availability[goal].available;
-        const selected = this.state.goal === goal;
-        const locked = 'locked' in meta && !available ? meta.locked : '';
-        return `
-          <button type="button"
-            class="nh-goal${selected ? ' nh-goal--selected' : ''}${available ? '' : ' nh-goal--locked'}"
-            data-goal="${goal}"
-            aria-pressed="${selected}"
-            ${available ? '' : 'aria-disabled="true"'}>
-            <span class="nh-goal-label">${available ? meta.label : `${NEIGHBOURHOOD_COPY.lockedPrefix} · ${meta.label}`}</span>
-            <span class="nh-goal-hint">${locked || meta.hint}</span>
-          </button>`;
-      })
-      .join('');
 
     const summaryBlock = this.lastSummary
       ? `<p class="nh-last">${this.summaryLine(this.lastSummary)}</p>`
       : '';
 
-    this.root.innerHTML = `
-      <div class="nh-panel">
-        <div class="nh-live-region" aria-live="polite" style="position:absolute;left:-9999px"></div>
-        <div class="nh-scroll">
+    const intro = firstVisit
+      ? `
+          <header class="nh-header">
+            <p class="nh-kicker">${NEIGHBOURHOOD_COPY.firstVisit.kicker}</p>
+            <h1 class="nh-headline nh-headline--invite">${NEIGHBOURHOOD_COPY.firstVisit.headline}</h1>
+          </header>
+          <p class="nh-lede">${NEIGHBOURHOOD_COPY.firstVisit.lede}</p>
+          <div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${this.goalButton('explore')}</div>
+          <p class="nh-requirement">${NEIGHBOURHOOD_COPY.firstVisit.requirement}</p>`
+      : `
           <header class="nh-header">
             <h1 class="nh-headline">${NEIGHBOURHOOD_COPY.headline}</h1>
             <p class="nh-progress">${NEIGHBOURHOOD_COPY.progressLine(this.state.qualifyingRuns)}</p>
@@ -293,16 +448,53 @@ export class NeighbourhoodExperience {
           <p class="nh-instruction">${NEIGHBOURHOOD_COPY.instruction}</p>
           <p class="nh-nextstep">${this.nextStepLine()}</p>
           ${this.referenceBlock()}
-          <div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${goalButtons}</div>
-          <div class="nh-ghostline"></div>
-          <div class="nh-legend" aria-label="${NEIGHBOURHOOD_COPY.legendLabel}">
-            <span class="nh-swatch nh-swatch--unvisited"></span>${NEIGHBOURHOOD_COPY.legend.unvisited}
-            <span class="nh-swatch nh-swatch--collected"></span>${NEIGHBOURHOOD_COPY.legend.collected}
-            <span class="nh-swatch nh-swatch--strengthened"></span>${NEIGHBOURHOOD_COPY.legend.strengthened}
-          </div>
+          <div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${goals
+            .map((goal) => this.goalButton(goal))
+            .join('')}</div>`;
+
+    this.root.innerHTML = `
+      <div class="nh-panel">
+        <div class="nh-live-region" aria-live="polite" style="position:absolute;left:-9999px"></div>
+        <div class="nh-scroll">
+          ${intro}
           ${summaryBlock}
+          <div class="nh-explore" data-tour="preview">
+            <p class="nh-explore-intro">${isDesk() ? NEIGHBOURHOOD_COPY.desktop.invitation : NEIGHBOURHOOD_COPY.desktop.phoneInvitation}</p>
+            <p class="nh-preview-status">${this.state.anchorCell ? '' : this.previewPoint ? NEIGHBOURHOOD_COPY.desktop.previewHint : NEIGHBOURHOOD_COPY.desktop.defaultCity}</p>
+            <div class="nh-explore-actions">
+              <button type="button" class="nh-secondary" data-action="show-streets">${NEIGHBOURHOOD_COPY.desktop.showStreets}</button>
+              <button type="button" class="nh-secondary" data-action="pick-spot" aria-pressed="${this.pickingSpot}">${NEIGHBOURHOOD_COPY.desktop.pickSpot}</button>
+              <button type="button" class="nh-secondary" data-action="sample" data-tour="sample">${NEIGHBOURHOOD_COPY.desktop.sample}</button>
+              <button type="button" class="nh-secondary" data-action="sketch" data-tour="sketch">${this.sketch?.isDrawing ? NEIGHBOURHOOD_COPY.desktop.sketchDone : NEIGHBOURHOOD_COPY.desktop.sketch}</button>
+            </div>
+            <p class="nh-sample-status" role="status" hidden></p>
+            <div class="nh-sample-actions" hidden>
+              <button type="button" class="nh-secondary" data-action="replay">${NEIGHBOURHOOD_COPY.desktop.replay}</button>
+              <button type="button" class="nh-secondary" data-action="skip-sample">${NEIGHBOURHOOD_COPY.desktop.skip}</button>
+            </div>
+            <div class="nh-sketch-controls" ${this.sketch?.isDrawing ? '' : 'hidden'}>
+              <p>${NEIGHBOURHOOD_COPY.desktop.sketchHint}</p>
+              <button type="button" class="nh-secondary" data-action="add-centre">${NEIGHBOURHOOD_COPY.desktop.addCentre}</button>
+              <button type="button" class="nh-secondary" data-action="undo">${NEIGHBOURHOOD_COPY.desktop.sketchUndo}</button>
+              <button type="button" class="nh-secondary" data-action="clear">${NEIGHBOURHOOD_COPY.desktop.sketchClear}</button>
+            </div>
+            <p class="nh-sketch-status" role="status"></p>
+            ${
+              isDesk()
+                ? `<button type="button" class="nh-secondary" data-action="handoff" data-tour="handoff">${NEIGHBOURHOOD_COPY.desktop.handoff}</button>
+            <div class="nh-handoff" ${this.handoffOpen ? '' : 'hidden'}>
+              <div class="nh-qr"></div>
+              <p>${NEIGHBOURHOOD_COPY.desktop.handoffNotice}</p>
+              <button type="button" class="nh-secondary" data-action="copy-link">${NEIGHBOURHOOD_COPY.desktop.copyLink}</button>
+              <button type="button" class="nh-secondary" data-action="share-link">${NEIGHBOURHOOD_COPY.desktop.share}</button>
+            </div>`
+                : ''
+            }
+          </div>
           <div class="nh-celldetail" hidden></div>
           <p class="nh-honest">${this.honestLine()}</p>
+          ${this.guideBlock(firstVisit)}
+          ${firstVisit && !this.tourPromptDismissed ? `<div class="nh-tour-invite"><button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tour}</button><button type="button" class="nh-secondary" data-action="dismiss-tour" aria-label="Dismiss tour invitation">Not now</button></div>` : ''}
           <div class="nh-footer">
             <button type="button" class="nh-secondary" data-action="atlas" aria-expanded="${this.atlasOpen}">${NEIGHBOURHOOD_COPY.myAtlas}</button>
             <button type="button" class="nh-secondary" data-action="account">${NEIGHBOURHOOD_COPY.account}</button>
@@ -323,6 +515,9 @@ export class NeighbourhoodExperience {
     this.renderCellDetail();
     if (this.atlasOpen) this.renderAtlasList();
     if (!this.deps.map) this.showMapNote();
+    this.updateSketchStatus();
+    this.updateSampleStatus();
+    if (this.handoffOpen) void this.renderHandoff();
   }
 
   private bindIdle(): void {
@@ -336,8 +531,69 @@ export class NeighbourhoodExperience {
     this.root.querySelector('[data-action="start"]')?.addEventListener('click', () => {
       void this.startRun();
     });
+    this.root.querySelector<HTMLDetailsElement>('.nh-guide')?.addEventListener('toggle', (e) => {
+      this.guideOpen = (e.currentTarget as HTMLDetailsElement).open;
+    });
     this.root.querySelector('[data-action="locate"]')?.addEventListener('click', () => {
       void this.locate();
+    });
+    this.root.querySelector('[data-action="show-streets"]')?.addEventListener('click', () => {
+      void this.showStreets();
+    });
+    this.root.querySelector('[data-action="pick-spot"]')?.addEventListener('click', () => {
+      if (this.pickingSpot) this.stopPicking();
+      else this.pickSpot();
+    });
+    for (const btn of this.root.querySelectorAll('[data-action="tour"]')) {
+      btn.addEventListener('click', () => this.startTour());
+    }
+    this.root.querySelector('[data-action="dismiss-tour"]')?.addEventListener('click', () => {
+      this.tourPromptDismissed = true;
+      try {
+        localStorage.setItem('runrealm-nh-tour-v1', 'dismissed');
+      } catch {
+        /* optional */
+      }
+      this.root?.querySelector('.nh-tour-invite')?.remove();
+    });
+    this.root
+      .querySelector('[data-action="sample"]')
+      ?.addEventListener('click', () => this.playSample());
+    this.root
+      .querySelector('[data-action="replay"]')
+      ?.addEventListener('click', () => this.playSample());
+    this.root
+      .querySelector('[data-action="skip-sample"]')
+      ?.addEventListener('click', () => this.stopSample());
+    this.root
+      .querySelector('[data-action="sketch"]')
+      ?.addEventListener('click', () => this.toggleSketch());
+    this.root.querySelector('[data-action="add-centre"]')?.addEventListener('click', () => {
+      const center = this.deps.map?.getCenter?.();
+      if (center) this.sketch?.addPoint({ lat: center.lat, lng: center.lng });
+    });
+    this.root
+      .querySelector('[data-action="undo"]')
+      ?.addEventListener('click', () => this.sketch?.undo());
+    this.root
+      .querySelector('[data-action="clear"]')
+      ?.addEventListener('click', () => this.sketch?.clear());
+    this.root.querySelector('[data-action="handoff"]')?.addEventListener('click', () => {
+      this.handoffOpen = !this.handoffOpen;
+      const card = this.root?.querySelector<HTMLElement>('.nh-handoff');
+      if (card) card.hidden = !this.handoffOpen;
+      if (this.handoffOpen) void this.renderHandoff();
+    });
+    this.root.querySelector('[data-action="copy-link"]')?.addEventListener('click', () => {
+      void navigator.clipboard?.writeText(
+        handoffUrl(this.sketch?.getPoints() ?? [], this.previewPoint)
+      );
+    });
+    this.root.querySelector('[data-action="share-link"]')?.addEventListener('click', () => {
+      if (navigator.share)
+        void navigator
+          .share({ url: handoffUrl(this.sketch?.getPoints() ?? [], this.previewPoint) })
+          .catch(() => {});
     });
     this.root.querySelector('[data-action="atlas"]')?.addEventListener('click', () => {
       this.atlasOpen = !this.atlasOpen;
@@ -611,11 +867,29 @@ export class NeighbourhoodExperience {
             summary.challenge.targetReached
           )}</p>`
         : '';
+    // Ground that changed is the payoff, so looking at it leads; an outing
+    // that collected nothing keeps Continue first and stays calm.
+    const changedGround = Boolean(
+      summary && summary.newCellIds.length + summary.strengthenedCellIds.length > 0
+    );
+    const firstGround =
+      summary && summary.newCellIds.length > 0 && this.state.qualifyingRuns === 1
+        ? `<p class="nh-summary-celebrate">${NEIGHBOURHOOD_COPY.firstGround}</p>`
+        : '';
+    const continueBtn = (cls: string) =>
+      `<button type="button" class="${cls}" data-action="continue">${NEIGHBOURHOOD_COPY.continue}</button>`;
+    const seeGroundBtn = (cls: string) =>
+      `<button type="button" class="${cls}" data-action="see-ground">${NEIGHBOURHOOD_COPY.seeGroundOnMap}</button>`;
+    const dock =
+      this.canReviewOnMap() && changedGround
+        ? `${seeGroundBtn('nh-start')}${continueBtn('nh-secondary')}`
+        : `${continueBtn('nh-start')}${this.canReviewOnMap() ? seeGroundBtn('nh-secondary') : ''}`;
     this.root.innerHTML = `
       <div class="nh-panel nh-panel--summary" role="dialog" aria-label="${NEIGHBOURHOOD_COPY.summaryTitle}">
         <div class="nh-live-region" aria-live="polite" style="position:absolute;left:-9999px"></div>
         <div class="nh-scroll">
           <h2 class="nh-headline">${NEIGHBOURHOOD_COPY.summaryTitle}</h2>
+          ${firstGround}
           <p class="nh-summary-meta">${meta}</p>
           <p class="nh-summary-line">${line}</p>
           ${challengeBlock}
@@ -623,14 +897,7 @@ export class NeighbourhoodExperience {
           <p class="nh-nextstep">${this.nextStepLine()}</p>
           <p class="nh-error" role="alert" hidden></p>
         </div>
-        <div class="nh-dock">
-          <button type="button" class="nh-start" data-action="continue">${NEIGHBOURHOOD_COPY.continue}</button>
-          ${
-            this.canReviewOnMap()
-              ? `<button type="button" class="nh-secondary" data-action="see-ground">${NEIGHBOURHOOD_COPY.seeGroundOnMap}</button>`
-              : ''
-          }
-        </div>
+        <div class="nh-dock">${dock}</div>
       </div>
     `;
     this.root.querySelector('[data-action="continue"]')?.addEventListener('click', () => {
@@ -688,6 +955,232 @@ export class NeighbourhoodExperience {
     return /location|denied|position/i.test(message)
       ? NEIGHBOURHOOD_COPY.gpsDenied
       : NEIGHBOURHOOD_COPY.startError;
+  }
+
+  private setPreview(point: PreviewPoint): void {
+    if (
+      !Number.isFinite(point.lat) ||
+      !Number.isFinite(point.lng) ||
+      Math.abs(point.lat) > 90 ||
+      Math.abs(point.lng) > 180
+    )
+      return;
+    this.previewPoint = point;
+    this.previewRing = previewCells(point);
+    savePreview(point);
+    this.syncMap();
+    if (!this.deps.neighbourhood.activeRingCellIds().length) {
+      this.mapController?.frameCells(this.previewRing);
+      this.mapRenderer?.playArrival();
+    }
+    this.renderCellDetail();
+    this.updateSketchStatus();
+    this.renderIdleBits();
+    const status = this.root?.querySelector('.nh-preview-status');
+    if (status) status.textContent = NEIGHBOURHOOD_COPY.desktop.previewHint;
+    if (this.handoffOpen) void this.renderHandoff();
+    this.announce(NEIGHBOURHOOD_COPY.desktop.previewHint);
+  }
+
+  private async showStreets(): Promise<void> {
+    const fix = await this.deps.location.getCurrentLocation(false, true);
+    if (!this.root) return;
+    if (fix) this.setPreview({ lat: fix.lat, lng: fix.lng });
+    else this.setError(NEIGHBOURHOOD_COPY.desktop.previewError);
+  }
+
+  private pickSpot(): void {
+    const map = this.deps.map;
+    if (!map) return;
+    this.pickingSpot = true;
+    const btn = this.root?.querySelector('[data-action="pick-spot"]');
+    btn?.setAttribute('aria-pressed', 'true');
+    this.announce(NEIGHBOURHOOD_COPY.desktop.pickInstruction);
+    this.mapPickHandler = (event) => {
+      this.stopPicking();
+      this.setPreview(event.lngLat);
+    };
+    map.on('click', this.mapPickHandler);
+    window.addEventListener('keydown', this.onPickKey);
+  }
+
+  private onPickKey = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.stopPicking();
+      this.root?.querySelector<HTMLElement>('[data-action="pick-spot"]')?.focus();
+    }
+  };
+
+  private stopPicking(): void {
+    if (this.mapPickHandler) this.deps.map?.off('click', this.mapPickHandler);
+    this.mapPickHandler = null;
+    this.pickingSpot = false;
+    window.removeEventListener('keydown', this.onPickKey);
+    this.root?.querySelector('[data-action="pick-spot"]')?.setAttribute('aria-pressed', 'false');
+  }
+
+  private startTour(): void {
+    if (this.phase !== 'idle') return;
+    this.tour?.dispose();
+    this.tour = new NeighbourhoodTour(
+      [
+        {
+          title: 'Your streets, your atlas',
+          body: 'RunRealm develops a map of the streets you run. The first real outing starts your neighbourhood.',
+          target: '.nh-headline',
+        },
+        {
+          title: 'Preview your neighbourhood',
+          body: 'Use Show my streets or Pick a spot to explore. This preview never collects or claims ground.',
+          target: '[data-tour="preview"]',
+          enter: () => {
+            if (!this.activeCells().length && this.deps.map) {
+              const point = this.deps.map.getCenter?.();
+              if (point && Number.isFinite(point.lat) && Number.isFinite(point.lng)) {
+                this.setPreview({ lat: point.lat, lng: point.lng });
+              }
+            }
+          },
+        },
+        {
+          title: 'Watch an example',
+          body: 'Watch a sample route and its cells light up. Sample — not your atlas.',
+          target: '[data-tour="sample"]',
+          enter: () => this.playSample(),
+          leave: () => this.stopSample(),
+        },
+        {
+          title: 'Three ways to explore',
+          body: 'Explore collects new blocks. Strengthen revisits familiar ones. Challenge unlocks after two qualifying outings.',
+          target: '.nh-guide',
+          enter: () => {
+            const guide = this.root?.querySelector<HTMLDetailsElement>('.nh-guide');
+            if (guide) guide.open = true;
+          },
+        },
+        {
+          title: 'Plan your first route',
+          body: 'Sketch a route on the map and check your distance against 500m. It is a plan, not an outing.',
+          target: '[data-tour="sketch"]',
+        },
+        {
+          title: 'See the Realm',
+          body: 'Open the Realm tab for a free storyboard. Live generation is optional and uses credits.',
+          target: '[data-tour="realm"]',
+        },
+        {
+          title: 'Beyond the first outing',
+          body: 'Advanced tools include the dashboard, ghosts, leaderboard and optional wallet. Your atlas is local, not registered ownership.',
+          target: '[data-action="advanced"]',
+        },
+        {
+          title: 'Take it outside',
+          body: isDesk()
+            ? 'Continue on your phone. Your link shares your exact drawn route and approximate preview centre, not saved progress.'
+            : 'Start a real run when you are ready. A qualifying 500m outing sets your neighbourhood.',
+          target: isDesk() ? '[data-tour="handoff"]' : '[data-action="start"]',
+        },
+      ],
+      () => {
+        this.stopSample();
+        this.tourPromptDismissed = true;
+        this.root?.querySelector('.nh-tour-invite')?.remove();
+      }
+    );
+    this.tour.start();
+  }
+
+  private playSample(): void {
+    if (this.phase !== 'idle' || !this.deps.map) return;
+    this.stopPicking();
+    this.sketch?.stop();
+    const ring = this.activeCells();
+    if (!ring.length) {
+      const center = this.deps.map.getCenter?.();
+      if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lng)) {
+        this.setError(NEIGHBOURHOOD_COPY.desktop.previewError);
+        return;
+      }
+      this.setPreview({ lat: center.lat, lng: center.lng });
+    }
+    if (!this.sample) return;
+    this.sampleActive = true;
+    this.sampleDone = false;
+    this.mapController?.frameCells(this.activeCells());
+    this.mapController?.beginSampleFollow();
+    this.sample.start(this.activeCells());
+    this.updateSampleStatus();
+  }
+
+  private stopSample(): void {
+    this.mapController?.stopSampleFollow();
+    this.sample?.stop();
+    this.sampleActive = false;
+    this.sampleDone = false;
+    this.updateSampleStatus();
+  }
+
+  private updateSampleStatus(): void {
+    const status = this.root?.querySelector<HTMLElement>('.nh-sample-status');
+    const actions = this.root?.querySelector<HTMLElement>('.nh-sample-actions');
+    if (!status || !actions) return;
+    status.hidden = !this.sampleActive;
+    actions.hidden = !this.sampleActive;
+    status.textContent = this.sampleDone
+      ? NEIGHBOURHOOD_COPY.desktop.sampleResult(this.sampleVisited)
+      : NEIGHBOURHOOD_COPY.desktop.sampleBadge;
+  }
+
+  private toggleSketch(): void {
+    if (!this.sketch) return;
+    this.stopPicking();
+    this.stopSample();
+    if (this.sketch.isDrawing) this.sketch.stop();
+    else this.sketch.start();
+    const active = this.sketch.isDrawing;
+    const btn = this.root?.querySelector<HTMLButtonElement>('[data-action="sketch"]');
+    if (btn)
+      btn.textContent = active
+        ? NEIGHBOURHOOD_COPY.desktop.sketchDone
+        : NEIGHBOURHOOD_COPY.desktop.sketch;
+    const controls = this.root?.querySelector<HTMLElement>('.nh-sketch-controls');
+    if (controls) controls.hidden = !active;
+    this.updateSketchStatus();
+  }
+
+  private updateSketchStatus(): void {
+    const status = this.root?.querySelector<HTMLElement>('.nh-sketch-status');
+    if (!status) return;
+    const points = this.sketch?.getPoints() ?? [];
+    const stats = sketchStats(points, this.activeCells());
+    status.textContent = points.length
+      ? NEIGHBOURHOOD_COPY.desktop.sketchStats(
+          stats.meters,
+          stats.remaining,
+          stats.collected,
+          stats.outside
+        )
+      : '';
+  }
+
+  private async renderHandoff(): Promise<void> {
+    const qr = this.root?.querySelector<HTMLElement>('.nh-qr');
+    if (!qr || !this.handoffOpen) return;
+    try {
+      const { default: QRCode } = await import('qrcode');
+      if (!this.root?.contains(qr) || !this.handoffOpen) return;
+      const image = await QRCode.toDataURL(
+        handoffUrl(this.sketch?.getPoints() ?? [], this.previewPoint),
+        { margin: 1, width: 200 }
+      );
+      const img = document.createElement('img');
+      img.src = image;
+      img.alt = 'Scan to open RunRealm on your phone';
+      qr.replaceChildren(img);
+    } catch {
+      qr.textContent = 'Use Copy link to open RunRealm on your phone.';
+    }
   }
 
   private async locate(): Promise<void> {
@@ -764,8 +1257,17 @@ export class NeighbourhoodExperience {
     return !document.body.classList.contains('living-realm-view');
   }
 
+  private activeCells(): string[] {
+    const real = this.deps.neighbourhood.activeRingCellIds();
+    if (real.length || this.phase === 'recording' || this.phase === 'paused') return real;
+    return this.previewRing;
+  }
+
   private syncMap(): void {
-    this.mapRenderer?.syncLedger(this.state, this.deps.neighbourhood.activeRingCellIds());
+    this.mapRenderer?.syncLedger(this.state, this.activeCells());
+    this.mapController?.refreshArea();
+    this.updateSketchStatus();
+    if (this.arrivalRippleUntil) this.tryArrivalRipple();
   }
 
   /** Accepted visits to uncollected ground, flashed once per run. */
@@ -808,14 +1310,18 @@ export class NeighbourhoodExperience {
       el.textContent = '';
       return;
     }
-    const index = this.state.ringCellIds.indexOf(cell.id);
+    const isPreview =
+      !this.deps.neighbourhood.activeRingCellIds().length && this.previewRing.includes(cell.id);
+    const index = this.activeCells().indexOf(cell.id);
     const label =
       index >= 0 ? NEIGHBOURHOOD_COPY.cellLabel(index) : cell.id.slice(-6).toUpperCase();
     el.hidden = false;
     el.innerHTML = `
       <span class="nh-celldetail-line">${NEIGHBOURHOOD_COPY.cellDetail.line(
         escapeHtml(label),
-        NEIGHBOURHOOD_COPY.cellDetail.status[cell.status],
+        isPreview
+          ? NEIGHBOURHOOD_COPY.desktop.previewOnly
+          : NEIGHBOURHOOD_COPY.cellDetail.status[cell.status],
         NEIGHBOURHOOD_COPY.visits(cell.visits)
       )}</span>
       <button type="button" class="nh-secondary nh-celldetail-clear" data-action="clear-cell">${NEIGHBOURHOOD_COPY.cellDetail.clear}</button>`;

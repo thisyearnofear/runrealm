@@ -292,6 +292,51 @@ describe('NeighbourhoodMapRenderer', () => {
     expect((map.featureState.get(IDS[3]) as unknown as CellTransientValues).exposure).toBe(0);
   });
 
+  it('ripples the neighbourhood once on arrival, in ring order, and settles to the ledger', () => {
+    const { map, renderer } = mount();
+    renderer.syncLedger(state({ [IDS[0]]: 1 }), IDS);
+    const setData = must(map.sources.get(CELLS_SOURCE), 'cells source missing').setData;
+    expect(renderer.playArrival()).toBe(true);
+    jest.advanceTimersByTime(200);
+    const first = (map.featureState.get(IDS[0]) as unknown as CellTransientValues).exposure;
+    const last = (map.featureState.get(IDS[18]) as unknown as CellTransientValues).exposure;
+    expect(first).toBeGreaterThan(last);
+    // Cosmetic only: no geometry re-upload, and a collected cell stays developed.
+    expect((map.featureState.get(IDS[0]) as unknown as CellTransientValues).develop).toBe(1);
+    expect(setData).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(5000);
+    for (const id of IDS) {
+      expect(map.featureState.get(id)).toEqual({ develop: 1, press: 0, exposure: 0, select: 0 });
+    }
+    expect(renderer.hasPendingTransitions).toBe(false);
+    expect(renderer.playArrival()).toBe(false);
+  });
+
+  it('skips the arrival ripple while no cells are drawn', () => {
+    const { renderer } = mount();
+    expect(renderer.playArrival()).toBe(false);
+    // Nothing was spent: once cells land, the ripple can still play.
+    renderer.syncLedger(state(), IDS);
+    expect(renderer.playArrival()).toBe(true);
+  });
+
+  it('settles the arrival ripple at once under reduced motion', () => {
+    const original = globalThis.matchMedia;
+    globalThis.matchMedia = ((q: string) => ({ matches: true, media: q })) as never;
+    try {
+      const { map, renderer } = mount();
+      renderer.syncLedger(state(), IDS);
+      expect(renderer.playArrival()).toBe(true);
+      expect(renderer.hasPendingTransitions).toBe(false);
+      for (const id of IDS) {
+        expect((map.featureState.get(id) as unknown as CellTransientValues).exposure).toBe(0);
+      }
+    } finally {
+      globalThis.matchMedia = original;
+    }
+  });
+
   it('selects a cell, reports it, and clears the previous selection', () => {
     const { map, renderer, onSelect } = mount();
     renderer.syncLedger(state({ [IDS[4]]: 1 }), IDS);

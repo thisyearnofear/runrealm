@@ -297,6 +297,225 @@ body.neighbourhood-mode .theater-pocket-btn {
   margin-top: 12px;
 }
 
+/* Secondary destinations recede so Start reads as the one obvious action. */
+.nh-footer .nh-secondary {
+  border-color: transparent;
+  padding: 0 8px;
+  color: #3f6372;
+  text-decoration: underline;
+  text-decoration-color: rgba(63, 99, 114, 0.35);
+  text-underline-offset: 3px;
+}
+
+.nh-footer .nh-secondary:hover {
+  color: var(--rr-sunprint-ink);
+  text-decoration-color: currentColor;
+}
+
+/* ---- First visit: an invitation, not a ledger ------------------------- */
+
+.nh-kicker {
+  margin: 0 0 6px;
+  font-family: var(--rr-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #3f6372;
+}
+
+.nh-headline--invite {
+  font-size: 1.6rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.nh-lede {
+  margin: 10px 0 4px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.nh-requirement {
+  margin: 0 0 4px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--rr-sunprint-amber);
+  background: rgba(13, 43, 62, 0.04);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--rr-sunprint-ink);
+}
+
+/* The desktop invitation remains secondary to the fixed run controls. */
+.nh-explore {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #b9cbd0;
+  border-radius: 12px;
+  background: rgba(99, 179, 200, 0.09);
+}
+
+.nh-explore-intro {
+  margin: 0 0 6px;
+  font-family: var(--rr-font-display);
+  line-height: 1.4;
+}
+
+.nh-preview-status,
+.nh-sketch-status,
+.nh-sample-status,
+.nh-sketch-controls p,
+.nh-handoff p {
+  margin: 6px 0 10px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #3f6372;
+}
+
+.nh-explore-actions,
+.nh-sample-actions,
+.nh-sketch-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nh-sketch-controls p {
+  flex-basis: 100%;
+}
+.nh-explore [hidden] {
+  display: none;
+}
+.nh-explore [data-action="pick-spot"][aria-pressed="true"],
+.nh-explore [data-action="sketch"]:focus-visible {
+  border-color: var(--rr-sunprint-amber);
+  outline: 2px solid var(--rr-sunprint-ink);
+  outline-offset: 2px;
+}
+
+.nh-handoff {
+  margin-top: 10px;
+}
+.nh-qr img {
+  width: min(200px, 100%);
+  height: auto;
+}
+.nh-tour-invite {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* ---- How it works (folded rulebook) ----------------------------------- */
+
+.nh-guide {
+  margin-top: 12px;
+  border-top: 1px solid #e0d8c4;
+  padding-top: 4px;
+}
+
+.nh-guide-summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: var(--rr-font-display);
+  font-size: 0.9rem;
+  color: var(--rr-sunprint-ink);
+  list-style: none;
+}
+
+.nh-guide-summary::-webkit-details-marker {
+  display: none;
+}
+
+.nh-guide-summary::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 180ms ease;
+}
+
+.nh-guide[open] > .nh-guide-summary::before {
+  transform: rotate(45deg);
+}
+
+.nh-guide-summary:focus-visible {
+  outline: 2px solid var(--rr-sunprint-ink);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.nh-guide-body {
+  padding-bottom: 4px;
+}
+
+.nh-guide-heading {
+  margin: 4px 0 0;
+  font-family: var(--rr-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #3f6372;
+}
+
+.nh-goals--later {
+  margin: 8px 0 4px;
+}
+
+.nh-summary-celebrate {
+  margin: 6px 0 2px;
+  font-family: var(--rr-font-display);
+  font-size: 1rem;
+  /* Ink keeps text contrast on bone; the verdigris mark carries the colour. */
+  color: var(--rr-sunprint-ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nh-summary-celebrate::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: rgba(79, 174, 139, 0.5);
+  border: 2px solid var(--rr-sunprint-verdigris);
+}
+
+/* ---- Arrival: the panel settles in as the splash lifts ---------------- */
+
+@keyframes nh-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+#neighbourhood-shell.nh-shell--arriving {
+  animation: nh-arrive 560ms cubic-bezier(0.2, 0.8, 0.2, 1) 160ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #neighbourhood-shell.nh-shell--arriving {
+    animation: none;
+  }
+
+  .nh-guide-summary::before {
+    transition: none;
+  }
+}
+
 .nh-atlas {
   margin-top: 10px;
   max-height: 180px;

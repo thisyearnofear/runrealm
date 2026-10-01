@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { announceReveal } from '../lib/reveal';
 
 type BootStatus = 'loading' | 'ready' | 'error';
 
@@ -52,7 +53,7 @@ function BootSplash({
 
         <p className="boot-splash__kicker">Sunprint Atlas</p>
         <h1 className="boot-splash__wordmark">RunRealm</h1>
-        <p className="boot-splash__tagline">Run. Claim. Defend.</p>
+        <p className="boot-splash__tagline">Run your streets. Grow your atlas.</p>
 
         {status === 'error' ? (
           <div className="boot-splash__error">
@@ -139,10 +140,12 @@ export default function Home() {
             }
           },
         });
+        if (mountedRef.current) setPhase('Unfolding your neighbourhood');
         await minSplash;
 
         if (!mountedRef.current) return;
         setStatus('ready');
+        announceReveal();
         hideTimer = setTimeout(() => {
           if (mountedRef.current) {
             setDismissed(true);
@@ -180,6 +183,7 @@ export default function Home() {
   // page with no recovery path.
   const handleSkip = useCallback(() => {
     setDismissed(true);
+    announceReveal();
   }, []);
 
   if (dismissed && status !== 'error') {

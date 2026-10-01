@@ -93,6 +93,9 @@ const deps = (): LivingRealmDeps => ({
 
 const flush = () => act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
 
+/** The map is the arrival; the realm (and its connect CTA) is one tab away. */
+const openRealm = () => fireEvent.click(screen.getByRole('button', { name: 'Realm' }));
+
 beforeEach(async () => {
   bus = EventBus.getInstance();
   bus.clear();
@@ -142,8 +145,19 @@ afterEach(() => {
 });
 
 describe('LivingRealmRoot', () => {
+  it('arrives on the map, keeping live-generation status out of the first impression', () => {
+    render(<LivingRealmRoot {...deps()} />);
+    expect(document.body.classList.contains('living-realm-view')).toBe(false);
+    expect(screen.getByRole('button', { name: 'Map' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByText('Live generation is not connected')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Reactor credits/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bring realm to life' })).not.toBeInTheDocument();
+  });
+
   it('boots disconnected without contacting the broker or model', () => {
     render(<LivingRealmRoot {...deps()} />);
+    openRealm();
+    expect(document.body.classList.contains('living-realm-view')).toBe(true);
     expect(mockReactor.connect).not.toHaveBeenCalled();
     expect(screen.getAllByText('Live generation is not connected').length).toBeGreaterThan(0);
     expect(screen.getByText('Local atlas preview — not generated video')).toBeInTheDocument();
@@ -156,6 +170,7 @@ describe('LivingRealmRoot', () => {
 
   it('connects once, sends the initial scene prompt before starting', async () => {
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     const connect = screen.getByRole('button', { name: 'Bring realm to life' });
     await act(async () => {
       fireEvent.click(connect);
@@ -181,6 +196,7 @@ describe('LivingRealmRoot', () => {
   it('disables model audio before starting and never exposes an audio transport', async () => {
     const setTransportSpy = jest.spyOn(director, 'setTransport');
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -206,6 +222,7 @@ describe('LivingRealmRoot', () => {
         })
     );
     render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -223,6 +240,7 @@ describe('LivingRealmRoot', () => {
 
   it('pauses generation started while the realm is hidden', async () => {
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -245,6 +263,7 @@ describe('LivingRealmRoot', () => {
 
   it('clears stale frames so a reconnect cannot claim Live from an old session', async () => {
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -276,6 +295,7 @@ describe('LivingRealmRoot', () => {
 
   it('keeps Disconnect reachable in map view', async () => {
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -295,6 +315,7 @@ describe('LivingRealmRoot', () => {
         })
     );
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -318,6 +339,7 @@ describe('LivingRealmRoot', () => {
   it('flags a stalled stream only on real frame silence, not state heartbeats', async () => {
     jest.useFakeTimers();
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -340,6 +362,7 @@ describe('LivingRealmRoot', () => {
 
   it('does not autostart a new generation after generation_complete', async () => {
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -397,6 +420,7 @@ describe('LivingRealmRoot', () => {
 
   it('never claims Live without a real frame and video readiness', async () => {
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -409,6 +433,7 @@ describe('LivingRealmRoot', () => {
 
   it('marks Live only when video is ready and frames have emitted', async () => {
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -429,19 +454,33 @@ describe('LivingRealmRoot', () => {
     expect(screen.getByText('Live')).toBeInTheDocument();
   });
 
-  it('switches to map on run start and back to realm on pause', async () => {
+  it('switches to map on run start and stays there through pause, resume and finish', async () => {
     render(<LivingRealmRoot {...deps()} />);
+    openRealm();
+    expect(document.body.classList.contains('living-realm-view')).toBe(true);
     act(() => bus.emit('run:started', { startPoint: { lat: 0, lng: 0 } }));
     expect(document.body.classList.contains('living-realm-view')).toBe(false);
     expect(map.resize).toHaveBeenCalled();
     act(() => bus.emit('run:paused', { runId: 'r', timestamp: 1, stats: {} }));
-    expect(document.body.classList.contains('living-realm-view')).toBe(true);
+    expect(document.body.classList.contains('living-realm-view')).toBe(false);
     act(() => bus.emit('run:resumed', { runId: 'r', timestamp: 2, stats: {} }));
+    expect(document.body.classList.contains('living-realm-view')).toBe(false);
+    act(() => bus.emit('run:completed', {} as never));
+    // The finished outing's reveal plays on the map, so the map stays.
+    expect(document.body.classList.contains('living-realm-view')).toBe(false);
+    expect(screen.getByRole('button', { name: 'Map' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps the map when a run is cancelled', async () => {
+    render(<LivingRealmRoot {...deps()} />);
+    act(() => bus.emit('run:started', { startPoint: { lat: 0, lng: 0 } }));
+    act(() => bus.emit('run:cancelled', {} as never));
     expect(document.body.classList.contains('living-realm-view')).toBe(false);
   });
 
   it('pauses generation and detaches the transport when hidden', async () => {
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -462,6 +501,7 @@ describe('LivingRealmRoot', () => {
       () => new Promise<void>((resolve) => setTimeout(resolve, LIVING_REALM_SESSION_LIMIT_MS + 500))
     );
     render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -474,6 +514,7 @@ describe('LivingRealmRoot', () => {
       throw new Error('provider denied placement JWT abc123');
     });
     render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -488,6 +529,7 @@ describe('LivingRealmRoot', () => {
   it('treats an undefined prompt reply as failure, not success', async () => {
     mockReactor.setPrompt = jest.fn(async () => undefined);
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });
@@ -511,6 +553,7 @@ describe('LivingRealmRoot', () => {
 
   it('unmount detaches its own session and restores the director flag', async () => {
     const view = render(<LivingRealmRoot {...deps()} />);
+    openRealm();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Bring realm to life' }));
     });

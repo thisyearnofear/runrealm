@@ -57,6 +57,10 @@ export const COLLECTION_STAGGER_MS = 40;
 const EXPOSURE_RISE_MS = 200;
 const EXPOSURE_FADE_MS = 600;
 const PRESS_RELEASE_MS = 700;
+/** Arrival: one quiet ripple across the neighbourhood as the splash lifts. */
+export const ARRIVAL_STAGGER_MS = 55;
+const ARRIVAL_RISE_MS = 260;
+const ARRIVAL_FADE_MS = 520;
 
 export interface NeighbourhoodMapRendererDeps {
   map: MaplibreMap | null;
@@ -74,6 +78,7 @@ export class NeighbourhoodMapRenderer {
   private onLoad: (() => void) | null = null;
   private onStyleData: (() => void) | null = null;
   private disposed = false;
+  private arrivalPlayed = false;
 
   constructor(private readonly deps: NeighbourhoodMapRendererDeps) {
     this.scheduler = new CellTransitionScheduler(deps.map, CELLS_SOURCE);
@@ -228,6 +233,37 @@ export class NeighbourhoodMapRenderer {
         durationMs: 1,
       });
     });
+  }
+
+  /**
+   * A one-time welcome as the splash lifts: the exposure outline ripples once
+   * across the drawn neighbourhood, in ring order. Purely cosmetic — it reads
+   * and writes only transient feature state, never status — and it plays at
+   * most once per renderer. Returns whether it played: with no cells drawn yet
+   * (e.g. before a first location fix) there is nothing to ripple.
+   */
+  playArrival(): boolean {
+    if (this.disposed || this.arrivalPlayed || !this.mapReady || this.cells.length === 0) {
+      return false;
+    }
+    this.arrivalPlayed = true;
+    this.cells.forEach((cell, index) => {
+      this.scheduler.tween({
+        cellId: cell.id,
+        from: { exposure: 0 },
+        to: { exposure: 1 },
+        durationMs: ARRIVAL_RISE_MS,
+        delayMs: index * ARRIVAL_STAGGER_MS,
+        onSettle: () => {
+          this.scheduler.tween({
+            cellId: cell.id,
+            to: { exposure: 0 },
+            durationMs: ARRIVAL_FADE_MS,
+          });
+        },
+      });
+    });
+    return true;
   }
 
   /**

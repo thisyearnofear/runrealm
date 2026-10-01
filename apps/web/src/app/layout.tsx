@@ -10,6 +10,7 @@ import '../styles/orbis-live.css';
 import '../styles/responsive.css';
 import '../styles/run-theater.css';
 import '../styles/neighbourhood.css';
+import '../styles/neighbourhood-tour.css';
 import '../styles/living-realm.css';
 
 export const metadata: Metadata = {

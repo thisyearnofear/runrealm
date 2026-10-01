@@ -211,13 +211,31 @@ body.living-realm-view .nh-marker {
   max-width: 300px;
 }
 
+.living-realm-storyboard {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 10px 24px;
+  border-radius: 999px;
+  background: var(--rr-sunprint-amber);
+  color: var(--rr-sunprint-ink);
+  text-decoration: none;
+  font-family: var(--rr-font-display);
+}
+
+.living-realm-storyboard:focus-visible {
+  outline: 2px solid var(--rr-sunprint-chalk);
+  outline-offset: 3px;
+}
+
 .living-realm-connect {
   min-height: 48px;
   padding: 12px 26px;
   border-radius: 999px;
-  border: none;
-  background: var(--rr-sunprint-amber);
-  color: var(--rr-sunprint-ink);
+  background: transparent;
+  color: var(--rr-sunprint-chalk);
+  border: 1px solid var(--rr-border-strong);
   font-family: var(--rr-font-display);
   font-size: 15px;
   font-weight: 600;
@@ -225,7 +243,7 @@ body.living-realm-view .nh-marker {
 }
 
 .living-realm-connect:hover {
-  background: var(--rr-sunprint-amber-hover);
+  background: var(--rr-sunprint-blueprint);
 }
 
 @media (max-height: 600px) {

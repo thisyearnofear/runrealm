@@ -7,7 +7,7 @@ A fitness game where you truly own everything: your runs become NFT territories,
 - **Run-to-territory gameplay** — runs auto-claim H3 territories as NFTs; activity points decay without regular engagement
 - **Ghost Runners** — AI virtual competitors that defend your territories when you can't run
 - **Confidential defense (live on Sepolia)** — encrypted activity-point state; rivals see only a silhouette until they win a contest
-- **Sunprint Atlas** — a living cyanotype-style map; try the wallet-free demo at `/orbis-live`
+- **Sunprint Atlas** — preview a neighbourhood, watch a sample outing, sketch a route, and take the optional tour; real runs develop the local atlas. Try the wallet-free Realm storyboard at `/orbis-live`
 - **Collectibles** — animated Sunprint Deed reveals, Atlas Binder showcase, GPS-anchored Realm Relics supply drops
 
 ## Quick start
@@ -33,7 +33,8 @@ Optional: the network pace-band leaderboard needs an attestation-oracle quorum. 
 | --- | --- |
 | [Introduction](docs/introduction.md) | Full local setup, env keys, troubleshooting |
 | [Architecture](docs/architecture.md) | System design, contracts, game rules, events |
-| [Features](docs/features.md) | Game mechanics: ghosts, defense, collectibles |
+| [Features](docs/features.md) | Game mechanics, neighbourhood previews, route planning and onboarding |
+| [Explore before your first outing](docs/neighbourhood-exploration.md) | Map previews, sample outing, route sketch, phone handoff and optional tour |
 | [Guides](docs/guides.md) | Dashboard, game-rule editing, sync workflow |
 | [Roadmap](docs/roadmap.md) | Build phases and project status |
 | [Sunprint Atlas](docs/design-improvement-plan.md) | Canonical visual/map/motion direction |

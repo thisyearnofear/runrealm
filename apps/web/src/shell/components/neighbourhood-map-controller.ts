@@ -60,6 +60,7 @@ export class NeighbourhoodMapController {
   private notchEl: HTMLElement | null = null;
   private labelEl: HTMLElement | null = null;
   private mode: CameraMode = 'follow';
+  private sampleFollowing = false;
   private lastFix: Fix | null = null;
   private lastFollowAt = Number.NEGATIVE_INFINITY;
   private staleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -113,6 +114,7 @@ export class NeighbourhoodMapController {
       if (!e?.originalEvent) return;
       this.hasUserZoomed = true;
       this.pendingZoom = null;
+      this.sampleFollowing = false;
       this.setMode('browse');
     };
     for (const evt of ['dragstart', 'rotatestart', 'zoomstart'] as const) {
@@ -129,6 +131,7 @@ export class NeighbourhoodMapController {
       const userZoom = () => {
         this.hasUserZoomed = true;
         this.pendingZoom = null;
+        this.sampleFollowing = false;
         this.setMode('browse');
       };
       const pinch = (e: TouchEvent) => {
@@ -586,11 +589,36 @@ export class NeighbourhoodMapController {
     }
   }
 
+  /** Follow the sample after its initial frame, until the user moves the map. */
+  public beginSampleFollow(): void {
+    this.sampleFollowing = true;
+  }
+
+  public stopSampleFollow(): void {
+    this.sampleFollowing = false;
+  }
+
+  public followSample(point: { lat: number; lng: number }): void {
+    if (!this.deps.map || !this.sampleFollowing) return;
+    this.deps.map.easeTo({
+      center: [point.lng, point.lat],
+      padding: this.cameraPadding(),
+      duration: reducedMotion() ? 0 : 350,
+    });
+  }
+
+  public refreshArea(): void {
+    this.syncAreaAvailability();
+  }
+
   public showNeighbourhood(): void {
+    this.frameCells(this.deps.getNeighbourhoodCells());
+  }
+
+  /** Fit an unsaved preview or saved neighbourhood without taking over GPS follow. */
+  public frameCells(ids: string[]): void {
     const map = this.deps.map;
-    if (!map) return;
-    const ids = this.deps.getNeighbourhoodCells();
-    if (ids.length === 0) return;
+    if (!map || ids.length === 0) return;
     const bounds = new LngLatBounds();
     for (const id of ids) {
       const ring = cellToPolygon(id).coordinates[0] ?? [];
