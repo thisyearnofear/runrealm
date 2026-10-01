@@ -179,6 +179,9 @@ export class TerritoryService extends BaseService {
       'run:completed',
       async (data: { run?: RunSession; stats?: { distance?: number } }) => {
         const run = data.run as RunSession | undefined;
+        if (run?.neighbourhoodGoal) {
+          return;
+        }
         if (!run || !run.territoryEligible || !run.geohash) {
           console.log('Run completed but not territory-eligible');
           return;

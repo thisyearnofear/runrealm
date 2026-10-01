@@ -251,4 +251,21 @@ describe('event-wiring', () => {
       expect.objectContaining({ type: 'success' })
     );
   });
+
+  it('leaves the camera alone on location:changed in neighbourhood mode', () => {
+    document.body.classList.add('neighbourhood-mode');
+    try {
+      wireEvents({ services, handles: null, getMap: () => map, onMapClick: jest.fn() });
+      bus.emit('location:changed', {
+        lat: -1.29,
+        lng: 36.82,
+        accuracy: 5,
+        source: 'gps' as const,
+        timestamp: 1,
+      });
+      expect(map.easeTo).not.toHaveBeenCalled();
+    } finally {
+      document.body.classList.remove('neighbourhood-mode');
+    }
+  });
 });

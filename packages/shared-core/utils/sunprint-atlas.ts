@@ -15,6 +15,7 @@ import type {
   WorldTerritoryStatus,
   WorldTimeOfDay,
 } from '../types/world-state';
+import { buildNeighbourhoodOrbisText, NEIGHBOURHOOD_ORBIS_PRIORITIES } from './neighbourhood-orbis';
 
 export const SUNPRINT_ATLAS_COLORS = {
   blueprint: '#0d2b3e',
@@ -89,7 +90,7 @@ export function threatLevelForTerritory(status: WorldTerritoryStatus): number {
   }
 }
 
-const ORBIS_REASON_PRIORITIES: Record<OrbisTransitionReason, number> = {
+const LEGACY_ORBIS_REASON_PRIORITIES = {
   'run-started': 60,
   'pace-changed': 30,
   'cell-exposed': 40,
@@ -100,6 +101,15 @@ const ORBIS_REASON_PRIORITIES: Record<OrbisTransitionReason, number> = {
   'ghost-racing': 70,
   'run-completed': 80,
 };
+
+const ORBIS_REASON_PRIORITIES: Record<OrbisTransitionReason, number> = {
+  ...NEIGHBOURHOOD_ORBIS_PRIORITIES,
+  ...LEGACY_ORBIS_REASON_PRIORITIES,
+  'run-paused': 45,
+  'run-resumed': 60,
+};
+
+const NEIGHBOURHOOD_ORBIS_REASONS = new Set<string>(Object.keys(NEIGHBOURHOOD_ORBIS_PRIORITIES));
 
 export function isOrbisTransitionReason(reason: string): reason is OrbisTransitionReason {
   return reason in ORBIS_REASON_PRIORITIES;
@@ -155,6 +165,10 @@ function transitionLine(reason: OrbisTransitionReason, snapshot: WorldSnapshot):
   switch (reason) {
     case 'run-started':
       return 'The runner begins exposing the atlas; the world wakes with a steady chalk-light trace.';
+    case 'run-paused':
+      return 'The same unbroken scene continues. The runner pauses beside the atlas; the route rests.';
+    case 'run-resumed':
+      return 'The same unbroken scene continues. The runner resumes the outing and the chalk trace continues.';
     case 'pace-changed':
       return `The same unbroken scene continues. ${paceLine(snapshot.paceBand)}`;
     case 'cell-exposed':
@@ -171,6 +185,8 @@ function transitionLine(reason: OrbisTransitionReason, snapshot: WorldSnapshot):
       return 'The same unbroken scene continues. The spectral rival trace races beside the runner, raising the visual tempo.';
     case 'run-completed':
       return 'The same unbroken scene continues. The runner slows, the light trace softens, and the exposure settles into a calm developed tableau.';
+    default:
+      return 'The same unbroken scene continues.';
   }
 }
 
@@ -178,6 +194,9 @@ function buildAudioPrompt(reason: OrbisTransitionReason, snapshot: WorldSnapshot
   switch (reason) {
     case 'run-started':
       return 'Soft rhythmic running footsteps on pavement, gentle night wind, quiet ambient synth drone.';
+    case 'run-paused':
+    case 'run-resumed':
+      return 'Soft footsteps and quiet wind.';
     case 'pace-changed':
       return snapshot.paceBand === 'sprint' || snapshot.paceBand === 'fast'
         ? 'Footsteps quicken, breathing becomes more urgent, subtle percussive pulse.'
@@ -196,21 +215,45 @@ function buildAudioPrompt(reason: OrbisTransitionReason, snapshot: WorldSnapshot
       return 'Footsteps accelerate, airy pulse intensifies, light stereo whooshes as a rival draws near.';
     case 'run-completed':
       return 'Footsteps slow to a stop, gentle completion chime, calm wind fading out.';
+    default:
+      return 'Soft footsteps and quiet wind.';
   }
+}
+
+export interface OrbisPromptIntentOptions {
+  initial?: boolean;
 }
 
 export function buildOrbisPromptIntent(
   change: WorldStateChange,
-  createdAt = change.timestamp
+  createdAt = change.timestamp,
+  options: OrbisPromptIntentOptions = {}
 ): OrbisPromptIntent | null {
   if (!isOrbisTransitionReason(change.reason)) return null;
+
+  const scene = change.snapshot.neighbourhood;
+  if (NEIGHBOURHOOD_ORBIS_REASONS.has(change.reason) && !scene) return null;
 
   // The first prompt after an idle/cancelled state builds the world; later
   // prompts describe only the visible change so Orbis preserves the scene.
   const initial =
-    change.reason === 'run-started' ||
-    change.previous.runStatus === 'idle' ||
-    change.previous.runStatus === 'cancelled';
+    options.initial ??
+    (change.reason === 'run-started' ||
+      change.previous.runStatus === 'idle' ||
+      change.previous.runStatus === 'cancelled');
+
+  if (scene) {
+    const { prompt, audioPrompt } = buildNeighbourhoodOrbisText(scene, change.reason, initial);
+    return {
+      reason: change.reason,
+      priority: ORBIS_REASON_PRIORITIES[change.reason],
+      prompt,
+      audioPrompt,
+      initial,
+      snapshot: { ...change.snapshot, neighbourhood: { ...scene } },
+      createdAt,
+    };
+  }
 
   const prompt = initial
     ? buildInitialPrompt(change.snapshot)

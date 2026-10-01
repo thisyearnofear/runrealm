@@ -185,6 +185,7 @@ export class RewardSystemUI extends BaseService {
     );
 
     this.subscribe('run:completed', (data) => {
+      if (data.run?.neighbourhoodGoal) return;
       // Canonical stats shape first; the demo emitters still send flat fields.
       const distance = data.stats?.distance ?? data.distance ?? 0;
       const duration = data.stats?.duration ?? data.duration ?? 0;

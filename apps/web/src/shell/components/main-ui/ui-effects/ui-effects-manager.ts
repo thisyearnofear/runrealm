@@ -80,6 +80,7 @@ export class UIEffectsManager {
    * does not stack on top of the map theatre.
    */
   showWelcomeExperience(): void {
+    if (document.body.classList.contains('neighbourhood-mode')) return;
     const isNewUser = !localStorage.getItem('runrealm_welcomed');
     const urlParams = new URLSearchParams(window.location.search);
     const forceOnboarding =

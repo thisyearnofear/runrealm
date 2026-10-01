@@ -455,7 +455,7 @@ export class AccessibilityEnhancer extends BaseService {
         }
 
         /* Enhanced focus indicators */
-        .keyboard-focused:not(.mouse-focused) {
+        .keyboard-focused:not(.mouse-focused):not(:where(#neighbourhood-shell *, .nh-map-toolbar *, .nh-marker, #living-realm-root *)) {
           outline: 3px solid #00ff88 !important;
           outline-offset: 2px !important;
         }
@@ -520,7 +520,7 @@ export class AccessibilityEnhancer extends BaseService {
           cursor: not-allowed;
         }
 
-        button[aria-pressed="true"] {
+        button[aria-pressed="true"]:not(.nh-goal):not(.nh-secondary):not(.nh-map-btn):not(.living-realm-tab) {
           background-color: rgba(0, 255, 136, 0.2) !important;
         }
 

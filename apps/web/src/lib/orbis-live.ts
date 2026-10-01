@@ -73,6 +73,17 @@ async function readTokenResponse(
   return { jwt: body.jwt, expires_at: body.expires_at };
 }
 
+export function withLivingRealmTokenProfile(endpoint: string): string {
+  const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+  const url = new URL(endpoint, base);
+  url.searchParams.set('profile', 'living-realm');
+  return endpoint.startsWith('http') ? url.toString() : url.pathname + url.search + url.hash;
+}
+
+export function getLivingRealmTokenEndpoints(): string[] {
+  return getReactorTokenEndpoints().map(withLivingRealmTokenProfile);
+}
+
 export function createReactorTokenResolver(
   options: ReactorTokenResolverOptions = {}
 ): () => Promise<string> {

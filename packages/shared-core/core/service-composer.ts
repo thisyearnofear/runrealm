@@ -45,6 +45,7 @@ import { HapticsService } from '../services/haptics-service';
 import { LocationService } from '../services/location-service';
 import { MapService } from '../services/map-service';
 import { NavigationService } from '../services/navigation-service';
+import { NeighbourhoodService } from '../services/neighbourhood-service';
 import { NotificationService } from '../services/notification-service';
 import { OnboardingService } from '../services/onboarding-service';
 import { OrbisDirector } from '../services/orbis-director';
@@ -76,6 +77,7 @@ export interface Services {
   dom: DOMService;
   location: LocationService;
   runTracking: RunTrackingService;
+  neighbourhood: NeighbourhoodService;
   web3: Web3Service;
   ai: AIService;
   game: GameService;
@@ -137,6 +139,7 @@ export function createServices(): Services {
   const dom = DOMService.getInstance();
   const progression = ProgressionService.getInstance();
   const runTracking = new RunTrackingService();
+  const neighbourhood = new NeighbourhoodService(runTracking);
   const onboarding = OnboardingService.getInstance();
   const navigation = NavigationService.getInstance();
   const animation = AnimationService.getInstance();
@@ -180,6 +183,7 @@ export function createServices(): Services {
     dom,
     location,
     runTracking,
+    neighbourhood,
     web3,
     ai,
     game,
@@ -258,6 +262,7 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     dom: services.dom,
     location: services.location,
     runTracking: services.runTracking,
+    neighbourhood: services.neighbourhood,
     territory: services.territory,
     enhancedRunControls: services.enhancedRunControls,
     gamefiUI: services.gamefiUI,

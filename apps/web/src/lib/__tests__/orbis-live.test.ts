@@ -2,10 +2,12 @@ import {
   createReactorTokenResolver,
   describeWorld,
   getIntroDone,
+  getLivingRealmTokenEndpoints,
   getReactorTokenEndpoints,
   isStreamStalled,
   markIntroDone,
   subscribeIntroDone,
+  withLivingRealmTokenProfile,
 } from '../orbis-live';
 
 // jsdom does not ship the fetch Response class; provide a minimal stub.
@@ -97,6 +99,29 @@ describe('Reactor token resolver', () => {
 
     await expect(resolve()).resolves.toBe('jwt-2');
     expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('adds the living-realm profile while preserving query and hash', () => {
+    expect(withLivingRealmTokenProfile('/api/reactor/token')).toBe(
+      '/api/reactor/token?profile=living-realm'
+    );
+    expect(withLivingRealmTokenProfile('/api/reactor/token?a=1#frag')).toBe(
+      '/api/reactor/token?a=1&profile=living-realm#frag'
+    );
+    const absolute = withLivingRealmTokenProfile('https://tokens.example.com/reactor?x=2');
+    expect(absolute).toBe('https://tokens.example.com/reactor?x=2&profile=living-realm');
+    expect(absolute).not.toContain('jwt');
+  });
+
+  it('maps every default endpoint to the profile variant', () => {
+    process.env.NEXT_PUBLIC_REACTOR_TOKEN_URL = 'https://tokens.example.com/reactor';
+    const defaults = getReactorTokenEndpoints();
+    const profiled = getLivingRealmTokenEndpoints();
+    expect(profiled.length).toBe(defaults.length);
+    for (const [index, endpoint] of defaults.entries()) {
+      const url = new URL(profiled[index], window.location.origin);
+      expect(url.searchParams.get('profile')).toBe('living-realm');
+    }
   });
 
   it('rejects malformed broker payloads', async () => {

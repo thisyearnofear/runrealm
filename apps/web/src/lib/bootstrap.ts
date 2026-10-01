@@ -1,6 +1,6 @@
 // Clean, modular entry point for RunRealm
 import { RunRealmApp } from '@runrealm/shared-core/core/run-realm-app';
-import { replayLinkBadLine } from '@runrealm/shared-core/utils/atlas-voice';
+import { NEIGHBOURHOOD_COPY, replayLinkBadLine } from '@runrealm/shared-core/utils/atlas-voice';
 import { DebugUI } from '@runrealm/shared-core/utils/debug-ui';
 import AccountScreen from '../shell/components/account-screen';
 import { MainUI } from '../shell/components/main-ui';
@@ -37,7 +37,14 @@ export async function initializeApp(options: BootstrapOptions = {}): Promise<voi
 }
 
 async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
+  let pendingRecoveredCard: { refocusPending(): boolean } | null = null;
   try {
+    const raceParam = new URLSearchParams(window.location.search).get('race');
+    if (!raceParam) {
+      document.body.classList.add('neighbourhood-mode');
+    }
+    const neighbourhoodMode = document.body.classList.contains('neighbourhood-mode');
+
     onPhase?.('Waking the atlas');
     const app = RunRealmApp.getInstance();
 
@@ -261,9 +268,37 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
       document.body.appendChild(recoveredContainer);
       // The composed instance, not a fresh one — this is the same object that
       // wrote the checkpoint in the first place.
-      new RecoveredRunCard(app.getServices().runTracking).initialize(recoveredContainer);
+      const recoveredCard = new RecoveredRunCard(app.getServices().runTracking, app.getEventBus());
+      recoveredCard.initialize(recoveredContainer);
+      pendingRecoveredCard = recoveredCard;
     } catch (err) {
       console.warn('Recovered run card not available:', err);
+    }
+
+    if (neighbourhoodMode) {
+      try {
+        const { NeighbourhoodExperience } = await import(
+          '../shell/components/neighbourhood-experience'
+        );
+        const services = app.getServices();
+        new NeighbourhoodExperience({
+          neighbourhood: services.neighbourhood,
+          runTracking: services.runTracking,
+          location: services.location,
+          eventBus: app.getEventBus(),
+          map: app.getMap(),
+          ghostRunnerService: services.ghostRunnerService,
+          recoveredRunCard: pendingRecoveredCard,
+        }).initialize(document.body);
+      } catch (err) {
+        console.warn('Neighbourhood shell not available:', err);
+        document.body.classList.remove('neighbourhood-mode');
+        app.getEventBus().emit('ui:toast', {
+          message: NEIGHBOURHOOD_COPY.mountFailed,
+          type: 'error',
+          duration: 6000,
+        } as never);
+      }
     }
 
     // Intuitive clarity: one quiet line naming the single most useful thing to
@@ -318,6 +353,43 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
       })
     );
     window.reactWalletRoot = reactRoot;
+
+    if (
+      neighbourhoodMode &&
+      document.body.classList.contains('neighbourhood-mode') &&
+      document.querySelector('#neighbourhood-shell')
+    ) {
+      try {
+        const { LivingRealmRoot } = await import('../shell/living-realm/LivingRealmRoot');
+        const services = app.getServices();
+        if (!services.worldState.getIsInitialized()) await services.worldState.initialize();
+        if (!services.orbisDirector.getIsInitialized()) await services.orbisDirector.initialize();
+        const restoreDirectorEnabled = services.orbisDirector.isEnabled();
+        services.orbisDirector.setEnabled(true);
+        services.worldState.setNeighbourhoodState(services.neighbourhood.getState());
+        const realmContainer = document.createElement('div');
+        realmContainer.id = 'living-realm-root';
+        document.body.appendChild(realmContainer);
+        createRoot(realmContainer).render(
+          createElement(LivingRealmRoot, {
+            eventBus: app.getEventBus(),
+            worldState: services.worldState,
+            orbisDirector: services.orbisDirector,
+            neighbourhood: services.neighbourhood,
+            runTracking: services.runTracking,
+            map: app.getMap(),
+            getPanel: () => document.querySelector<HTMLElement>('#neighbourhood-shell .nh-panel'),
+            restoreDirectorEnabled,
+            onFatal: () => {
+              document.body.classList.remove('living-realm-view');
+              services.orbisDirector.setEnabled(restoreDirectorEnabled);
+            },
+          })
+        );
+      } catch (err) {
+        console.warn('Living realm not available:', err);
+      }
+    }
 
     // Remove loading indicator from template
     const loadingDiv = document.getElementById('loading');

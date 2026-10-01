@@ -11,6 +11,7 @@ import { DemoGhostDirector } from '../services/demo-ghost-director';
 import type { ToastOptions } from '../services/ui-service';
 import { errorCopy } from '../utils/atlas-voice';
 import { coordsToCell, type TerritoryCell } from '../utils/h3-territory';
+import { isNeighbourhoodMode } from '../utils/neighbourhood-mode';
 import { fitMapToRoute, type MaplibreHandles } from './map-bootstrap';
 import type { Services } from './service-composer';
 
@@ -95,6 +96,7 @@ export function wireEvents(opts: EventWiringOptions): void {
   let lastMapFollowMs = 0;
   let didInitialRecenter = false;
   services.eventBus.on('location:changed', (locationInfo) => {
+    if (isNeighbourhoodMode()) return;
     if (!locationInfo) return;
     const map = getMap();
     if (!map) return;

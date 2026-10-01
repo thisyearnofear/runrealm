@@ -4,6 +4,7 @@
  * This is deliberately coarse and privacy-preserving: renderers and the Orbis
  * prompt compiler receive semantic world state, not raw GPS coordinates.
  */
+import type { NeighbourhoodRealmScene } from '../utils/neighbourhood-orbis';
 
 export type WorldRunStatus = 'idle' | 'recording' | 'paused' | 'completed' | 'cancelled';
 
@@ -36,6 +37,7 @@ export interface WorldSnapshot {
   ghostPresence: WorldGhostPresence;
   environment: WorldEnvironment;
   timeOfDay: WorldTimeOfDay;
+  neighbourhood?: NeighbourhoodRealmScene;
 }
 
 export type WorldTransitionReason =
@@ -53,7 +55,12 @@ export type WorldTransitionReason =
   | 'territory-updated'
   | 'ghost-deployed'
   | 'ghost-racing'
-  | 'ghost-completed';
+  | 'ghost-completed'
+  | 'realm-entered'
+  | 'goal-selected'
+  | 'local-ground-developed'
+  | 'local-outing-uncredited'
+  | 'companion-arrived';
 
 export interface WorldStateChange {
   previous: WorldSnapshot;
@@ -65,6 +72,8 @@ export interface WorldStateChange {
 export type OrbisTransitionReason = Extract<
   WorldTransitionReason,
   | 'run-started'
+  | 'run-paused'
+  | 'run-resumed'
   | 'run-completed'
   | 'pace-changed'
   | 'cell-exposed'
@@ -73,6 +82,11 @@ export type OrbisTransitionReason = Extract<
   | 'territory-overexposed'
   | 'ghost-deployed'
   | 'ghost-racing'
+  | 'realm-entered'
+  | 'goal-selected'
+  | 'local-ground-developed'
+  | 'local-outing-uncredited'
+  | 'companion-arrived'
 >;
 
 export interface OrbisPromptIntent {
@@ -91,5 +105,8 @@ export interface OrbisPromptIntent {
 }
 
 export function cloneWorldSnapshot(snapshot: WorldSnapshot): WorldSnapshot {
-  return { ...snapshot };
+  return {
+    ...snapshot,
+    neighbourhood: snapshot.neighbourhood ? { ...snapshot.neighbourhood } : undefined,
+  };
 }

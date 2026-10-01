@@ -1,7 +1,28 @@
 # Orbis Live challenge slice
 
-`/orbis-live/` is a wallet-free, GPS-free demo of RunRealm's Sunprint Atlas
-world state steering Visko Orbis Dynamic in real time.
+The **main game** is the primary integration: on the neighbourhood shell a
+LivingRealm overlay (`apps/web/src/shell/living-realm/LivingRealmRoot.tsx`)
+steers Visko Orbis Dynamic from the same canonical world state that drives the
+runner experience. `WorldStateService` carries a coarse
+`NeighbourhoodRealmScene` (goal, stage, cell counts, outcome — never
+coordinates or cell indices); `OrbisDirector` compiles transitions through the
+frozen `neighbourhood-orbis.ts` prompt grammar, with `run-paused`/`run-resumed`
+priorities 45/60 and the first prompt of each session as the scene-build.
+
+Sessions are explicit: nothing connects until the runner presses **Bring realm
+to life**. The client requests disconnect at `LIVING_REALM_SESSION_LIMIT_MS`
+(180,000 ms, measured from the connect click, including negotiation) and the
+`living-realm` broker grant limits each token to one session of at most 180
+seconds; network failures can delay physical cleanup on the far side. The
+"Live" label requires both a decoded video frame and `frames_emitted > 0` —
+status alone never claims liveness. Pause/pocket/hidden detaches the transport
+and pauses generation; the map remains the authoritative navigator. When no
+session is connected the realm surface shows a local atlas preview built from
+the actual ledger counts, labelled as not generated video.
+
+`/orbis-live/` remains as the wallet-free, GPS-free conductor QA route of the
+same Sunprint Atlas world-state loop steering Visko Orbis Dynamic in real
+time.
 
 ## What it demonstrates
 
@@ -32,12 +53,12 @@ an existing server process rather than an App Router API route.
 ```bash
 # Terminal 1 — backend token broker
 cd /Users/udingethe/Dev/RunRealm
-PORT=3001 REACTOR_API_KEY=rk_your_key_here node server.js
+PORT=3100 REACTOR_API_KEY=rk_your_key_here node server.js
 
 # Terminal 2 — web app
 cd /Users/udingethe/Dev/RunRealm
 NEXT_PUBLIC_ENABLE_ORBIS=true \
-NEXT_PUBLIC_REACTOR_TOKEN_URL=http://localhost:3001/api/reactor/token \
+NEXT_PUBLIC_REACTOR_TOKEN_URL=http://localhost:3100/api/reactor/token \
 npm run dev:web
 ```
 
@@ -57,9 +78,14 @@ client tries, in order:
 5. local Express on ports 3001/3000 for development.
 
 The broker calls `POST https://api.reactor.inc/tokens` with a session-scoped
-`authorization_details` grant for `reactor/visko-orbis-dynamic`, at most 10
-sessions, 30-minute session duration, and a one-hour token lifetime. The API
-key is never exposed through `NEXT_PUBLIC_*`, `__ENV__`, or the client bundle.
+`authorization_details` grant for `reactor/visko-orbis-dynamic`. With no
+`profile` parameter the legacy grant is unchanged (10 sessions, 30-minute
+sessions, one-hour token). The main game passes `?profile=living-realm`, which
+mints a bounded grant: `expires_after: 180`, `max_sessions: 1`,
+`max_session_duration_seconds: 180`. Any other profile value is rejected with
+400 before Reactor is called. The API key is never exposed through
+`NEXT_PUBLIC_*`, `__ENV__`, or the client bundle; the scoped session JWT is
+intentionally delivered to the browser so the SDK can connect.
 
 ## The experience layer
 
@@ -132,3 +158,30 @@ key is never exposed through `NEXT_PUBLIC_*`, `__ENV__`, or the client bundle.
   restates the full Sunprint style anchor. Follow-ups describe one visible
   change each, keeping the camera and art direction consistent across the
   unbroken take.
+
+## Submission checkpoint — 2026-10-01
+
+Status: **implemented locally; not live-verified, deployed, or submitted**. The project owner has confirmed Visko challenge registration. Submission remains gated on a real Orbis session and a usable judge-facing delivery, not on the existence of the conductor route.
+
+### Completed
+
+- One-neighbourhood collection: a fixed 19-cell H3 atlas, 500m minimum with no loop requirement, repeat visits that strengthen ground, and Explore / Strengthen / personal-distance Challenge goals.
+- Phone-visible zoom, explicit Follow / browse behavior, panel-aware framing, and a persistent Sunprint surveyor marker with GPS uncertainty and stale-location handling.
+- The main game mounts the LivingRealm SDK surface and connects actual goal selection and local outing outcomes to the shared world-state / prompt path. Recording is map-first; pause and finish return to the realm. The conductor at `/orbis-live/` is a secondary QA surface.
+- A disconnected realm is explicitly labeled **Local atlas preview — not generated video**. Local collection is not registered NFT ownership. Main-game prompts use coarse counts and enums rather than raw GPS or cell identifiers.
+- Explicit connection and disconnect controls; the client requests disconnect after 180 seconds from connection start. The `living-realm` token profile requests one session with a maximum duration of 180 seconds and a 180-second token lifetime. Network cleanup and provider enforcement still require live verification.
+- Latest focused checks passed: 111 web tests, 71 shared-core tests, and 9 token-broker tests; shared build, web typecheck, architecture checks, and changed-file lint passed. Browser checks exercised two eligible outings with synthetic geolocation delivered through the actual watcher callbacks, collection and strengthening outcomes, view switching, outage labels, and phone/desktop control reachability. These are local and mocked-provider results, not live Orbis or human engagement evidence.
+
+### Deferred and open gates
+
+1. The backend on port 3100 currently reports `REACTOR_API_KEY` is not set. The owner will provision it server-side when they return. Never put it in `NEXT_PUBLIC_*`, source control, or submission material. The browser SDK receives a scoped JWT, not the API key.
+2. One live verification session, capped at three minutes, has been approved but **has not been used**. After provisioning, prove real decoded video frames and accepted prompts for an actual in-game choice and an eligible local outcome in the same session; disconnect at the cap and retain redacted evidence.
+3. No judge-facing deployment has been validated in this work. Before sharing a live public link, verify the deployed token broker, model availability, and account-wide rate/credit controls. A per-token session cap is not an account-wide spending limit.
+4. Outdoor GPS, physical-phone pocket/lock behavior, and unassisted runner playtests remain unverified. Do not claim validated retention, background reliability, or popularity from synthetic tests.
+5. Browser QA observed a first Start click after a settled summary occasionally needing a second click. The mechanism is not confirmed; reproduce and trace it before treating it as fixed.
+
+### Demonstration and claim boundaries
+
+The strongest demonstration is one continuous main-game journey: choose a goal, observe a live Orbis response, record an outing, finish, show the actual local result and the corresponding realm response, then choose a reason to return. If movement is simulated, label it as synthetic GPS; if video is a local preview or storyboard, label it as such. Never describe those as live generated footage.
+
+Do not submit as live-verified until that proof exists. Keep the map authoritative for navigation and the local ledger authoritative for counts; Orbis illustrates the experience rather than deciding territory ownership or race results. A proposed engagement playtest should ask unfamiliar runners whether they understand the goal, the outcome, and why they would take a second outing, and should observe whether they actually return. No engagement results have been collected yet.

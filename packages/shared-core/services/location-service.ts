@@ -17,6 +17,8 @@ export interface LocationInfo {
   address?: string;
   source: 'gps' | 'search' | 'manual' | 'default';
   timestamp: number;
+  heading?: number | null;
+  speed?: number | null;
 }
 
 /** Min interval between synchronous localStorage focus writes (perf). */
@@ -81,9 +83,12 @@ export class LocationService extends BaseService {
    */
   private async tryCenterOnDeviceGps(): Promise<void> {
     try {
-      const permission = await this.checkLocationPermission();
-      if (permission === 'denied') return;
-      await this.getCurrentLocation(true, permission !== 'granted');
+      if (!navigator.geolocation || !('permissions' in navigator)) return;
+      const result = await (navigator.permissions as any).query({
+        name: 'geolocation',
+      });
+      if (result.state !== 'granted') return;
+      await this.getCurrentLocation(true, true);
     } catch (error) {
       console.warn('LocationService: initial GPS recenter skipped:', error);
     }
@@ -684,7 +689,9 @@ export class LocationService extends BaseService {
             lng: position.coords.longitude,
             accuracy: position.coords.accuracy,
             source: 'gps',
-            timestamp: Date.now(),
+            timestamp: Number.isFinite(position.timestamp) ? position.timestamp : Date.now(),
+            heading: position.coords.heading,
+            speed: position.coords.speed,
           };
 
           // Try to get address for this location
@@ -854,7 +861,9 @@ export class LocationService extends BaseService {
           lng: position.coords.longitude,
           accuracy: position.coords.accuracy,
           source: 'gps',
-          timestamp: Date.now(),
+          timestamp: Number.isFinite(position.timestamp) ? position.timestamp : Date.now(),
+          heading: position.coords.heading,
+          speed: position.coords.speed,
         };
 
         this.setCurrentLocation(locationInfo);

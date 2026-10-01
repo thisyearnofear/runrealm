@@ -19,6 +19,7 @@
  * Being handed a run you cannot use, without being told, is the kind of
  * thing that makes a game feel dishonest.
  */
+import type { EventBus } from '@runrealm/shared-core/core/event-bus';
 import {
   type RunSession,
   RunTrackingService,
@@ -64,6 +65,7 @@ export default class RecoveredRunCard {
   private readonly runTracking: RunTrackingService;
   private run: RunSession | null = null;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private disposers: Array<() => void> = [];
   /** The card offers once. Re-reading storage on every render would let a
    *  stale checkpoint re-offer a run the runner already decided about. */
   private offered = false;
@@ -74,7 +76,10 @@ export default class RecoveredRunCard {
    * a second instance here would read and clear a *different* object's
    * notion of the run than the one writing the checkpoint.
    */
-  constructor(runTracking: RunTrackingService) {
+  constructor(
+    runTracking: RunTrackingService,
+    private readonly eventBus?: EventBus
+  ) {
     this.runTracking = runTracking;
   }
 
@@ -98,9 +103,27 @@ export default class RecoveredRunCard {
     container.addEventListener('focusout', () => this.releaseOpen());
     this.ensureStyles();
 
+    const onRunLive = () => {
+      const active = this.runTracking.getCurrentRun();
+      if (active?.status === 'recording' || active?.status === 'paused') this.hide();
+    };
+    this.eventBus?.on('run:started', onRunLive as never);
+    this.eventBus?.on('run:resumed', onRunLive as never);
+    this.disposers.push(() => this.eventBus?.off('run:started', onRunLive as never));
+    this.disposers.push(() => this.eventBus?.off('run:resumed', onRunLive as never));
+
     // Offer it on boot. Reading is cheap and the answer is almost always
     // "nothing to recover", so this costs nothing in the common case.
     this.offerIfRecoverable();
+  }
+
+  public refocusPending(): boolean {
+    const found = this.run ?? this.runTracking.readCheckpoint();
+    if (!found) return false;
+    this.run = found;
+    this.offered = true;
+    this.render();
+    return true;
   }
 
   /** Render the card if there is an interrupted run worth offering. Public
@@ -129,6 +152,15 @@ export default class RecoveredRunCard {
    *  by tests; the runner-facing paths are keep and discard. */
   public hide(): void {
     this.dismiss();
+  }
+
+  public destroy(): void {
+    this.disarmAutoHide();
+    for (const d of this.disposers) d();
+    this.disposers = [];
+    this.run = null;
+    this.container?.remove();
+    this.container = null;
   }
 
   private render(): void {
@@ -173,6 +205,11 @@ export default class RecoveredRunCard {
   /** Keep it: file the run to history, clear the checkpoint, done. */
   private keep(): void {
     if (!this.run) return;
+    const active = this.runTracking.getCurrentRun();
+    if (active?.status === 'recording' || active?.status === 'paused') {
+      this.hide();
+      return;
+    }
     this.runTracking.adoptCheckpoint(this.run);
     this.runTracking.finalizeRecoveredRun();
     this.dismiss();

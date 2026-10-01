@@ -85,3 +85,23 @@ Physical-to-digital collectible mechanics in the athletic loop, in Sunprint Atla
 ### 4. "Run First, Mint Later" (Deferred Onboarding)
 - **Location**: `packages/shared-core/services/deferred-claim-service.ts`
 - Guests run and capture territories without a wallet; unminted deeds queue in local storage (`runrealm_unminted_deeds`) and are claimed after post-workout wallet connection.
+
+## Neighbourhood (default web)
+
+Local-only collection slice for the default web experience
+(`apps/web/src/shell/components/neighbourhood-experience.ts`, shared logic in
+`packages/shared-core/services/neighbourhood-service.ts`):
+
+- The first qualifying outing (500m+, valid GPS, no loop requirement) anchors a
+  fixed 19-cell H3 res-9 ring; later outings collect or strengthen cells inside
+  that ring and report outside cells honestly.
+- Goals: Explore always available; Strengthen unlocks after a collected cell;
+  Challenge unlocks after two outings and compares against the previous outing's
+  distance and pace.
+- The atlas ledger is local and separate from the registered (receipt-gated)
+  territory registry — neighbourhood runs never touch wallet or claim flows, and
+  summaries say "saved on this device; not registered ownership".
+- Map interaction: a compass-seal position marker with an honest accuracy halo,
+  Follow/browse camera modes, explicit zoom and neighbourhood-fit controls —
+  present only where MapLibre WebGL is available; otherwise the run controls
+  and atlas list remain usable without the map.

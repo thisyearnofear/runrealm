@@ -86,8 +86,87 @@ describe('Sunprint Atlas foundation', () => {
     expect(easy?.audioPrompt).toContain('calm rhythm');
   });
 
+  it('compiles pause and resume as scene-preserving deltas', () => {
+    const paused = buildOrbisPromptIntent(change('run-paused'));
+    expect(paused?.priority).toBe(45);
+    expect(paused?.prompt).toBe(
+      'The same unbroken scene continues. The runner pauses beside the atlas; the route rests.'
+    );
+    expect(paused?.audioPrompt).toBe('Soft footsteps and quiet wind.');
+    const resumed = buildOrbisPromptIntent(change('run-resumed'));
+    expect(resumed?.priority).toBe(60);
+    expect(resumed?.prompt).toBe(
+      'The same unbroken scene continues. The runner resumes the outing and the chalk trace continues.'
+    );
+    expect(resumed?.audioPrompt).toBe('Soft footsteps and quiet wind.');
+  });
+
   it('ignores non-generative transitions', () => {
-    expect(buildOrbisPromptIntent(change('run-paused'))).toBeNull();
+    expect(buildOrbisPromptIntent(change('run-cancelled'))).toBeNull();
+    expect(buildOrbisPromptIntent(change('territory-updated'))).toBeNull();
+  });
+
+  it('ignores neighbourhood transitions without a scene', () => {
+    expect(buildOrbisPromptIntent(change('realm-entered'))).toBeNull();
+    expect(buildOrbisPromptIntent(change('goal-selected'))).toBeNull();
+    expect(buildOrbisPromptIntent(change('local-ground-developed'))).toBeNull();
+    expect(buildOrbisPromptIntent(change('companion-arrived'))).toBeNull();
+  });
+
+  it('routes scene prompts through the neighbourhood helper with counts only', () => {
+    const scene = {
+      goal: 'explore' as const,
+      stage: 'preview' as const,
+      collectedCells: 7,
+      strengthenedCells: 2,
+      newCells: 0,
+      revisitedCells: 0,
+    };
+    const withScene = (reason: WorldStateChange['reason']): WorldStateChange => {
+      const base = change(reason);
+      return {
+        ...base,
+        snapshot: { ...base.snapshot, neighbourhood: scene },
+      };
+    };
+
+    const entered = buildOrbisPromptIntent(withScene('realm-entered'), 1000, { initial: true });
+    expect(entered?.priority).toBe(110);
+    expect(entered?.initial).toBe(true);
+    expect(entered?.prompt).toContain('living cyanotype-inspired athletic atlas');
+    expect(entered?.prompt).toContain('7 cells');
+    expect(entered?.prompt).not.toMatch(/\d{2}\.\d{3,}/);
+
+    const resumedDelta = buildOrbisPromptIntent(withScene('run-started'), 1000, {
+      initial: false,
+    });
+    expect(resumedDelta?.initial).toBe(false);
+    expect(resumedDelta?.prompt).toContain('The same unbroken scene continues.');
+
+    const settled = buildOrbisPromptIntent(
+      {
+        ...withScene('local-ground-developed'),
+        snapshot: {
+          ...withScene('local-ground-developed').snapshot,
+          neighbourhood: {
+            ...scene,
+            stage: 'settled' as const,
+            newCells: 3,
+            revisitedCells: 1,
+            outcome: 'collected' as const,
+          },
+        },
+      },
+      1000
+    );
+    expect(settled?.priority).toBe(100);
+    expect(settled?.prompt).toContain('3 new cells');
+    expect(settled?.prompt).toContain('not registered ownership');
+    expect(settled?.audioPrompt).toContain('paper-development chime');
+
+    const paused = buildOrbisPromptIntent(withScene('run-paused'), 1000);
+    expect(paused?.prompt).toContain('The runner pauses safely beside the atlas');
+    expect(paused?.priority).toBe(45);
   });
 
   it('maps semantic territory states to bounded threat levels', () => {

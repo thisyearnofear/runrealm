@@ -5,6 +5,7 @@
 
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { BaseService } from '../core/base-service';
+import { isNeighbourhoodMode } from '../utils/neighbourhood-mode';
 import { GhostRunner } from './ai-service';
 
 export interface AnimationConfig {
@@ -340,6 +341,7 @@ export class AnimationService extends BaseService {
    * Add or update user location marker on the map with enhanced styling
    */
   public updateUserLocationMarker(lng: number, lat: number): void {
+    if (isNeighbourhoodMode()) return;
     if (!this.map) {
       console.warn('AnimationService: Map not available for location marker');
       return;

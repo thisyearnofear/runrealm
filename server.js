@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('node:path');
+const { mintSessionToken } = require('./server/reactor-token-grant');
 require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
@@ -127,46 +128,12 @@ if (embedOracle && !process.env.RUNREALM_ORACLE_PRIVATE_KEY) {
 }
 
 app.get('/api/reactor/token', async (req, res) => {
-  const apiKey = process.env.REACTOR_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'REACTOR_API_KEY is not set on the server' });
-  }
-
-  try {
-    const reactorResponse = await fetch('https://api.reactor.inc/tokens', {
-      method: 'POST',
-      headers: {
-        'Reactor-API-Key': apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        expires_after: 60 * 60,
-        authorization_details: [
-          {
-            type: 'session',
-            resources: { models: { match: ['reactor/visko-orbis-dynamic'] } },
-            constraints: {
-              max_sessions: 10,
-              max_session_duration_seconds: 60 * 30,
-            },
-          },
-        ],
-      }),
-    });
-
-    if (!reactorResponse.ok) {
-      const detail = await reactorResponse.text();
-      console.error('Reactor token mint failed:', reactorResponse.status, detail);
-      return res.status(502).json({ error: `Reactor /tokens returned ${reactorResponse.status}` });
-    }
-
-    const { jwt, expires_at } = await reactorResponse.json();
-    res.set('Cache-Control', 'private, no-store');
-    res.json({ jwt, expires_at });
-  } catch (error) {
-    console.error('Reactor token broker error:', error);
-    res.status(500).json({ error: 'Unable to mint Reactor token' });
-  }
+  const result = await mintSessionToken({
+    profile: req.query.profile,
+    apiKey: process.env.REACTOR_API_KEY,
+  });
+  res.set('Cache-Control', 'private, no-store');
+  res.status(result.status).json(result.body);
 });
 
 // Strava OAuth callback handler

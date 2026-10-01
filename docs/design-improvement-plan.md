@@ -141,3 +141,104 @@ A change is on-direction only if it is recognizable with color and motion
 removed. If a screen still reads as generic neon-dark dashboard UI, it is not
 Sunprint Atlas yet.
 
+## Runner orientation and map visibility
+
+Baseline findings from the Sep 30 local review of the neighbourhood slice
+(inspection, not a final gate): the mobile MapLibre `NavigationControl` was
+omitted entirely; the player marker was a 16px green dot inside a 24px ring
+recreated on every fix; and `easeTo` camera moves ignored the panel, so at
+390x844 the run sheet (top ~321px) pushed the map centre behind the panel.
+
+Grounded takeaways from comparable products:
+
+- Pokémon GO (https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/84-what-is-the-map-view/):
+  the avatar is a recognisable identity representing the player, the compass
+  offers a north/facing choice, and its interaction rings mark gameplay reach,
+  not GPS precision. We take the identity/orientation idea only — the fixed
+  screen-size marker is our own decision — and no asset or style copying.
+- Fog of World (https://fogofworld.app/en): real movement visibly clears the
+  map and accumulation becomes a keepsake. We borrow visible exploration, not
+  any claim about retention.
+- Zombies, Run! (https://zombiesrungame.com/news/Get-started-with-zr): audio
+  and missions support movement without continuous screen attention. We
+  borrow optional eyes-free cues, not pressure to keep watching the map.
+- MapLibre `GeolocateControl`
+  (https://maplibre.org/maplibre-gl-js/docs/API/classes/GeolocateControl/):
+  the active/passive follow distinction and honest accuracy visualisation are
+  the model; verify APIs against the installed 4.7.1 types rather than
+  assuming the latest docs.
+
+Decided design contract:
+
+- A 36px compass seal marks the runner: central amber disc, blueprint-dark
+  ink outline, chalk outer stroke. Shape separates user (solid seal) from
+  ghost (dashed trace) and territory (hex) — never colour alone.
+- The accuracy halo is a ground-scaled GPS uncertainty circle, drawn in
+  blueprint/chalk at low opacity; it is GPS-estimated uncertainty, never a
+  gameplay interaction radius. Large or unknown accuracy suppresses the halo
+  and is labelled honestly instead of drawing huge geometry.
+- The course notch appears only with a finite heading in [0,360), speed
+  >= 1 m/s, accuracy <= 50m and a fix under 30s old. No heading is derived
+  from device orientation; a missing browser heading is acceptable.
+- Stale fixes (>= 30s) freeze the last known marker with a muted outline and
+  a "Last known location" label; they are not hidden and not refreshed
+  forward.
+- Camera modes: north-up Follow by default, an explicit browse state after a
+  user pan/zoom gesture, preserved user-chosen zoom, and controls that never
+  occlude the marker or sit under the panel. Camera moves are panel-aware
+  (measured bounds plus padding), throttled, and instant under reduced
+  motion.
+- Buttons are at least 44px on phones and readable at 320x568.
+- Map framing changes nothing in the local ledger or the registered
+  territory registry; progress stays local and unencrypted.
+
+Deferred (only after this visibility pass is playtested): a chalk trail of
+the current outing, cell-entry acknowledgements, and a customisable
+illustrated runner.
+
+Acceptance criteria: a new player finds themselves at a glance, can zoom
+without instructions, can browse without the camera fighting back, and can
+return to Follow in one tap; the marker and controls are not occluded at
+320x568, 390x844, 768x1024 and 1280x800, including after pause, summary and
+resize; weak or stale GPS never fabricates direction or accuracy; denied
+location remains recoverable. Synthetic browser geolocation does not count as
+outdoor, locked-phone or human validation.
+
+## LivingRealm integration
+
+The main-game neighbourhood shell carries a Realm/Map overlay
+(`apps/web/src/shell/living-realm/LivingRealmRoot.tsx`) mounted once at boot.
+It is a player surface, not the conductor demo: the `/orbis-live/` route stays
+available for QA.
+
+Decided behaviour:
+
+- **No implicit connection.** Nothing contacts the Reactor broker on boot —
+  no JWT fetch, no placement. Connect is a button ("Bring realm to life").
+- **Semantic scene only.** `WorldState.neighbourhood` carries goal, stage and
+  coarse cell counts; prompt text comes exclusively from
+  `neighbourhood-orbis.ts`. Pauses and resumes are deltas on the same scene;
+  only the first accepted prompt of a session restates the world.
+- **Honest liveness.** The "Live" label requires a decoded video frame plus
+  `frames_emitted > 0`. Connection status, priming, pauses, stalls, failed
+  connects and rejected prompts each render their own state; provider errors
+  go to the console, never to the UI.
+- **Session cap.** `LIVING_REALM_SESSION_LIMIT_MS` (180,000 ms) runs from the
+  connect click — including negotiation — and the client requests disconnect
+  at that bound even on failure paths. The `living-realm` broker grant also
+  constrains each token to one 180-second session, but network failures can
+  delay physical cleanup. There is no automatic retry or second placement;
+  a retry is explicit and mints a fresh profile JWT.
+- **Map stays authoritative.** Realm view hides the map layer without
+  destroying it; run start/resume flips to the map, pause and completion
+  return to the realm, and pocket/hidden pauses generation without ending
+  the session.
+- **Ledger honesty.** Collecting outings develop ground in the scene; short,
+  GPS-poor, out-of-ring or recovered outings settle as uncredited — no
+  fabricated claims, and nothing neighbourhood-tagged touches on-chain state.
+
+Implemented locally and synthetic-validated; **not deployed**, and
+live-unverified until one capped session runs against the user-configured
+broker. Requires `REACTOR_API_KEY` server-side (the client only ever sees a
+session JWT). Open gates: the capped live session, outdoor/human testing,
+locked-phone validation.

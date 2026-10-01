@@ -64,6 +64,39 @@ describe('TerritoryService auto-claim', () => {
     expect(event.runId).toBe('run-fail');
   });
 
+  it('ignores neighbourhood-flagged runs even when territory-eligible', async () => {
+    const createSpy = jest.spyOn(service as any, 'createTerritoryFromRun');
+    const claimSpy = jest.spyOn(service as any, 'claimTerritory');
+    createSpy.mockClear();
+    claimSpy.mockClear();
+    const claimedSpy = jest.fn();
+    const failedSpy = jest.fn();
+    bus.on('territory:claimed', claimedSpy);
+    bus.on('territory:claimFailed', failedSpy);
+
+    bus.emit('run:completed', {
+      run: {
+        id: 'run-neighbourhood',
+        territoryEligible: true,
+        geohash: 'gh-run-neighbourhood',
+        neighbourhoodGoal: 'explore',
+      } as unknown as RunSession,
+      distance: 5000,
+      duration: 1500,
+      points: [],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(claimSpy).not.toHaveBeenCalled();
+    expect(claimedSpy).not.toHaveBeenCalled();
+    expect(failedSpy).not.toHaveBeenCalled();
+    createSpy.mockRestore();
+    claimSpy.mockRestore();
+    bus.off('territory:claimed', claimedSpy);
+    bus.off('territory:claimFailed', failedSpy);
+  });
+
   it('ignores runs that are not territory-eligible', async () => {
     const claimedSpy = jest.fn();
     const failedSpy = jest.fn();

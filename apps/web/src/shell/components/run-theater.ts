@@ -335,6 +335,7 @@ export class RunTheater {
 
   private maybeShowIntro(): void {
     if (!this.introEl || arcSeen()) return;
+    if (document.body.classList.contains('neighbourhood-mode')) return;
     this.introEl.hidden = false;
   }
 

@@ -69,6 +69,8 @@ export interface RunSession {
   territoryEligible: boolean;
   geohash?: string;
   externalActivity?: ExternalActivity; // Link to imported activity
+  neighbourhoodGoal?: 'explore' | 'strengthen' | 'challenge';
+  completionKind?: 'recovered';
 }
 
 export interface RunTrackingConfig {
@@ -188,15 +190,26 @@ export class RunTrackingService extends BaseService {
     this.subscribe('run:lapRequested' as any, () => this.recordLap());
   }
 
+  private startInFlight = false;
+
+  private assertCanStartRun(): void {
+    if (this.currentRun?.status === 'recording' || this.currentRun?.status === 'paused') {
+      throw new Error('A run is already in progress');
+    }
+    if (this.startInFlight) {
+      throw new Error('A run is already starting');
+    }
+  }
+
   /**
    * Start a new run session
    */
-  public async startRun(): Promise<string> {
+  public async startRun(options?: {
+    neighbourhoodGoal?: 'explore' | 'strengthen' | 'challenge';
+  }): Promise<string> {
     console.log('RunTrackingService: Starting run...');
 
-    if (this.currentRun?.status === 'recording') {
-      throw new Error('A run is already in progress');
-    }
+    this.assertCanStartRun();
 
     // Get current location to start
     if (!this.locationService) {
@@ -204,6 +217,7 @@ export class RunTrackingService extends BaseService {
       throw new Error('LocationService not available - make sure setLocationService() was called');
     }
 
+    this.startInFlight = true;
     try {
       console.log('RunTrackingService: Getting current location...');
       const currentLocation = await this.locationService.getCurrentLocation(true, false);
@@ -234,6 +248,7 @@ export class RunTrackingService extends BaseService {
         maxSpeed: 0,
         status: 'recording',
         territoryEligible: false,
+        neighbourhoodGoal: options?.neighbourhoodGoal,
       };
 
       this.lastPoint = startPoint;
@@ -268,6 +283,8 @@ export class RunTrackingService extends BaseService {
     } catch (error) {
       console.error('RunTrackingService: Failed to start run:', error);
       throw new Error(`Failed to start run: ${(error as Error).message}`);
+    } finally {
+      this.startInFlight = false;
     }
   }
 
@@ -277,9 +294,7 @@ export class RunTrackingService extends BaseService {
   public async startRunWithRoute(coordinates: any[], distance: number): Promise<string> {
     console.log('RunTrackingService: Starting run with route...', { coordinates, distance });
 
-    if (this.currentRun?.status === 'recording') {
-      throw new Error('A run is already in progress');
-    }
+    this.assertCanStartRun();
 
     // Get current location to start
     if (!this.locationService) {
@@ -287,6 +302,7 @@ export class RunTrackingService extends BaseService {
       throw new Error('LocationService not available - make sure setLocationService() was called');
     }
 
+    this.startInFlight = true;
     try {
       console.log('RunTrackingService: Getting current location for route run...');
       const currentLocation = await this.locationService.getCurrentLocation(true, false);
@@ -358,6 +374,8 @@ export class RunTrackingService extends BaseService {
     } catch (error) {
       console.error('RunTrackingService: Failed to start run with route:', error);
       throw new Error(`Failed to start run with route: ${(error as Error).message}`);
+    } finally {
+      this.startInFlight = false;
     }
   }
 
@@ -440,6 +458,11 @@ export class RunTrackingService extends BaseService {
 
     const completedRun = { ...this.currentRun };
 
+    // Save run to storage
+    this.saveRun(completedRun);
+    // The run is in history now; a checkpoint would only offer it twice.
+    this.clearCheckpoint();
+
     this.safeEmit('run:completed' as any, {
       run: completedRun,
       stats: this.getCurrentStats(),
@@ -451,11 +474,6 @@ export class RunTrackingService extends BaseService {
       runId: completedRun.id,
       stats: this.getCurrentStats(),
     });
-
-    // Save run to storage
-    this.saveRun(completedRun);
-    // The run is in history now; a checkpoint would only offer it twice.
-    this.clearCheckpoint();
 
     return completedRun;
   }
@@ -703,20 +721,14 @@ export class RunTrackingService extends BaseService {
    * Start GPS tracking
    */
   private startGPSTracking(): void {
-    const locationService = this.getSiblingService('LocationService');
-    if (locationService) {
-      locationService.startLocationTracking();
-    }
+    this.locationService?.startLocationTracking?.();
   }
 
   /**
    * Stop GPS tracking
    */
   private stopGPSTracking(): void {
-    const locationService = this.getSiblingService('LocationService');
-    if (locationService) {
-      locationService.stopLocationTracking();
-    }
+    this.locationService?.stopLocationTracking?.();
   }
 
   /**
@@ -930,6 +942,7 @@ export class RunTrackingService extends BaseService {
     this.currentRun.endTime = endTime;
     this.currentRun.totalDuration = endTime - this.currentRun.startTime;
     this.currentRun.territoryEligible = false;
+    this.currentRun.completionKind = 'recovered';
 
     const finished = { ...this.currentRun };
     this.saveRun(finished);

@@ -13,6 +13,7 @@ import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { MapService } from '../services/map-service';
 import type { PreferenceService } from '../services/preference-service';
 import { getStyleById } from '../utils/map-style';
+import { isNeighbourhoodMode } from '../utils/neighbourhood-mode';
 
 type MaplibreGL = typeof import('maplibre-gl');
 
@@ -142,33 +143,35 @@ export function wireMapControls(opts: MapWiringOptions): void {
     onStyleLoad,
   } = opts;
 
-  if (!isMobile) {
+  if (!isMobile && !isNeighbourhoodMode()) {
     map.addControl(new handles.NavigationControl(), 'bottom-right');
   }
 
-  map.addControl(
-    (() => {
-      const geolocate = new handles.GeolocateControl({
-        positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: false,
-      });
-      geolocate.on('geolocate', (position: GeolocationPosition) => {
-        preferenceService.saveCurrentFocus(position, map.getZoom());
-      });
-      // Auto-locate once the style is ready. Permission already granted
-      // → flies to the user; still prompting → browser shows the dialog.
-      // Manual click of the control still works afterwards.
-      map.once('load', () => {
-        try {
-          geolocate.trigger();
-        } catch (err) {
-          console.warn('Auto-geolocate skipped:', err);
-        }
-      });
-      return geolocate;
-    })(),
-    'bottom-right'
-  );
+  if (!isNeighbourhoodMode()) {
+    map.addControl(
+      (() => {
+        const geolocate = new handles.GeolocateControl({
+          positionOptions: { enableHighAccuracy: true },
+          trackUserLocation: false,
+        });
+        geolocate.on('geolocate', (position: GeolocationPosition) => {
+          preferenceService.saveCurrentFocus(position, map.getZoom());
+        });
+        // Auto-locate once the style is ready. Permission already granted
+        // → flies to the user; still prompting → browser shows the dialog.
+        // Manual click of the control still works afterwards.
+        map.once('load', () => {
+          try {
+            geolocate.trigger();
+          } catch (err) {
+            console.warn('Auto-geolocate skipped:', err);
+          }
+        });
+        return geolocate;
+      })(),
+      'bottom-right'
+    );
+  }
 
   map.on('click', () => onMapClick());
   map.on('style.load', () => onStyleLoad());

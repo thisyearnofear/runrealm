@@ -266,6 +266,16 @@ export interface AppEvents extends Web3Events {
   'run:resumed': { runId: string; timestamp: number; stats: any };
   'run:cancelled': { runId: string; timestamp: number };
   'run:statusChanged': { status: string };
+  'neighbourhood:updated': {
+    state: import('../types/neighbourhood').NeighbourhoodState;
+  };
+  'neighbourhood:goalSelected': {
+    goal: import('../types/neighbourhood').NeighbourhoodGoal;
+  };
+  'neighbourhood:runCompleted': {
+    summary: import('../types/neighbourhood').NeighbourhoodRunSummary;
+    state: import('../types/neighbourhood').NeighbourhoodState;
+  };
   /**
    * Live run stats. RunTrackingService emits the canonical `{ stats, runId }`
    * shape; the Orbis live demo still emits flat `{ distance, duration, speed }`.
@@ -283,6 +293,7 @@ export interface AppEvents extends Web3Events {
   'orbis:promptQueued': { intent: OrbisPromptIntent };
   'orbis:promptDispatched': { intent: OrbisPromptIntent };
   'orbis:promptFailed': { intent: OrbisPromptIntent; error: string };
+  'ui:realmViewChanged': { view: 'realm' | 'map' };
   'ui:settingsOpened': Record<string, never>;
   'ui:settingsClosed': Record<string, never>;
   'ui:unitsToggled': { useMetric: boolean };

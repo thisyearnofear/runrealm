@@ -5,8 +5,14 @@
  */
 import { BaseService } from '../core/base-service';
 import type { AppEvents } from '../core/event-bus';
-import type { WorldSnapshot, WorldTransitionReason } from '../types/world-state';
+import type { NeighbourhoodState } from '../types/neighbourhood';
+import {
+  cloneWorldSnapshot,
+  type WorldSnapshot,
+  type WorldTransitionReason,
+} from '../types/world-state';
 import { coordsToCell } from '../utils/h3-territory';
+import type { NeighbourhoodRealmScene } from '../utils/neighbourhood-orbis';
 import {
   createInitialWorldSnapshot,
   derivePaceBand,
@@ -31,7 +37,33 @@ export class WorldStateService extends BaseService {
   }
 
   public getSnapshot(): WorldSnapshot {
-    return { ...this.snapshot };
+    return {
+      ...this.snapshot,
+      neighbourhood: this.snapshot.neighbourhood ? { ...this.snapshot.neighbourhood } : undefined,
+    };
+  }
+
+  public setNeighbourhoodState(state: NeighbourhoodState): void {
+    if (this.snapshot.neighbourhood) {
+      const scene = this.snapshot.neighbourhood;
+      if (
+        scene.collectedCells === state.collectedCount &&
+        scene.strengthenedCells === state.strengthenedCount
+      )
+        return;
+      this.update(
+        {
+          neighbourhood: {
+            ...scene,
+            collectedCells: state.collectedCount,
+            strengthenedCells: state.strengthenedCount,
+          },
+        },
+        'realm-entered'
+      );
+      return;
+    }
+    this.update({ neighbourhood: seedScene(state) }, 'realm-entered');
   }
 
   private setupEventListeners(): void {
@@ -43,12 +75,32 @@ export class WorldStateService extends BaseService {
           enteredNewCell: false,
           territoryStatus: 'exposing',
           threatLevel: threatLevelForTerritory('exposing'),
+          neighbourhood: this.snapshot.neighbourhood
+            ? {
+                ...this.snapshot.neighbourhood,
+                stage: 'recording',
+                newCells: 0,
+                revisitedCells: 0,
+                outcome: undefined,
+                challengeTargetReached: undefined,
+              }
+            : undefined,
         },
         'run-started'
       );
     });
     this.subscribe('run:paused', () => this.update({ runStatus: 'paused' }, 'run-paused'));
-    this.subscribe('run:resumed', () => this.update({ runStatus: 'recording' }, 'run-resumed'));
+    this.subscribe('run:resumed', () => {
+      this.update(
+        {
+          runStatus: 'recording',
+          neighbourhood: this.snapshot.neighbourhood
+            ? { ...this.snapshot.neighbourhood, stage: 'recording' }
+            : undefined,
+        },
+        'run-resumed'
+      );
+    });
     this.subscribe('run:completed', () => {
       this.update(
         { runStatus: 'completed', enteredNewCell: false, ghostPresence: 'none' },
@@ -116,6 +168,60 @@ export class WorldStateService extends BaseService {
     this.subscribe('territory:activityUpdated', (data) => {
       this.setTerritoryStatus(statusFromTerritory(data.territory), 'territory-updated');
     });
+    this.subscribe('neighbourhood:updated', ({ state }) => {
+      this.setNeighbourhoodState(state);
+    });
+    this.subscribe('neighbourhood:goalSelected', ({ goal }) => {
+      const scene = this.snapshot.neighbourhood;
+      if (!scene) return;
+      if (scene.goal === goal && scene.stage === 'preview' && scene.outcome === undefined) return;
+      this.update(
+        {
+          neighbourhood: {
+            ...scene,
+            goal,
+            stage: 'preview',
+            newCells: 0,
+            revisitedCells: 0,
+            outcome: undefined,
+            challengeTargetReached: undefined,
+          },
+        },
+        'goal-selected'
+      );
+    });
+    this.subscribe('neighbourhood:runCompleted', ({ summary, state }) => {
+      const developed =
+        summary.reason === 'collected' &&
+        summary.newCellIds.length + summary.strengthenedCellIds.length > 0;
+      const scene: NeighbourhoodRealmScene = {
+        goal: summary.goal,
+        stage: 'settled',
+        collectedCells: state.collectedCount,
+        strengthenedCells: state.strengthenedCount,
+        newCells: summary.newCellIds.length,
+        revisitedCells: summary.strengthenedCellIds.length,
+        outcome: summary.reason,
+        challengeTargetReached: summary.challenge?.targetReached,
+      };
+      this.update(
+        developed
+          ? {
+              neighbourhood: scene,
+              territoryStatus: 'developed',
+              threatLevel: threatLevelForTerritory('developed'),
+            }
+          : { neighbourhood: scene },
+        developed ? 'local-ground-developed' : 'local-outing-uncredited'
+      );
+    });
+    this.subscribe('ghost:unlocked', ({ ghost }) => {
+      const ghostType = (ghost as { type?: string } | undefined)?.type;
+      if (ghostType === 'allrounder' && this.snapshot.ghostPresence === 'none') {
+        this.update({ ghostPresence: 'nearby' }, 'companion-arrived');
+      }
+    });
+
     this.subscribe('ghost:deployed', () => {
       this.update({ ghostPresence: 'defending' }, 'ghost-deployed');
     });
@@ -146,7 +252,7 @@ export class WorldStateService extends BaseService {
   }
 
   private update(patch: Partial<WorldSnapshot>, reason: WorldTransitionReason): void {
-    const previous = { ...this.snapshot };
+    const previous = cloneWorldSnapshot(this.snapshot);
     this.snapshot = {
       ...this.snapshot,
       ...patch,
@@ -157,12 +263,36 @@ export class WorldStateService extends BaseService {
 
   private publish(reason: WorldTransitionReason, previous?: WorldSnapshot): void {
     this.safeEmit('world:stateChanged', {
-      previous: previous ?? { ...this.snapshot },
-      snapshot: { ...this.snapshot },
+      previous: previous ?? cloneWorldSnapshot(this.snapshot),
+      snapshot: cloneWorldSnapshot(this.snapshot),
       reason,
       timestamp: Date.now(),
     });
   }
+}
+
+function seedScene(state: NeighbourhoodState): NeighbourhoodRealmScene {
+  const summary = state.lastSummary;
+  if (summary) {
+    return {
+      goal: summary.goal,
+      stage: 'settled',
+      collectedCells: state.collectedCount,
+      strengthenedCells: state.strengthenedCount,
+      newCells: summary.newCellIds.length,
+      revisitedCells: summary.strengthenedCellIds.length,
+      outcome: summary.reason,
+      challengeTargetReached: summary.challenge?.targetReached,
+    };
+  }
+  return {
+    goal: state.goal,
+    stage: 'preview',
+    collectedCells: state.collectedCount,
+    strengthenedCells: state.strengthenedCount,
+    newCells: 0,
+    revisitedCells: 0,
+  };
 }
 
 function statusFromTerritory(territory: Territory): WorldSnapshot['territoryStatus'] {

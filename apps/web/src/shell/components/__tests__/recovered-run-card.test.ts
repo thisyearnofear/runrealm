@@ -187,6 +187,85 @@ describe('RecoveredRunCard', () => {
     });
   });
 
+  describe('an active run takes precedence', () => {
+    it('hides the offer when a live run starts, leaving the checkpoint intact', () => {
+      plantInterruptedRun();
+      component = new RecoveredRunCard(runTracking, bus);
+      component.initialize(container);
+      expect(root().classList.contains('hidden')).toBe(false);
+
+      jest.spyOn(runTracking, 'getCurrentRun').mockReturnValue({
+        status: 'recording',
+      } as RunSession);
+      bus.emit('run:started', { run: {} } as never);
+
+      expect(root().classList.contains('hidden')).toBe(true);
+      expect(window.localStorage.getItem(KEY)).not.toBeNull();
+      expect(runTracking.readCheckpoint()).not.toBeNull();
+    });
+
+    it('hides the offer when a paused run resumes', () => {
+      plantInterruptedRun();
+      component = new RecoveredRunCard(runTracking, bus);
+      component.initialize(container);
+      expect(root().classList.contains('hidden')).toBe(false);
+
+      jest.spyOn(runTracking, 'getCurrentRun').mockReturnValue({
+        status: 'paused',
+      } as RunSession);
+      bus.emit('run:resumed', { runId: 'r' } as never);
+
+      expect(root().classList.contains('hidden')).toBe(true);
+    });
+
+    it('keeps the offer parked, not adopted, while another run is live', () => {
+      plantInterruptedRun();
+      mount();
+      jest.spyOn(runTracking, 'getCurrentRun').mockReturnValue({
+        status: 'recording',
+      } as RunSession);
+      const adopt = jest.spyOn(runTracking, 'adoptCheckpoint');
+
+      press('keep');
+
+      expect(adopt).not.toHaveBeenCalled();
+      expect(root().classList.contains('hidden')).toBe(true);
+      expect(runTracking.readCheckpoint()).not.toBeNull();
+    });
+
+    it('brings a hidden offer back when the runner asks to start over it', () => {
+      plantInterruptedRun();
+      mount();
+      component.hide();
+      expect(root().classList.contains('hidden')).toBe(true);
+
+      expect(component.refocusPending()).toBe(true);
+      expect(root().classList.contains('hidden')).toBe(false);
+    });
+
+    it('does not refocus when there is nothing on file', () => {
+      mount();
+      expect(component.refocusPending()).toBe(false);
+    });
+
+    it('detaches its listeners and removes itself on destroy', () => {
+      plantInterruptedRun();
+      component = new RecoveredRunCard(runTracking, bus);
+      component.initialize(container);
+      expect(root().classList.contains('hidden')).toBe(false);
+
+      component.destroy();
+      expect(document.querySelector('#recovered-run')).toBeNull();
+      expect(window.localStorage.getItem(KEY)).not.toBeNull();
+
+      jest.spyOn(runTracking, 'getCurrentRun').mockReturnValue({
+        status: 'recording',
+      } as RunSession);
+      bus.emit('run:started', { run: {} } as never);
+      expect(runTracking.readCheckpoint()).not.toBeNull();
+    });
+  });
+
   describe('keeping it', () => {
     it('clears the checkpoint so the run is not offered twice', () => {
       plantInterruptedRun();

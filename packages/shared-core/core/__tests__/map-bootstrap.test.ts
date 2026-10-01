@@ -97,3 +97,26 @@ describe('bootMapOrNull', () => {
     expect(console.warn).toHaveBeenCalled();
   });
 });
+
+describe('wireMapControls in neighbourhood mode', () => {
+  afterEach(() => {
+    document.body.classList.remove('neighbourhood-mode');
+  });
+
+  it('skips the native NavigationControl and GeolocateControl', async () => {
+    const { wireMapControls } = await import('../map-bootstrap');
+    document.body.classList.add('neighbourhood-mode');
+    const map = { addControl: jest.fn(), on: jest.fn() };
+    wireMapControls({
+      map: map as never,
+      handles: { NavigationControl: class {}, GeolocateControl: class {} } as never,
+      preferenceService: {} as never,
+      isMobile: false,
+      mapService: {} as never,
+      territoryToggle: { setMapService: () => {} },
+      onMapClick: () => {},
+      onStyleLoad: () => {},
+    });
+    expect(map.addControl).not.toHaveBeenCalled();
+  });
+});

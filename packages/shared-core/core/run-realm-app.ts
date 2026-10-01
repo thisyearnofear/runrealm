@@ -21,6 +21,7 @@ import {
 } from '../types/ui-interfaces';
 import { errorCopy } from '../utils/atlas-voice';
 import { seedDemoAtlas } from '../utils/dev-atlas-seed';
+import { isNeighbourhoodMode } from '../utils/neighbourhood-mode';
 import { wireEvents } from './event-wiring';
 import { initializeGameFi } from './gamefi-bootstrap';
 import {
@@ -339,6 +340,7 @@ export class RunRealmApp {
   }
 
   private initializeOnboarding(): void {
+    if (isNeighbourhoodMode()) return;
     if (!this.services.onboarding.shouldShowOnboarding()) {
       localStorage.setItem('runrealm_onboarding_complete', 'true');
       return;

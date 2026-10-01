@@ -7,6 +7,7 @@
  */
 import { EventBus } from '../core/event-bus';
 import { buildDemoRoute, demoRouteToCoordinates } from '../utils/demo-ghost-routes';
+import { isNeighbourhoodMode } from '../utils/neighbourhood-mode';
 import { StorageAdapter } from '../utils/storage-adapter';
 import type { GhostRunner } from './ai-service';
 import type { AnimationService } from './animation-service';
@@ -82,6 +83,11 @@ export class DemoGhostDirector {
       this.storage = options.storage;
     }
 
+    if (isNeighbourhoodMode()) {
+      this.emitSettled('neighbourhood-mode');
+      return false;
+    }
+
     // Force-replay via ?demo=ghosts (before the seen gate).
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -104,6 +110,10 @@ export class DemoGhostDirector {
   }
 
   start(options: DemoGhostStartOptions): void {
+    if (isNeighbourhoodMode()) {
+      this.emitSettled('neighbourhood-mode');
+      return;
+    }
     if (this.active) {
       this.stop({ markSeen: false, reason: 'restart' });
     }
