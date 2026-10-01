@@ -248,6 +248,60 @@ human legibility check of new-vs-revisited ground. Deferred: the chalk trail
 of the current outing (accepted GPS points, pause/GPS-gap subpaths) and any
 deck.gl/3D layer.
 
+## Desk participation
+
+Not everyone who cares about ground can run today — injury, season,
+caregiving, a desk job. Desk participation invites them in as managers,
+directors, jurors and coaches, and converts some of them into runners. It is
+sequenced after the map-consequences work because every desk role attaches to
+ground the map already makes legible.
+
+The one rule: desk participation never mints territory. GPS-verified
+locomotion stays the only way to claim ground — the attestation oracle,
+receipt-gated claims and the honesty contract all depend on it. Desk roles
+allocate, coach, judge and create; per-action caps keep a runner's legs
+strictly superior to a manager's mouse.
+
+Roles, in ascending privacy risk (build in this order):
+
+- **Ghost Manager (build first).** The desk player is the ghost's brain:
+  adopt and train a ghost stable (daily training decisions — intervals vs
+  hills vs rest), choose deployments, spend upgrades, watch deterministic
+  replays through the existing `?race=` spectator links. Desk movement counts
+  here and only here: phone-pedometer or treadmill steps may train ghosts but
+  can never claim ground. Lowest privacy risk — ghosts are synthetic, so no
+  other human's location is ever exposed.
+- **Race Director.** Design a route, set the condition ("this loop under 22
+  minutes"), fund the escrow, publish. Encrypted bounties are Phase-A live
+  (H3); desk players become content producers for runners. Low risk — no
+  personal data flows to the director.
+- **Juror.** The contest spec already has a 24h dispute window; desk workers
+  are the natural jury pool because they are at a screen while it is open.
+  Medium risk — dispute evidence is a stranger's GPS trace — so evidence is
+  redacted by construction: disputed segment only, endpoints trimmed
+  (Strava-style privacy zones, ~500 m), pseudonymised, time-boxed to the
+  window, access-logged, randomly assigned, never your own linked runner.
+- **Coach (build last).** A desk player linked to a runner plans routes
+  (which cells to target, what is decaying) and, during a live run, watches
+  the trace while allocating a small pool of surge buffs. Highest risk — live
+  location of another human is stalking-grade data — so this needs per-session
+  explicit opt-in with a visible "you are being watched" indicator,
+  auto-expiry, one-tap revocation, an E2E-encrypted relay with zero server
+  persistence, and optionally a 10–15 minute delay.
+
+Privacy traps to design around regardless of role: never expose owner
+activity timestamps (they reveal when someone is away from home — aggregate
+or delay defence-status visibility); pedometer/step data is health-adjacent,
+so it stays on-device and syncs only as daily aggregates; role identities
+stay pseudonymous and unlinkable to wallets unless explicitly linked.
+
+The conversion funnel designs itself: a decay alert reaches the manager
+("your ghost can't hold this alone — a 20-minute walk defends it, +150") →
+Territory Walk, which is GPS-verified walking and already built → first
+GPS-verified movement → "you're 400 m from an unvisited cell" → first
+collection → runner. The notification service already delivers every step of
+that ramp.
+
 ## LivingRealm integration
 
 The main-game neighbourhood shell carries a Realm/Map overlay
