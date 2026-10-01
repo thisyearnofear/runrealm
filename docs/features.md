@@ -105,3 +105,14 @@ Local-only collection slice for the default web experience
   Follow/browse camera modes, explicit zoom and neighbourhood-fit controls —
   present only where MapLibre WebGL is available; otherwise the run controls
   and atlas list remain usable without the map.
+- Map consequences: a dedicated renderer
+  (`apps/web/src/shell/components/neighbourhood-map-renderer.ts`) owns the cell
+  layers and animates transient values through MapLibre feature state — cells
+  flash exposure amber the first time a run touches them, develop
+  amber → verdigris on collection (staggered in encounter order), press deeper
+  on strengthening, and tapping a cell opens a detail strip naming the block,
+  its status and its visits. A finished outing can be reviewed with
+  **"See ground on map"**, which replays only the map's explanation and never
+  re-awards progress. All motion settles instantly under
+  `prefers-reduced-motion`, and the animation layer never writes back to the
+  ledger.

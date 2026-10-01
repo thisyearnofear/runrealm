@@ -470,9 +470,22 @@ describe('NeighbourhoodExperience', () => {
   });
 });
 
+function cellValue(map: ReturnType<typeof fakeMap>, cellId: string) {
+  const call = map.setFeatureState.mock.calls.findLast((c) => c[0].id === cellId);
+  return (call?.[1] ?? {}) as { develop: number; press: number; exposure: number; select: number };
+}
+
+/** True when no cell is off its settled value — i.e. nothing is animating. */
+function rendererIsIdle(map: ReturnType<typeof fakeMap>): boolean {
+  const settled = { develop: 1, press: 0, exposure: 0, select: 0 };
+  return map.setFeatureState.mock.calls.every(
+    (c) => JSON.stringify(c[1]) === JSON.stringify(settled)
+  );
+}
+
 function fakeMap() {
   const source = { setData: jest.fn() };
-  const listeners = new Map<string, Array<() => void>>();
+  const listeners = new Map<string, Array<(arg?: unknown) => void>>();
   let hasSource = false;
   const layers = new Set<string>();
   return {
@@ -483,6 +496,9 @@ function fakeMap() {
     getZoom: jest.fn(() => 12),
     getBearing: jest.fn(() => 0),
     resize: jest.fn(),
+    setFeatureState: jest.fn(),
+    getFeatureState: jest.fn(() => ({})),
+    getCanvas: jest.fn(() => null),
     getSource: jest.fn(() => (hasSource ? source : undefined)),
     addSource: jest.fn(() => {
       hasSource = true;
@@ -497,20 +513,28 @@ function fakeMap() {
     removeSource: jest.fn(() => {
       hasSource = false;
     }),
-    on: jest.fn((evt: string, cb: () => void) => {
-      listeners.set(evt, [...(listeners.get(evt) ?? []), cb]);
+    on: jest.fn((evt: string, layerOrCb: string | (() => void), maybeCb?: () => void) => {
+      const key = typeof layerOrCb === 'string' ? `${evt}/${layerOrCb}` : evt;
+      const cb = typeof layerOrCb === 'string' ? maybeCb : layerOrCb;
+      if (!cb) return;
+      listeners.set(key, [...(listeners.get(key) ?? []), cb]);
     }),
-    once: jest.fn((evt: string, cb: () => void) => {
-      listeners.set(evt, [...(listeners.get(evt) ?? []), cb]);
+    once: jest.fn((evt: string, layerOrCb: string | (() => void), maybeCb?: () => void) => {
+      const key = typeof layerOrCb === 'string' ? `${evt}/${layerOrCb}` : evt;
+      const cb = typeof layerOrCb === 'string' ? maybeCb : layerOrCb;
+      if (!cb) return;
+      listeners.set(key, [...(listeners.get(key) ?? []), cb]);
     }),
-    off: jest.fn((evt: string, cb: () => void) => {
+    off: jest.fn((evt: string, layerOrCb: string | (() => void), maybeCb?: () => void) => {
+      const key = typeof layerOrCb === 'string' ? `${evt}/${layerOrCb}` : evt;
+      const cb = typeof layerOrCb === 'string' ? maybeCb : layerOrCb;
       listeners.set(
-        evt,
-        (listeners.get(evt) ?? []).filter((l) => l !== cb)
+        key,
+        (listeners.get(key) ?? []).filter((l) => l !== cb)
       );
     }),
-    fire: (evt: string) => {
-      for (const l of listeners.get(evt) ?? []) l();
+    fire: (evt: string, arg?: unknown) => {
+      for (const l of listeners.get(evt) ?? []) l(arg);
     },
     dropSource: () => {
       hasSource = false;
@@ -572,6 +596,120 @@ describe('NeighbourhoodExperience regressions', () => {
     const gps = root.querySelector('.nh-gps');
     expect(gps?.textContent).toContain('10');
     expect(gps?.textContent).not.toMatch(/stale/i);
+  });
+
+  it('offers ground review on the summary and never re-files the outing', () => {
+    const map = fakeMap();
+    const ids = gridDisk(latLngToCell(37.7749, -122.4194, 9), 2);
+    const { deps, root, shell } = mount({ map });
+    deps.neighbourhood.activeRingCellIds.mockReturnValue(ids);
+    deps.neighbourhood.getState.mockReturnValue(
+      baseState({ collectedCount: 1, cells: { [ids[0]]: { visits: 1, lastVisitedAt: 0 } } })
+    );
+    deps.bus.emit('neighbourhood:runCompleted', {
+      summary: {
+        runId: 'r9',
+        goal: 'explore',
+        distanceMeters: 800,
+        durationMs: 300_000,
+        newCellIds: [ids[0]],
+        strengthenedCellIds: [],
+        outsideCellCount: 0,
+        reason: 'collected',
+        persisted: true,
+      },
+      state: baseState({ collectedCount: 1 }),
+    } as never);
+    expect(root.querySelector('[data-action="see-ground"]')).toBeTruthy();
+    const filed = jest.fn();
+    deps.bus.on('neighbourhood:runCompleted', filed);
+
+    root.querySelector<HTMLButtonElement>('[data-action="see-ground"]')?.click();
+    // The map was already visible, so the reveal runs immediately and the shell
+    // returns to idle. Reviewing is not filing: the outcome is not re-emitted,
+    // so nothing downstream can award or generate a second time.
+    expect(filed).not.toHaveBeenCalled();
+    expect(root.querySelector('[data-action="start"]')).toBeTruthy();
+    shell.destroy();
+  });
+
+  it('defers the reveal while the realm covers the map, then plays it on the map view', () => {
+    const map = fakeMap();
+    const ids = gridDisk(latLngToCell(37.7749, -122.4194, 9), 2);
+    document.body.classList.add('living-realm-view');
+    const { deps, root, shell } = mount({ map });
+    deps.neighbourhood.activeRingCellIds.mockReturnValue(ids);
+    deps.bus.emit('neighbourhood:runCompleted', {
+      summary: {
+        runId: 'r10',
+        goal: 'explore',
+        distanceMeters: 800,
+        durationMs: 300_000,
+        newCellIds: [ids[1]],
+        strengthenedCellIds: [],
+        outsideCellCount: 0,
+        reason: 'collected',
+        persisted: true,
+      },
+      state: baseState({ collectedCount: 1 }),
+    } as never);
+    // The map is hidden, so every cell is showing its settled ledger state and
+    // nothing is animating in the dark.
+    expect(cellValue(map, ids[1]).develop).toBe(1);
+    expect(rendererIsIdle(map)).toBe(true);
+
+    root.querySelector<HTMLButtonElement>('[data-action="see-ground"]')?.click();
+    expect(cellValue(map, ids[1]).develop).toBe(1);
+
+    document.body.classList.remove('living-realm-view');
+    deps.bus.emit('ui:realmViewChanged', { view: 'map' });
+    // The collected cell now starts its amber exposure, then resolves.
+    expect(cellValue(map, ids[1]).develop).toBeLessThan(1);
+    shell.destroy();
+  });
+
+  it('does not offer ground review without a map', () => {
+    const { deps, root } = mount();
+    deps.bus.emit('neighbourhood:runCompleted', {
+      summary: {
+        runId: 'r11',
+        goal: 'explore',
+        distanceMeters: 800,
+        durationMs: 300_000,
+        newCellIds: ['a'],
+        strengthenedCellIds: [],
+        outsideCellCount: 0,
+        reason: 'collected',
+        persisted: true,
+      },
+      state: baseState({ collectedCount: 1 }),
+    } as never);
+    expect(root.querySelector('[data-action="see-ground"]')).toBeNull();
+  });
+
+  it('names the inspected block, its status and its visits', () => {
+    const map = fakeMap();
+    const ids = gridDisk(latLngToCell(37.7749, -122.4194, 9), 2);
+    const { deps, root, shell } = mount({ map });
+    deps.neighbourhood.activeRingCellIds.mockReturnValue(ids);
+    deps.neighbourhood.getState.mockReturnValue(
+      baseState({
+        ringCellIds: ids,
+        cells: { [ids[2]]: { visits: 2, lastVisitedAt: 0 } },
+      })
+    );
+    deps.bus.emit('neighbourhood:updated', { state: deps.neighbourhood.getState() } as never);
+    const clickListeners = map.listeners.get('click/neighbourhood-cells-fill') ?? [];
+    expect(clickListeners.length).toBeGreaterThan(0);
+    clickListeners[0]({ features: [{ id: ids[2] }] });
+    const detail = root.querySelector<HTMLElement>('.nh-celldetail');
+    expect(detail?.hidden).toBe(false);
+    expect(detail?.textContent).toContain('Block 03');
+    expect(detail?.textContent).toContain('Deepened');
+    expect(detail?.textContent).toContain('2 visits');
+    detail?.querySelector<HTMLButtonElement>('[data-action="clear-cell"]')?.click();
+    expect(root.querySelector<HTMLElement>('.nh-celldetail')?.hidden).toBe(true);
+    shell.destroy();
   });
 
   it('shows the provisional ring on the map during the first run', () => {

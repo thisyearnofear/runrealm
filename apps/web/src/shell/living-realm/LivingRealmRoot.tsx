@@ -456,6 +456,7 @@ function LivingRealmExperience({
       setRunActive(false);
       setView('realm');
     };
+    const onMapViewRequested = () => setView('map');
     eventBus.on('world:stateChanged', onWorld);
     eventBus.on('neighbourhood:updated', onNhUpdated);
     eventBus.on('run:started', onRunStarted);
@@ -464,6 +465,7 @@ function LivingRealmExperience({
     eventBus.on('run:resumed', onRunResumed);
     eventBus.on('run:completed', onRunCompleted);
     eventBus.on('neighbourhood:runCompleted', onRunCompleted);
+    eventBus.on('ui:mapViewRequested', onMapViewRequested);
     return () => {
       eventBus.off('world:stateChanged', onWorld);
       eventBus.off('neighbourhood:updated', onNhUpdated);
@@ -473,6 +475,7 @@ function LivingRealmExperience({
       eventBus.off('run:resumed', onRunResumed);
       eventBus.off('run:completed', onRunCompleted);
       eventBus.off('neighbourhood:runCompleted', onRunCompleted);
+      eventBus.off('ui:mapViewRequested', onMapViewRequested);
     };
   }, [eventBus]);
 

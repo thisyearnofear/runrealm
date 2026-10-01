@@ -193,8 +193,9 @@ Decided design contract:
   territory registry; progress stays local and unencrypted.
 
 Deferred (only after this visibility pass is playtested): a chalk trail of
-the current outing, cell-entry acknowledgements, and a customisable
-illustrated runner.
+the current outing and a customisable illustrated runner. (Cell-entry
+acknowledgements shipped as the exposure flash — see §Cell consequences on
+the map below.)
 
 Acceptance criteria: a new player finds themselves at a glance, can zoom
 without instructions, can browse without the camera fighting back, and can
@@ -203,6 +204,49 @@ return to Follow in one tap; the marker and controls are not occluded at
 resize; weak or stale GPS never fabricates direction or accuracy; denied
 location remains recoverable. Synthetic browser geolocation does not count as
 outdoor, locked-phone or human validation.
+
+## Cell consequences on the map
+
+Shipped (Oct 2026) after a source-level evaluation of three candidate
+approaches: native MapLibre patterns, maplibre-transition, and threelibre.
+The verdict: adopt MapLibre's built-in feature-state animation with a small
+local scheduler; borrow maplibre-transition's scheduling ideas (one bounded
+loop, retarget-from-current-value, explicit disposal) but not the library —
+it has no public cancel API and cannot infer start colours from `match`
+expressions. threelibre was rejected outright: it reads private MapLibre
+internals and its `dispose()` removes the map it was handed.
+
+Decided contract:
+
+- **Ledger vs picture.** The ledger owns geometry and status (GeoJSON
+  properties, re-uploaded only when the ring or a visit count changes). The
+  picture owns transient values (`develop`, `press`, `exposure`, `select`) in
+  MapLibre feature state, animated by `CellTransitionScheduler` — one bounded
+  RAF loop, at most one feature-state write per cell per frame. An
+  interrupted or torn-down animation can never look like progress, because
+  nothing in the renderer writes back to the ledger.
+- **Stable identity.** Cells carry their H3 string id via `promoteId: 'h3'`,
+  and every animated paint expression reads through
+  `['coalesce', ['feature-state', key], fallback]`, so a freshly re-uploaded
+  feature still paints its settled appearance. The renderer also seeds
+  settled state after every upload, and re-seeds on `styledata` after a
+  basemap swap.
+- **Vocabulary.** First contact flashes exposure amber (200 ms rise, 600 ms
+  fade, once per cell per run); a collection develops amber → verdigris over
+  700 ms with a 40 ms stagger in encounter order; strengthening presses for
+  450 ms and releases over 700 ms; selection is a restrained 150 ms chalk
+  outline. `prefers-reduced-motion` settles everything instantly.
+- **Honest review.** "See ground on map" on the finish summary replays only
+  the cosmetic outcome — rewards and Orbis outcomes are never re-emitted. A
+  finish that lands while the Realm view is up is replayed once, when the
+  runner asks for the map (`ui:mapViewRequested` → `ui:realmViewChanged`).
+- **Inspection.** Tapping a cell names the block, its status and its visit
+  count in a detail strip; clearing the selection never touches the ledger.
+
+Open gates: browser QA at 320x568, 390x844, 768x1024 and 1280x800, and a
+human legibility check of new-vs-revisited ground. Deferred: the chalk trail
+of the current outing (accepted GPS points, pause/GPS-gap subpaths) and any
+deck.gl/3D layer.
 
 ## LivingRealm integration
 

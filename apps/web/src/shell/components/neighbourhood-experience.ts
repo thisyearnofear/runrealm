@@ -9,10 +9,11 @@ import {
   type NeighbourhoodState,
 } from '@runrealm/shared-core/types/neighbourhood';
 import { NEIGHBOURHOOD_COPY } from '@runrealm/shared-core/utils/atlas-voice';
-import { cellToPolygon } from '@runrealm/shared-core/utils/h3-territory';
 import { formatDistance, formatDuration, formatPace } from '@runrealm/shared-core/utils/run-status';
-import type { GeoJSONSource, Map as MaplibreMap } from 'maplibre-gl';
+import type { Map as MaplibreMap } from 'maplibre-gl';
 import { NeighbourhoodMapController } from './neighbourhood-map-controller';
+import { NeighbourhoodMapRenderer } from './neighbourhood-map-renderer';
+import type { CellRecord } from './neighbourhood-map-types';
 
 export interface NeighbourhoodExperienceDeps {
   neighbourhood: NeighbourhoodService;
@@ -25,13 +26,6 @@ export interface NeighbourhoodExperienceDeps {
 }
 
 type ShellPhase = 'idle' | 'recording' | 'paused' | 'summary';
-
-const CELLS_SOURCE = 'neighbourhood-cells';
-const FILL_LAYER = 'neighbourhood-cells-fill';
-const UNVISITED_LAYER = 'neighbourhood-cells-unvisited';
-const COLLECTED_LAYER = 'neighbourhood-cells-collected';
-const STRENGTHENED_LAYER = 'neighbourhood-cells-strengthened';
-const LAYERS = [FILL_LAYER, UNVISITED_LAYER, COLLECTED_LAYER, STRENGTHENED_LAYER];
 
 const STALE_FIX_MS = 30000;
 
@@ -55,6 +49,7 @@ type BusEvent = Extract<
   | 'neighbourhood:runCompleted'
   | 'ghost:unlocked'
   | 'map:styleLoaded'
+  | 'ui:realmViewChanged'
   | 'location:changed'
 >;
 
@@ -66,11 +61,14 @@ export class NeighbourhoodExperience {
   private lastSummary: NeighbourhoodRunSummary | null = null;
   private atlasOpen = false;
   private handlers: Array<{ event: BusEvent; handler: (data: unknown) => void }> = [];
-  private mapReady = false;
-  private onMapLoad: (() => void) | null = null;
-  private onStyleLoad: (() => void) | null = null;
   private lastRawFix: { accuracy?: number; at: number } | null = null;
   private mapController: NeighbourhoodMapController | null = null;
+  private mapRenderer: NeighbourhoodMapRenderer | null = null;
+  private selectedCell: CellRecord | null = null;
+  /** Cells already flashed as provisional during the current run. */
+  private exposedCellIds = new Set<string>();
+  /** A finished outing awaiting a look at the map. */
+  private pendingReview: NeighbourhoodRunSummary | null = null;
 
   constructor(private readonly deps: NeighbourhoodExperienceDeps) {
     this.state = deps.neighbourhood.getState();
@@ -89,7 +87,7 @@ export class NeighbourhoodExperience {
       const collectedChanged = next.collectedCount !== this.state.collectedCount;
       this.state = next;
       this.renderIdleBits();
-      if (collectedChanged || this.phase === 'idle') this.renderMapLayers();
+      if (collectedChanged || this.phase === 'idle') this.syncMap();
     });
     this.on('neighbourhood:runCompleted', (data) => {
       const payload = data as {
@@ -98,14 +96,19 @@ export class NeighbourhoodExperience {
       };
       this.lastSummary = payload.summary;
       this.state = payload.state;
+      this.exposedCellIds.clear();
       this.showSummary(payload.summary);
-      this.renderMapLayers();
+      this.syncMap();
+      if (this.isMapVisible()) this.playOutcome(payload.summary);
+      else this.pendingReview = payload.summary;
     });
     this.on('run:started', () => {
       this.phase = 'recording';
       this.lastRawFix = null;
+      this.exposedCellIds.clear();
+      this.pendingReview = null;
       this.render();
-      this.renderMapLayers();
+      this.syncMap();
       this.mapController?.onRunStarted();
       this.focusSelector('[data-action="pause-resume"]');
       this.announce(this.phase);
@@ -131,7 +134,8 @@ export class NeighbourhoodExperience {
     });
     this.on('run:statsUpdated', () => {
       this.renderRecordingBits();
-      this.renderMapLayers();
+      this.markExposure();
+      this.syncMap();
     });
     this.on('location:changed', (data) => {
       const fix = data as { lat?: number; lng?: number; accuracy?: number; timestamp?: number };
@@ -143,7 +147,11 @@ export class NeighbourhoodExperience {
       }
     });
     this.on('ghost:unlocked', () => this.renderGhost());
-    this.on('map:styleLoaded', () => this.renderMapLayers());
+    this.on('map:styleLoaded', () => this.syncMap());
+    this.on('ui:realmViewChanged', (data) => {
+      if ((data as { view: string }).view !== 'map') return;
+      this.reviewPendingOutcome();
+    });
 
     const current = this.deps.runTracking.getCurrentRun();
     if (current?.status === 'recording' || current?.status === 'paused') {
@@ -166,11 +174,12 @@ export class NeighbourhoodExperience {
   destroy(): void {
     this.mapController?.destroy();
     this.mapController = null;
+    this.mapRenderer?.dispose();
+    this.mapRenderer = null;
     for (const { event, handler } of this.handlers) {
       this.deps.eventBus.off(event, handler as never);
     }
     this.handlers = [];
-    this.teardownMap();
     this.root?.remove();
     this.root = null;
   }
@@ -292,6 +301,7 @@ export class NeighbourhoodExperience {
             <span class="nh-swatch nh-swatch--strengthened"></span>${NEIGHBOURHOOD_COPY.legend.strengthened}
           </div>
           ${summaryBlock}
+          <div class="nh-celldetail" hidden></div>
           <p class="nh-honest">${this.honestLine()}</p>
           <div class="nh-footer">
             <button type="button" class="nh-secondary" data-action="atlas" aria-expanded="${this.atlasOpen}">${NEIGHBOURHOOD_COPY.myAtlas}</button>
@@ -310,8 +320,9 @@ export class NeighbourhoodExperience {
     `;
     this.bindIdle();
     this.renderGhost();
+    this.renderCellDetail();
     if (this.atlasOpen) this.renderAtlasList();
-    if (!this.deps.map || !this.mapReady) this.showMapNote();
+    if (!this.deps.map) this.showMapNote();
   }
 
   private bindIdle(): void {
@@ -493,6 +504,10 @@ export class NeighbourhoodExperience {
     if (gps) gps.textContent = this.gpsLine(session);
   }
 
+  private canReviewOnMap(): boolean {
+    return Boolean(this.deps.map) && Boolean(this.lastSummary);
+  }
+
   private liveProgressLine(): string {
     const preview = this.deps.neighbourhood.previewLive();
     const goal = this.state.goal;
@@ -610,6 +625,11 @@ export class NeighbourhoodExperience {
         </div>
         <div class="nh-dock">
           <button type="button" class="nh-start" data-action="continue">${NEIGHBOURHOOD_COPY.continue}</button>
+          ${
+            this.canReviewOnMap()
+              ? `<button type="button" class="nh-secondary" data-action="see-ground">${NEIGHBOURHOOD_COPY.seeGroundOnMap}</button>`
+              : ''
+          }
         </div>
       </div>
     `;
@@ -618,6 +638,27 @@ export class NeighbourhoodExperience {
       this.render();
       this.focusSelector('[data-action="start"]');
     });
+    this.root.querySelector('[data-action="see-ground"]')?.addEventListener('click', () => {
+      this.showGroundOnMap();
+    });
+  }
+
+  /**
+   * Reviewing an outing on the map must not pay it out twice: the summary is
+   * already filed, so this only asks for the map and replays the explanation.
+   */
+  private showGroundOnMap(): void {
+    const summary = this.lastSummary;
+    if (!summary) return;
+    this.phase = 'idle';
+    this.render();
+    this.focusSelector('[data-action="start"]');
+    if (!this.isMapVisible()) {
+      this.pendingReview = summary;
+      this.deps.eventBus.emit('ui:mapViewRequested', {} as never);
+      return;
+    }
+    this.playOutcome(summary);
   }
 
   private setError(message: string | null, retryAction?: (() => void) | null): void {
@@ -707,124 +748,79 @@ export class NeighbourhoodExperience {
   }
 
   private setupMap(): void {
-    const map = this.deps.map;
-    if (!map) return;
-    this.onMapLoad = () => {
-      this.onMapLoad = null;
-      this.mapReady = true;
-      this.renderMapLayers();
-    };
-    this.onStyleLoad = () => this.renderMapLayers();
-    map.on('styledata', this.onStyleLoad);
-    if (map.isStyleLoaded()) {
-      this.onMapLoad();
-    } else {
-      map.once('load', this.onMapLoad);
-    }
+    if (!this.deps.map) return;
+    this.mapRenderer = new NeighbourhoodMapRenderer({
+      map: this.deps.map,
+      onSelect: (cell) => {
+        this.selectedCell = cell;
+        this.renderCellDetail();
+      },
+    });
+    this.mapRenderer.initialize();
+    this.syncMap();
   }
 
-  private teardownMap(): void {
-    const map = this.deps.map;
-    if (!map) return;
-    if (this.onMapLoad) {
-      map.off('load', this.onMapLoad);
-      this.onMapLoad = null;
-    }
-    if (this.onStyleLoad) {
-      map.off('styledata', this.onStyleLoad);
-      this.onStyleLoad = null;
-    }
-    for (const layer of LAYERS) {
-      try {
-        if (map.getLayer(layer)) map.removeLayer(layer);
-      } catch {}
-    }
-    try {
-      if (map.getSource(CELLS_SOURCE)) map.removeSource(CELLS_SOURCE);
-    } catch {}
+  private isMapVisible(): boolean {
+    return !document.body.classList.contains('living-realm-view');
   }
 
-  private renderMapLayers(): void {
-    const map = this.deps.map;
-    if (!map || !this.mapReady) return;
-    try {
-      const ring = this.deps.neighbourhood.activeRingCellIds();
-      const features: GeoJSON.Feature[] = ring.map((id) => {
-        const record = this.state.cells[id];
-        const visits = record?.visits ?? 0;
-        return {
-          type: 'Feature',
-          properties: {
-            status: visits >= 2 ? 'strengthened' : visits === 1 ? 'collected' : 'unvisited',
-          },
-          geometry: cellToPolygon(id),
-        };
-      });
-      const data: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
-      const source = map.getSource(CELLS_SOURCE) as GeoJSONSource | undefined;
-      if (source) {
-        source.setData(data);
-        return;
-      }
-      map.addSource(CELLS_SOURCE, { type: 'geojson', data });
-      map.addLayer({
-        id: FILL_LAYER,
-        type: 'fill',
-        source: CELLS_SOURCE,
-        paint: {
-          'fill-color': [
-            'match',
-            ['get', 'status'],
-            'strengthened',
-            '#4fae8b',
-            'collected',
-            '#4fae8b',
-            'rgba(0,0,0,0)',
-          ],
-          'fill-opacity': [
-            'match',
-            ['get', 'status'],
-            'strengthened',
-            0.5,
-            'collected',
-            0.28,
-            0.04,
-          ],
-        },
-      });
-      map.addLayer({
-        id: UNVISITED_LAYER,
-        type: 'line',
-        source: CELLS_SOURCE,
-        filter: ['==', ['get', 'status'], 'unvisited'],
-        paint: {
-          'line-color': '#9fb8bf',
-          'line-width': 1,
-          'line-dasharray': [2, 2],
-        },
-      });
-      map.addLayer({
-        id: COLLECTED_LAYER,
-        type: 'line',
-        source: CELLS_SOURCE,
-        filter: ['==', ['get', 'status'], 'collected'],
-        paint: {
-          'line-color': '#63b3c8',
-          'line-width': 2,
-        },
-      });
-      map.addLayer({
-        id: STRENGTHENED_LAYER,
-        type: 'line',
-        source: CELLS_SOURCE,
-        filter: ['==', ['get', 'status'], 'strengthened'],
-        paint: {
-          'line-color': '#4fae8b',
-          'line-width': 2,
-        },
-      });
-    } catch (error) {
-      console.warn('NeighbourhoodExperience: map layers skipped:', error);
+  private syncMap(): void {
+    this.mapRenderer?.syncLedger(this.state, this.deps.neighbourhood.activeRingCellIds());
+  }
+
+  /** Accepted visits to uncollected ground, flashed once per run. */
+  private markExposure(): void {
+    const renderer = this.mapRenderer;
+    if (!renderer) return;
+    const preview = this.deps.neighbourhood.previewLive();
+    const fresh = preview.projectedNewCellIds.filter((id) => !this.exposedCellIds.has(id));
+    if (fresh.length === 0) return;
+    for (const id of fresh) this.exposedCellIds.add(id);
+    renderer.markExposure(fresh);
+  }
+
+  /**
+   * Replays the cosmetic consequences of the last outing. Rewards and Orbis
+   * outcomes are never re-emitted here — only the map's own explanation.
+   */
+  private reviewPendingOutcome(): void {
+    const summary = this.pendingReview;
+    if (!summary) return;
+    this.pendingReview = null;
+    this.playOutcome(summary);
+  }
+
+  private playOutcome(summary: NeighbourhoodRunSummary): void {
+    if (!this.mapRenderer || !this.isMapVisible()) {
+      this.pendingReview = summary;
+      return;
     }
+    this.mapRenderer.playOutcome(summary);
+    this.mapController?.showNeighbourhood();
+  }
+
+  private renderCellDetail(): void {
+    const el = this.root?.querySelector<HTMLElement>('.nh-celldetail');
+    if (!el) return;
+    const cell = this.selectedCell;
+    if (!cell) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    const index = this.state.ringCellIds.indexOf(cell.id);
+    const label =
+      index >= 0 ? NEIGHBOURHOOD_COPY.cellLabel(index) : cell.id.slice(-6).toUpperCase();
+    el.hidden = false;
+    el.innerHTML = `
+      <span class="nh-celldetail-line">${NEIGHBOURHOOD_COPY.cellDetail.line(
+        escapeHtml(label),
+        NEIGHBOURHOOD_COPY.cellDetail.status[cell.status],
+        NEIGHBOURHOOD_COPY.visits(cell.visits)
+      )}</span>
+      <button type="button" class="nh-secondary nh-celldetail-clear" data-action="clear-cell">${NEIGHBOURHOOD_COPY.cellDetail.clear}</button>`;
+    el.querySelector('[data-action="clear-cell"]')?.addEventListener('click', () => {
+      this.mapRenderer?.setSelection(null);
+    });
   }
 }

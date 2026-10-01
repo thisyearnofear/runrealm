@@ -1056,6 +1056,17 @@ export const NEIGHBOURHOOD_COPY = {
     waiting: 'Waiting for GPS…',
   },
   mapUnavailable: 'The map could not be drawn — your atlas list still works.',
+  seeGroundOnMap: 'See ground on map',
+  cellDetail: {
+    label: 'Selected block',
+    clear: 'Clear',
+    status: {
+      unvisited: 'Uncollected ground',
+      collected: 'Collected',
+      strengthened: 'Deepened',
+    },
+    line: (label: string, status: string, visits: string) => `${label} · ${status} · ${visits}`,
+  },
   mountFailed: 'The neighbourhood view could not open — the map still works.',
   outsideNote: 'That outing went beyond your neighbourhood — it is saved, but no cells count.',
   shortNote: 'Under 500m — saved, but too short to collect.',

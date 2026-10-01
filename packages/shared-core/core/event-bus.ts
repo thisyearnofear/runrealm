@@ -294,6 +294,12 @@ export interface AppEvents extends Web3Events {
   'orbis:promptDispatched': { intent: OrbisPromptIntent };
   'orbis:promptFailed': { intent: OrbisPromptIntent; error: string };
   'ui:realmViewChanged': { view: 'realm' | 'map' };
+  /**
+   * Asks the neighbourhood view to show the map — e.g. "See ground on map" on
+   * the finish summary. The view owns the answer and answers with
+   * `ui:realmViewChanged`, so a request never implies the map is already up.
+   */
+  'ui:mapViewRequested': Record<string, never>;
   'ui:settingsOpened': Record<string, never>;
   'ui:settingsClosed': Record<string, never>;
   'ui:unitsToggled': { useMetric: boolean };
