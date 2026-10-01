@@ -161,7 +161,11 @@ intentionally delivered to the browser so the SDK can connect.
 
 ## Submission checkpoint — 2026-10-01
 
-Status: **implemented locally; not live-verified, deployed, or submitted**. The project owner has confirmed Visko challenge registration. Submission remains gated on a real Orbis session and a usable judge-facing delivery, not on the existence of the conductor route.
+Status: **live-verified and deployed**. Production hosting moved to Vercel after Netlify paused production deploys; the judge-facing route is `https://runrealm-psi.vercel.app/orbis-live/` with the credential broker at `api/reactor/token.js` (`/api/reactor/token`). The project owner has confirmed Visko challenge registration.
+
+### Live verification — 2026-10-01
+
+Verified end-to-end on the Vercel production deployment: scoped JWT minted by the broker, Reactor WebRTC session negotiated to READY, decoded video frames confirmed (video element `readyState 4`, advancing `currentTime`, 2560×1440 live MediaStream), chunks emitted continuously, and the "Live" label rendered (decoded frame + `frames_emitted > 0`). The guided sequence drove world-state transitions through the real prompt path while the stream ran.
 
 ### Completed
 
@@ -174,9 +178,9 @@ Status: **implemented locally; not live-verified, deployed, or submitted**. The 
 
 ### Deferred and open gates
 
-1. The backend on port 3100 currently reports `REACTOR_API_KEY` is not set. The owner will provision it server-side when they return. Never put it in `NEXT_PUBLIC_*`, source control, or submission material. The browser SDK receives a scoped JWT, not the API key.
-2. One live verification session, capped at three minutes, has been approved but **has not been used**. After provisioning, prove real decoded video frames and accepted prompts for an actual in-game choice and an eligible local outcome in the same session; disconnect at the cap and retain redacted evidence.
-3. No judge-facing deployment has been validated in this work. Before sharing a live public link, verify the deployed token broker, model availability, and account-wide rate/credit controls. A per-token session cap is not an account-wide spending limit.
+1. ~~`REACTOR_API_KEY` provisioning~~ — resolved: set as a Vercel production env var (and in `.env.local` for the local broker). Never put it in `NEXT_PUBLIC_*`, source control, or submission material. The browser SDK receives a scoped JWT, not the API key.
+2. ~~Live verification session~~ — resolved: see "Live verification" above. The main-game in-session evidence (an actual in-game choice plus an eligible local outcome in one session) is still worth capturing if a second session is run.
+3. ~~Judge-facing deployment~~ — resolved: `runrealm-psi.vercel.app` serves the static export and `/api/reactor/token` mints both legacy and `living-realm` scoped grants (verified 200s). Account-wide rate/credit controls still rest with the Reactor dashboard — a per-token session cap is not an account-wide spending limit.
 4. Outdoor GPS, physical-phone pocket/lock behavior, and unassisted runner playtests remain unverified. Do not claim validated retention, background reliability, or popularity from synthetic tests.
 5. Browser QA observed a first Start click after a settled summary occasionally needing a second click. The mechanism is not confirmed; reproduce and trace it before treating it as fixed.
 

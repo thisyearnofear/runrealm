@@ -2,7 +2,7 @@
 
 A fitness game where you truly own everything: your runs become NFT territories, with **private proof-of-movement** — cryptographically provable athletic achievement over location data that stays encrypted (Zama FHEVM). Connect Strava, track runs, claim ground, beat rivals. The chain is the court, not the product — the north-star architecture lives in [docs/protocol-vision.md](docs/protocol-vision.md).
 
-**Live:** <https://runrealm.netlify.app> (Orbis Live slice: <https://runrealm.netlify.app/orbis-live/>)
+**Live:** <https://runrealm-psi.vercel.app> (Orbis Live slice: <https://runrealm-psi.vercel.app/orbis-live/>)
 
 - **Run-to-territory gameplay** — runs auto-claim H3 territories as NFTs; activity points decay without regular engagement
 - **Ghost Runners** — AI virtual competitors that defend your territories when you can't run
