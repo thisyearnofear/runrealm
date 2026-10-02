@@ -16,6 +16,10 @@ const { forwardGeocode, reverseGeocode } = require('../server/geocode-grant.js')
  *
  * One endpoint rather than two so there is a single place where the token is
  * read and a single set of headers to reason about.
+ *
+ * Upstream is Mapbox Geocoding v6, whose forward and reverse are separate
+ * endpoints. v6 defaults to temporary result storage, which is why nothing
+ * here is cached -- see the note on `Cache-Control` below.
  */
 module.exports = async function handler(req, res) {
   const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
@@ -34,16 +38,20 @@ module.exports = async function handler(req, res) {
           token,
         });
 
-  if (q !== null) {
-    // Forward results are keyed on a query the user typed and are not worth
-    // storing anywhere, including a shared cache.
-    res.setHeader('Cache-Control', 'no-store');
-  } else {
-    // A street name is stable for hours and the response is derived from a
-    // ~110 m cell, so it is safe to cache. But keyed on the URL: the response
-    // must never be shared between users in a shared cache.
-    res.setHeader('Cache-Control', 'private, max-age=3600');
-  }
+  // Both directions, always `no-store`.
+  //
+  // Mapbox defaults every endpoint to *temporary* geocoding, and temporary
+  // results "are not allowed to be cached" -- permanent storage needs a credit
+  // card or an enterprise contract. This endpoint used to send
+  // `private, max-age=3600` for reverse on the reasoning that a street name is
+  // stable and the response is derived from an already-coarse ~110m cell.
+  // That was reasoning about our own privacy posture and missed the licence
+  // term, which is about retaining the response rather than about how
+  // sensitive the key is. `private` still means a browser will reuse it.
+  //
+  // The cost is one Mapbox request per location update. That is the correct
+  // trade: a licence term is not a performance budget.
+  res.setHeader('Cache-Control', 'no-store');
 
   // Belt and braces: even if a browser somehow rendered this as a document,
   // it would not execute.

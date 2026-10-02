@@ -32,9 +32,39 @@
  * written. That is a query the user typed themselves, so it discloses
  * nothing they did not already choose to disclose, but the two paths are not
  * symmetric and it should not be pretended otherwise.
+ *
+ * ── Nothing here is cached, on either path ────────────────────────────────
+ * Mapbox splits result storage in two. *Temporary* results "are not allowed
+ * to be cached"; *permanent* results may be stored indefinitely. Every
+ * endpoint defaults to temporary, and switching to permanent requires either
+ * a credit card on file or an enterprise contract arranged with Mapbox
+ * sales. We are on the default, so every response here is temporary and must
+ * not be retained.
+ *
+ * That is why there is no memoisation below and why `api/geocode.js` sends
+ * `no-store` for both directions. An earlier version of this file cached
+ * reverse results for six hours against a ~110m grid key, on the reasoning
+ * that the key was already coarse. That reasoning was about *our* privacy
+ * posture and missed Mapbox's entirely: the licence term is about retaining
+ * the response, not about how sensitive the key is. The response is the
+ * thing that may not be kept. See `docs/privacy-handover.md`.
+ *
+ * If permanent geocoding is ever enabled for this account, caching becomes
+ * permissible — but that is a licence change, not a code change, and it
+ * should be made deliberately rather than by editing this comment away.
  */
 
-const ENDPOINT = 'https://api.mapbox.com/geocoding/v5/mapbox.places';
+const FORWARD_ENDPOINT = 'https://api.mapbox.com/search/geocode/v6/forward';
+const REVERSE_ENDPOINT = 'https://api.mapbox.com/search/geocode/v6/reverse';
+
+/**
+ * v6 dropped POI data from geocoding (Mapbox points POI search at the
+ * separate Search Box API), but it also added `street` as a first-class
+ * filterable type. Pinning the types is what stops a search for a street
+ * name returning a country or a postcode instead, and it documents the
+ * intent: this app geocodes places to run, it does not find restaurants.
+ */
+const FORWARD_TYPES = ['address', 'street', 'place', 'locality', 'neighborhood'];
 
 /** Three decimals is ~110 m at the equator. See the note above. */
 function coarsen(value) {
@@ -52,53 +82,10 @@ function parseCoordinate(raw, limit) {
   return value;
 }
 
-/**
- * Bounded TTL cache. Keyed by the *coarsened* coordinate, which is the whole
- * reason it is effective: a run stays inside one ~110 m cell for a while, so
- * the second and subsequent lookups cost nothing.
- *
- * Bounded because a serverless function that is kept warm can live for a long
- * time, and an unbounded Map keyed by arbitrary input is a memory leak that
- * someone else can trigger.
- */
-const CACHE_MAX_ENTRIES = 500;
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-
 /** Autocomplete fires on every keystroke past three characters. */
 const MAX_QUERY_LENGTH = 256;
 const MAX_LIMIT = 10;
 const DEFAULT_LIMIT = 5;
-
-/** Injected in tests; module-level so a warm function reuses it. */
-function createCache(now = Date.now) {
-  const entries = new Map();
-  return {
-    get(key) {
-      const hit = entries.get(key);
-      if (!hit) return undefined;
-      if (hit.expiresAt <= now()) {
-        entries.delete(key);
-        return undefined;
-      }
-      // Refresh recency so a hot cell survives eviction.
-      entries.delete(key);
-      entries.set(key, hit);
-      return hit.value;
-    },
-    set(key, value) {
-      if (entries.size >= CACHE_MAX_ENTRIES) {
-        const oldest = entries.keys().next().value;
-        if (oldest !== undefined) entries.delete(oldest);
-      }
-      entries.set(key, { value, expiresAt: now() + CACHE_TTL_MS });
-    },
-    get size() {
-      return entries.size;
-    },
-  };
-}
-
-const defaultCache = createCache();
 
 /**
  * @param {object} input
@@ -106,9 +93,8 @@ const defaultCache = createCache();
  * @param {unknown} input.lng     Client longitude. Coarsened here regardless.
  * @param {string} [input.token]  Server-side Mapbox token. Never from the client.
  * @param {Function} [input.fetchImpl]
- * @param {object} [input.cache]
  */
-async function reverseGeocode({ lat, lng, token, fetchImpl = fetch, cache = defaultCache } = {}) {
+async function reverseGeocode({ lat, lng, token, fetchImpl = fetch } = {}) {
   if (!token) {
     return { status: 500, body: { error: 'MAPBOX_ACCESS_TOKEN is not set on the server' } };
   }
@@ -122,16 +108,14 @@ async function reverseGeocode({ lat, lng, token, fetchImpl = fetch, cache = defa
 
   const coarseLat = coarsen(latitude);
   const coarseLng = coarsen(longitude);
-  const cacheKey = `${coarseLat},${coarseLng}`;
 
-  const cached = cache.get(cacheKey);
-  if (cached !== undefined) {
-    return { status: 200, body: { name: cached, cached: true } };
-  }
-
+  // v6 takes the coordinate as two named query parameters rather than a path
+  // segment, so the values are interpolated as validated numbers -- they have
+  // been through parseCoordinate and coarsen by this point, and cannot carry
+  // a second query parameter or a fragment.
   const url =
-    `${ENDPOINT}/${coarseLng},${coarseLat}.json` +
-    `?limit=1&access_token=${encodeURIComponent(token)}`;
+    `${REVERSE_ENDPOINT}?longitude=${coarseLng}&latitude=${coarseLat}` +
+    `&limit=1&access_token=${encodeURIComponent(token)}`;
 
   try {
     const response = await fetchImpl(url);
@@ -141,13 +125,9 @@ async function reverseGeocode({ lat, lng, token, fetchImpl = fetch, cache = defa
       return { status: 502, body: { error: `Mapbox returned ${response.status}` } };
     }
     const payload = await response.json();
-    const name = payload?.features?.[0]?.place_name;
-    if (typeof name !== 'string' || name.length === 0) {
-      // A valid "no result here" is not an error; it is just null.
-      return { status: 200, body: { name: null } };
-    }
-    cache.set(cacheKey, name);
-    return { status: 200, body: { name } };
+    const name = reverseLabel(payload);
+    // A valid "no result here" is not an error; it is just null.
+    return { status: 200, body: { name: name ?? null } };
   } catch {
     console.error('Mapbox reverse geocode error');
     return { status: 502, body: { error: 'Unable to reach Mapbox' } };
@@ -156,6 +136,7 @@ async function reverseGeocode({ lat, lng, token, fetchImpl = fetch, cache = defa
 
 /**
  * Normalise a typed query before it is used to build a URL or billed.
+ *
  *
  * Control characters are stripped because a raw newline or NUL in a path
  * segment is a request-smuggling primitive, not a search term. Length is
@@ -186,27 +167,53 @@ function parseLimit(raw) {
   return Math.min(MAX_LIMIT, Math.max(1, Math.floor(value)));
 }
 
-/** Mapbox nests region/country under `context` with ids like `country.840`. */
-function contextText(feature, kind) {
-  const list = Array.isArray(feature?.context) ? feature.context : [];
-  for (const entry of list) {
-    if (typeof entry?.id === 'string' && entry.id.startsWith(`${kind}.`)) {
-      if (typeof entry.text === 'string') return entry.text;
-    }
-  }
+/**
+ * v6 nests administrative context as an object keyed by feature type, where
+ * v5 used an array of `{id: 'country.840', text}` entries. So `region` is now
+ * `properties.context.region.name` rather than a `startsWith` scan.
+ */
+function contextText(properties, kind) {
+  const entry = properties?.context?.[kind];
+  return typeof entry?.name === 'string' ? entry.name : null;
+}
+
+/**
+ * The label for a reverse lookup.
+ *
+ * v6 dropped v5's `place_name`, which concatenated the whole hierarchy into
+ * one string ("20 West 34th Street, New York, New York 10118, United States").
+ * The closest equivalents are `name` (the feature itself) and
+ * `place_formatted` (the place context). For a street label the feature name
+ * is the useful part -- the full formatted string duplicates what the caller
+ * already knows and is several times longer -- so `name` is preferred and
+ * `place_formatted` is the fallback for features that have no name of their
+ * own, such as a bare region.
+ */
+function reverseLabel(payload) {
+  const properties = payload?.features?.[0]?.properties;
+  const name = properties?.name;
+  if (typeof name === 'string' && name.length > 0) return name;
+  const formatted = properties?.place_formatted;
+  if (typeof formatted === 'string' && formatted.length > 0) return formatted;
   return null;
 }
 
 /**
  * Reduce a Mapbox feature to the four fields the location modal renders.
  *
- * The full feature carries bbox, geometry and a long context list. None of it
- * is used, and the point of this endpoint is to send less across the wire than
- * the browser would have had to parse.
+ * The full feature carries bbox, geometry, match_code and a long context
+ * object. None of it is used, and the point of this endpoint is to send less
+ * across the wire than the browser would have had to parse.
+ *
+ * v6 moved the label to `properties.name` and the coordinates to
+ * `geometry.coordinates`; v5's `place_name` and top-level `center` are gone.
+ * Both new locations are treated as untrusted, because they are: everything
+ * below is parsed defensively rather than assumed.
  */
 function toResult(feature) {
-  const name = feature?.place_name;
-  const center = feature?.center;
+  const properties = feature?.properties;
+  const name = properties?.name ?? properties?.place_formatted;
+  const center = feature?.geometry?.coordinates;
   if (typeof name !== 'string' || name.length === 0) return null;
   if (!Array.isArray(center) || center.length < 2) return null;
 
@@ -219,19 +226,19 @@ function toResult(feature) {
     name,
     lat,
     lng,
-    country: contextText(feature, 'country'),
-    region: contextText(feature, 'region'),
+    country: contextText(properties, 'country'),
+    region: contextText(properties, 'region'),
   };
 }
 
 /**
  * Forward geocoding.
  *
- * Deliberately uncached, unlike `reverseGeocode`. The reverse cache is keyed
- * on a ~110 m grid cell, so what it retains is a location that is already
- * coarse and that the runner has just told us anyway. A forward cache would
- * instead be a record of what each user typed and when — the exact shape of
- * data this project has been removing, and worse than the miss rate costs.
+ * Uncached for two independent reasons. One is Mapbox's: every response here
+ * is temporary, and temporary results may not be cached. The other is ours,
+ * and it predates the licence question — a forward cache would be a record of
+ * what each user typed and when, which is the exact shape of data this project
+ * has been removing.
  *
  * @param {object} input
  * @param {unknown} input.q       Raw query. Validated here, never trusted.
@@ -254,8 +261,10 @@ async function forwardGeocode({ q, limit, token, fetchImpl = fetch } = {}) {
 
   const perPage = parseLimit(limit);
   const url =
-    `${ENDPOINT}/${encodeURIComponent(query)}.json` +
-    `?autocomplete=true&limit=${perPage}&access_token=${encodeURIComponent(token)}`;
+    `${FORWARD_ENDPOINT}?q=${encodeURIComponent(query)}` +
+    `&autocomplete=true&limit=${perPage}` +
+    `&types=${FORWARD_TYPES.join(',')}` +
+    `&access_token=${encodeURIComponent(token)}`;
 
   try {
     const response = await fetchImpl(url);
@@ -281,14 +290,15 @@ async function forwardGeocode({ q, limit, token, fetchImpl = fetch } = {}) {
 
 module.exports = {
   coarsen,
-  createCache,
   forwardGeocode,
   normaliseQuery,
   parseCoordinate,
   parseLimit,
   reverseGeocode,
-  CACHE_MAX_ENTRIES,
   DEFAULT_LIMIT,
+  FORWARD_ENDPOINT,
+  FORWARD_TYPES,
   MAX_LIMIT,
   MAX_QUERY_LENGTH,
+  REVERSE_ENDPOINT,
 };

@@ -49,11 +49,24 @@ describe('GeocodingService privacy', () => {
       return {
         ok: true,
         json: async () => ({
+          // v6 response shape: label at properties.name, coordinates at
+          // geometry.coordinates, context as an object keyed by feature type.
+          // The v5 shape (place_name / center / context array) is gone, so a
+          // parser still reading it would silently produce undefined fields
+          // rather than throwing.
           features: [
             {
-              place_name: 'Somewhere',
-              center: [1, 2],
-              context: [{ id: 'country.840', text: 'United States' }],
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [1, 2] },
+              properties: {
+                name: 'Somewhere',
+                place_formatted: 'Somewhere, United States',
+                feature_type: 'address',
+                context: {
+                  country: { name: 'United States', country_code: 'us' },
+                  region: { name: 'California', region_code: '06' },
+                },
+              },
             },
           ],
         }),
@@ -91,8 +104,22 @@ describe('GeocodingService privacy', () => {
 
       const mapbox = urls.find((u) => u.includes('api.mapbox.com'));
       expect(mapbox).toBeDefined();
-      const coords = mapbox?.split('/api.mapbox.com/geocoding/v5/mapbox.places/')[1];
-      expect(coords).toBe('0.123,-0.988.json?limit=1&access_token=token');
+      // v6 takes longitude/latitude as separate query parameters. The argument is
+      // [lng, lat], so 0.123… is the longitude and -0.987… the latitude.
+      expect(mapbox).toContain('longitude=0.123&latitude=-0.988');
+      expect(mapbox).not.toContain('0.123456789');
+      expect(mapbox).not.toContain('-0.987654321');
+    });
+
+    it('reads the v6 response shape on the fallback path', async () => {
+      // The stub returns `properties.name`. If the fallback were still parsing
+      // v5's `place_name`, this would be null rather than an exception, which
+      // is why it needs its own test.
+      proxyStatus = 404;
+      const svc = new GeocodingService('token');
+      const name = await svc.reverseGeocode([1, 2]);
+
+      expect(name).toBe('Somewhere');
     });
   });
 
@@ -215,6 +242,25 @@ describe('GeocodingService privacy', () => {
       expect(urls[0]).toContain('/api/geocode?q=');
       expect(urls[1]).toContain('api.mapbox.com');
       expect(urls[1]).toContain('Golden%20Gate%20Park');
+      // v6 forward endpoint, and place-like types only.
+      expect(urls[1]).toContain('/search/geocode/v6/forward');
+      expect(urls[1]).toContain('types=address,street');
+      expect(urls[1]).not.toContain('mapbox.places');
+    });
+
+    it('rebuilds the v5-shaped context array from v6 on the fallback path', async () => {
+      // `searchLocations` reads country/region out of `context`, so the shape
+      // callers see must not change just because Mapbox's did. v6 gives an
+      // object keyed by feature type; the direct path has to convert.
+      proxyStatus = 404;
+      const svc = new GeocodingService('token');
+      const results = await svc.searchPlaces('Golden Gate Park');
+
+      expect(results[0].name).toBe('Somewhere');
+      expect(results[0].center).toEqual([1, 2]);
+      const context = results[0].context as Array<{ id: string; text: string }>;
+      expect(context.find((c) => c.id.includes('country'))?.text).toBe('United States');
+      expect(context.find((c) => c.id.includes('region'))?.text).toBe('California');
     });
 
     it('returns no results rather than calling Mapbox when there is no proxy and no token', async () => {

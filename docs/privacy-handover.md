@@ -6,19 +6,35 @@ person can provide. This file is the checklist for those.
 
 ---
 
-## 1. Mapbox token — swap it for a secret one (5 minutes)
+## 1. Mapbox token — create a scoped public one (5 minutes)
 
 The token used to be handed to the browser. It no longer is: `/api/geocode` is
 a Vercel function that holds it, so the token is not in the page and your IP
 address never reaches Mapbox. What remains is a five-minute account change.
 
+> **Corrected.** An earlier version of this file said to create a *secret*
+> (`sk.`) token with the scope `geocoding:read`. Both halves of that were
+> wrong, checked against Mapbox's current docs:
+>
+> - **`geocoding:read` does not exist.** The complete list of public scopes is
+>   `styles:tiles`, `styles:read`, `fonts:read`, `datasets:read`. Geocoding
+>   requires no scope at all.
+> - **A secret token is the wrong tool.** Secret scopes exist for privileged
+>   operations — `uploads:write`, `tokens:write`, `tilesets:write`,
+>   `styles:write`. Geocoding is a read. Mapbox's guidance is that an
+>   application token should carry public scopes, and that secret-scope
+>   requests belong on a server — which ours does, without needing extra
+>   account-wide write access.
+>
+> There is also a practical cost: `sk.` tokens are shown **once** and cannot be
+> edited afterwards. Get the scopes wrong and you delete and recreate.
+
 ### What to do at https://account.mapbox.com/access-tokens/
 
-1. **Create a secret token** (`sk.`), scoped to public geocoding — which now
-   covers both reverse geocoding and place search. Secret tokens
-   are scoped to server use by Mapbox — they do not work from a browser at
-   all, which is exactly the property we want now that the token only ever
-   runs server-side.
+1. **Create a public token** (`pk.`), used only by our server. Do not use the
+   account's *default* public token — Mapbox explicitly says to avoid it,
+   because it carries every public scope and cannot be restricted. Create a
+   fresh one instead.
 
 2. **Add it to Vercel** as `MAPBOX_ACCESS_TOKEN` in the Production
    environment (Project → Settings → Environment Variables). Without it
@@ -27,31 +43,27 @@ address never reaches Mapbox. What remains is a five-minute account change.
 3. **Revoke the old public token.** Nothing needs it any more. Until you do,
    it is a credential that used to be handed to every visitor.
 
-4. **Scopes: tick `geocoding:read` under Public scopes and nothing else.**
-   Leave every Secret scope unticked. Do **not** tick:
-   - `styles:tiles` / `styles:read` — no Mapbox style is loaded. Tiles,
-     glyphs and sprite all come from OpenFreeMap.
-   - `fonts:read` — same reason.
-   - `tilesets:read` / `datasets:read` — unused.
-   - `directions:read` — only if you decide to turn route snapping back on
-     (see below), and then it needs a public token again, not this one.
+4. **Scopes: leave them all unticked.** Geocoding needs none, and nothing here
+   does. Specifically do **not** tick:
+   - `styles:tiles` / `styles:read` / `fonts:read` — no Mapbox style is
+     loaded. Tiles, glyphs and sprite all come from OpenFreeMap.
+   - `datasets:read`, `tilesets:read` — unused.
+   - Anything under **Secret scopes**. None is needed for a read, and
+     `tokens:write` in particular would let a leak rewrite the account.
 
 5. **Leave URL restrictions blank.** Do not add one. A URL restriction is a
-   browser-side control: Mapbox checks the `Origin` header, and a call from a
-   Vercel function to `api.mapbox.com` has none. A restricted token would be
-   rejected and `/api/geocode` would return 502. The page's own wording —
-   *"This token will work for requests originating from any URL"* — is the
-   state you want.
-
-   This inverts the advice an earlier version of this file gave, which assumed
-   a browser token. There is no browser token any more.
+   browser-side control, and Mapbox's own docs list what it does not support:
+   requests with no referer, and IP addresses. A call from a Vercel function to
+   `api.mapbox.com` has neither, so a restricted token would be rejected and
+   `/api/geocode` would return 502. The page's wording — *"This token will work
+   for requests originating from any URL"* — is the state you want.
 
 6. **Understand what a narrow scope does and does not buy you.** Mapbox's own
-   note on that page: *"All tokens, regardless of the scopes included, are able
-   to view styles, tilesets, and geocode locations for the token's owner's
-   account."* A tight scope therefore does not make a leaked token harmless —
-   it makes it *less obviously* useful. The actual protection is that the
-   token never reaches a browser, plus revoking the old `pk.`.
+   note: *"All tokens, regardless of the scopes included, are able to view
+   styles, tilesets, and geocode locations for the token's owner's account."*
+   A tight scope therefore does not make a leaked token harmless — it makes it
+   *less obviously* useful. The actual protection is that the token never
+   reaches a browser, plus revoking the old `pk.`.
 
 7. **Confirm street labels still work** on the deployed site. If they vanish,
    the usual cause is the environment variable being scoped to Preview rather

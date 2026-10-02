@@ -5,6 +5,17 @@ export type GeocodeFeature = {
 };
 
 /**
+ * Place-like feature types, matching `FORWARD_TYPES` in
+ * `server/geocode-grant.js`.
+ *
+ * v6 dropped POI data from geocoding (Mapbox points POI search at the
+ * separate Search Box API) but made `street` a filterable type. Pinning the
+ * list keeps a street-name search from returning a country, and keeps the
+ * direct fallback from asking v6 for a `poi` type it would reject with a 400.
+ */
+const DIRECT_FORWARD_TYPES = 'address,street,place,locality,neighborhood';
+
+/**
  * Geocoding, through our own server.
  *
  * The proxy (`api/geocode.js`) holds the Mapbox token, so the token is not in
@@ -25,7 +36,19 @@ export type GeocodeFeature = {
  */
 export class GeocodingService {
   private readonly token: string;
-  private readonly endpoint = 'https://api.mapbox.com/geocoding/v5/mapbox.places';
+  /**
+   * Direct-to-Mapbox endpoints, used only when the server proxy is absent (a
+   * self-hosted deployment with no Vercel function).
+   *
+   * v6, matching `server/geocode-grant.js`. The proxy is strongly preferred —
+   * it keeps the token off the client and Mapbox off the runner's IP — but a
+   * fallback left on v5 while the server moved to v6 would parse a response
+   * shape that no longer exists: v5 put the label at `place_name` and the
+   * coordinates at `center`, v6 puts them at `properties.name` and
+   * `geometry.coordinates`.
+   */
+  private readonly forwardEndpoint = 'https://api.mapbox.com/search/geocode/v6/forward';
+  private readonly reverseEndpoint = 'https://api.mapbox.com/search/geocode/v6/reverse';
   private readonly proxyPath: string;
   /** Only a 404 means "no proxy here". Anything else is a real failure. */
   private proxyUnavailable = false;
@@ -92,16 +115,29 @@ export class GeocodingService {
     // Deployment without the function (self-hosted). Same caveat as reverse
     // geocoding: old behaviour, no worse, but not the preferred path.
     if (!this.token) return [];
-    const url = `${this.endpoint}/${encodeURIComponent(q)}.json?autocomplete=true&limit=${limit}&access_token=${encodeURIComponent(this.token)}`;
+    const url =
+      `${this.forwardEndpoint}?q=${encodeURIComponent(q)}` +
+      `&autocomplete=true&limit=${limit}` +
+      `&types=${DIRECT_FORWARD_TYPES}` +
+      `&access_token=${encodeURIComponent(this.token)}`;
     try {
       const res = await fetch(url, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const features = json?.features || [];
+      // v6 nests the label and coordinates; `properties.context` is an object
+      // keyed by feature type rather than v5's `{id, text}` array. Callers
+      // downstream expect the v5-shaped `context` array, so it is rebuilt
+      // here rather than leaking the new shape into the location modal.
       return features.map((f: any) => ({
-        name: f.place_name as string,
-        center: f.center as [number, number],
-        context: f.context,
+        name: (f?.properties?.name ?? f?.properties?.place_formatted) as string,
+        center: (f?.geometry?.coordinates ?? [0, 0]) as [number, number],
+        context: Object.entries(f?.properties?.context ?? {}).map(
+          ([kind, entry]: [string, any]) => ({
+            id: kind,
+            text: entry?.name ?? '',
+          })
+        ),
       }));
     } catch (e) {
       console.warn('Geocoding search error', e);
@@ -156,12 +192,15 @@ export class GeocodingService {
 
     if (!this.token) return null;
 
-    const url = `${this.endpoint}/${lng},${lat}.json?limit=1&access_token=${encodeURIComponent(this.token)}`;
+    const url =
+      `${this.reverseEndpoint}?longitude=${lng}&latitude=${lat}` +
+      `&limit=1&access_token=${encodeURIComponent(this.token)}`;
     try {
       const res = await fetch(url, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      const name = json?.features?.[0]?.place_name;
+      const properties = json?.features?.[0]?.properties;
+      const name = properties?.name ?? properties?.place_formatted;
       return name || null;
     } catch (e) {
       console.warn('Reverse geocoding error', e);

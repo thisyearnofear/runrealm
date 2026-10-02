@@ -92,8 +92,23 @@ could post a precise coordinate straight to the endpoint and Mapbox would
 receive a precise location record — the rounding would be a claim the caller
 made about itself rather than a property of the system.
 
-Answers are cached per grid cell for six hours, so staying in one neighbourhood
-costs nothing after the first lookup.
+Answers are **not cached**. Every lookup costs a Mapbox request, including
+repeat lookups from the same spot.
+
+That is deliberate, and it is a licence condition rather than a privacy
+choice. Mapbox splits geocoding result storage in two: *temporary* results
+"are not allowed to be cached", while *permanent* results may be stored
+indefinitely. Every endpoint defaults to temporary, and permanent storage
+requires a credit card on file or an enterprise contract arranged with Mapbox
+sales. We are on the default, so responses may not be retained — not in the
+browser, and not in the server either.
+
+An earlier version of this document claimed a six-hour per-cell cache, on the
+reasoning that the key was already coarse to ~110 m and therefore harmless to
+keep. That was reasoning about our own exposure and missed Mapbox's term
+entirely: the restriction is on retaining the *response*, not on how sensitive
+the cache key is. Both layers are gone — the `Cache-Control` header and the
+in-process memo.
 
 If the function is not deployed (a self-hosted install), the app falls back to
 calling Mapbox directly — the old behaviour, and no worse, but the token then
@@ -118,11 +133,13 @@ difference:
   That is a query you wrote yourself, so it discloses nothing you had not
   already chosen to disclose — but it is not the guarantee reverse gets.
 
-Forward results are **not cached**, unlike reverse. The reverse cache is keyed
-on a grid cell you have just disclosed anyway; a forward cache would be a log of
-what you searched and when, which is the exact shape of data this document has
-been removing. The server also strips control characters from the query,
-percent-encodes it into the Mapbox URL, and clamps the requested result count.
+Forward results are **not cached** either, and never were. Beyond Mapbox's rule
+above, a forward cache would be a log of what you searched and when — the exact
+shape of data this document has been removing. The server strips control
+characters from the query, percent-encodes it into the Mapbox URL, clamps the
+requested result count, and asks only for place-like feature types
+(`address`, `street`, `place`, `locality`, `neighborhood`) so a street name
+does not come back as a country.
 
 A place name is chosen by whoever owns the place, and Mapbox does not sanitise
 it. So the modal renders results as DOM nodes with `textContent`, never as
@@ -246,7 +263,8 @@ These are real, and we would rather list them than imply otherwise. The
   protect a token from script that has already run.
 - **The Mapbox token is now server-side**, held by the `/api/geocode`
   function, which is the version that does not need to be public. Two things
-  left to check in the Mapbox account: that the token is a secret (`sk.`) one,
+  left to check in the Mapbox account: that the token is a fresh `pk.` one that
+  is not the account default,
   and that whatever `pk.` token may still exist in a browser somewhere is
   revoked. Checklist in `docs/privacy-handover.md`.
 - **The CSP is report-only.** Documented above. Enforcing it is the next step
