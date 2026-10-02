@@ -36,6 +36,7 @@ import {
   ghostRosterFailedLine,
   ghostUpgradedLine,
   ghostUpgradeFailedLine,
+  LEGACY_ONBOARDING_STEPS,
   ledgerFailedLine,
   levelUpLine,
   locationTroubleLine,
@@ -238,6 +239,12 @@ function sweep(): Array<{ source: string; line: string }> {
   for (const step of MOBILE_ONBOARDING) {
     out.push({ source: `onboarding:${step.id}`, line: `${step.title}. ${step.description}` });
   }
+  for (const step of LEGACY_ONBOARDING_STEPS) {
+    out.push({
+      source: `onboarding:legacy:${step.id}`,
+      line: `${step.title}. ${step.description}`,
+    });
+  }
   return out;
 }
 
@@ -294,6 +301,32 @@ describe('atlas voice register', () => {
         clean: true,
       });
       expect({ source, terminated: /[.!?]$/.test(line) }).toEqual({ source, terminated: true });
+    }
+  });
+
+  it('states the rules the product actually has', () => {
+    // The service used to ship four built-in step sets that nothing called and
+    // that had drifted: loops described as required, ground described as an NFT
+    // on a named chain. They are gone; this keeps them gone. A copy guard is
+    // the point — an assertion nobody reads will not catch the next drift.
+    const onboarding = lines.filter(({ source }) => source.startsWith('onboarding:'));
+    expect(onboarding.length).toBeGreaterThan(6);
+    const forbidden: Array<[string, RegExp]> = [
+      ['emoji', /\p{Extended_Pictographic}/u],
+      ['loop required', /\bloops? (?:are|is) (?:required|needed)\b/i],
+      ['complete loops', /\bcomplete (?:a |your )?loops?\b/i],
+      ['nft ownership', /\bas (?:an?\s+)?nfts?\b/i],
+      ['named chain', /\bzetachain\b/i],
+      ['earn rewards', /\bearn rewards\b/i],
+    ];
+    for (const { source, line } of onboarding) {
+      for (const [label, pattern] of forbidden) {
+        expect({ source, label, matched: pattern.test(line) }).toEqual({
+          source,
+          label,
+          matched: false,
+        });
+      }
     }
   });
 

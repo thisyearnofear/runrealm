@@ -50,94 +50,13 @@ export class OnboardingService extends BaseService {
   }
 
   /**
-   * Start progressive onboarding based on user experience
-   */
-  public startProgressive(): void {
-    const hasUsedApp = localStorage.getItem('runrealm-has-used-app');
-    const hasUsedAI = localStorage.getItem('runrealm-has-used-ai');
-    const hasUsedWeb3 = localStorage.getItem('runrealm-has-used-web3');
-
-    if (!hasUsedApp) {
-      this.start({ steps: this.getBasicSteps(), mode: 'basic', allowSkip: true });
-    } else if (!hasUsedAI) {
-      this.start({ steps: this.getAISteps(), mode: 'ai', allowSkip: true });
-    } else if (!hasUsedWeb3) {
-      this.start({ steps: this.getWeb3Steps(), mode: 'web3', allowSkip: true });
-    }
-  }
-
-  private getBasicSteps(): OnboardingStep[] {
-    return [
-      {
-        id: 'welcome',
-        title: 'Welcome to RunRealm! 🏃‍♂️',
-        description: 'Plan routes, track runs, discover your city.',
-        targetElement: '.map-container',
-      },
-      {
-        id: 'strava-integration',
-        title: 'Connect with Strava 🔗',
-        description:
-          'Import your Strava activities to claim territories and see your runs on the map.',
-        targetElement: '.service-card.strava',
-        position: 'bottom',
-      },
-    ];
-  }
-
-  private getAISteps(): OnboardingStep[] {
-    return [
-      {
-        id: 'ai-intro',
-        title: 'AI Coach Available 🤖',
-        description: 'Try "Smart Morning" for personalized route suggestions.',
-        targetElement: '[data-payload*="smart_morning"]',
-      },
-    ];
-  }
-
-  private getWeb3Steps(): OnboardingStep[] {
-    return [
-      {
-        id: 'web3-intro',
-        title: 'Own Your Runs 🏆',
-        description: 'Connect wallet to claim territories and earn rewards.',
-        targetElement: '.wallet-widget',
-      },
-    ];
-  }
-
-  private getMobileSteps(): OnboardingStep[] {
-    return [
-      {
-        id: 'mobile-welcome',
-        title: 'Welcome to RunRealm Mobile! 📱',
-        description: 'Track runs, claim territories, earn rewards.',
-        // Mobile doesn't use targetElement, handled by React component
-      },
-      {
-        id: 'mobile-gps',
-        title: 'GPS Tracking 🛰️',
-        description:
-          'Grant location permission to track your runs and discover nearby territories.',
-      },
-      {
-        id: 'mobile-first-run',
-        title: 'Start Your First Run 🏃‍♂️',
-        description:
-          'Tap "Start Run" to begin tracking. Complete loops to become eligible for territory claiming!',
-      },
-      {
-        id: 'mobile-territories',
-        title: 'Claim Territories 🏰',
-        description:
-          'Run in loops to create claimable territories. Territories are NFTs on the ZetaChain blockchain.',
-      },
-    ];
-  }
-
-  /**
    * Start the onboarding process
+   *
+   * Callers supply their own steps. The service used to ship four built-in
+   * step sets (basic / AI / Web3 / mobile); they were removed because nothing
+   * called them and they had drifted into copy that contradicts the product —
+   * loops described as required, and ground described as NFTs. Live onboarding
+   * copy lives in `utils/atlas-voice.ts` and must be passed in from there.
    */
   public async start(config: OnboardingConfig): Promise<void> {
     if (this.isActive) {
@@ -164,20 +83,6 @@ export class OnboardingService extends BaseService {
       await this.showStep(0);
       this.setupEventListeners();
     }
-  }
-
-  /**
-   * Start mobile-specific onboarding
-   */
-  public async startMobileOnboarding(): Promise<void> {
-    const config: OnboardingConfig = {
-      steps: this.getMobileSteps(),
-      mode: 'mobile',
-      platform: 'mobile',
-      allowSkip: true,
-      showProgress: true,
-    };
-    await this.start(config);
   }
 
   /**

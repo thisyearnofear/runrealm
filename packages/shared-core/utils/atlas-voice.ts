@@ -796,6 +796,45 @@ export const MOBILE_ONBOARDING = [
   },
 ] as const;
 
+/**
+ * Steps for the legacy widget shell, which still runs outside neighbourhood
+ * mode. Kept beside MOBILE_ONBOARDING rather than inline at the call site so
+ * that "what are the rules" has exactly one answer in the codebase: no loop is
+ * required, and collected ground is local, not a registered NFT.
+ */
+export const LEGACY_ONBOARDING_STEPS = [
+  {
+    id: 'welcome',
+    title: 'Welcome to RunRealm',
+    description: 'Every run reveals a little more of the map.',
+    targetElement: '#maplibre-container',
+    position: 'bottom' as const,
+  },
+  {
+    id: 'map-intro',
+    title: 'Your streets',
+    description: 'Click anywhere on the map to start planning your route.',
+    targetElement: '#maplibre-container',
+    position: 'bottom' as const,
+    completionCondition: 'run:pointAdded',
+  },
+  {
+    id: 'territory-claim',
+    title: 'Claiming ground',
+    description:
+      'Finish a run and the ground you traced is yours to develop — a local atlas, not a registered NFT.',
+    targetElement: '#claim-territory-btn',
+    position: 'top' as const,
+  },
+  {
+    id: 'ai-coach',
+    title: 'AI Coaching',
+    description: 'Get personalized route suggestions and running tips from our AI coach.',
+    targetElement: '#get-ai-route',
+    position: 'top' as const,
+  },
+] as const;
+
 /** A wallet that is mid-handshake. */
 export function walletConnectingLine(): string {
   return pickLine(

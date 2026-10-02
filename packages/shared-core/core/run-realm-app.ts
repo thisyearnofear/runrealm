@@ -19,7 +19,7 @@ import {
   TerritoryDashboard as TerritoryDashboardInterface,
   WalletWidget as WalletWidgetInterface,
 } from '../types/ui-interfaces';
-import { errorCopy } from '../utils/atlas-voice';
+import { errorCopy, LEGACY_ONBOARDING_STEPS } from '../utils/atlas-voice';
 import { seedDemoAtlas } from '../utils/dev-atlas-seed';
 import { isNeighbourhoodMode } from '../utils/neighbourhood-mode';
 import { wireEvents } from './event-wiring';
@@ -345,39 +345,11 @@ export class RunRealmApp {
       localStorage.setItem('runrealm_onboarding_complete', 'true');
       return;
     }
+    // Copy comes from the shared voice so it cannot drift from the rest of the
+    // product. The old inline steps described loops as required and ground as
+    // NFTs; neither is true of a neighbourhood outing.
     this.services.onboarding.resumeOnboarding({
-      steps: [
-        {
-          id: 'welcome',
-          title: 'Welcome to RunRealm!',
-          description: 'Claim, trade, and defend real-world running territories as NFTs.',
-          targetElement: '#maplibre-container',
-          position: 'bottom' as const,
-        },
-        {
-          id: 'map-intro',
-          title: 'Interactive Map',
-          description: 'Click anywhere on the map to start planning your running route.',
-          targetElement: '#maplibre-container',
-          position: 'bottom' as const,
-          completionCondition: 'run:pointAdded',
-        },
-        {
-          id: 'territory-claim',
-          title: 'Claim Territories',
-          description:
-            'When you complete a route near an unclaimed territory, you can claim it as your own NFT.',
-          targetElement: '#claim-territory-btn',
-          position: 'top' as const,
-        },
-        {
-          id: 'ai-coach',
-          title: 'AI Coaching',
-          description: 'Get personalized route suggestions and running tips from our AI coach.',
-          targetElement: '#get-ai-route',
-          position: 'top' as const,
-        },
-      ],
+      steps: LEGACY_ONBOARDING_STEPS.map((step) => ({ ...step })),
       allowSkip: true,
       showProgress: true,
     });
