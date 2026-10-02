@@ -36,11 +36,15 @@
     X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
     # See apps/web/public/_headers: the desk handoff carries a preview centre
-    # in the URL, and no-referrer-when-downgrade would send it to Mapbox as the
-    # Referer on every tile.
+    # in the URL, and no-referrer-when-downgrade would send it to the basemap
+    # provider as the Referer on every tile.
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(self), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    # Report-only for now, and the policy itself is explained in
+    # apps/web/public/_headers. Both files must stay in step -- the test in
+    # privacy-headers.test.ts enforces that. Keep the two strings identical.
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'unsafe-inline' wasm-unsafe-eval blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tiles.openfreemap.org https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self' data: blob: https://tiles.openfreemap.org https://server.arcgisonline.com https://api.mapbox.com https://www.strava.com https://api.reactor.inch wss://api.reactor.inch https://mainnet.infura.io https://cloudflare-eth.com https://polygon-rpc.com https://rpc-amoy.polygon.technology https://ethereum-sepolia-rpc.publicnode.com https://zetachain-evm.blockpi.network https://zetachain-athens-evm.blockpi.network; worker-src 'self' blob:; frame-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
 
 # HTML files should not be cached to prevent stale references
 [[headers]]

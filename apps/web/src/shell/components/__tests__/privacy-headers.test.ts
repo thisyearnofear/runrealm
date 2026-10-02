@@ -26,6 +26,40 @@ const netlifyRules = netlify
   .filter((line) => line.trim() && !line.trim().startsWith('#'))
   .join('\n');
 
+/**
+ * Pull the CSP value out of a comment-stripped rules blob, so the two files
+ * can be compared byte for byte. They are written in different syntaxes
+ * (`Header: value` vs `Header = "value"`), so a naive "both contain the
+ * directive name" check would happily pass with two different policies.
+ *
+ * Note this reads the *stripped* text on purpose. Both files explain the
+ * policy in comments, and an unanchored match happily latches onto the
+ * sentence in the comment instead of the header.
+ */
+function readCsp(rules: string, file: string): string {
+  const line = rules
+    .split('\n')
+    .map((l) => l.trim())
+    .find((l) => /^Content-Security-Policy(-Report-Only)?\s*[:=]/.test(l));
+  if (!line) throw new Error(`no Content-Security-Policy in ${file}`);
+  return line
+    .replace(/^Content-Security-Policy(-Report-Only)?\s*[:=]\s*/, '')
+    .replace(/^"|"$/g, '')
+    .trim();
+}
+
+const cspFromHeaders = readCsp(headerRules, 'apps/web/public/_headers');
+const cspFromNetlify = readCsp(netlifyRules, 'netlify.toml');
+
+/** Split on the directive semicolons; order is meaningful, contents are not. */
+function directives(csp: string): string[] {
+  return csp
+    .split(';')
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .sort();
+}
+
 describe('deployed response headers', () => {
   it('never sends the full URL to a third party', () => {
     expect(headerRules).toContain('Referrer-Policy: strict-origin-when-cross-origin');
@@ -60,5 +94,68 @@ describe('deployed response headers', () => {
   it('keeps geolocation available — it is the app', () => {
     expect(headerRules).toMatch(/geolocation=\(self\)/);
     expect(netlifyRules).toMatch(/geolocation=\(self\)/);
+  });
+});
+
+describe('Content-Security-Policy', () => {
+  it('ships the same policy to both deploy targets', () => {
+    // A drifted policy means one environment quietly enforces something the
+    // other does not. Since the header is a single enormous line, the two
+    // copies will drift the moment someone edits one of them.
+    expect(directives(cspFromNetlify)).toEqual(directives(cspFromHeaders));
+  });
+
+  it('is report-only, and both files say so', () => {
+    // Enforcing is a deliberate later step, once a QA pass has shown the
+    // violations list empty. If this test ever fails, the flip happened --
+    // which is fine, but it must be a choice somebody made on purpose, with
+    // the header renamed in both files at once.
+    expect(headers).toContain('Content-Security-Policy-Report-Only:');
+    expect(netlify).toContain('Content-Security-Policy-Report-Only = ');
+    expect(cspFromHeaders).not.toContain('Content-Security-Policy');
+  });
+
+  it('locks down the directives that carry the privacy weight', () => {
+    // object-src none is the one that stops an injected <object>/<embed>.
+    expect(cspFromHeaders).toContain("object-src 'none'");
+    // default-src 'self' is the backstop: a directive nobody thought to
+    // write falls back to same-origin rather than to *.
+    expect(cspFromHeaders).toContain("default-src 'self'");
+    // The basemap. These are the only tile origins; map-style.ts is the
+    // source of truth and a new style provider has to be added here too.
+    expect(cspFromHeaders).toContain('https://tiles.openfreemap.org');
+    expect(cspFromHeaders).toContain('https://server.arcgisonline.com');
+  });
+
+  it('does not grant the dangerous escapes', () => {
+    // 'unsafe-eval' is not wasm-unsafe-eval. Granting plain unsafe-eval
+    // would let any injected string become code, which defeats the point.
+    expect(cspFromHeaders).not.toMatch(/script-src[^;]*'unsafe-eval'/);
+    expect(cspFromHeaders).toContain('wasm-unsafe-eval');
+    // connect-src must not be a wildcard -- that is the directive which
+    // decides where a compromised dependency is allowed to send your run.
+    const connect = directives(cspFromHeaders).find((d) => d.startsWith('connect-src '));
+    expect(connect).toBeDefined();
+    expect(connect).not.toMatch(/(\s|^)\*(\s|$)/);
+    // A bare scheme source. Note this has to be a token test: 'https:' as a
+    // substring appears inside every legitimate origin, so a plain
+    // toContain would fail the policy for being correct.
+    expect(connect).not.toMatch(/(\s|^)https:(\s|$)/);
+  });
+
+  it('allows exactly the third parties the app actually calls', () => {
+    // If one of these disappears from the code, this test should fail and the
+    // CSP should be narrowed with it -- not the other way round.
+    for (const origin of [
+      'https://api.mapbox.com', // reverse geocoding + directions
+      'https://www.strava.com', // activities API
+      'https://api.reactor.inch', // Reactor WebRTC signalling
+      'wss://api.reactor.inch',
+    ]) {
+      expect(cspFromHeaders).toContain(origin);
+    }
+    // blob: is required by maplibre-gl's workers; that is the one legitimate
+    // reason the policy is not 'self'-only everywhere.
+    expect(cspFromHeaders).toContain('worker-src');
   });
 });
