@@ -11,6 +11,7 @@ const {
   normaliseQuery,
   parseCoordinate,
   parseLimit,
+  parseProximity,
   reverseGeocode,
 } = require('../geocode-grant.js');
 
@@ -504,6 +505,87 @@ test('forward search is not cached -- it would be a record of what users typed',
   await forwardGeocode({ q: 'Golden Gate Park', token: 't', fetchImpl });
   await forwardGeocode({ q: 'Golden Gate Park', token: 't', fetchImpl });
   assert.equal(fetchImpl.calls.length, 2);
+});
+
+test('sends no proximity parameter when no bias point is given', async () => {
+  const fetchImpl = recordingFetch();
+  await forwardGeocode({ q: 'High Street', token: 't', fetchImpl });
+  assert.ok(!fetchImpl.calls[0].includes('proximity'), 'a bias was invented');
+});
+
+test('coarsens the bias point server-side regardless of the precision given', async () => {
+  // The point of the whole feature. The client also rounds, but if the server
+  // trusted that, anyone could POST a precise fix and Mapbox would receive a
+  // precise location record — and this parameter is optional, so a caller
+  // wanting better results would have every reason to send full precision.
+  const fetchImpl = recordingFetch();
+  await forwardGeocode({
+    q: 'High Street',
+    near: '-74.00601234,40.7128004',
+    token: 't',
+    fetchImpl,
+  });
+  const url = fetchImpl.calls[0];
+  assert.match(url, /proximity=-74\.006,40\.713\b/);
+  assert.ok(!url.includes('40.7128'), 'a precise latitude reached Mapbox');
+  assert.ok(!url.includes('74.00601234'), 'a precise longitude reached Mapbox');
+});
+
+test('drops a malformed bias point rather than failing the search', async () => {
+  // proximity is a ranking hint. Failing the whole search because a hint was
+  // malformed would be a worse outcome than searching without it.
+  for (const bad of ['', 'abc', '1,2,3', '40.7', '999,999', null, undefined, {}]) {
+    const fetchImpl = recordingFetch();
+    const result = await forwardGeocode({
+      q: 'High Street',
+      near: bad,
+      token: 't',
+      fetchImpl,
+    });
+    assert.equal(result.status, 200, `expected 200 for ${JSON.stringify(bad)}`);
+    assert.ok(
+      !fetchImpl.calls[0].includes('proximity'),
+      `a malformed bias reached Mapbox: ${JSON.stringify(bad)}`
+    );
+    assert.equal(fetchImpl.calls.length, 1);
+  }
+});
+
+test('a bias point cannot smuggle extra parameters into the Mapbox request', async () => {
+  const fetchImpl = recordingFetch();
+  await forwardGeocode({
+    q: 'High Street',
+    near: '-74.006,40.713&types=poi&access_token=stolen',
+    token: 't',
+    fetchImpl,
+  });
+  const url = fetchImpl.calls[0];
+  // parseCoordinate rejects the whole thing because the longitude is no longer
+  // a number, so nothing is forwarded at all.
+  assert.ok(!url.includes('stolen'), 'an injected parameter reached Mapbox');
+  assert.ok(!url.includes('types=poi'), 'the types filter was overridden');
+});
+
+test('parseProximity rejects values that are not a coordinate pair', () => {
+  assert.equal(parseProximity('-74.006,40.713'), '-74.006,40.713');
+  assert.equal(parseProximity('-74.00601234,40.7128004'), '-74.006,40.713');
+  // A single number, three numbers, non-numbers and out-of-range all drop out.
+  assert.equal(parseProximity('40.713'), null);
+  assert.equal(parseProximity('1,2,3'), null);
+  assert.equal(parseProximity('a,b'), null);
+  assert.equal(parseProximity('181,40'), null);
+  assert.equal(parseProximity('-74.006,91'), null);
+  assert.equal(parseProximity(''), null);
+  assert.equal(parseProximity('  '), null);
+  assert.equal(parseProximity(null), null);
+  assert.equal(parseProximity(undefined), null);
+  assert.equal(parseProximity(42), null);
+});
+
+test('an over-long bias string is rejected rather than parsed loosely', () => {
+  // It splits on commas, so a very long string cannot become a valid pair,
+  // but assert it explicitly rather than trusting that reasoning.
+  assert.equal(parseProximity(`${'9'.repeat(10000)},40`), null);
 });
 
 test('reverse prefers the feature name over the full formatted place', async () => {

@@ -283,6 +283,36 @@ describe('GeocodingService privacy', () => {
       expect(urls.some((u) => u.includes('api.mapbox.com'))).toBe(true);
     });
 
+    it('biases search toward the runner, coarsened on the way out', async () => {
+      // "High Street" exists in most cities. Passing the runner's position is
+      // what makes the first result the one they are standing on.
+      const svc = new GeocodingService('token');
+      await svc.searchPlaces('High Street', 5, [-122.4194155, 37.7749295]);
+
+      const url = new URL(urls[0], 'https://example.test');
+      expect(url.searchParams.get('near')).toBe('-122.419,37.775');
+      // Coarsened here as well as server-side. A precise fix in a URL is still
+      // a precise fix in a URL that lands in our function logs.
+      expect(urls[0]).not.toContain('-122.4194155');
+      expect(urls[0]).not.toContain('37.7749295');
+    });
+
+    it('omits the bias entirely when no position is known', async () => {
+      // Before the first fix arrives there is nothing to bias toward, and
+      // inventing one would be worse than an unbiased search.
+      const svc = new GeocodingService('token');
+      await svc.searchPlaces('High Street');
+      expect(urls[0]).not.toContain('near=');
+    });
+
+    it('ignores a bias point that is not a finite coordinate pair', async () => {
+      for (const bad of [[Number.NaN, 1], [1, Number.POSITIVE_INFINITY], null as never]) {
+        const svc = new GeocodingService('token');
+        await svc.searchPlaces('High Street', 5, bad as [number, number]);
+        expect(urls[urls.length - 1]).not.toContain('near=');
+      }
+    });
+
     it('returns nothing for an empty or whitespace query without calling anything', async () => {
       const svc = new GeocodingService('token');
       expect(await svc.searchPlaces('')).toEqual([]);

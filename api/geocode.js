@@ -13,6 +13,8 @@ const { forwardGeocode, reverseGeocode } = require('../server/geocode-grant.js')
  *   GET ?lat=&lng=   reverse — coordinate to a street name. Coordinates are
  *                    coarsened server-side no matter what the client sends.
  *   GET ?q=&limit=   forward — a typed query to candidate places.
+ *   GET ?near=       optional `lng,lat` bias, so "High Street" resolves to
+ *                    the one the runner is standing on. Coarsened here.
  *
  * One endpoint rather than two so there is a single place where the token is
  * read and a single set of headers to reason about.
@@ -31,7 +33,14 @@ module.exports = async function handler(req, res) {
   // would answer a malformed request with something plausible.
   const result =
     q !== null
-      ? await forwardGeocode({ q, limit: url.searchParams.get('limit'), token })
+      ? await forwardGeocode({
+          q,
+          limit: url.searchParams.get('limit'),
+          // Optional ranking hint. Coarsened again server-side, so a client
+          // sending full precision gains nothing -- see parseProximity.
+          near: url.searchParams.get('near'),
+          token,
+        })
       : await reverseGeocode({
           lat: url.searchParams.get('lat'),
           lng: url.searchParams.get('lng'),

@@ -232,6 +232,22 @@ function toResult(feature) {
 }
 
 /**
+ * Parse an optional `lng,lat` bias point into a coarsened, safe-to-send form.
+ *
+ * Returns null when absent or malformed -- see the note at the call site for
+ * why a bad hint drops out rather than failing the search.
+ */
+function parseProximity(raw) {
+  if (typeof raw !== 'string' || raw.length === 0) return null;
+  const parts = raw.split(',');
+  if (parts.length !== 2) return null;
+  const lng = parseCoordinate(parts[0], 180);
+  const lat = parseCoordinate(parts[1], 90);
+  if (lat === null || lng === null) return null;
+  return `${coarsen(lng)},${coarsen(lat)}`;
+}
+
+/**
  * Forward geocoding.
  *
  * Uncached for two independent reasons. One is Mapbox's: every response here
@@ -243,10 +259,11 @@ function toResult(feature) {
  * @param {object} input
  * @param {unknown} input.q       Raw query. Validated here, never trusted.
  * @param {unknown} [input.limit] Requested result count. Clamped here.
+ * @param {unknown} [input.near]  Bias point as `lng,lat`. Coarsened here.
  * @param {string} [input.token]  Server-side Mapbox token. Never from the client.
  * @param {Function} [input.fetchImpl]
  */
-async function forwardGeocode({ q, limit, token, fetchImpl = fetch } = {}) {
+async function forwardGeocode({ q, limit, near, token, fetchImpl = fetch } = {}) {
   if (!token) {
     return { status: 500, body: { error: 'MAPBOX_ACCESS_TOKEN is not set on the server' } };
   }
@@ -260,10 +277,26 @@ async function forwardGeocode({ q, limit, token, fetchImpl = fetch } = {}) {
   }
 
   const perPage = parseLimit(limit);
+  // Mapbox `proximity` biases results toward a point. It is what turns "High
+  // Street" from an ambiguous list into the one the runner is standing on.
+  //
+  // Coarsened here for the same reason reverse is: the client also rounds, but
+  // trusting that would make the rounding a claim the caller makes about
+  // itself. A caller could post a precise fix and Mapbox would receive a
+  // precise location record -- and this one is optional, so a caller that
+  // wanted the feature would have every reason to send full precision to get
+  // better results. Assume the caller is hostile.
+  //
+  // Anything unparseable is dropped rather than rejected. This is a ranking
+  // hint; failing the whole search because a hint was malformed would be a
+  // worse outcome than searching without it.
+  const proximity = parseProximity(near);
+
   const url =
     `${FORWARD_ENDPOINT}?q=${encodeURIComponent(query)}` +
     `&autocomplete=true&limit=${perPage}` +
     `&types=${FORWARD_TYPES.join(',')}` +
+    (proximity ? `&proximity=${proximity}` : '') +
     `&access_token=${encodeURIComponent(token)}`;
 
   try {
@@ -294,6 +327,7 @@ module.exports = {
   normaliseQuery,
   parseCoordinate,
   parseLimit,
+  parseProximity,
   reverseGeocode,
   DEFAULT_LIMIT,
   FORWARD_ENDPOINT,

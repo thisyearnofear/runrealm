@@ -72,9 +72,17 @@ export class GeocodingService {
   private async searchViaProxy(
     query: string,
     limit: number,
+    near?: [number, number],
     signal?: AbortSignal
   ): Promise<GeocodeFeature[] | null> {
-    const url = `${this.proxyPath}?q=${encodeURIComponent(query)}&limit=${limit}`;
+    // `near` is coarsened here too, not just server-side. The server rounds
+    // independently and would not trust this, but sending a precise fix in a
+    // URL is still a precise fix in a URL that lands in our function logs.
+    const nearParam =
+      near && Number.isFinite(near[0]) && Number.isFinite(near[1])
+        ? `&near=${this.coarsen(near[0])},${this.coarsen(near[1])}`
+        : '';
+    const url = `${this.proxyPath}?q=${encodeURIComponent(query)}&limit=${limit}${nearParam}`;
     try {
       const res = await fetch(url, { signal });
       if (res.status === 404) {
@@ -102,12 +110,23 @@ export class GeocodingService {
     }
   }
 
-  async searchPlaces(query: string, limit = 5, signal?: AbortSignal): Promise<GeocodeFeature[]> {
+  /**
+   * @param near Optional bias point as `[lng, lat]`, coarsened before it
+   *   leaves the device and again by the server. Mapbox uses it to prefer
+   *   results close to the runner, which is what turns "High Street" from an
+   *   ambiguous list into the street they are standing on.
+   */
+  async searchPlaces(
+    query: string,
+    limit = 5,
+    near?: [number, number],
+    signal?: AbortSignal
+  ): Promise<GeocodeFeature[]> {
     const q = query.trim();
     if (!q) return [];
 
     if (!this.proxyUnavailable) {
-      const viaProxy = await this.searchViaProxy(q, limit, signal);
+      const viaProxy = await this.searchViaProxy(q, limit, near, signal);
       if (viaProxy !== null) return viaProxy;
       if (this.proxyUnavailable && !this.token) return [];
     }
@@ -115,10 +134,15 @@ export class GeocodingService {
     // Deployment without the function (self-hosted). Same caveat as reverse
     // geocoding: old behaviour, no worse, but not the preferred path.
     if (!this.token) return [];
+    const nearParam =
+      near && Number.isFinite(near[0]) && Number.isFinite(near[1])
+        ? `&proximity=${this.coarsen(near[0])},${this.coarsen(near[1])}`
+        : '';
     const url =
       `${this.forwardEndpoint}?q=${encodeURIComponent(q)}` +
       `&autocomplete=true&limit=${limit}` +
       `&types=${DIRECT_FORWARD_TYPES}` +
+      nearParam +
       `&access_token=${encodeURIComponent(this.token)}`;
     try {
       const res = await fetch(url, { signal });

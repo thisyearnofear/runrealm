@@ -765,6 +765,15 @@ export class LocationService extends BaseService {
 
   /**
    * Search for locations by name/address
+   *
+   * Passes the runner's last known position as a ranking bias, so "High
+   * Street" resolves to the one they are near rather than an arbitrary one
+   * in another city. It is a hint, not a filter: without a position, or
+   * before the first fix arrives, the search still works and is simply
+   * unbiased.
+   *
+   * Coarsened on the way out and again by the server, so this does not turn
+   * place search into location disclosure.
    */
   public async searchLocations(query: string): Promise<LocationSearchResult[]> {
     try {
@@ -772,7 +781,9 @@ export class LocationService extends BaseService {
         console.warn('Geocoding service not initialized');
         return [];
       }
-      const results = await this.geocodingService.searchPlaces(query, 10);
+      const here = this.currentLocation;
+      const near: [number, number] | undefined = here ? [here.lng, here.lat] : undefined;
+      const results = await this.geocodingService.searchPlaces(query, 10, near);
       return results.map((result) => ({
         name: result.name,
         lat: result.center[1],

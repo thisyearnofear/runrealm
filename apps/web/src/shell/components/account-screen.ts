@@ -12,6 +12,8 @@
  *      as plain-language authorizations with expiry and spend limits.
  *   3. Privacy — territory disclosure posture (default shielded) with
  *      a count of public territories; management lives in the dashboard.
+ *   4. Map credits — who supplies the map and the street labels, read
+ *      from the same manifest the map itself uses.
  */
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import {
@@ -25,6 +27,7 @@ import {
   eraseDeviceData,
   listDeviceData,
 } from '@runrealm/shared-core/utils/device-data';
+import { MAP_CREDITS } from '@runrealm/shared-core/utils/map-credits';
 
 function escapeHtml(value: string): string {
   return value.replace(
@@ -107,6 +110,38 @@ export default class AccountScreen {
         ${this.renderIdentityCard()}
         ${this.renderSessionKeys()}
         ${this.renderPrivacyCard()}
+        ${this.renderMapCredits()}
+      </div>
+    `;
+  }
+
+  /**
+   * Who supplies the basemap and the street labels.
+   *
+   * This is not decoration, and it is not optional politeness. Mapbox returns
+   * an `attribution` field on every geocoding response and requires credit
+   * for its data; OpenFreeMap is built on OpenStreetMap and carries the same
+   * expectation. Mapbox's attribution rule is written in terms of *maps*, and
+   * we render no Mapbox style or tiles — so on a strict reading of that rule
+   * it may not bind us. Google, the comparable provider, explicitly requires
+   * it when geocoding results are shown off their own map, which is our
+   * exact situation. Rather than argue the edge of Mapbox's wording in
+   * either direction, the credit is shown.
+   *
+   * Built from `MAP_CREDITS` rather than written inline, so the credits
+   * cannot drift away from the providers `map-style.ts` actually uses. A
+   * test pins the two together.
+   */
+  private renderMapCredits(): string {
+    return `
+      <div class="account-card">
+        <h3>Map credits</h3>
+        <p class="account-copy">
+          ${MAP_CREDITS.basemap}
+        </p>
+        <p class="account-copy">
+          ${MAP_CREDITS.labels}
+        </p>
       </div>
     `;
   }

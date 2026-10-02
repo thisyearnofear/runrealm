@@ -46,4 +46,54 @@ describe('AccountScreen device-local atlas copy', () => {
       );
     });
   }
+
+  describe('map credits', () => {
+    beforeEach(() => {
+      (AccountService.getInstance as jest.Mock).mockReturnValue({
+        getAccount: () => ({
+          id: 'account-example-1234',
+          tier: 'guest',
+          createdAt: Date.now(),
+        }),
+        getActiveSessionKeys: () => [],
+      });
+    });
+
+    /** Render the screen and return its credits card. */
+    function renderCredits(): HTMLElement {
+      const screen = new AccountScreen();
+      screen.initialize(document.body);
+      screen.show();
+      const heading = [...document.querySelectorAll('.account-card h3')].find(
+        (h) => h.textContent === 'Map credits'
+      );
+      expect(heading).toBeDefined();
+      return heading!.closest('.account-card') as HTMLElement;
+    }
+
+    it('shows Mapbox for the street labels', () => {
+      // Mapbox requires credit for its geocoding data, and this is the only
+      // place a runner will ever look for it. Deleting this card is a licence
+      // change, not a copy change.
+      const text = renderCredits().textContent ?? '';
+      expect(text).toContain('Mapbox');
+      expect(text).toMatch(/our server/i);
+    });
+
+    it('credits the basemap to OpenStreetMap, not Mapbox', () => {
+      const text = renderCredits().textContent ?? '';
+      expect(text).toContain('OpenStreetMap');
+      expect(text).toContain('OpenFreeMap');
+    });
+
+    it('marks external links noopener', () => {
+      // These are innerHTML, so an anchor without noopener hands the opened
+      // page a window.opener reference back into the running app.
+      const anchors = [...renderCredits().querySelectorAll('a')];
+      expect(anchors.length).toBeGreaterThan(0);
+      for (const anchor of anchors) {
+        expect(anchor.rel).toContain('noopener');
+      }
+    });
+  });
 });
