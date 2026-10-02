@@ -140,7 +140,7 @@ body.neighbourhood-mode .theater-pocket-btn {
 .nh-run-note,
 .nh-receipt-credit,
 .nh-receipt-save,
-.nh-ownership p {
+.nh-ownership {
   font-size: 0.8rem;
   line-height: 1.45;
 }
@@ -160,26 +160,9 @@ body.neighbourhood-mode .theater-pocket-btn {
   margin: 8px 0;
   color: #3f6372;
 }
-
 .nh-ownership {
-  margin: 10px 0;
-}
-
-.nh-ownership summary {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-family: var(--rr-font-display);
-}
-
-.nh-ownership summary:focus-visible {
-  outline: 2px solid var(--rr-sunprint-ink);
-  outline-offset: 2px;
-}
-
-.nh-ownership p {
-  margin: 2px 0 10px;
+  margin: 8px 0 0;
+  color: #3f6372;
 }
 
 .nh-goals {
@@ -309,7 +292,7 @@ body.neighbourhood-mode .theater-pocket-btn {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: 8px;
   font-size: 0.72rem;
   color: #3f6372;
 }
@@ -381,12 +364,50 @@ body.neighbourhood-mode .theater-pocket-btn {
   line-height: 1.5;
 }
 
-.nh-requirement {
-  margin: 0 0 4px;
+/* The rules, as tokens. Three chips read at a glance where a paragraph is
+   skipped — the amber rule marks the threshold, not the wall of text. */
+.nh-rules {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 6px;
   padding: 8px 10px;
   border-left: 3px solid var(--rr-sunprint-amber);
   background: rgba(13, 43, 62, 0.04);
   border-radius: 0 8px 8px 0;
+}
+
+.nh-rules-label {
+  font-family: var(--rr-font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #3f6372;
+}
+
+.nh-rules-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nh-rule {
+  font-family: var(--rr-font-display);
+  font-size: 0.78rem;
+  color: var(--rr-sunprint-ink);
+  background: var(--rr-sunprint-bone);
+  border: 1px solid #b9cbd0;
+  border-radius: 999px;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+
+.nh-anchor {
+  margin: 0 0 4px;
   font-size: 0.8rem;
   line-height: 1.45;
   color: var(--rr-sunprint-ink);
@@ -424,6 +445,60 @@ body.neighbourhood-mode .theater-pocket-btn {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
+}
+
+/* One obvious way in; the rest stay reachable as quiet inline text rather than
+   four identical boxes that imply four equal commitments. */
+.nh-secondary--primary {
+  flex: 1 1 auto;
+  background: rgba(99, 179, 200, 0.16);
+  border-color: var(--rr-sunprint-amber);
+  color: var(--rr-sunprint-ink);
+  font-family: var(--rr-font-display);
+  font-size: 0.85rem;
+}
+
+.nh-secondary--primary:hover {
+  background: rgba(99, 179, 200, 0.26);
+}
+
+.nh-explore-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  align-items: center;
+}
+
+/* Still a full-size tap target — quiet, not small. */
+.nh-link {
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #3f6372;
+  font-family: var(--rr-font-body);
+  font-size: 0.78rem;
+  text-decoration: underline;
+  text-decoration-color: rgba(63, 99, 114, 0.35);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.nh-link:hover {
+  color: var(--rr-sunprint-ink);
+  text-decoration-color: currentColor;
+}
+
+.nh-link:focus-visible {
+  outline: 2px solid var(--rr-sunprint-ink);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.nh-link[aria-pressed="true"] {
+  color: var(--rr-sunprint-ink);
+  font-weight: 600;
 }
 
 .nh-sketch-controls p {
@@ -453,65 +528,40 @@ body.neighbourhood-mode .theater-pocket-btn {
   margin-top: 10px;
 }
 
-/* ---- How it works (folded rulebook) ----------------------------------- */
+/* ---- The facts, never folded ------------------------------------------ */
 
-.nh-guide {
+/* A collapsed rulebook is a rulebook nobody opens. Legend, ghost line and
+   ownership sit at rest in quiet type; only the tour and Start run compete. */
+.nh-facts {
   margin-top: 12px;
+  padding-top: 8px;
   border-top: 1px solid #e0d8c4;
-  padding-top: 4px;
 }
 
-.nh-guide-summary {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-family: var(--rr-font-display);
-  font-size: 0.9rem;
-  color: var(--rr-sunprint-ink);
-  list-style: none;
+.nh-later {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  color: #3f6372;
 }
 
-.nh-guide-summary::-webkit-details-marker {
-  display: none;
-}
-
-.nh-guide-summary::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform 180ms ease;
-}
-
-.nh-guide[open] > .nh-guide-summary::before {
-  transform: rotate(45deg);
-}
-
-.nh-guide-summary:focus-visible {
-  outline: 2px solid var(--rr-sunprint-ink);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-
-.nh-guide-body {
-  padding-bottom: 4px;
-}
-
-.nh-guide-heading {
-  margin: 4px 0 0;
+.nh-facts-heading {
+  margin: 10px 0 0;
   font-family: var(--rr-font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #3f6372;
 }
 
 .nh-goals--later {
-  margin: 8px 0 4px;
+  margin: 6px 0 0;
+  gap: 6px;
+}
+
+.nh-facts .nh-secondary {
+  margin-top: 4px;
+  padding: 0 10px;
+  min-height: 36px;
 }
 
 .nh-summary-celebrate {
@@ -555,10 +605,6 @@ body.neighbourhood-mode .theater-pocket-btn {
 @media (prefers-reduced-motion: reduce) {
   #neighbourhood-shell.nh-shell--arriving {
     animation: none;
-  }
-
-  .nh-guide-summary::before {
-    transition: none;
   }
 }
 

@@ -1068,14 +1068,13 @@ export const NEIGHBOURHOOD_COPY = {
   headline: 'Your neighbourhood',
   subline: 'One neighbourhood. Three kinds of outing.',
   instruction: 'Move 500m to collect the cells you visit. No loop needed.',
-  honestNote: 'Atlas saved locally; not registered ownership.',
-  emptyAtlasNote:
-    'A qualifying real outing can be saved on this device; previews and samples do not count. This is not registered ownership.',
+  // Each states exactly one fact, so no two of them overlap. The ownership
+  // caveat below is the only place it appears; both are always visible.
+  honestNote: 'Saved on this device.',
+  emptyAtlasNote: 'Previews and samples do not count.',
   savedStatus: (outings: number, cells: number) =>
     `${outings} credited outing${outings === 1 ? '' : 's'} · ${cells} collected block${cells === 1 ? '' : 's'} saved on this device.`,
-  ownershipTitle: 'What do I own?',
-  ownershipExplanation:
-    'Collected blocks are a local atlas on this device, not NFTs. Registered territories use a separate eligible-run and wallet flow. Advanced tools shows territory features, but these neighbourhood outings do not register or mint blocks. Linking a wallet or passkey does not sync this atlas to another device.',
+  ownershipExplanation: 'Not NFTs or registered ownership.',
   receiptCredit: (newCells: number, revisited: number) =>
     `${newCells} new block${newCells === 1 ? '' : 's'} · ${revisited} revisited`,
   receiptNoCredit: 'No blocks credited this outing.',
@@ -1086,7 +1085,6 @@ export const NEIGHBOURHOOD_COPY = {
   runCreditNote:
     'Only GPS fixes accurate within 50m can credit blocks. Complete at least 500m, then finish your outing.',
   notSavedNote: 'Kept in memory but not saved on this device.',
-  legendLabel: 'Map legend',
   legend: {
     unvisited: 'Unvisited',
     collected: 'Collected',
@@ -1101,31 +1099,34 @@ export const NEIGHBOURHOOD_COPY = {
     strengthen: {
       label: 'Strengthen',
       hint: 'Revisit cells you already know.',
-      locked: 'Collect your first cell to unlock Strengthen.',
+      locked: 'Collect your first block.',
     },
     challenge: {
       label: 'Challenge',
       hint: 'Match your previous distance at your own pace.',
-      locked: 'Two outings in your neighbourhood unlock Challenge.',
+      locked: 'Two outings in this neighbourhood.',
     },
   },
   lockedPrefix: 'Locked',
   firstVisit: {
-    kicker: 'Sunprint Atlas · first outing',
+    kicker: 'Sunprint Atlas',
     headline: 'Your neighbourhood is uncharted.',
-    lede: 'Every street you run develops onto this map. Start with one outing — no loop, no route to plan.',
-    requirement:
-      'Previewing is optional. Start run asks for location. Finish at least 500m with enough GPS fixes accurate within 50m to collect blocks you visit. Your first qualifying run sets your neighbourhood.',
+    lede: 'Every street you run develops onto this map.',
+    // The rules are three scannable tokens, not a sentence. Recognising
+    // "500m+ / GPS / no loop" is faster than parsing the paragraph it replaced.
+    ruleLabel: 'To collect',
+    rules: ['500m+', 'GPS within 50m', 'No loop needed'],
+    anchorNote: 'Start run asks for location. Your first outing sets this map.',
   },
   desktop: {
-    invitation: 'Outings happen on your phone. Explore the map here first.',
+    invitation: 'Outings happen on your phone.',
     phoneInvitation: 'Explore the map before your first outing.',
-    defaultCity: 'This is a sample city — show your streets or pick a spot.',
+    defaultCity: 'Sample city. Show your streets or pick a spot.',
     previewOnly: 'Preview — not collected',
     showStreets: 'Show my streets',
     pickSpot: 'Pick a spot',
     pickInstruction: 'Click a spot on the map to preview its neighbourhood. Esc to cancel.',
-    previewHint: 'Preview only. Your first qualifying run sets your real neighbourhood.',
+    previewHint: 'Preview only — nothing is collected.',
     previewError: 'Could not find your streets. Pick a spot on the map instead.',
     sample: 'Watch a sample outing',
     sampleBadge: 'Sample — not your atlas',
@@ -1149,7 +1150,7 @@ export const NEIGHBOURHOOD_COPY = {
     tour: 'New here? Take the tour',
     tourAgain: 'Take the tour',
   },
-  guideLabel: 'How it works',
+  legendHeading: 'Map legend',
   laterGoalsLabel: 'Unlocks as you run',
   firstGround: 'Your first ground is on the map.',
   ghostTeaser: 'Your first outing introduces your ghost.',
@@ -1171,7 +1172,8 @@ export const NEIGHBOURHOOD_COPY = {
   myAtlas: 'My atlas',
   account: 'Account',
   advancedTools: 'Advanced tools',
-  advancedHint: 'Dashboard, wallet and the rest of the realm live here.',
+  advancedHint:
+    'Dashboard, ghosts and the rest of the realm live here. Registered territories use a separate wallet flow — these outings never register or mint blocks, and a linked wallet does not sync this atlas to another device.',
   backToNeighbourhood: 'Back to your neighbourhood',
   gpsDenied: 'Location is off. Allow it in your browser settings, then try again.',
   gpsRetry: 'Try again',

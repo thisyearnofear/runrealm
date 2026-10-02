@@ -123,6 +123,12 @@ function mount(over: Record<string, unknown> = {}) {
   return { shell, deps, root: document.getElementById('neighbourhood-shell') as HTMLElement };
 }
 
+// The reveal flag lives on <html> and outlives any single test, so a test that
+// reveals would otherwise make every later mount auto-arrive — and autoplay.
+beforeEach(() => {
+  document.documentElement.removeAttribute('data-rr-revealed');
+});
+
 describe('NeighbourhoodExperience', () => {
   beforeEach(() => {
     EventBus.getInstance().clear();
@@ -132,47 +138,108 @@ describe('NeighbourhoodExperience', () => {
     const { root } = mount({ state: { collectedCount: 2, qualifyingRuns: 1 } });
     expect(root.querySelector('.nh-headline')?.textContent).toBe('Your neighbourhood');
     expect(root.textContent).toContain('Move 500m');
-    expect(root.textContent).toContain('not registered ownership');
+    expect(root.textContent).toContain('Not NFTs');
     expect(root.querySelector('[data-action="start"]')).toBeTruthy();
     expect(root.querySelectorAll('.nh-goal')).toHaveLength(3);
     expect(root.querySelector('.nh-goal--locked')).toBeTruthy();
   });
 
-  it('opens a first visit as an invitation with one Explore goal and the rules folded away', () => {
+  it('opens a first visit as an invitation with one Explore goal and scannable rule chips', () => {
     const { root } = mount();
     expect(root.querySelector('.nh-headline')?.textContent).toBe(
       'Your neighbourhood is uncharted.'
     );
-    const requirement = root.querySelector('.nh-requirement')?.textContent ?? '';
-    expect(requirement).toContain('location');
-    expect(requirement).toContain('500m');
-    expect(requirement).toContain('GPS');
-    expect(requirement).toContain('50m');
-    expect(requirement.toLowerCase()).toContain('finish');
-    expect(root.querySelector('.nh-honest')?.textContent).toContain(
-      'previews and samples do not count'
-    );
-    expect(root.querySelector('.nh-ownership summary')?.textContent).toBe('What do I own?');
 
+    // Rules are tokens, not a paragraph to parse.
+    const rules = Array.from(root.querySelectorAll('.nh-rule')).map((r) => r.textContent);
+    expect(rules).toEqual(['500m+', 'GPS within 50m', 'No loop needed']);
+    expect(root.querySelector('.nh-rules-label')?.textContent).toBe('To collect');
+    expect(root.querySelector('.nh-anchor')?.textContent).toContain('asks for location');
+
+    expect(root.querySelector('.nh-honest')?.textContent).toContain(
+      'Previews and samples do not count'
+    );
+
+    // Explore is the only offered goal; the locked pair sits below it.
     const mainGoals = root.querySelectorAll('.nh-goals:not(.nh-goals--later) .nh-goal');
     expect(mainGoals).toHaveLength(1);
     expect((mainGoals[0] as HTMLElement).dataset.goal).toBe('explore');
 
-    const guide = root.querySelector<HTMLDetailsElement>('details.nh-guide');
-    expect(guide).toBeTruthy();
-    expect(guide?.open).toBe(false);
-    expect(guide?.querySelector('.nh-goal[data-goal="strengthen"]')).toBeTruthy();
-    expect(guide?.querySelector('.nh-goal[data-goal="challenge"]')).toBeTruthy();
-    expect(guide?.querySelector('.nh-legend')).toBeTruthy();
-    expect(guide?.querySelector('.nh-ghostline')).toBeTruthy();
+    // The facts sit at rest: no rulebook to open and miss.
+    expect(root.querySelector('details')).toBeNull();
+    expect(root.querySelector('.nh-facts')).toBeTruthy();
+    expect(root.querySelector('.nh-legend')).toBeTruthy();
+    expect(root.querySelector('.nh-ghostline')).toBeTruthy();
+    expect(root.querySelector('.nh-goals--later .nh-goal[data-goal="strengthen"]')).toBeTruthy();
+    expect(root.querySelector('.nh-goals--later .nh-goal[data-goal="challenge"]')).toBeTruthy();
 
-    // Honesty stays in plain sight, never folded into the guide.
-    const honest = root.querySelector('.nh-honest');
-    expect(honest?.textContent).toContain('not registered ownership');
-    expect(guide?.contains(honest as Node)).toBe(false);
+    // Honesty stays in plain sight.
+    expect(root.querySelector('.nh-honest')?.textContent).toContain('Previews and samples');
   });
 
-  it('shows returning runners every goal with the legend folded into the guide', () => {
+  it('keeps the first-visit panel inside a word budget', () => {
+    const { root } = mount();
+    const scroll = root.querySelector('.nh-scroll');
+    // Count only what is on screen: panels behind `hidden` (sketch controls,
+    // handoff card, sample controls) are not read by anyone.
+    const visible = scroll?.cloneNode(true) as HTMLElement;
+    for (const hidden of Array.from(visible.querySelectorAll('[hidden]'))) hidden.remove();
+    const words = (visible.textContent ?? '').trim().split(/\s+/).filter(Boolean);
+    // Guards the consolidation: copy that crept back is copy nobody reads.
+    // Raise deliberately, never accidentally.
+    expect(words.length).toBeLessThanOrEqual(140);
+    expect(root.textContent).not.toContain('qualifying run');
+  });
+
+  it('autoplays the sample once on a first visit, then offers a replay', () => {
+    announceReveal();
+    const map = fakeMap();
+    const { root, deps, shell } = mount({ map });
+    // The splash has lifted, so the sample has already played itself — proved
+    // by its controls being offered, not by the status text (always present).
+    expect(root.querySelector<HTMLElement>('.nh-sample-actions')?.hidden).toBe(false);
+    expect(root.querySelector('[data-action="sample"]')?.textContent).toBe('Replay sample');
+    // Showing the mechanic must never touch a real run or ask for location.
+    expect(deps.runTracking.startRun).not.toHaveBeenCalled();
+    expect(deps.location.getCurrentLocation).not.toHaveBeenCalled();
+    root.querySelector<HTMLButtonElement>('[data-action="skip-sample"]')?.click();
+    expect(root.querySelector<HTMLElement>('.nh-sample-actions')?.hidden).toBe(true);
+    // Skipping stops it; it does not re-arm itself.
+    expect(root.querySelector('[data-action="sample"]')?.textContent).toBe('Replay sample');
+    shell.destroy();
+  });
+
+  it('does not autoplay the sample for a returning runner', () => {
+    announceReveal();
+    const map = fakeMap();
+    const { root, shell } = mount({ map, state: baseState({ collectedCount: 2 }) });
+    expect(root.querySelector<HTMLElement>('.nh-sample-actions')?.hidden).toBe(true);
+    expect(root.querySelector('[data-action="sample"]')?.textContent).toBe('Watch a sample outing');
+    shell.destroy();
+  });
+
+  it('leaves one primary preview affordance and demotes the rest to links', () => {
+    const { root } = mount();
+    const primary = root.querySelector('.nh-explore-actions .nh-secondary--primary');
+    expect(primary?.getAttribute('data-action')).toBe('show-streets');
+    const links = Array.from(root.querySelectorAll('.nh-explore-links .nh-link'));
+    expect(links.map((l) => l.getAttribute('data-action'))).toEqual([
+      'pick-spot',
+      'sample',
+      'sketch',
+    ]);
+    // No duplicate replay control beside the sample button itself.
+    expect(root.querySelector('[data-action="replay"]')).toBeNull();
+  });
+
+  it('offers the tour once on a first visit', () => {
+    const { root } = mount();
+    expect(root.querySelectorAll('[data-action="tour"]')).toHaveLength(1);
+    const returning = mount({ state: { collectedCount: 2, qualifyingRuns: 1 } }).root;
+    expect(returning.querySelectorAll('[data-action="tour"]')).toHaveLength(1);
+  });
+
+  it('shows returning runners every goal with the facts visible', () => {
     const { root } = mount({
       state: { collectedCount: 3, qualifyingRuns: 1 },
       availability: {
@@ -187,26 +254,18 @@ describe('NeighbourhoodExperience', () => {
     );
     expect(root.querySelectorAll('.nh-goals:not(.nh-goals--later) .nh-goal')).toHaveLength(3);
     expect(root.querySelector('.nh-goals--later')).toBeNull();
-    expect(root.querySelector('.nh-requirement')).toBeNull();
-    expect(root.querySelector('details.nh-guide .nh-legend')).toBeTruthy();
-  });
-
-  it('keeps the guide open across re-renders', () => {
-    const { root } = mount();
-    const guide = root.querySelector<HTMLDetailsElement>('details.nh-guide') as HTMLDetailsElement;
-    guide.open = true;
-    guide.dispatchEvent(new Event('toggle'));
-    root.querySelector<HTMLButtonElement>('[data-action="atlas"]')?.click();
-    expect(root.querySelector<HTMLDetailsElement>('details.nh-guide')?.open).toBe(true);
+    expect(root.querySelector('.nh-rules')).toBeNull();
+    expect(root.querySelector('.nh-anchor')).toBeNull();
+    expect(root.querySelector('.nh-facts .nh-legend')).toBeTruthy();
   });
 
   it('redraws from invitation to ledger once ground is collected', () => {
     const { deps, root } = mount();
-    expect(root.querySelector('.nh-requirement')).toBeTruthy();
+    expect(root.querySelector('.nh-rules')).toBeTruthy();
     deps.bus.emit('neighbourhood:updated', {
       state: baseState({ collectedCount: 2, qualifyingRuns: 1 }),
     } as never);
-    expect(root.querySelector('.nh-requirement')).toBeNull();
+    expect(root.querySelector('.nh-rules')).toBeNull();
     expect(root.querySelector('.nh-headline')?.textContent).toBe('Your neighbourhood');
   });
 
@@ -424,9 +483,7 @@ describe('NeighbourhoodExperience', () => {
       '2 new blocks · 1 revisited'
     );
     expect(root.querySelector('.nh-receipt-save')?.textContent).toContain('saved on this device');
-    expect(root.querySelector('.nh-honest')?.textContent).toContain('not registered ownership');
-    expect(root.querySelector('.nh-ownership')?.textContent).toContain('not NFTs');
-    expect(root.querySelector('.nh-ownership')?.textContent).toContain('do not register or mint');
+    expect(root.querySelector('.nh-ownership')?.textContent).toContain('Not NFTs');
     expect(text).toContain('800 m');
     expect(text).not.toContain('claimed');
     const title = root.querySelector<HTMLElement>('.nh-headline');

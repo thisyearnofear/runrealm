@@ -29,13 +29,13 @@
 
 ## Phase 2: watch a sample outing
 
-**What the user sees:** "Watch a sample outing" plays a 22-second scene inside the preview neighbourhood (or around the current map centre):
+**What the user sees:** a 22-second scene inside the preview neighbourhood (or around the current map centre). It plays automatically once, on a first visit, after the splash lifts; a returning runner starts it from the panel:
 - a route draws itself and a runner marker moves along it;
 - the camera eases after the runner until the visitor drags or zooms the map;
 - each cell the runner enters lights up amber, then settles to the collected colour;
 - the status line closes with *"That is one sample outing: N blocks visited. Yours start when you do."*; the displayed count is the sample route's visited blocks, not an atlas reward.
 
-Replay and Skip are always available.
+Skip is available while it plays. Once the sample has played, the panel button reads "Replay sample" and starts it again on demand; the autoplay never re-arms itself.
 
 **How:** a new `sample-outing.ts`.
 - **Route:** follow a loop through the centre and radius-one H3 neighbours, which stays inside the radius-two ring and exceeds the 500 m qualification distance. The route line is drawn from interpolated positions along that loop.
@@ -86,14 +86,14 @@ Replay and Skip are always available.
 
 **What the user sees:**
 - The first-visit panel offers "New here? Take the tour". The tour is optional and never starts automatically.
-- The same tour action is available under "How it works".
+- A returning runner can reopen it from a standing "Take the tour" link at the end of the panel.
 - It never starts by itself. The card can be dismissed, and the app remembers that.
 
 **Steps.** Each step points at a relevant control; the preview and sample steps demonstrate behavior, while the others explain or highlight controls without starting them:
 1. **Welcome.** What RunRealm is: your streets as a map that develops as you run.
 2. **Your neighbourhood.** If no ring exists, previews the current map centre and plays the ripple (phase 1).
 3. **An outing.** Plays the sample outing (phase 2); leaving that step stops the sample.
-4. **Goals.** Opens "How it works" and explains Explore, Strengthen, Challenge, and their unlocks.
+4. **Goals.** Points at the always-visible facts block and explains Explore, Strengthen, Challenge, and their unlocks.
 5. **Plan.** Points to the route-sketch control without starting map click capture; the visitor can try it after closing the tour.
 6. **The Realm.** Highlights the Realm tab and explains the free storyboard; the visitor opens the tab after the tour.
 7. **Beyond.** Highlights Advanced tools and explains the dashboard, ghosts, leaderboard, optional wallet, and local-versus-registered ownership.

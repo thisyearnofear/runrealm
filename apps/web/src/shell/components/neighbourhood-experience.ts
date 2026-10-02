@@ -77,11 +77,11 @@ export class NeighbourhoodExperience {
   private exposedCellIds = new Set<string>();
   /** A finished outing awaiting a look at the map. */
   private pendingReview: NeighbourhoodRunSummary | null = null;
-  /** Whether "How it works" is expanded; kept across re-renders. */
-  private guideOpen = false;
   /** Which idle layout is on screen; null until the idle panel first renders. */
   private renderedFirstVisit: boolean | null = null;
   private arrived = false;
+  /** The first-visit sample has auto-played; never repeat it unasked. */
+  private sampleAutoplayed = false;
   private onReveal: (() => void) | null = null;
   /** Until when a late-drawn neighbourhood may still get its arrival ripple. */
   private arrivalRippleUntil = 0;
@@ -93,6 +93,8 @@ export class NeighbourhoodExperience {
   private sample: SampleOuting | null = null;
   private sampleActive = false;
   private sampleDone = false;
+  /** The sample has played at least once; the button offers a replay after. */
+  private sampleSeen = false;
   private sampleVisited = 0;
   private handoffOpen = false;
   private tour: NeighbourhoodTour | null = null;
@@ -240,6 +242,9 @@ export class NeighbourhoodExperience {
    * The splash has lifted: the panel makes its entrance (once) and the drawn
    * neighbourhood ripples. Both are decoration over controls that are already
    * live — nothing waits on them.
+   *
+   * A first visit also plays the sample outing once, automatically. Watching
+   * the cells light up teaches the mechanic faster than any sentence about it.
    */
   private arrive(): void {
     this.detachReveal();
@@ -254,6 +259,18 @@ export class NeighbourhoodExperience {
     }
     this.arrivalRippleUntil = Date.now() + ARRIVAL_RIPPLE_WINDOW_MS;
     this.tryArrivalRipple();
+    this.autoplaySample();
+  }
+
+  /**
+   * Autoplay, once, on a first visit only. Returning runners already know the
+   * mechanic, and a sample that fires unasked mid-session is noise.
+   */
+  private autoplaySample(): void {
+    if (this.sampleAutoplayed || !this.isFirstVisit() || this.phase !== 'idle') return;
+    this.sampleAutoplayed = true;
+    if (!this.deps.map || !this.isMapVisible()) return;
+    this.playSample();
   }
 
   /**
@@ -375,10 +392,23 @@ export class NeighbourhoodExperience {
   }
 
   private ownershipBlock(): string {
-    return `<details class="nh-ownership">
-      <summary>${NEIGHBOURHOOD_COPY.ownershipTitle}</summary>
-      <p>${NEIGHBOURHOOD_COPY.ownershipExplanation}</p>
-    </details>`;
+    return `<p class="nh-ownership">${NEIGHBOURHOOD_COPY.ownershipExplanation}</p>`;
+  }
+
+  /**
+   * The rules as three scannable tokens. A first-visit reader recognises
+   * "500m+ / GPS / no loop" in one glance; the same facts as prose cost a
+   * paragraph and get skipped.
+   */
+  private ruleChips(): string {
+    const { ruleLabel, rules } = NEIGHBOURHOOD_COPY.firstVisit;
+    return `
+      <div class="nh-rules" role="group" aria-label="${ruleLabel}">
+        <span class="nh-rules-label">${ruleLabel}</span>
+        <ul class="nh-rules-list">
+          ${rules.map((rule) => `<li class="nh-rule">${rule}</li>`).join('')}
+        </ul>
+      </div>`;
   }
 
   private referenceBlock(): string {
@@ -419,29 +449,33 @@ export class NeighbourhoodExperience {
   }
 
   /**
-   * The rulebook, folded away: later goals (first visit only), the ghost line
-   * and the legend. Open state survives re-renders.
+   * Legend, ghost line and ownership — always visible, never folded. A
+   * collapsed rulebook is a rulebook nobody reads; these are short enough to
+   * carry at rest. The locked goals stay on the first-visit panel too: with
+   * the accordion gone they are the only signal that more than Explore exists.
    */
-  private guideBlock(firstVisit: boolean): string {
+  private factsBlock(firstVisit: boolean): string {
     const laterGoals = firstVisit
-      ? `<p class="nh-guide-heading">${NEIGHBOURHOOD_COPY.laterGoalsLabel}</p>
+      ? `<p class="nh-facts-heading">${NEIGHBOURHOOD_COPY.laterGoalsLabel}</p>
          <div class="nh-goals nh-goals--later" role="group" aria-label="${NEIGHBOURHOOD_COPY.laterGoalsLabel}">${this.goalButton('strengthen')}${this.goalButton('challenge')}</div>`
       : '';
+    // A first visit is already invited to the tour below; only returning
+    // runners need the standing link.
+    const tourLink = firstVisit
+      ? ''
+      : `<button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tourAgain}</button>`;
     return `
-      <details class="nh-guide"${this.guideOpen ? ' open' : ''}>
-        <summary class="nh-guide-summary">${NEIGHBOURHOOD_COPY.guideLabel}</summary>
-        <div class="nh-guide-body">
-          ${laterGoals}
-          <div class="nh-ghostline"></div>
-          ${this.ownershipBlock()}
-          <button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tourAgain}</button>
-          <div class="nh-legend" aria-label="${NEIGHBOURHOOD_COPY.legendLabel}">
-            <span class="nh-swatch nh-swatch--unvisited"></span>${NEIGHBOURHOOD_COPY.legend.unvisited}
-            <span class="nh-swatch nh-swatch--collected"></span>${NEIGHBOURHOOD_COPY.legend.collected}
-            <span class="nh-swatch nh-swatch--strengthened"></span>${NEIGHBOURHOOD_COPY.legend.strengthened}
-          </div>
+      <div class="nh-facts">
+        ${laterGoals}
+        <div class="nh-ghostline"></div>
+        <div class="nh-legend" aria-label="${NEIGHBOURHOOD_COPY.legendHeading}">
+          <span class="nh-swatch nh-swatch--unvisited"></span>${NEIGHBOURHOOD_COPY.legend.unvisited}
+          <span class="nh-swatch nh-swatch--collected"></span>${NEIGHBOURHOOD_COPY.legend.collected}
+          <span class="nh-swatch nh-swatch--strengthened"></span>${NEIGHBOURHOOD_COPY.legend.strengthened}
         </div>
-      </details>`;
+        ${this.ownershipBlock()}
+        ${tourLink}
+      </div>`;
   }
 
   private renderIdle(): void {
@@ -462,7 +496,8 @@ export class NeighbourhoodExperience {
           </header>
           <p class="nh-lede">${NEIGHBOURHOOD_COPY.firstVisit.lede}</p>
           <div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${this.goalButton('explore')}</div>
-          <p class="nh-requirement">${NEIGHBOURHOOD_COPY.firstVisit.requirement}</p>`
+          ${this.ruleChips()}
+          <p class="nh-anchor">${NEIGHBOURHOOD_COPY.firstVisit.anchorNote}</p>`
       : `
           <header class="nh-header">
             <h1 class="nh-headline">${NEIGHBOURHOOD_COPY.headline}</h1>
@@ -486,14 +521,15 @@ export class NeighbourhoodExperience {
             <p class="nh-explore-intro">${isDesk() ? NEIGHBOURHOOD_COPY.desktop.invitation : NEIGHBOURHOOD_COPY.desktop.phoneInvitation}</p>
             <p class="nh-preview-status">${this.state.anchorCell ? '' : this.previewPoint ? NEIGHBOURHOOD_COPY.desktop.previewHint : NEIGHBOURHOOD_COPY.desktop.defaultCity}</p>
             <div class="nh-explore-actions">
-              <button type="button" class="nh-secondary" data-action="show-streets">${NEIGHBOURHOOD_COPY.desktop.showStreets}</button>
-              <button type="button" class="nh-secondary" data-action="pick-spot" aria-pressed="${this.pickingSpot}">${NEIGHBOURHOOD_COPY.desktop.pickSpot}</button>
-              <button type="button" class="nh-secondary" data-action="sample" data-tour="sample">${NEIGHBOURHOOD_COPY.desktop.sample}</button>
-              <button type="button" class="nh-secondary" data-action="sketch" data-tour="sketch">${this.sketch?.isDrawing ? NEIGHBOURHOOD_COPY.desktop.sketchDone : NEIGHBOURHOOD_COPY.desktop.sketch}</button>
+              <button type="button" class="nh-secondary nh-secondary--primary" data-action="show-streets">${NEIGHBOURHOOD_COPY.desktop.showStreets}</button>
+              <div class="nh-explore-links">
+                <button type="button" class="nh-link" data-action="pick-spot" aria-pressed="${this.pickingSpot}">${NEIGHBOURHOOD_COPY.desktop.pickSpot}</button>
+                <button type="button" class="nh-link" data-action="sample" data-tour="sample">${this.sampleSeen ? NEIGHBOURHOOD_COPY.desktop.replay : NEIGHBOURHOOD_COPY.desktop.sample}</button>
+                <button type="button" class="nh-link" data-action="sketch" data-tour="sketch">${this.sketch?.isDrawing ? NEIGHBOURHOOD_COPY.desktop.sketchDone : NEIGHBOURHOOD_COPY.desktop.sketch}</button>
+              </div>
             </div>
             <p class="nh-sample-status" role="status" hidden></p>
             <div class="nh-sample-actions" hidden>
-              <button type="button" class="nh-secondary" data-action="replay">${NEIGHBOURHOOD_COPY.desktop.replay}</button>
               <button type="button" class="nh-secondary" data-action="skip-sample">${NEIGHBOURHOOD_COPY.desktop.skip}</button>
             </div>
             <div class="nh-sketch-controls" ${this.sketch?.isDrawing ? '' : 'hidden'}>
@@ -517,7 +553,7 @@ export class NeighbourhoodExperience {
           </div>
           <div class="nh-celldetail" hidden></div>
           <p class="nh-honest">${firstVisit && this.state.persisted ? NEIGHBOURHOOD_COPY.emptyAtlasNote : this.honestLine()}</p>
-          ${this.guideBlock(firstVisit)}
+          ${this.factsBlock(firstVisit)}
           ${firstVisit && !this.tourPromptDismissed ? `<div class="nh-tour-invite"><button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tour}</button><button type="button" class="nh-secondary" data-action="dismiss-tour" aria-label="Dismiss tour invitation">Not now</button></div>` : ''}
           <div class="nh-footer">
             <button type="button" class="nh-secondary" data-action="atlas" aria-expanded="${this.atlasOpen}">${NEIGHBOURHOOD_COPY.myAtlas}</button>
@@ -555,9 +591,6 @@ export class NeighbourhoodExperience {
     this.root.querySelector('[data-action="start"]')?.addEventListener('click', () => {
       void this.startRun();
     });
-    this.root.querySelector<HTMLDetailsElement>('.nh-guide')?.addEventListener('toggle', (e) => {
-      this.guideOpen = (e.currentTarget as HTMLDetailsElement).open;
-    });
     this.root.querySelector('[data-action="locate"]')?.addEventListener('click', () => {
       void this.locate();
     });
@@ -582,9 +615,6 @@ export class NeighbourhoodExperience {
     });
     this.root
       .querySelector('[data-action="sample"]')
-      ?.addEventListener('click', () => this.playSample());
-    this.root
-      .querySelector('[data-action="replay"]')
       ?.addEventListener('click', () => this.playSample());
     this.root
       .querySelector('[data-action="skip-sample"]')
@@ -1067,7 +1097,7 @@ export class NeighbourhoodExperience {
       [
         {
           title: 'Your streets, your atlas',
-          body: 'RunRealm develops a map of the streets you run. The first real outing starts your neighbourhood.',
+          body: 'RunRealm develops a map of the streets you run. Your first outing sets this neighbourhood.',
           target: '.nh-headline',
         },
         {
@@ -1092,12 +1122,8 @@ export class NeighbourhoodExperience {
         },
         {
           title: 'Three ways to explore',
-          body: 'Explore collects new blocks. Strengthen revisits familiar ones. Challenge unlocks after two qualifying outings.',
-          target: '.nh-guide',
-          enter: () => {
-            const guide = this.root?.querySelector<HTMLDetailsElement>('.nh-guide');
-            if (guide) guide.open = true;
-          },
+          body: 'Explore collects new blocks. Strengthen revisits familiar ones. Challenge unlocks after two outings.',
+          target: '.nh-facts',
         },
         {
           title: 'Plan your first route',
@@ -1118,7 +1144,7 @@ export class NeighbourhoodExperience {
           title: 'Take it outside',
           body: isDesk()
             ? 'Continue on your phone. Your link shares your exact drawn route and approximate preview centre, not saved progress.'
-            : 'Start a real run when you are ready. A qualifying 500m outing sets your neighbourhood.',
+            : 'Start a real run when you are ready. Your first 500m outing sets this neighbourhood.',
           target: isDesk() ? '[data-tour="handoff"]' : '[data-action="start"]',
         },
       ],
@@ -1147,6 +1173,7 @@ export class NeighbourhoodExperience {
     if (!this.sample) return;
     this.sampleActive = true;
     this.sampleDone = false;
+    this.sampleSeen = true;
     this.mapController?.frameCells(this.activeCells());
     this.mapController?.beginSampleFollow();
     this.sample.start(this.activeCells());
@@ -1170,6 +1197,13 @@ export class NeighbourhoodExperience {
     status.textContent = this.sampleDone
       ? NEIGHBOURHOOD_COPY.desktop.sampleResult(this.sampleVisited)
       : NEIGHBOURHOOD_COPY.desktop.sampleBadge;
+    // Once seen, the button offers a replay rather than a first watch.
+    const button = this.root?.querySelector<HTMLElement>('[data-action="sample"]');
+    if (button) {
+      button.textContent = this.sampleSeen
+        ? NEIGHBOURHOOD_COPY.desktop.replay
+        : NEIGHBOURHOOD_COPY.desktop.sample;
+    }
   }
 
   private toggleSketch(): void {
