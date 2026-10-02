@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { GeocodingService } from '../geocoding-service';
 
 /**
@@ -18,6 +20,11 @@ import { GeocodingService } from '../geocoding-service';
 describe('GeocodingService privacy', () => {
   const urls: string[] = [];
   const originalFetch = global.fetch;
+  // Resolved from __dirname rather than process.cwd(): jest may be invoked
+  // from the repo root or the package root, and a cwd-relative path that works
+  // under one command fails under the other. __dirname is stable either way.
+  // __tests__ -> services -> shared-core -> packages -> repo root.
+  const repoRoot = path.join(__dirname, '..', '..', '..', '..');
 
   /** Status the stubbed proxy should return. */
   let proxyStatus = 200;
@@ -318,6 +325,36 @@ describe('GeocodingService privacy', () => {
       expect(await svc.searchPlaces('')).toEqual([]);
       expect(await svc.searchPlaces('   ')).toEqual([]);
       expect(urls).toHaveLength(0);
+    });
+  });
+  describe('the declined precision mode', () => {
+    // Not a behavioural test — there is no such feature to test. This is a
+    // tripwire on the documentation, because the idea is attractive enough
+    // that someone will propose it again. `docs/precision-mode.md` records
+    // why it was declined and under what conditions that could change.
+    //
+    // If this test fails, someone has added a way to send precise
+    // coordinates to Mapbox. That may be legitimate — the conditions are
+    // written down — but it should be a deliberate change with the document
+    // updated, not an accident.
+    it('documents the decision not to build one', () => {
+      const doc = fs.readFileSync(path.join(repoRoot, 'docs/precision-mode.md'), 'utf8');
+      expect(doc).toMatch(/declined/i);
+      expect(doc).toContain('isochrone');
+    });
+
+    it('sends no unrounded coordinate to Mapbox on either path', async () => {
+      // The invariant the declined feature would have broken. Reverse and
+      // forward-bias both round server-side regardless of client precision.
+      const svc = new GeocodingService('token');
+      await svc.reverseGeocode([-122.4194155, 37.7749295]);
+      await svc.searchPlaces('High Street', 5, [-122.4194155, 37.7749295]);
+
+      for (const url of urls) {
+        if (!url.includes('api.mapbox.com')) continue;
+        expect(url).not.toContain('-122.4194155');
+        expect(url).not.toContain('37.7749295');
+      }
     });
   });
 });

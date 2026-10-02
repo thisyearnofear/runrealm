@@ -133,6 +133,14 @@ difference:
   That is a query you wrote yourself, so it discloses nothing you had not
   already chosen to disclose — but it is not the guarantee reverse gets.
 
+Place search is also *biased* toward the runner, using Mapbox's `proximity`
+parameter. Search for "High Street" — a name that exists in most cities — and
+it resolves to the one you are near rather than an arbitrary one elsewhere.
+The bias point is coarsened on the way out and again by the server, on the same
+terms as the coordinates themselves: a precise fix in a URL is still a precise
+fix in a URL that lands in our function logs. It is a ranking preference, so a
+malformed one is dropped rather than failing the search.
+
 Forward results are **not cached** either, and never were. Beyond Mapbox's rule
 above, a forward cache would be a log of what you searched and when — the exact
 shape of data this document has been removing. The server strips control
@@ -194,6 +202,25 @@ Worth being precise about, because "we use Mapbox" and "we use Mapbox for
 tiles" are very different amounts of information about where you are. The tiles,
 the glyphs and the sprite all come from `tiles.openfreemap.org`, and the
 satellite layer from `server.arcgisonline.com`. Mapbox serves no tiles here.
+
+> An earlier version of this section ended there and drew no conclusion from
+> it. That omission is why the caching question went unnoticed for several
+> commits: "Mapbox serves us no tiles" was true, and was quietly read as "so
+> Mapbox's terms do not apply to us". They do. See the note on attribution
+> below, and on result storage above.
+
+Both providers are credited under **Account → Map credits**, and the credit
+text is asserted against the live style manifest by a test so the two cannot
+drift apart.
+
+**On attribution.** Mapbox returns an `attribution` field on every geocoding
+response. Its attribution requirement is written in terms of *maps* — styles,
+tilesets, Mapbox software — and we use none of those, so on a strict reading
+it does not bind us. Google, the comparable provider, explicitly requires
+attribution when geocoding results are displayed off their own map, which is
+precisely our situation. Rather than argue the edge of Mapbox's wording in
+either direction, the credit is shown. It costs one line of text; being wrong
+the other way costs a licence conversation.
 
 ### About permissions
 
@@ -272,6 +299,30 @@ These are real, and we would rather list them than imply otherwise. The
 - **The oracle and the public API are separate processes**, so the signing key
   is not reachable from the unauthenticated endpoint. That separation is
   deliberate and load-bearing.
+
+## Map features we are building, and one we refused
+
+`docs/precision-mode.md` records a proposal to add a user-facing "precise
+location" mode for street labels, and why it was declined. In short: the
+exchange reads as *we will know exactly where you are* for a marginally
+better label, which is a bad bargain against a product whose differentiator is
+precisely that it does not need that trade.
+
+The plan that survived instead:
+
+- **Place search is already biased to the runner** (`proximity`), using the
+  existing ~110 m position. This delivers most of the perceived benefit of
+  precision and discloses nothing new — those coordinates were going to Mapbox
+  anyway, one endpoint over.
+- **Isochrones come next.** "What can I reach in 15 minutes?" shaded onto the
+  map, proxied through `/api/geocode` so the token stays server-side and the
+  position stays coarse. This is the feature that would make the map
+  interactive rather than decorative, and it is worth building *without*
+  precision so the question of precision never arises.
+- **Everything else Mapbox offers — Search Box POIs, Mapbox Standard, 3D
+  buildings — requires a token in the browser.** That is the property the last
+  several commits removed, and it is not for sale at the price of a nicer
+  basemap.
 
 ## Reporting a problem
 
