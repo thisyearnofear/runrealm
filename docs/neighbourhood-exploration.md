@@ -4,11 +4,28 @@ RunRealm opens on the neighbourhood map after its loading sequence. You can look
 
 ## The first-visit panel
 
-On a first visit the panel is an invitation, not a ledger: a headline, one line about what develops, the rules as three chips (**500m+**, **GPS within 50m**, **No loop needed**), a single **Start run** control, and the facts below it.
+A first visit is an invitation, not a ledger. What it carries depends on where
+you are, because the two platforms can do different things.
 
-The facts — locked Strengthen and Challenge goals, the ghost line, the map legend, and the ownership note — are always visible rather than folded behind a "How it works" disclosure. The reason is that a collapsed rulebook is a rulebook nobody opens.
+**On a desk** nothing can be collected, so the panel drops the running
+furniture entirely — the goal selector, the credit rules, the unlock ladder,
+the ghost line, the ownership note. What is left is roughly 50 words: the
+headline, **Show my streets** as the one obvious action, three quieter ways to
+look around, the map legend, the honest line, and **Continue on your phone** as
+the real destination.
 
-A sample outing plays automatically once, after the loading sequence lifts, if no outing has been recorded yet. Returning runners do not get it. **Start run** is never started by the sample: it asks for no location and files nothing.
+**On the phone** the full panel shows: the rules as three chips (**500m+**,
+**GPS within 50m**, **No loop needed**), the goal selector, the locked goals,
+and the honest line.
+
+The facts that remain are always visible rather than folded behind a "How it
+works" disclosure. The reason is that a collapsed rulebook is a rulebook nobody
+opens.
+
+A sample outing plays automatically once, after the loading sequence lifts, if
+no outing has been recorded yet. Returning runners do not get it. **Start run**
+is never started by the sample: it asks for no location and files nothing. When
+it finishes, its Skip control goes away with it.
 
 ## Preview a neighbourhood
 

@@ -463,6 +463,16 @@ body.neighbourhood-mode .theater-pocket-btn {
   background: rgba(99, 179, 200, 0.26);
 }
 
+/* On a lean desktop first visit the phone handoff is the real destination,
+   so it reads as the second obvious action rather than another quiet box. */
+.nh-secondary--handoff {
+  margin-top: 10px;
+  border-color: var(--rr-sunprint-amber);
+  font-family: var(--rr-font-display);
+  font-size: 0.85rem;
+  color: var(--rr-sunprint-ink);
+}
+
 .nh-explore-links {
   display: flex;
   flex-wrap: wrap;

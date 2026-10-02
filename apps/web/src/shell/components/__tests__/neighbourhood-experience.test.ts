@@ -114,6 +114,30 @@ function makeDeps(over: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * Force `isDesk()` true.
+ *
+ * The jsdom matchMedia stub answers `matches: false` to everything, so every
+ * desktop branch in this component has been dead in tests — including the lean
+ * first visit. jsdom's window is already 1024px wide, so only the pointer query
+ * needs to pass. The reduced-motion query deliberately keeps returning false.
+ */
+function asDesktop(): void {
+  window.matchMedia = jest.fn(
+    (query: string) =>
+      ({
+        matches: query.includes('hover: hover'),
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList
+  ) as never;
+}
+
 /** The panel text a first visit actually sees, with hidden subtrees dropped. */
 function visiblePanelText(root: HTMLElement): string {
   const visible = root.querySelector('.nh-scroll')?.cloneNode(true) as HTMLElement;
@@ -728,9 +752,50 @@ function fakeMap() {
 }
 
 describe('NeighbourhoodExperience desktop exploration', () => {
+  let savedMatchMedia: typeof window.matchMedia;
+
+  beforeAll(() => {
+    savedMatchMedia = window.matchMedia;
+  });
+
+  // matchMedia is global; leaving desk mode on would silently strip the goal
+  // selector out of every later suite's render.
+  afterAll(() => {
+    window.matchMedia = savedMatchMedia;
+  });
+
   beforeEach(() => {
     localStorage.clear();
     EventBus.getInstance().clear();
+    asDesktop();
+  });
+
+  it('shows a desk first visit without running furniture', () => {
+    const map = fakeMap();
+    const { root, shell } = mount({ map });
+    // Everything here describes an action a desk cannot take.
+    expect(root.querySelector('.nh-goals')).toBeNull();
+    expect(root.querySelector('.nh-rules')).toBeNull();
+    expect(root.querySelector('.nh-anchor')).toBeNull();
+    expect(root.querySelector('.nh-ghostline')).toBeNull();
+    expect(root.querySelector('.nh-ownership')).toBeNull();
+    expect(root.querySelector('[data-action="atlas"]')).toBeNull();
+    expect(root.querySelector('.nh-explore-intro')).toBeNull();
+
+    // What it keeps: the hook, the way to see it, and the way to actually run.
+    expect(root.querySelector('.nh-headline')?.textContent).toBe(
+      'Your neighbourhood is uncharted.'
+    );
+    expect(root.querySelector('.nh-secondary--primary')?.textContent).toBe('Show my streets');
+    expect(root.querySelector('[data-action="handoff"]')).toBeTruthy();
+    expect(root.querySelector('.nh-honest')?.textContent).toContain(
+      'Previews and samples do not count'
+    );
+    expect(root.querySelector('.nh-legend')).toBeTruthy();
+
+    const words = visiblePanelText(root).trim().split(/\s+/).filter(Boolean);
+    expect(words.length).toBeLessThanOrEqual(60);
+    shell.destroy();
   });
 
   it('lets a visitor pick a preview without filing an outing or setting the atlas anchor', () => {
@@ -741,7 +806,7 @@ describe('NeighbourhoodExperience desktop exploration', () => {
       'true'
     );
     map.fire('click', { lngLat: { lat: 37.7749, lng: -122.4194 } });
-    expect(root.querySelector('.nh-preview-status')?.textContent).toContain('Preview only');
+    expect(root.querySelector('.nh-preview-status')?.textContent).toContain('Previewing');
     expect(map.source.setData.mock.calls.at(-1)?.[0].features).toHaveLength(19);
     expect(deps.neighbourhood.setGoal).not.toHaveBeenCalled();
     expect(deps.neighbourhood.getState().anchorCell).toBeNull();

@@ -455,10 +455,15 @@ export class NeighbourhoodExperience {
    * the accordion gone they are the only signal that more than Explore exists.
    */
   private factsBlock(firstVisit: boolean): string {
-    const laterGoals = firstVisit
-      ? `<p class="nh-facts-heading">${NEIGHBOURHOOD_COPY.laterGoalsLabel}</p>
+    // A desk first visit keeps the legend — it is how you read what the sample
+    // just drew — and drops the ghost tease and the unlock ladder, which are
+    // both about runs you cannot take from here.
+    const lean = firstVisit && isDesk();
+    const laterGoals =
+      firstVisit && !lean
+        ? `<p class="nh-facts-heading">${NEIGHBOURHOOD_COPY.laterGoalsLabel}</p>
          <div class="nh-goals nh-goals--later" role="group" aria-label="${NEIGHBOURHOOD_COPY.laterGoalsLabel}">${this.goalButton('strengthen')}${this.goalButton('challenge')}</div>`
-      : '';
+        : '';
     // A first visit is already invited to the tour below; only returning
     // runners need the standing link.
     const tourLink = firstVisit
@@ -467,13 +472,13 @@ export class NeighbourhoodExperience {
     return `
       <div class="nh-facts">
         ${laterGoals}
-        <div class="nh-ghostline"></div>
+        ${lean ? '' : '<div class="nh-ghostline"></div>'}
         <div class="nh-legend" aria-label="${NEIGHBOURHOOD_COPY.legendHeading}">
           <span class="nh-swatch nh-swatch--unvisited"></span>${NEIGHBOURHOOD_COPY.legend.unvisited}
           <span class="nh-swatch nh-swatch--collected"></span>${NEIGHBOURHOOD_COPY.legend.collected}
           <span class="nh-swatch nh-swatch--strengthened"></span>${NEIGHBOURHOOD_COPY.legend.strengthened}
         </div>
-        ${this.ownershipBlock()}
+        ${lean ? '' : this.ownershipBlock()}
         ${tourLink}
       </div>`;
   }
@@ -488,6 +493,12 @@ export class NeighbourhoodExperience {
       ? `<p class="nh-last">${this.summaryLine(this.lastSummary)}</p>`
       : '';
 
+    // From a desk nothing can be collected, so the running furniture — the goal
+    // selector, the credit rules, the unlock ladder — describes an action the
+    // visitor cannot take. It stays on the phone, where it is the point. On
+    // desktop the panel has one job: show the mechanic, then hand off.
+    const lean = firstVisit && isDesk();
+
     const intro = firstVisit
       ? `
           <header class="nh-header">
@@ -495,9 +506,13 @@ export class NeighbourhoodExperience {
             <h1 class="nh-headline nh-headline--invite">${NEIGHBOURHOOD_COPY.firstVisit.headline}</h1>
           </header>
           <p class="nh-lede">${NEIGHBOURHOOD_COPY.firstVisit.lede}</p>
-          <div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${this.goalButton('explore')}</div>
+          ${
+            lean
+              ? ''
+              : `<div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${this.goalButton('explore')}</div>
           ${this.ruleChips()}
           <p class="nh-anchor">${NEIGHBOURHOOD_COPY.firstVisit.anchorNote}</p>`
+          }`
       : `
           <header class="nh-header">
             <h1 class="nh-headline">${NEIGHBOURHOOD_COPY.headline}</h1>
@@ -518,7 +533,15 @@ export class NeighbourhoodExperience {
           ${intro}
           ${summaryBlock}
           <div class="nh-explore" data-tour="preview">
-            <p class="nh-explore-intro">${isDesk() ? NEIGHBOURHOOD_COPY.desktop.invitation : NEIGHBOURHOOD_COPY.desktop.phoneInvitation}</p>
+            ${
+              lean
+                ? ''
+                : `<p class="nh-explore-intro">${
+                    isDesk()
+                      ? NEIGHBOURHOOD_COPY.desktop.invitation
+                      : NEIGHBOURHOOD_COPY.desktop.phoneInvitation
+                  }</p>`
+            }
             <p class="nh-preview-status">${this.state.anchorCell ? '' : this.previewPoint ? NEIGHBOURHOOD_COPY.desktop.previewHint : NEIGHBOURHOOD_COPY.desktop.defaultCity}</p>
             <div class="nh-explore-actions">
               <button type="button" class="nh-secondary nh-secondary--primary" data-action="show-streets">${NEIGHBOURHOOD_COPY.desktop.showStreets}</button>
@@ -541,7 +564,7 @@ export class NeighbourhoodExperience {
             <p class="nh-sketch-status" role="status"></p>
             ${
               isDesk()
-                ? `<button type="button" class="nh-secondary" data-action="handoff" data-tour="handoff">${NEIGHBOURHOOD_COPY.desktop.handoff}</button>
+                ? `<button type="button" class="nh-secondary nh-secondary--handoff" data-action="handoff" data-tour="handoff">${NEIGHBOURHOOD_COPY.desktop.handoff}</button>
             <div class="nh-handoff" ${this.handoffOpen ? '' : 'hidden'}>
               <div class="nh-qr"></div>
               <p>${NEIGHBOURHOOD_COPY.desktop.handoffNotice}</p>
@@ -556,7 +579,11 @@ export class NeighbourhoodExperience {
           ${this.factsBlock(firstVisit)}
           ${firstVisit && !this.tourPromptDismissed ? `<div class="nh-tour-invite"><button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tour}</button><button type="button" class="nh-secondary" data-action="dismiss-tour" aria-label="Dismiss tour invitation">Not now</button></div>` : ''}
           <div class="nh-footer">
-            <button type="button" class="nh-secondary" data-action="atlas" aria-expanded="${this.atlasOpen}">${NEIGHBOURHOOD_COPY.myAtlas}</button>
+            ${
+              lean
+                ? ''
+                : `<button type="button" class="nh-secondary" data-action="atlas" aria-expanded="${this.atlasOpen}">${NEIGHBOURHOOD_COPY.myAtlas}</button>`
+            }
             <button type="button" class="nh-secondary" data-action="account">${NEIGHBOURHOOD_COPY.account}</button>
             <button type="button" class="nh-secondary nh-advanced-toggle" data-action="advanced" aria-pressed="false">${NEIGHBOURHOOD_COPY.advancedTools}</button>
           </div>
@@ -1193,7 +1220,9 @@ export class NeighbourhoodExperience {
     const actions = this.root?.querySelector<HTMLElement>('.nh-sample-actions');
     if (!status || !actions) return;
     status.hidden = !this.sampleActive;
-    actions.hidden = !this.sampleActive;
+    // Nothing to skip once it has finished — otherwise the completed sample
+    // leaves a control behind that does nothing.
+    actions.hidden = !this.sampleActive || this.sampleDone;
     status.textContent = this.sampleDone
       ? NEIGHBOURHOOD_COPY.desktop.sampleResult(this.sampleVisited)
       : NEIGHBOURHOOD_COPY.desktop.sampleBadge;
