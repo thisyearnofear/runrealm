@@ -994,21 +994,7 @@ export class LocationService extends BaseService {
               <div id="location-search-results" class="search-results"></div>
             </div>
 
-            <div class="current-location-info" id="current-location-info">
-              ${
-                this.currentLocation
-                  ? `
-                <div class="location-display">
-                  <strong>Current:</strong> ${
-                    this.currentLocation.address ||
-                    `${this.currentLocation.lat.toFixed(4)}, ${this.currentLocation.lng.toFixed(4)}`
-                  }
-                  <small>(${this.currentLocation.source})</small>
-                </div>
-              `
-                  : ''
-              }
-            </div>
+            <div class="current-location-info" id="current-location-info"></div>
           </div>
         </div>
         <div class="modal-focus-trap" tabindex="0"></div>
@@ -1016,6 +1002,41 @@ export class LocationService extends BaseService {
     });
 
     document.body.appendChild(this.locationModal);
+    this.renderCurrentLocation();
+  }
+
+  /**
+   * Fills the "Current:" line, as a node.
+   *
+   * `address` is whatever Mapbox called the place, from `reverseGeocode` --
+   * another string chosen by whoever owns it. It used to be interpolated into
+   * this modal's markup, which made a place name executable.
+   */
+  private renderCurrentLocation(): void {
+    const container = this.locationModal?.querySelector('#current-location-info');
+    if (!container) return;
+    container.textContent = '';
+    if (!this.currentLocation) return;
+
+    const display = document.createElement('div');
+    display.className = 'location-display';
+
+    const label = document.createElement('strong');
+    label.textContent = 'Current:';
+    display.appendChild(label);
+
+    const address = document.createElement('span');
+    address.textContent =
+      this.currentLocation.address ||
+      `${this.currentLocation.lat.toFixed(4)}, ${this.currentLocation.lng.toFixed(4)}`;
+    display.appendChild(document.createTextNode(' '));
+    display.appendChild(address);
+
+    const source = document.createElement('small');
+    source.textContent = `(${this.currentLocation.source})`;
+    display.appendChild(source);
+
+    container.appendChild(display);
   }
 
   private setupEventHandlers(): void {
@@ -1128,24 +1149,37 @@ export class LocationService extends BaseService {
       return;
     }
 
-    resultsContainer.innerHTML = results
-      .map(
-        (result) => `
-      <div class="search-result-item" data-lat="${result.lat}" data-lng="${
-        result.lng
-      }" data-name="${result.name}">
-        <div class="result-name">${result.name}</div>
-        ${
-          result.region || result.country
-            ? `<div class="result-details">${[result.region, result.country]
-                .filter(Boolean)
-                .join(', ')}</div>`
-            : ''
-        }
-      </div>
-    `
-      )
-      .join('');
+    // Built as nodes rather than markup. These strings are Mapbox place names,
+    // which are chosen by whoever owns the place -- a business can call itself
+    // `<img src=x onerror=...>`, and Mapbox does not sanitise. Interpolating
+    // into innerHTML made that executable, and the `data-name` attribute was
+    // the sharper edge: a single quote closed it and the rest parsed as a
+    // live event handler on the row.
+    resultsContainer.textContent = '';
+
+    for (const result of results) {
+      const item = document.createElement('div');
+      item.className = 'search-result-item';
+      // dataset assigns a property, so there is no attribute to break out of.
+      item.dataset.lat = String(result.lat);
+      item.dataset.lng = String(result.lng);
+      item.dataset.name = result.name;
+
+      const name = document.createElement('div');
+      name.className = 'result-name';
+      name.textContent = result.name;
+      item.appendChild(name);
+
+      const detail = [result.region, result.country].filter(Boolean).join(', ');
+      if (detail) {
+        const details = document.createElement('div');
+        details.className = 'result-details';
+        details.textContent = detail;
+        item.appendChild(details);
+      }
+
+      resultsContainer.appendChild(item);
+    }
 
     // Add click handlers for results
     if (this.domService) {

@@ -111,7 +111,7 @@ RunRealm/
 ├── server.js                 # Express backend (dev token broker, webhooks)
 ├── api/                      # Vercel serverless functions:
 │   ├── reactor/token.js      #   Reactor token broker
-│   └── geocode.js            #   Mapbox reverse geocoding proxy
+│   └── geocode.js            #   Mapbox geocoding proxy (reverse + place search)
 └── docs/                     # Architecture, features, guides, roadmap
 ```
 

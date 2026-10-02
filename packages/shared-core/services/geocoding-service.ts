@@ -5,12 +5,17 @@ export type GeocodeFeature = {
 };
 
 /**
- * Reverse geocoding, through our own server.
+ * Geocoding, through our own server.
  *
  * The proxy (`api/geocode.js`) holds the Mapbox token, so the token is not in
  * the page, not in `localStorage`, and the runner's IP address never reaches
- * Mapbox. It re-coarsens server-side — see `server/geocode-grant.js` for why
- * that is not merely belt-and-braces.
+ * Mapbox. Reverse geocoding is re-coarsened server-side — see
+ * `server/geocode-grant.js` for why that is not merely belt-and-braces.
+ *
+ * Both directions go through the proxy. Forward search was left client-side
+ * for a while on the reasoning that "a typed query is not a location", which
+ * was true of the query but not of the request: it still carried the token
+ * out of the page.
  *
  * If the proxy is absent (self-hosted, no function deployed) we fall back to
  * calling Mapbox directly with whatever token we were constructed with. That
@@ -30,11 +35,62 @@ export class GeocodingService {
     this.proxyPath = proxyPath;
   }
 
+  /**
+   * Forward search, through our server.
+   *
+   * Proxied for the same reason reverse geocoding is: not because the query
+   * is sensitive — it is the user's own keystrokes — but because the request
+   * used to carry the Mapbox token out of the page and tell Mapbox the
+   * runner's IP on every keystroke past three characters. The token is the
+   * part that matters, and it belongs on the server either way.
+   *
+   * Resolves to an empty array on any failure, like the direct path.
+   */
+  private async searchViaProxy(
+    query: string,
+    limit: number,
+    signal?: AbortSignal
+  ): Promise<GeocodeFeature[] | null> {
+    const url = `${this.proxyPath}?q=${encodeURIComponent(query)}&limit=${limit}`;
+    try {
+      const res = await fetch(url, { signal });
+      if (res.status === 404) {
+        // No function deployed at this origin. Remember it so we stop probing.
+        this.proxyUnavailable = true;
+        return null;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const results = Array.isArray(json?.results) ? json.results : [];
+      return results.map((r: any) => ({
+        name: String(r?.name ?? ''),
+        center: [Number(r?.lng), Number(r?.lat)] as [number, number],
+        // The server already reduced country/region to flat strings; keep the
+        // `context` shape so `searchLocations` does not have to care which
+        // path produced the result.
+        context: [
+          r?.country && { id: 'country', text: String(r.country) },
+          r?.region && { id: 'region', text: String(r.region) },
+        ].filter(Boolean),
+      }));
+    } catch (e) {
+      console.warn('Forward geocoding proxy error', e);
+      return null;
+    }
+  }
+
   async searchPlaces(query: string, limit = 5, signal?: AbortSignal): Promise<GeocodeFeature[]> {
     const q = query.trim();
     if (!q) return [];
-    // Forward search stays client-side: it is a typed query, not a position,
-    // so there is nothing sensitive to proxy and it needs no token round trip.
+
+    if (!this.proxyUnavailable) {
+      const viaProxy = await this.searchViaProxy(q, limit, signal);
+      if (viaProxy !== null) return viaProxy;
+      if (this.proxyUnavailable && !this.token) return [];
+    }
+
+    // Deployment without the function (self-hosted). Same caveat as reverse
+    // geocoding: old behaviour, no worse, but not the preferred path.
     if (!this.token) return [];
     const url = `${this.endpoint}/${encodeURIComponent(q)}.json?autocomplete=true&limit=${limit}&access_token=${encodeURIComponent(this.token)}`;
     try {

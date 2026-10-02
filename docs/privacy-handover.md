@@ -14,7 +14,8 @@ address never reaches Mapbox. What remains is a five-minute account change.
 
 ### What to do at https://account.mapbox.com/access-tokens/
 
-1. **Create a secret token** (`sk.`), scoped to public geocoding. Secret tokens
+1. **Create a secret token** (`sk.`), scoped to public geocoding — which now
+   covers both reverse geocoding and place search. Secret tokens
    are scoped to server use by Mapbox — they do not work from a browser at
    all, which is exactly the property we want now that the token only ever
    runs server-side.
@@ -26,27 +27,58 @@ address never reaches Mapbox. What remains is a five-minute account change.
 3. **Revoke the old public token.** Nothing needs it any more. Until you do,
    it is a credential that used to be handed to every visitor.
 
-4. **Drop the token scope you no longer use.** The token needs public
-   geocoding. It does **not** need:
+4. **Scopes: tick `geocoding:read` under Public scopes and nothing else.**
+   Leave every Secret scope unticked. Do **not** tick:
    - `styles:tiles` / `styles:read` — no Mapbox style is loaded. Tiles,
      glyphs and sprite all come from OpenFreeMap.
    - `fonts:read` — same reason.
-   - any secret scope on a token that is not `sk.`
-   - directions, unless you decide to turn route snapping back on (see below).
+   - `tilesets:read` / `datasets:read` — unused.
+   - `directions:read` — only if you decide to turn route snapping back on
+     (see below), and then it needs a public token again, not this one.
 
-5. **Confirm street labels still work** on the deployed site. If they vanish,
+5. **Leave URL restrictions blank.** Do not add one. A URL restriction is a
+   browser-side control: Mapbox checks the `Origin` header, and a call from a
+   Vercel function to `api.mapbox.com` has none. A restricted token would be
+   rejected and `/api/geocode` would return 502. The page's own wording —
+   *"This token will work for requests originating from any URL"* — is the
+   state you want.
+
+   This inverts the advice an earlier version of this file gave, which assumed
+   a browser token. There is no browser token any more.
+
+6. **Understand what a narrow scope does and does not buy you.** Mapbox's own
+   note on that page: *"All tokens, regardless of the scopes included, are able
+   to view styles, tilesets, and geocode locations for the token's owner's
+   account."* A tight scope therefore does not make a leaked token harmless —
+   it makes it *less obviously* useful. The actual protection is that the
+   token never reaches a browser, plus revoking the old `pk.`.
+
+7. **Confirm street labels still work** on the deployed site. If they vanish,
    the usual cause is the environment variable being scoped to Preview rather
    than Production.
+8. **Confirm place search works**: open the location modal and type a place name.
+   It should return results with no browser token present.
 
 ### A note on route snapping
 
 Route snapping (Mapbox Directions) still goes to Mapbox directly from the
-browser and is currently **off** — nothing turns it on. It has no proxy yet.
-Two honest options: leave it off, or give it the same treatment as geocoding.
-Its waypoints are already coarsened to ~110 m, so it is not urgent the way
-the client-side geocoding token was.
+browser, and it has no proxy. It is inert today for an accidental reason worth
+naming: `getMapboxRoute` reads `config.mapbox.accessToken`, which on Vercel is
+`''` (no `NEXT_PUBLIC_API_BASE_URL`, so the `/api/tokens` fetch is skipped), so
+it throws and `generateFallbackRoute` falls back to generated waypoints. It is
+not switched off by a flag — nothing would turn it back on.
+
+Two honest options: leave it inert, or give it the same proxy treatment as
+geocoding. Its waypoints are already coarsened to ~110 m, so it is not urgent
+the way the client-side geocoding token was.
 
 ## 2. Flip the CSP from report-only to enforcing (one deploy)
+
+> **Before you do anything else:** push. The live site is still serving
+> `no-referrer-when-downgrade` and no CSP at all, because none of this is
+> deployed. Check with `npm run check:deployed` — it exits non-zero and names
+> each header that is missing or wrong.
+
 
 The policy is live in report-only mode: violations are logged to the devtools
 console, nothing is blocked. Enforcing it is a one-word change — delete
@@ -116,3 +148,22 @@ What this does *not* mean is that the endpoint is safe to turn on. It is
 unauthenticated with `Access-Control-Allow-Origin: *`. Before switching sync
 on, it needs a real auth story — which is an infrastructure decision, not a
 code fix.
+
+---
+
+## Verifying without a checklist
+
+`npm run check:deployed` fetches the live site and compares its headers
+against `vercel.json`. It is how you confirm the deploy landed, and it runs
+nightly in CI so a header that quietly stopped being served gets noticed
+without anyone remembering to look.
+
+It exits non-zero and names each mismatch. Point it somewhere else with
+`npm run check:deployed -- https://staging.example.com`, or set the
+`RUNREALM_URL` environment variable (the CI job reads the optional
+`RUNREALM_PRODUCTION_URL` repository variable into it).
+
+That script exists because of the incident that motivated all of this: the
+Referrer-Policy fix was applied to two configs, neither of which served
+production, and stayed broken for two releases with every test green. A test
+can only assert what is in the repo. This asserts what is on the wire.

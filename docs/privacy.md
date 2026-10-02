@@ -34,6 +34,7 @@ reads your history needs the track, so it is not kept.
 | `POST /api/runs` | **Nothing — this path is off.** See below | Everything |
 | Attestation oracle | Distance, duration, pace band, H3 cell ids | The GPS track |
 | Mapbox (reverse geocoding) | Position rounded to ~110 m | Full-precision coordinates |
+| Mapbox (place search) | The text you typed, after debounce | Anything you did not type |
 | Mapbox (route planning) | Waypoints rounded to ~110 m | Full-precision coordinates |
 | OpenFreeMap (basemap tiles, fonts, labels) | The tile you are looking at | Your position — see the note on `Referrer-Policy` below |
 | ESRI (satellite tiles) | The tile you are looking at | Your position |
@@ -71,12 +72,11 @@ All three are covered by
 returns 404 on Vercel. Even if the sync service were switched on today, there
 is nowhere for it to send a run.
 
-### About reverse geocoding
+### About geocoding
 
 When the app wants to show a street name for where you are, it asks Mapbox.
 It sends coordinates rounded to three decimal places — roughly 110 m, enough to
 name a neighbourhood, far too coarse to reconstruct where you live or work.
-Forward search (typing a place name) is unaffected.
 
 **This goes through our own server, not the browser.** `/api/geocode` is a
 Vercel function that holds the Mapbox token. Two things follow from that, and
@@ -99,8 +99,41 @@ If the function is not deployed (a self-hosted install), the app falls back to
 calling Mapbox directly — the old behaviour, and no worse, but the token then
 has to exist in the client.
 
+#### Place search goes the same way
+
+Typing a place name in the location modal used to go straight to Mapbox from
+the browser, carrying the token in the URL. The argument for leaving it was that
+"a typed query is not a location", and that was true of the query — it is your
+own keystrokes. It was not true of the *request*, which told Mapbox your IP
+address on every keystroke past three characters. That is the same objection as
+reverse geocoding, so it now goes through `/api/geocode` too.
+
+The two directions are not symmetric, and it is worth being precise about the
+difference:
+
+- Reverse takes coordinates, so the server can coarsen them. It does, and does
+  not take the client's word for it.
+- Forward takes arbitrary text, so there is nothing to coarsen. If you paste
+  `40.71280,-74.0060` into the search box, those digits reach Mapbox as typed.
+  That is a query you wrote yourself, so it discloses nothing you had not
+  already chosen to disclose — but it is not the guarantee reverse gets.
+
+Forward results are **not cached**, unlike reverse. The reverse cache is keyed
+on a grid cell you have just disclosed anyway; a forward cache would be a log of
+what you searched and when, which is the exact shape of data this document has
+been removing. The server also strips control characters from the query,
+percent-encodes it into the Mapbox URL, and clamps the requested result count.
+
+A place name is chosen by whoever owns the place, and Mapbox does not sanitise
+it. So the modal renders results as DOM nodes with `textContent`, never as
+interpolated markup — otherwise a business named `<img src=x onerror=...>` would
+run script in your page, and the `data-name` attribute made that reachable from
+a single quote in the name.
+
 Route snapping still uses Mapbox directly and is currently **off**, because it
-has no proxy yet. It is not on by default and nothing turns it on.
+has no proxy yet. It is not on by default and nothing turns it on. It fails
+closed in practice: the client token is empty in production, so the call throws
+and the app falls back to generated waypoints.
 
 ### About Strava
 
