@@ -1285,22 +1285,31 @@ Make this feel like a personal AI running coach in a game world!
     };
   }
 
+  /**
+   * A fallback route when the AI returns something unusable.
+   *
+   * This used to ask Mapbox Directions for a road-following route first. That
+   * is gone, and the reason is worth keeping in place of the code.
+   *
+   * It required a Mapbox token in the browser — the same property that
+   * `/api/geocode` was built to remove. In production `config.mapbox
+   * .accessToken` is empty, so the call threw on every invocation and the
+   * circular fallback below ran anyway. Dead code that could not work.
+   *
+   * It was also the wrong shape: a waypoint set is the shape of a route
+   * someone intends to run, so sending it to a third party from the device
+   * disclosed a run's shape as well as the runner's IP. The coarsening to
+   * ~110m was a mitigation, not a fix, and the whole request still left the
+   * browser with the token attached.
+   *
+   * If road-following routes are wanted later they should go through a
+   * server proxy like geocoding does, so the token stays server-side and the
+   * coordinates stay coarse.
+   */
   private async generateFallbackRoute(
     center: { lat: number; lng: number },
     distance: number
   ): Promise<[number, number][]> {
-    // Try to get road-following route via Mapbox Directions
-    try {
-      const waypoints = this.generateCircularWaypoints(center, distance);
-      const roadRoute = await this.getMapboxRoute(waypoints);
-      if (roadRoute && roadRoute.length > 2) {
-        return roadRoute;
-      }
-    } catch (error) {
-      console.warn('Failed to get road route, using fallback:', error);
-    }
-
-    // Fallback to simple circular route
     const points: [number, number][] = [];
     const radius = distance / (2 * Math.PI * 111000);
     const numPoints = 8;
@@ -1313,55 +1322,6 @@ Make this feel like a personal AI running coach in a game world!
     }
 
     return points;
-  }
-
-  private generateCircularWaypoints(
-    center: { lat: number; lng: number },
-    distance: number
-  ): [number, number][] {
-    const radius = distance / (2 * Math.PI * 111000);
-    const waypoints: [number, number][] = [];
-
-    // Generate 4 waypoints for a roughly circular route
-    for (let i = 0; i < 4; i++) {
-      const angle = (i / 4) * 2 * Math.PI;
-      const lat = center.lat + radius * Math.cos(angle);
-      const lng = center.lng + radius * Math.sin(angle);
-      waypoints.push([lng, lat]);
-    }
-    waypoints.push(waypoints[0]); // Close the loop
-
-    return waypoints;
-  }
-
-  private async getMapboxRoute(waypoints: [number, number][]): Promise<[number, number][]> {
-    const config = this.config.getConfig();
-    const token = config.mapbox?.accessToken;
-
-    if (!token) {
-      throw new Error('No Mapbox token available');
-    }
-
-    // Coarsen before this leaves the device, for the same reason
-    // geocoding-service does: a full-precision waypoint set is the shape of a
-    // route someone intends to run. Three decimals is ~110m, which routes
-    // street-network geometry perfectly well.
-    const coordinates = waypoints
-      .map(([lng, lat]) => `${Math.round(lng * 1000) / 1000},${Math.round(lat * 1000) / 1000}`)
-      .join(';');
-    const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?geometries=geojson&access_token=${token}`;
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Mapbox API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (data.routes?.[0]?.geometry) {
-      return data.routes[0].geometry.coordinates;
-    }
-
-    throw new Error('No route found');
   }
 
   private calculatePaceFromDifficulty(difficulty: number): number {

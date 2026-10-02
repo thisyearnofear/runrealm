@@ -357,4 +357,81 @@ describe('GeocodingService privacy', () => {
       }
     });
   });
+  describe('dead Mapbox paths stay dead', () => {
+    // Route snapping used to call Mapbox Directions from the browser with a
+    // token. It could not work in production, because no token exists
+    // client-side -- which is exactly why leaving it was dangerous: the next
+    // person to configure a token, for any reason, would have switched it on
+    // with no flag and no notice.
+    //
+    // Note what is deliberately NOT asserted: that the client tree contains
+    // no Mapbox URL at all. It does contain two. The self-hosted fallback in
+    // geocoding-service.ts is a real, documented browser-side path, and an
+    // earlier version of this guard claimed otherwise while passing only
+    // because its regex looked for a variable literally named `token`.
+    // An assertion that is both false and vacuous is worse than none.
+    //
+    // What is asserted instead is the precise invariant: the only browser-side
+    // Mapbox endpoints left are those two fallback constants, and nothing else
+    // reaches for Mapbox from the device.
+    it('has no browser-side Mapbox endpoint outside the documented fallback', () => {
+      const roots = ['apps/web/src', 'packages/shared-core', 'packages/shared-utils'];
+      const offenders: string[] = [];
+
+      // The one file allowed to hold a browser-side Mapbox URL, and only for
+      // the self-hosted fallback where no proxy function exists.
+      const allowed = 'packages/shared-core/services/geocoding-service.ts';
+      for (const root of roots) {
+        const dir = path.join(repoRoot, root);
+        const walkSource = (d: string) => {
+          for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+            const full = path.join(d, entry.name);
+            if (entry.isDirectory()) {
+              if (entry.name === 'dist' || entry.name === 'node_modules') continue;
+              walkSource(full);
+            } else if (/\.(ts|tsx|js)$/.test(entry.name)) {
+              const source = fs.readFileSync(full, 'utf8');
+              if (full.includes(`${path.sep}__tests__${path.sep}`)) continue;
+              if (source.includes('api.mapbox.com')) {
+                const rel = path.relative(repoRoot, full);
+                if (rel !== allowed) offenders.push(rel);
+              }
+            }
+          }
+        };
+        walkSource(dir);
+      }
+
+      expect(offenders).toEqual([]);
+    });
+
+    it('the fallback file holds only the two documented endpoint constants', () => {
+      // Pins the exception itself, so widening it is a deliberate act.
+      const source = fs.readFileSync(
+        path.join(repoRoot, 'packages/shared-core/services/geocoding-service.ts'),
+        'utf8'
+      );
+      const urls = source.match(/https:\/\/api\.mapbox\.com[^'\s]*/g) ?? [];
+      expect(urls.sort()).toEqual([
+        'https://api.mapbox.com/search/geocode/v6/forward',
+        'https://api.mapbox.com/search/geocode/v6/reverse',
+      ]);
+      // And no Directions endpoint, which is what route snapping used.
+      // Matched as a URL, not the bare word: this file legitimately says
+      // "both directions" in a comment, and a loose assertion there would
+      // fail on English.
+      expect(source).not.toContain('api.mapbox.com/directions');
+    });
+
+    it('removed the duplicated v5 geocoding service', () => {
+      // It was a second GeocodingService, still on the v5 endpoint and the
+      // v5 response shape, imported by nothing and not exported from its
+      // package -- but present in the CI matrix, so its spec ran and gave it
+      // the appearance of being live. Wiring it up would have parsed a v6
+      // response with a v5 parser, which fails silently rather than loudly.
+      expect(fs.existsSync(path.join(repoRoot, 'packages/shared-utils/geocoding-service.ts'))).toBe(
+        false
+      );
+    });
+  });
 });

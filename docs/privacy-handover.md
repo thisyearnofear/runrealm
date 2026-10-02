@@ -71,25 +71,33 @@ address never reaches Mapbox. What remains is a five-minute account change.
 8. **Confirm place search works**: open the location modal and type a place name.
    It should return results with no browser token present.
 
-### A note on route snapping
+### A note on route snapping — removed
 
-Route snapping (Mapbox Directions) still goes to Mapbox directly from the
-browser, and it has no proxy. It is inert today for an accidental reason worth
-naming: `getMapboxRoute` reads `config.mapbox.accessToken`, which on Vercel is
-`''` (no `NEXT_PUBLIC_API_BASE_URL`, so the `/api/tokens` fetch is skipped), so
-it throws and `generateFallbackRoute` falls back to generated waypoints. It is
-not switched off by a flag — nothing would turn it back on.
+Route snapping (Mapbox Directions) used to go to Mapbox directly from the
+browser with no proxy. It has been deleted rather than left inert.
 
-Two honest options: leave it inert, or give it the same proxy treatment as
-geocoding. Its waypoints are already coarsened to ~110 m, so it is not urgent
-the way the client-side geocoding token was.
+It was inert for an accidental reason worth recording, because the accident
+is the lesson: `getMapboxRoute` read `config.mapbox.accessToken`, which on
+Vercel is `''` (no `NEXT_PUBLIC_API_BASE_URL`, so the `/api/tokens` fetch is
+skipped), so it threw on every call and `generateFallbackRoute` fell back to
+generated waypoints. Nothing would have turned it back on, and no flag said
+so — it was safe by the absence of a token rather than by a decision.
+
+That is a poor thing to leave in a codebase. The next person to configure a
+token, for any reason, would have silently switched on a path that sends a
+run's shape to a third party from the device, carrying the token with it.
+Deleting it means the feature cannot come back by accident, and the reasoning
+is recorded above it for whoever wants road-following routes properly.
+
+If they are wanted later, they belong behind a server proxy like geocoding,
+so the token stays server-side and the waypoints stay coarse.
 
 ## 2. Flip the CSP from report-only to enforcing (one deploy)
 
-> **Before you do anything else:** push. The live site is still serving
-> `no-referrer-when-downgrade` and no CSP at all, because none of this is
-> deployed. Check with `npm run check:deployed` — it exits non-zero and names
-> each header that is missing or wrong.
+> The headers are live and verified. `npm run check:deployed` exits 0 against
+> production: `strict-origin-when-cross-origin`, `Permissions-Policy`, and the
+> report-only CSP are all on the wire. This step is the last one that is not
+> yet true of anything.
 
 
 The policy is live in report-only mode: violations are logged to the devtools
@@ -106,9 +114,12 @@ with the exact directive and the offending URL.
 Cover at minimum:
 
 - [ ] **Cold load.** The map renders, labels/fonts appear, and the camera works.
-- [ ] **Street labels appear.** That means `/api/geocode` found a token and
-      answered. If they are blank, check `MAPBOX_ACCESS_TOKEN` is set in the
-      Vercel **Production** environment, not just Preview.
+- [ ] **Street labels appear.** This is the one to check first, because it is
+      the item that was blocked longest. If they are blank, the function is
+      answering `500 MAPBOX_ACCESS_TOKEN is not set` — check the var is in the
+      Vercel **Production** environment, and that the deployment is newer than
+      the variable (serverless functions snapshot env at deploy time, so a
+      newly added variable needs a redeploy to take effect).
 - [ ] **Basemap switch.** Streets → dark → satellite → back. All three load.
       This is the one most likely to surface a missing tile origin.
 - [ ] **Run a territory claim** on mobile or web. Exercises the chain RPC
