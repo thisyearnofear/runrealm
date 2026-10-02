@@ -222,7 +222,7 @@ runrealm/
 ├── contracts/                # Smart contracts (Solidity)
 ├── scripts/                  # Build, sync, deployment scripts
 ├── config/environment/       # Environment variable templates
-├── netlify/functions/        # Serverless functions (static-deploy API broker)
+├── api/reactor/              # Vercel serverless function (Reactor token broker)
 └── server.js                 # Express.js backend server
 ```
 

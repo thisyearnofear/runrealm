@@ -10,7 +10,7 @@ flow, deploy state, and the assets the program requires.
 | --- | --- | --- |
 | Functioning dApp demo using Zama FHE | ✅ Done | `ConfidentialTerritoryDefense` (Sepolia) + `ConfidentialShieldWidget` |
 | Smart contract + Frontend codebase | ✅ Done | `contracts/zama/` + `apps/web` |
-| Working demo deployed on a website | ⏳ Needs deploy | Netlify config present (`netlify.toml`); set `RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS` |
+| Working demo deployed on a website | ✅ Deployed | Vercel project `runrealm`; set `RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS` |
 | 3-minute real-person pitch video | ⏳ Draft script (see below) | `docs/zama-builder-track.md#demo-video-script` |
 | X thread / article | ⏳ Draft (see below) | `docs/zama-builder-track.md#x-thread-draft` |
 
@@ -62,7 +62,7 @@ npx hardhat compile
 npm run deploy:confidential
 #    → writes deployments/sepolia/ConfidentialTerritoryDefense.json
 #    → export RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=<new address>   (local, for contracts.ts)
-#    → set NEXT_PUBLIC_RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=<new address> in Netlify
+#    → set NEXT_PUBLIC_RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=<new address> in Vercel
 #    → npm run build:shared   # so contracts.ts picks up the address
 ```
 
@@ -73,17 +73,19 @@ npm run lint:errors   # passes
 npm run build:web     # static export → apps/web/dist
 ```
 
-## Deploy the demo site (Netlify)
+## Deploy the demo site (Vercel)
 
-```bash
-# Set these in the Netlify build environment (the web app reads NEXT_PUBLIC_* vars):
-#   NEXT_PUBLIC_RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=0xa15C61871E4D096093d183040D0c1005CB4Fe0b8
-#   NEXT_PUBLIC_SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
-npm run build:web          # static export → apps/web/dist
-# Netlify publish dir: apps/web/dist  (see netlify.toml)
+Set these in the Vercel Production environment (the web app reads `NEXT_PUBLIC_*`):
+
+```
+NEXT_PUBLIC_RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS=0xa15C61871E4D096093d183040D0c1005CB4Fe0b8
+NEXT_PUBLIC_SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 ```
 
-Demo URL: _<fill in after Netlify deploy>_
+Push to `main`, or `vercel --prod`. Output directory is `apps/web/dist`
+(see `vercel.json`).
+
+Demo URL: `https://runrealm-psi.vercel.app`
 
 ## Demo video script
 

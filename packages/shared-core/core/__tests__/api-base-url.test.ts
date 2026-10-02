@@ -3,12 +3,12 @@
  *
  * Phase 4 moved hosting toward Cloudflare, and the thing that made it a
  * question at all is that the client hard-coded relative `/api/*` paths.
- * Those only work because Netlify proxies them to a third-party origin —
+ * Those only work because a proxy serves them from another origin —
  * and Cloudflare Pages documents that proxying "will only support relative
  * URLs on your site. You cannot proxy external domains."
  *
  * So the client either calls the API at an absolute origin, or the deploy is
- * stuck on Netlify. These tests pin that resolution in one place instead of
+ * stuck pointing at a dead host. These tests pin that resolution in one place instead of
  * at four call sites.
  */
 
@@ -40,7 +40,7 @@ describe('ConfigService API base URL', () => {
   const config = ConfigService.getInstance();
 
   it('is empty by default, meaning same-origin', () => {
-    // The Netlify shape: `_redirects` proxies `/api/*`, so a relative path
+    // The deployed shape: a proxy serves `/api/*`, so a relative path
     // is correct and adding a base would double the prefix.
     withEnv(undefined, () => {
       expect(config.getApiBaseUrl()).toBe('');

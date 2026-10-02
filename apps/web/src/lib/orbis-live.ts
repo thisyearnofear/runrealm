@@ -10,7 +10,6 @@ import type { WorldSnapshot } from '@runrealm/shared-core/types/world-state';
 
 export const REACTOR_MODEL_NAME = 'reactor/visko-orbis-dynamic';
 export const DEFAULT_TOKEN_PATH = '/api/reactor/token';
-export const NETLIFY_TOKEN_PATH = '/.netlify/functions/reactor-token';
 
 export interface ReactorTokenResponse {
   jwt: string;
@@ -39,9 +38,10 @@ export function getReactorTokenEndpoints(): string[] {
   if (explicit) endpoints.push(explicit);
   if (apiBase) endpoints.push(`${trimTrailingSlash(apiBase)}${DEFAULT_TOKEN_PATH}`);
 
-  // Static Next exports cannot serve App Router API routes. Try same-origin
-  // first for dynamic deployments, then Netlify Functions, then local Express.
-  endpoints.push(DEFAULT_TOKEN_PATH, NETLIFY_TOKEN_PATH);
+  // Served by a Vercel function at api/reactor/token.js. Static Next exports
+  // cannot serve App Router API routes, so the same-origin path is the one
+  // that works on the deployed site; local Express picks it up too.
+  endpoints.push(DEFAULT_TOKEN_PATH);
 
   if (typeof window !== 'undefined') {
     const { origin, port, hostname } = window.location;

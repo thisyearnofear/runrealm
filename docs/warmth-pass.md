@@ -381,12 +381,18 @@ moment a second writer or a warm start existed.
 
 ### The finding
 
-`netlify.toml` carries deliberate work that a naive `wrangler pages deploy`
+`vercel.json` carries deliberate work that a naive `wrangler pages deploy`
 would drop: HTML `no-store` so a deploy is picked up instead of serving an
-index that points at deleted hashed assets; `immutable` for a year on
-content-hashed chunks; and explicit `Content-Type` on `.js`/`.css`/`.json`
-because Chrome and Brave have both refused to execute a module served with
-the wrong type. All ported to `apps/web/public/_headers`.
+index that points at deleted hashed assets, and `immutable` for a year on
+content-hashed chunks. Also ported to `apps/web/public/_headers`.
+
+One correction, learned the hard way later: those headers were written here
+first, then hosting moved to Vercel and `vercel.json` kept an older,
+insecure `Referrer-Policy` for two releases because the file was nobody's
+concern. `vercel.json` is now pinned to `_headers` by a test, and a second
+test fails if a new deploy config appears without them. Explicit `Content-Type`
+is deliberately *not* set on Vercel — it serves correct MIME types already, and
+pinning them by extension is how you serve a `.wasm` as the wrong type.
 
 ### The part that could not be ported
 
@@ -401,7 +407,7 @@ reads as a successful response and is not one.
 The alternative is the cheap one: the API already sends
 `Access-Control-Allow-Origin: *`, so the browser can call it at an absolute
 origin. `ConfigService.apiUrl()` resolves that from
-`NEXT_PUBLIC_API_BASE_URL`, empty by default (same-origin, the Netlify
+`NEXT_PUBLIC_API_BASE_URL`, empty by default (same-origin, the deployed
 shape).
 
 It is a *separate* variable from the existing `API_BASE_URL` on purpose.
@@ -599,8 +605,8 @@ The ledger needs a persistent volume shared by both processes, or
 deploy. A container's local disk is not durable, and a board that empties
 itself on deploy is worse than an empty one.
 
-Still Netlify? Nothing here is required. `apps/web/public/_redirects` and
-`netlify.toml` are untouched and still the live path.
+Still on Vercel? Nothing here is required. `apps/web/public/_redirects` and
+`vercel.json` are untouched and still the live path.
 
 ---
 

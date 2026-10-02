@@ -57,8 +57,11 @@ app.get('/api/tokens', (req, res) => {
       gemini: process.env.GOOGLE_GEMINI_API_KEY || '',
       strava: {
         clientId: process.env.STRAVA_CLIENT_ID || '',
+        // Falls back to the live host. This pointed at runrealm.netlify.app,
+        // which no longer serves us: Strava would have redirected the runner
+        // to a dormant deploy and the OAuth code would never come back.
         redirectUri:
-          process.env.STRAVA_REDIRECT_URI || 'https://runrealm.netlify.app/auth/strava/callback', // Updated for production
+          process.env.STRAVA_REDIRECT_URI || 'https://runrealm-psi.vercel.app/auth/strava/callback',
       },
     };
 

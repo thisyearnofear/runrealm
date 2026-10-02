@@ -31,7 +31,7 @@ reads your history needs the track, so it is not kept.
 
 | Destination | What is sent | What is **not** sent |
 |---|---|---|
-| `POST /api/runs` (your own server) | Distance, duration, and the **first and last** position of the run | Every intermediate fix, timestamps, accuracy |
+| `POST /api/runs` | **Nothing — this path is off.** See below | Everything |
 | Attestation oracle | Distance, duration, pace band, H3 cell ids | The GPS track |
 | Mapbox (reverse geocoding) | Position rounded to ~110 m | Full-precision coordinates |
 | Mapbox (route planning) | Waypoints rounded to ~110 m | Full-precision coordinates |
@@ -40,20 +40,36 @@ reads your history needs the track, so it is not kept.
 | Mapbox | **Nothing.** Tiles are not served by Mapbox | — |
 | Strava | OAuth tokens, exchanged over POST | Tokens are never placed in a redirect URL |
 
-### About `/api/runs`
+### About `/api/runs` — it is not switched on
 
-This endpoint is **unauthenticated and served with COS \***. That is a known,
-deliberate constraint of the current scaffold, and it is the reason nothing
-sensitive is ever accepted by it.
+**The shipped mobile app never uploads a run.** The sync service is only
+constructed when a caller passes a `sync` config, and nothing in the app does;
+every screen calls `MobileRunTrackingService.getInstance()` with no arguments.
+The upload path exists and is tested, but it is unreachable from the UI.
 
-The mobile app used to post the entire run object, including the full GPS
-track. That was wrong: it would have put a home-to-work trace somewhere
-readable by anything that could reach the API. It now sends only what the
-server needs to check that a run closed its loop — where it started and where
-it ended — plus the totals. The track itself never leaves the phone.
+We are saying so plainly because the honest version of this document is more
+useful than a flattering one. An earlier draft of this file described what
+`/api/runs` *would* send, in the present tense, as though it were happening.
+It is not, and a privacy document that implies a data flow which does not
+exist is wrong in the same way a document that overstates one is.
 
-The server keeps a summary in memory for the pending queue and never retains
-the submitted run object.
+For the day someone does wire it up, the constraints it has to respect:
+
+- The endpoint is **unauthenticated and served with CORS \***. That is why
+  nothing sensitive may ever be accepted by it.
+- It used to accept the whole run object including the GPS track. That was
+  wrong: it would have put a home-to-work trace somewhere readable by anything
+  that could reach the API. `uploadPayload()` now reduces a run to its
+  **first and last** position plus the totals before it is sent.
+- The server keeps a summary in memory for the pending queue and never
+  retains the submitted run object.
+
+All three are covered by
+`packages/mobile-app/src/services/__tests__/RunSyncService.upload.test.ts`.
+
+**Note:** the deployed site does not serve this endpoint at all — `/api/runs`
+returns 404 on Vercel. Even if the sync service were switched on today, there
+is nowhere for it to send a run.
 
 ### About reverse geocoding
 
@@ -61,6 +77,18 @@ When the app wants to show a street name for where you are, it asks Mapbox.
 It sends coordinates rounded to three decimal places — roughly 110 m, enough to
 name a neighbourhood, far too coarse to reconstruct where you live or work.
 Forward search (typing a place name) is unaffected.
+
+**Right now, in production, this does not run at all.** The client only fetches
+a Mapbox token from `/api/tokens` when a non-localhost API base is configured,
+and the Vercel build has no such base and no token in its environment. So
+geocoding and route snapping are effectively off, and the rows above describe
+what *would* be sent if the app were given a token.
+
+That is better for privacy and worse for the product, and it is worth knowing
+before someone reads the table above and assumes street labels are showing up.
+Restoring it means giving the browser a token again (public and URL-restricted)
+or proxying geocoding through a server function that holds the token — the
+latter being the only version that does not need the token to be public.
 
 ### About Strava
 
@@ -82,8 +110,14 @@ coordinates went out on every tile load — regardless of how carefully the
 geocoding and routing code rounded them.
 
 The policy is now `strict-origin-when-cross-origin`: third parties receive only
-`https://your-app.example/` and never the path or the query. Both deploy targets
-(Cloudflare and Netlify) are pinned by a test so the two cannot drift.
+`https://your-app.example/` and never the path or the query.
+
+This was fixed once and the fix was **live-inert for two releases**. It was
+written to `netlify.toml` and `_headers`, then hosting moved to Vercel, and
+`vercel.json` kept `no-referrer-when-downgrade` throughout because nobody was
+looking at a file nobody was deploying to. Every configured deploy target is
+now pinned by a test, including one that fails if a *new* target appears
+without the headers.
 
 A correction worth making: an earlier version of this document named Mapbox as
 the tile provider. It is not, and has not been for some time — the basemap is
@@ -128,9 +162,9 @@ Three things are worth noting about the policy itself:
 - `object-src 'none'`, and `frame-ancestors 'self'` on top of the existing
   `X-Frame-Options`.
 
-The full policy, and the reason for each entry, is in
-`apps/web/public/_headers`; `netlify.toml` carries an identical copy and a test
-asserts the two have not drifted.
+The full policy, and the reason for each entry, is in `apps/web/public/_headers`.
+`vercel.json` — the host that actually serves production — carries an identical
+copy, and a test asserts the two have not drifted.
 
 ## Seeing and erasing what is on your device
 

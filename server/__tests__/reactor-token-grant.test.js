@@ -126,27 +126,48 @@ test('request: malformed upstream payload returns 502 without leaking the body',
   assert.equal(result.body.jwt, undefined);
 });
 
-test('netlify handler: profile grant, 400, and legacy paths', async () => {
-  const { default: handler } = await import('../../netlify/functions/reactor-token.js');
+test('vercel handler: profile grant, 400, and legacy paths', async () => {
+  // This is the handler production actually runs. It used to point at the
+  // Netlify function, which quietly stopped being the deployed path when
+  // hosting moved -- so this test kept passing against a file nobody
+  // shipped. Asserting against the live entry point is the point.
+  const handler = require('../../api/reactor/token.js');
   const calls = [];
   const realFetch = globalThis.fetch;
   const realKey = process.env.REACTOR_API_KEY;
   globalThis.fetch = okFetch(calls);
   process.env.REACTOR_API_KEY = 'server-side-key';
+
+  // The Vercel handler is Node-style (req, res) rather than the Fetch API
+  // signature the Netlify one used, so stand up just enough of `res`.
+  const invoke = async (search) => {
+    let status = 200;
+    let payload;
+    const res = {
+      setHeader() {},
+      status(code) {
+        status = code;
+        return this;
+      },
+      json(body) {
+        payload = body;
+        return this;
+      },
+    };
+    await handler({ url: `https://x/api/reactor/token${search}`, headers: { host: 'x' } }, res);
+    return { status, body: payload };
+  };
+
   try {
-    const profileRes = await handler(
-      new Request('https://x/.netlify/functions/reactor-token?profile=living-realm')
-    );
+    const profileRes = await invoke('?profile=living-realm');
     assert.equal(profileRes.status, 200);
     assert.equal(JSON.parse(calls.at(-1).init.body).expires_after, 180);
 
-    const badRes = await handler(
-      new Request('https://x/.netlify/functions/reactor-token?profile=bogus')
-    );
+    const badRes = await invoke('?profile=bogus');
     assert.equal(badRes.status, 400);
     assert.equal(calls.length, 1);
 
-    const legacyRes = await handler(new Request('https://x/.netlify/functions/reactor-token'));
+    const legacyRes = await invoke('');
     assert.equal(legacyRes.status, 200);
     assert.equal(JSON.parse(calls.at(-1).init.body).expires_after, 3600);
   } finally {

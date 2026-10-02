@@ -67,15 +67,17 @@ run**. If no broker is available, choose **Play storyboard**.
 
 ## Deployed static app
 
-`netlify/functions/reactor-token.js` provides the same broker for the static
-Netlify deployment. Set `REACTOR_API_KEY` in Netlify environment variables. The
-client tries, in order:
+Production runs on Vercel, where `api/reactor/token.js` is the broker. Set
+`REACTOR_API_KEY` in the Vercel Production environment. The client tries, in
+order:
 
 1. `NEXT_PUBLIC_REACTOR_TOKEN_URL`, when configured;
 2. `NEXT_PUBLIC_API_BASE_URL + /api/reactor/token`;
-3. same-origin `/api/reactor/token` for dynamic deployments;
-4. `/.netlify/functions/reactor-token`;
-5. local Express on ports 3001/3000 for development.
+3. same-origin `/api/reactor/token`, which is what Vercel serves;
+4. local Express on ports 3001/3000 for development.
+
+There was once a Netlify deployment and a fourth candidate endpoint for it.
+That host is gone; the constant is removed rather than left to 404.
 
 The broker calls `POST https://api.reactor.inc/tokens` with a session-scoped
 `authorization_details` grant for `reactor/visko-orbis-dynamic`. With no

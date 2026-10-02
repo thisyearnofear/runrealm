@@ -32,7 +32,7 @@ learn roughly which neighbourhood you are in when you ask for a street name."
 
 2. **Set a URL restriction.** Edit the token → *URL restrictions* → *Limit by
    URL*. Allow:
-   - `https://runrealm.netlify.app`
+   - `https://runrealm-psi.vercel.app` (production)
    - `https://runrealm.fun` (and any other production domain)
    - `http://localhost:*` — only if you need local dev to work. Remove it
      before you care about production; leaving localhost open means anyone can
@@ -89,7 +89,9 @@ Cover at minimum:
 ### If something is blocked
 
 The console tells you which origin. Add it to `connect-src` in **both**
-`apps/web/public/_headers` and `netlify.toml` — a test fails if the two drift.
+`apps/web/public/_headers` and `vercel.json` — a test fails if the two drift.
+A second test fails if a third deploy config (`fly.toml`, `render.yaml`, …)
+appears without the headers copied into it.
 
 Do **not** respond by adding `https:`. That is the whole guarantee; a single
 missing origin is not worth trading it for.
@@ -106,12 +108,19 @@ that deliberate".
 
 ## 3. Not a checklist item, but you should know
 
-**Testers on the old mobile build still upload raw tracks.** The wire format
-changed — `POST /api/runs` now receives only the first and last point plus
-totals. Anyone testing with a build from before that change is still sending
-full GPS tracks to the API. They need to pull the new build.
+**No build is uploading GPS tracks — old or new.** The mobile app's sync
+service is only constructed when a caller passes a `sync` config, and nothing
+in the app does. Every screen calls `MobileRunTrackingService.getInstance()`
+with no arguments, so `syncService` is always `null` and `POST /api/runs` is
+never reached.
 
-The endpoint is unauthenticated with `Access-Control-Allow-Origin: *`. The
-server no longer stores the track, but an old client will still put one on
-the wire. That is the argument for authenticating it, which is an
-infrastructure decision rather than a code fix.
+An earlier version of this file warned that testers on old builds were still
+putting raw tracks on the wire. That was wrong, and worth recording: it was
+inferred from the shape of the upload code rather than from whether anything
+called it. `/api/runs` also returns 404 on the deployed Vercel site, so even a
+wired-up client would have nowhere to send a run.
+
+What this does *not* mean is that the endpoint is safe to turn on. It is
+unauthenticated with `Access-Control-Allow-Origin: *`. Before switching sync
+on, it needs a real auth story — which is an infrastructure decision, not a
+code fix.

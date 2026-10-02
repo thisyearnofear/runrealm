@@ -1,8 +1,8 @@
 # Cloudflare configuration — RunRealm.
 #
 # Two workers, mirroring the process split from Phase 3, plus a Pages project
-# for the static export. Nothing here is required to run the app on Netlify;
-# it is the target configuration for the migration.
+# for the static export. Nothing here is required to run the app on Vercel,
+# which is the live host; this is the target configuration for a migration.
 #
 # The reason there are two workers and not one: the attestation oracle holds
 # a quorum signing key. On the old single-process server that key sat in the
@@ -88,7 +88,7 @@ max_instances = 1
 #
 # Two files carry the deploy's real behaviour, and both are already written:
 #
-#   apps/web/public/_headers          the port of netlify.toml's header rules
+#   apps/web/public/_headers          the header rules, mirrored in vercel.json
 #                                    — HTML no-store, hashed assets immutable,
 #                                    explicit Content-Type on .js/.css/.json
 #                                    for Chrome and Brave

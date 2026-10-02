@@ -18,7 +18,7 @@ export interface RunRealmEnv {
   API_BASE_URL: string;
   /**
    * Origin the browser sends ordinary `/api/*` calls to. Empty means
-   * same-origin, which is the Netlify shape (`_redirects` proxies them).
+   * same-origin, which is how we deploy (a proxy serves `/api/*`).
    *
    * Separate from `API_BASE_URL` on purpose: that one has a localhost
    * default that is right in development and wrong in production, and

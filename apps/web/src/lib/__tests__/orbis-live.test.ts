@@ -53,7 +53,7 @@ describe('Reactor token resolver', () => {
 
     expect(endpoints[0]).toBe('https://tokens.example.com/reactor');
     expect(endpoints).toContain('https://api.example.com/api/reactor/token');
-    expect(endpoints).toContain('/.netlify/functions/reactor-token');
+    expect(endpoints).toContain('/api/reactor/token');
     expect(new Set(endpoints).size).toBe(endpoints.length);
   });
 
@@ -92,7 +92,7 @@ describe('Reactor token resolver', () => {
         })
       );
     const resolve = createReactorTokenResolver({
-      endpoints: ['/missing', '/.netlify/functions/reactor-token'],
+      endpoints: ['/missing', '/api/reactor/token'],
       fetchImpl,
       now: () => 0,
     });

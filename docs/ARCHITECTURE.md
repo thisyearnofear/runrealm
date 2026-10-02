@@ -109,7 +109,7 @@ RunRealm/
 ├── contracts/                # Smart contracts (generated/, boost/, zama/, libraries/)
 ├── scripts/                  # Build, sync, deployment scripts
 ├── server.js                 # Express backend (dev token broker, webhooks)
-├── netlify/functions/        # Serverless equivalents for the static deploy
+├── api/reactor/              # Vercel serverless function (Reactor token broker)
 └── docs/                     # Architecture, features, guides, roadmap
 ```
 

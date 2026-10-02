@@ -247,7 +247,7 @@ export class ConfigService {
       // Use API base URL from environment or default
       const baseUrl = __ENV__?.API_BASE_URL || 'http://localhost:3000';
 
-      // On static hosts (Netlify/Vercel) there is no backend serving
+      // On static hosts (Vercel, Cloudflare) there is no backend serving
       // /api/tokens, so the default localhost URL would always fail
       // (and spam the console). Skip the request unless a real API
       // base URL is configured; tokens then come from public env vars
@@ -387,7 +387,7 @@ export class ConfigService {
   /**
    * The origin the browser should send API calls to.
    *
-   * Empty means "same origin as the page", which is the Netlify shape: a
+   * Empty means "same origin as the page", which is how we deploy: a
    * `_redirects` rule proxies `/api/*` to the backend. It is NOT portable —
    * Cloudflare Pages can only proxy to paths on its own domain, so the
    * migration to Cloudflare needs an absolute origin here instead.
