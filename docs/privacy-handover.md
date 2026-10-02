@@ -6,56 +6,45 @@ person can provide. This file is the checklist for those.
 
 ---
 
-## 1. Mapbox token — check the restrictions (5 minutes)
+## 1. Mapbox token — swap it for a secret one (5 minutes)
 
-The token is public. That is inherent to the current architecture: the browser
-makes the geocoding and directions calls directly, so the token has to be in
-the client. It is *not* how it was a month ago, and the difference matters:
+The token used to be handed to the browser. It no longer is: `/api/geocode` is
+a Vercel function that holds it, so the token is not in the page and your IP
+address never reaches Mapbox. What remains is a five-minute account change.
 
-- Tiles, fonts (glyphs) and the sprite all come from **OpenFreeMap**.
-- The satellite layer comes from **ESRI**.
-- Mapbox serves **no tiles** at all. It is called for exactly two things:
-  reverse geocoding and route direction-snapping.
+### What to do at https://account.mapbox.com/access-tokens/
 
-Both of those already send coordinates rounded to ~110 m
-(`coarsen()` in `packages/shared-core/services/geocoding-service.ts`, waypoint
-rounding in `ai-service.ts`).
+1. **Create a secret token** (`sk.`), scoped to public geocoding. Secret tokens
+   are scoped to server use by Mapbox — they do not work from a browser at
+   all, which is exactly the property we want now that the token only ever
+   runs server-side.
 
-So the residual risk is not "your route is exposed" — it is "a third party can
-learn roughly which neighbourhood you are in when you ask for a street name."
+2. **Add it to Vercel** as `MAPBOX_ACCESS_TOKEN` in the Production
+   environment (Project → Settings → Environment Variables). Without it
+   `/api/geocode` returns a 500 and street labels stay blank.
 
-### What to check, at https://account.mapbox.com/access-tokens/
+3. **Revoke the old public token.** Nothing needs it any more. Until you do,
+   it is a credential that used to be handed to every visitor.
 
-1. **Find the token the deployed app actually uses.** It is not in the repo.
-   Open the deployed site, devtools → Application → Local Storage →
-   `runrealm_mapbox_access_token`. Use the value from there.
+4. **Drop the token scope you no longer use.** The token needs public
+   geocoding. It does **not** need:
+   - `styles:tiles` / `styles:read` — no Mapbox style is loaded. Tiles,
+     glyphs and sprite all come from OpenFreeMap.
+   - `fonts:read` — same reason.
+   - any secret scope on a token that is not `sk.`
+   - directions, unless you decide to turn route snapping back on (see below).
 
-2. **Set a URL restriction.** Edit the token → *URL restrictions* → *Limit by
-   URL*. Allow:
-   - `https://runrealm-psi.vercel.app` (production)
-   - `https://runrealm.fun` (and any other production domain)
-   - `http://localhost:*` — only if you need local dev to work. Remove it
-     before you care about production; leaving localhost open means anyone can
-     run `curl` with your token from their own machine.
+5. **Confirm street labels still work** on the deployed site. If they vanish,
+   the usual cause is the environment variable being scoped to Preview rather
+   than Production.
 
-3. **Narrow the scopes.** The token needs public geocoding and public
-   directions. It does **not** need:
-   - `styles:tiles` / `styles:read` — nothing loads a Mapbox style
-   - `fonts:read` — OpenFreeMap serves the glyphs
-   - anything under `tokens:` other than what you use for upload
-   - any secret scope. If a `sk.` secret token is sitting in the client config,
-     that is a real problem — rotate it.
+### A note on route snapping
 
-4. **Confirm it works after restricting.** Load the deployed map, switch to the
-   satellite layer, search for a place. If geocoding broke, the restriction is
-   too tight — most often a missing exact host, or `localhost` being needed
-   because you tested on a preview domain that isn't in the allow-list.
-
-5. **Note the date you did this** somewhere durable. It is the difference
-   between "unverified" and "verified", and `docs/privacy.md` should not have
-   to keep saying unverified.
-
----
+Route snapping (Mapbox Directions) still goes to Mapbox directly from the
+browser and is currently **off** — nothing turns it on. It has no proxy yet.
+Two honest options: leave it off, or give it the same treatment as geocoding.
+Its waypoints are already coarsened to ~110 m, so it is not urgent the way
+the client-side geocoding token was.
 
 ## 2. Flip the CSP from report-only to enforcing (one deploy)
 
@@ -73,6 +62,9 @@ with the exact directive and the offending URL.
 Cover at minimum:
 
 - [ ] **Cold load.** The map renders, labels/fonts appear, and the camera works.
+- [ ] **Street labels appear.** That means `/api/geocode` found a token and
+      answered. If they are blank, check `MAPBOX_ACCESS_TOKEN` is set in the
+      Vercel **Production** environment, not just Preview.
 - [ ] **Basemap switch.** Streets → dark → satellite → back. All three load.
       This is the one most likely to surface a missing tile origin.
 - [ ] **Run a territory claim** on mobile or web. Exercises the chain RPC

@@ -109,7 +109,9 @@ RunRealm/
 ├── contracts/                # Smart contracts (generated/, boost/, zama/, libraries/)
 ├── scripts/                  # Build, sync, deployment scripts
 ├── server.js                 # Express backend (dev token broker, webhooks)
-├── api/reactor/              # Vercel serverless function (Reactor token broker)
+├── api/                      # Vercel serverless functions:
+│   ├── reactor/token.js      #   Reactor token broker
+│   └── geocode.js            #   Mapbox reverse geocoding proxy
 └── docs/                     # Architecture, features, guides, roadmap
 ```
 

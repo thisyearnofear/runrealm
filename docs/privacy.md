@@ -78,17 +78,29 @@ It sends coordinates rounded to three decimal places — roughly 110 m, enough t
 name a neighbourhood, far too coarse to reconstruct where you live or work.
 Forward search (typing a place name) is unaffected.
 
-**Right now, in production, this does not run at all.** The client only fetches
-a Mapbox token from `/api/tokens` when a non-localhost API base is configured,
-and the Vercel build has no such base and no token in its environment. So
-geocoding and route snapping are effectively off, and the rows above describe
-what *would* be sent if the app were given a token.
+**This goes through our own server, not the browser.** `/api/geocode` is a
+Vercel function that holds the Mapbox token. Two things follow from that, and
+they are the reason it is built this way:
 
-That is better for privacy and worse for the product, and it is worth knowing
-before someone reads the table above and assumes street labels are showing up.
-Restoring it means giving the browser a token again (public and URL-restricted)
-or proxying geocoding through a server function that holds the token — the
-latter being the only version that does not need the token to be public.
+- **Your IP address never reaches Mapbox.** A client-side token would tell
+  Mapbox who is asking, every single time a street label appeared.
+- **The token is never in the page**, so no script on the page can read it.
+
+The server rounds the coordinates a second time, to the same ~110 m, and does
+not take the client's word for it. If it trusted the client's rounding, anyone
+could post a precise coordinate straight to the endpoint and Mapbox would
+receive a precise location record — the rounding would be a claim the caller
+made about itself rather than a property of the system.
+
+Answers are cached per grid cell for six hours, so staying in one neighbourhood
+costs nothing after the first lookup.
+
+If the function is not deployed (a self-hosted install), the app falls back to
+calling Mapbox directly — the old behaviour, and no worse, but the token then
+has to exist in the client.
+
+Route snapping still uses Mapbox directly and is currently **off**, because it
+has no proxy yet. It is not on by default and nothing turns it on.
 
 ### About Strava
 
@@ -193,19 +205,17 @@ These are real, and we would rather list them than imply otherwise. The
 `user-analytics` buffer that used to sit here is now visible and erasable under
 **Account → Privacy**.
 
-- **Tokens sit in `localStorage`.** The Strava and Mapbox tokens are stored in
-  `localStorage`, where any script running on the page can read them. Moving
-  them behind an origin-scoped backend endpoint is the fix; it is not done yet.
-  (Erasing your data does remove them — that is the workaround until it is.)
-  The Content-Security-Policy above narrows *who can send data out*; it does
-  not protect a token from script that has already run.
-- **The Mapbox token is public, and its restrictions are unverified.** It is
-  readable in the page source by design, since the geocoding call is made from
-  the browser. We need someone with access to the Mapbox account to confirm
-  the token is URL-restricted to our deployed origins. Until that is checked,
-  treat it as unconfirmed. What it can reach is bounded: geocoding and
-  directions only, with coordinates rounded to ~110 m, and no tile traffic at
-  all. The step-by-step checklist is in `docs/privacy-handover.md`.
+- **The Strava token still sits in `localStorage`.** The Mapbox token used to
+  be there too and no longer is — it moved behind `/api/geocode`, which closed
+  that half of the problem. Strava's has not, because there is no broker for
+  it yet. (Erasing your data does remove it — that is the workaround.)
+  The Content-Security-Policy narrows *who can send data out*; it does not
+  protect a token from script that has already run.
+- **The Mapbox token is now server-side**, held by the `/api/geocode`
+  function, which is the version that does not need to be public. Two things
+  left to check in the Mapbox account: that the token is a secret (`sk.`) one,
+  and that whatever `pk.` token may still exist in a browser somewhere is
+  revoked. Checklist in `docs/privacy-handover.md`.
 - **The CSP is report-only.** Documented above. Enforcing it is the next step
   and is waiting on a QA pass, not on code.
 - **The oracle and the public API are separate processes**, so the signing key

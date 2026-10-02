@@ -63,7 +63,9 @@ const DESCRIPTIONS: Record<string, string> = {
   runrealm_welcomed: 'That you have been here before.',
   'runrealm-here-when-you-were-away': 'When you last ran, used for the greeting.',
   'runrealm-notification-last': 'When you were last prompted.',
-  runrealm_mapbox_access_token: 'Map access, needed to draw the map.',
+  // Only here as a fallback: geocoding normally goes through our own
+  // server, which holds the token. Tiles never needed Mapbox at all.
+  runrealm_mapbox_access_token: 'A fallback key for street labels. Not needed normally.',
   'map-camera-position': 'Where the map was last looking.',
 };
 
