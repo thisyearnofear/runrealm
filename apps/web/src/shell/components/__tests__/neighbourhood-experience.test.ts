@@ -114,6 +114,13 @@ function makeDeps(over: Record<string, unknown> = {}) {
   };
 }
 
+/** The panel text a first visit actually sees, with hidden subtrees dropped. */
+function visiblePanelText(root: HTMLElement): string {
+  const visible = root.querySelector('.nh-scroll')?.cloneNode(true) as HTMLElement;
+  for (const hidden of Array.from(visible.querySelectorAll('[hidden]'))) hidden.remove();
+  return visible.textContent ?? '';
+}
+
 function mount(over: Record<string, unknown> = {}) {
   document.body.innerHTML = '';
   document.body.classList.remove('neighbourhood-advanced');
@@ -179,16 +186,38 @@ describe('NeighbourhoodExperience', () => {
 
   it('keeps the first-visit panel inside a word budget', () => {
     const { root } = mount();
-    const scroll = root.querySelector('.nh-scroll');
-    // Count only what is on screen: panels behind `hidden` (sketch controls,
-    // handoff card, sample controls) are not read by anyone.
-    const visible = scroll?.cloneNode(true) as HTMLElement;
-    for (const hidden of Array.from(visible.querySelectorAll('[hidden]'))) hidden.remove();
-    const words = (visible.textContent ?? '').trim().split(/\s+/).filter(Boolean);
+    const visible = visiblePanelText(root);
+    const words = visible.trim().split(/\s+/).filter(Boolean);
     // Guards the consolidation: copy that crept back is copy nobody reads.
     // Raise deliberately, never accidentally.
     expect(words.length).toBeLessThanOrEqual(140);
     expect(root.textContent).not.toContain('qualifying run');
+  });
+
+  it('never says the same thing twice', () => {
+    // The real defect this panel had was not length but repetition: one fact
+    // maintained by hand in four places. A word budget would pass that happily,
+    // so guard the duplication itself.
+    //
+    // Compared as word n-grams rather than sentences, because most of this
+    // panel is un-terminated button labels: splitting on punctuation glues a
+    // caveat onto the button text above it and two identical lines then look
+    // different. Five words is long enough that legitimate echoes like
+    // "Start run" (a button and a sentence) do not trip it.
+    const words = visiblePanelText(mount().root)
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]+/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+    const gram = 5;
+    const seen = new Set<string>();
+    const repeated = new Set<string>();
+    for (let i = 0; i + gram <= words.length; i += 1) {
+      const phrase = words.slice(i, i + gram).join(' ');
+      if (seen.has(phrase)) repeated.add(phrase);
+      else seen.add(phrase);
+    }
+    expect([...repeated].slice(0, 3)).toEqual([]);
   });
 
   it('autoplays the sample once on a first visit, then offers a replay', () => {

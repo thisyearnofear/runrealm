@@ -64,6 +64,35 @@ authoritative geometry        generated atmosphere
 - **Social Interaction**: Real-time friend tracking, location-based encounters, instant messaging
 - **AI Coaching**: Real-time route suggestions, pace adjustment recommendations, milestone celebrations, ghost runner generation
 
+### Two run models — intentional, not drift
+
+The two platforms run **different mechanics**, and the onboarding copy on each is
+correct for the model that platform actually implements. Do not "fix" one to
+match the other without deciding the question below first.
+
+| | Neighbourhood model | Territory model |
+|---|---|---|
+| Where | Default web shell | Mobile app (`TerritoryService`) |
+| Eligibility | 500m, **no loop** | 500m **and a closed loop** |
+| Source of truth | `neighbourhood-service.ts` | `run-tracking-service.checkTerritoryEligibility` |
+| Result | Local H3 cells, saved on device | `geohash` → registered territory on ZetaChain |
+| Ownership | Not NFTs, not registered | Registered, transferable |
+
+Consequences worth knowing before editing copy or eligibility:
+
+- **Mobile onboarding says loops and deeds because mobile really is that
+  product.** `MOBILE_ONBOARDING` ("a loop is usually enough to trace your
+  first claim") accurately describes `checkTerritoryEligibility`. Changing it
+  to match the neighbourhood panel would make the app misdescribe its own
+  mechanic.
+- **Eligibility is computed once.** Never re-derive it from `totalDistance`
+  at a call site — that drops the loop half. Read `territoryEligible` off the
+  run. `territory-claim-gate.ts` exists because `MapScreen` once got this
+  wrong and opened a claim flow the service would refuse.
+- **Whether both models should ship is an open product decision**, not a bug.
+  Until it is settled, "make mobile consistent with web" is the wrong
+  instruction, and copy tension between the two will keep regenerating.
+
 ## Monorepo Architecture
 
 ### Project Structure

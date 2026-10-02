@@ -20,6 +20,7 @@ import type { WalletButtonProps } from '../components/WalletButton';
 import { MobileMapAdapter } from '../services/MobileMapAdapter';
 import MobileRunTrackingService from '../services/MobileRunTrackingService';
 import { MobileWeb3Adapter } from '../services/MobileWeb3Adapter';
+import { shouldOfferTerritoryClaim } from '../services/territory-claim-gate';
 import { saveRunToHistory } from './HistoryScreen';
 
 type RootStackParamList = ParamListBase;
@@ -149,11 +150,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
 
       setCompletedRunData(completedRun);
 
-      // Trust the rule the tracker already applied. Territory eligibility is
-      // 500m *and* a closed loop; re-deriving it from distance alone opened the
-      // claim modal for runs every other surface — including the claim service
-      // itself — considers ineligible.
-      if (completedRun.territoryEligible) {
+      if (shouldOfferTerritoryClaim(completedRun)) {
         setShowClaimModal(true);
       }
     }
