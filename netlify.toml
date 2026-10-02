@@ -34,9 +34,12 @@
     Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
     # Security hardening
     X-Frame-Options = "SAMEORIGIN"
-    X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "no-referrer-when-downgrade"
+    # See apps/web/public/_headers: the desk handoff carries a preview centre
+    # in the URL, and no-referrer-when-downgrade would send it to Mapbox as the
+    # Referer on every tile.
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(self), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
 
 # HTML files should not be cached to prevent stale references

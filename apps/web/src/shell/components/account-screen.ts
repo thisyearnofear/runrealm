@@ -20,6 +20,18 @@ import {
   type SessionKey,
 } from '@runrealm/shared-core/services/account-service';
 import { PreferenceService } from '@runrealm/shared-core/services/preference-service';
+import {
+  deviceDataBytes,
+  eraseDeviceData,
+  listDeviceData,
+} from '@runrealm/shared-core/utils/device-data';
+
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch] ?? ch
+  );
+}
 
 const TIER_DISPLAY = {
   guest: {
@@ -204,7 +216,41 @@ export default class AccountScreen {
           </div>
         </div>
         <p class="account-copy">Defense scores, pace, and location history stay private unless you disclose a territory. Manage per-territory visibility from the dashboard.</p>
+        ${this.renderDeviceData()}
       </div>
+    `;
+  }
+
+  /**
+   * What this device actually holds, and a way to erase it.
+   *
+   * A privacy promise is only worth what you can act on. The list is read from
+   * the same manifest the eraser uses, so it cannot drift into claiming less
+   * than is stored.
+   */
+  private renderDeviceData(): string {
+    const entries = listDeviceData();
+    const total = deviceDataBytes();
+    const size = total < 1024 ? `${total} bytes` : `${(total / 1024).toFixed(1)} kB`;
+    return `
+      <details class="account-device-data">
+        <summary>On this device</summary>
+        ${
+          entries.length === 0
+            ? '<p class="account-copy">Nothing stored yet.</p>'
+            : `<p class="account-copy">${entries.length} item${entries.length === 1 ? '' : 's'} · ${size}</p>
+               <ul class="account-device-list">
+                 ${entries
+                   .map(
+                     (entry) =>
+                       `<li><span class="account-device-desc">${escapeHtml(entry.description)}</span></li>`
+                   )
+                   .join('')}
+               </ul>`
+        }
+        <p class="account-copy">Your routes are not among them. Run history keeps distance, time and pace, never the track.</p>
+        <button class="action-btn" data-account-action="erase-device-data">Erase my data</button>
+      </details>
     `;
   }
 
@@ -236,6 +282,18 @@ export default class AccountScreen {
         // The React wallet flow owns the modal; we just ask it to open.
         this.eventBus.emit('wallet:connect', {});
         break;
+      case 'erase-device-data': {
+        const removed = eraseDeviceData();
+        this.render();
+        this.eventBus.emit('ui:toast', {
+          message:
+            removed.length === 0
+              ? 'There was nothing stored to erase.'
+              : `Erased ${removed.length} item${removed.length === 1 ? '' : 's'} from this device.`,
+          type: 'info',
+        });
+        break;
+      }
       case 'revoke-session': {
         const id = (target as HTMLElement).getAttribute('data-session-id');
         if (id) this.accountService.revokeSessionKey(id);

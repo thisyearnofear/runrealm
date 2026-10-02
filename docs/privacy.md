@@ -34,7 +34,8 @@ reads your history needs the track, so it is not kept.
 | `POST /api/runs` (your own server) | Distance, duration, and the **first and last** position of the run | Every intermediate fix, timestamps, accuracy |
 | Attestation oracle | Distance, duration, pace band, H3 cell ids | The GPS track |
 | Mapbox (reverse geocoding) | Position rounded to ~110 m | Full-precision coordinates |
-| Mapbox (basemap tiles) | The tile you are looking at | Your position |
+| Mapbox (route planning) | Waypoints rounded to ~110 m | Full-precision coordinates |
+| Mapbox (basemap tiles) | The tile you are looking at | Your position — see the note on `Referrer-Policy` below |
 | Strava | OAuth tokens, exchanged over POST | Tokens are never placed in a redirect URL |
 
 ### About `/api/runs`
@@ -67,6 +68,40 @@ every request the landing page makes afterwards. They now move through a
 one-time code: the server holds the tokens briefly, the app redeems the code
 once over POST, and the code is destroyed the moment it is claimed.
 
+### About the URL and the `Referer` header
+
+Sharing a preview puts a centre in the link — `?preview={"lat":…,"lng":…}`.
+That matters more than it looks, because a page's `Referer` header is sent
+automatically with every outbound request, including map tiles.
+
+Under the old `Referrer-Policy: no-referrer-when-downgrade`, the **full URL**
+was sent to every third-party request over https. Mapbox received your exact
+preview coordinates on every tile load — regardless of how carefully the
+geocoding and routing code rounded them.
+
+The policy is now `strict-origin-when-cross-origin`: third parties receive only
+`https://your-app.example/` and never the path or the query. Both deploy targets
+(Cloudflare and Netlify) are pinned by a test so the two cannot drift.
+
+### About permissions
+
+The app requests geolocation and nothing else. `Permissions-Policy` denies
+camera, microphone, payment, USB and interest-cohort by default, so a future
+dependency cannot quietly begin asking.
+
+## Seeing and erasing what is on your device
+
+**Account → Privacy → On this device** lists what the app is holding right now,
+in plain words, with a total size — and **Erase my data** removes it.
+
+The list and the eraser read the same manifest, so the inventory cannot drift
+into claiming less than is stored. Erasure is deliberately conservative: it
+removes only keys this app owns, never a wholesale `localStorage.clear()`. If
+another app shares the origin, its state is not ours to delete.
+
+Run history keeps distance, time and pace. The GPS track is not in the list
+because it is never written to storage in the first place.
+
 ## What we do not do
 
 - No analytics SDK, no third-party tracking scripts, no advertising pixels.
@@ -77,18 +112,19 @@ once over POST, and the code is destroyed the moment it is claimed.
 
 ## Open questions we have not closed
 
-These are real, and we would rather list them than imply otherwise.
+These are real, and we would rather list them than imply otherwise. The
+`user-analytics` buffer that used to sit here is now visible and erasable under
+**Account → Privacy**.
 
 - **Tokens sit in `localStorage`.** The Strava and Mapbox tokens are stored in
   `localStorage`, where any script running on the page can read them. Moving
   them behind an origin-scoped backend endpoint is the fix; it is not done yet.
+  (Erasing your data does remove them — that is the workaround until it is.)
 - **Mapbox token is public.** A client-side map token is visible to anyone who
   views the source. It should be URL-restricted on Mapbox's side, and we have
   not verified that it is.
-- **`user-analytics` is stored locally.** Up to 1,000 interaction events
-  (`gps_enabled`, `wallet_button_clicked`, and similar) are kept in
-  `localStorage`. They are never transmitted, but there is no screen where you
-  can see or delete them. Adding one is outstanding.
+- **There is no Content-Security-Policy.** The deploy targets set the headers
+  above, but not a CSP. Adding one is worthwhile and not done.
 - **The oracle and the public API are separate processes**, so the signing key
   is not reachable from the unauthenticated endpoint. That separation is
   deliberate and load-bearing.

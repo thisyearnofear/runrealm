@@ -1907,6 +1907,37 @@
     0 0 0 6px rgba(79, 174, 139, 0.2);
 }
 
+/* Account → Privacy → what this device holds, and the eraser. */
+.account-device-data {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(13, 43, 62, 0.12);
+}
+
+.account-device-data summary {
+  cursor: pointer;
+  font-family: var(--rr-font-display);
+  color: var(--rr-sunprint-ink);
+}
+
+.account-device-data summary:focus-visible {
+  outline: 2px solid var(--rr-sunprint-ink);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.account-device-list {
+  margin: 8px 0;
+  padding-left: 18px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #3f6372;
+}
+
+.account-device-desc {
+  display: block;
+}
+
 /* Global keyboard-focus fallback for buttons, links and inputs that
  * don't opt into the widget-specific look above. */
 button:focus-visible,

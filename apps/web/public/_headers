@@ -21,7 +21,16 @@
 /*
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
-  Referrer-Policy: no-referrer-when-downgrade
+  # strict-origin-when-cross-origin, not no-referrer-when-downgrade. The desk
+  # handoff puts a preview centre in the URL (`?preview={"lat":...}`), and
+  # no-referrer-when-downgrade sends the *full* URL as Referer on any
+  # https-to-https request -- including every Mapbox tile load. That handed
+  # Mapbox the exact coordinates on every tile, regardless of the rounding in
+  # geocoding-service. Cross-origin now gets the origin only.
+  Referrer-Policy: strict-origin-when-cross-origin
+  # Geolocation is the app; camera, microphone and interest-cohort are not.
+  # Denying by default means a future dependency cannot quietly start asking.
+  Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   # X-XSS-Protection is deliberately absent. It was removed from every major
   # browser years ago, and browsers that still honour it only ever introduce

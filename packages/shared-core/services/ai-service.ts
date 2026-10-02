@@ -1342,7 +1342,13 @@ Make this feel like a personal AI running coach in a game world!
       throw new Error('No Mapbox token available');
     }
 
-    const coordinates = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(';');
+    // Coarsen before this leaves the device, for the same reason
+    // geocoding-service does: a full-precision waypoint set is the shape of a
+    // route someone intends to run. Three decimals is ~110m, which routes
+    // street-network geometry perfectly well.
+    const coordinates = waypoints
+      .map(([lng, lat]) => `${Math.round(lng * 1000) / 1000},${Math.round(lat * 1000) / 1000}`)
+      .join(';');
     const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?geometries=geojson&access_token=${token}`;
 
     const response = await fetch(url);
