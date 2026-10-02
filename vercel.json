@@ -83,7 +83,7 @@
       ]
     },
     {
-      "source": "/apple-touch-icon*",
+      "source": "/apple-touch-icon(.*)",
       "headers": [
         {
           "key": "Cache-Control",

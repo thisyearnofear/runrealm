@@ -19,9 +19,25 @@
  * fails if a target is added without them. The two copies are written in
  * different syntaxes (Cloudflare `_headers` vs Vercel JSON), which is exactly
  * why a substring check is not enough.
+ *
+ * ── And the third failure mode: a pattern Vercel refuses to parse ───────
+ * A `source` that is not valid path-to-regexp does not degrade. Vercel
+ * rejects the whole `vercel.json` and the deploy fails before a build starts,
+ * which means *every* header above silently stops being applied -- the file
+ * looks correct in the repo and enforces nothing in production.
+ *
+ * `/apple-touch-icon*` did exactly that. A bare `*` is a modifier with no
+ * preceding token to modify, so path-to-regexp throws. It was added alongside
+ * the header fixes and took five commits' worth of deploys down with it,
+ * while the live site kept serving the old `no-referrer-when-downgrade` from
+ * the last good build. Tests asserted the *contents* of the catch-all rule
+ * and were green throughout, because the broken rule was a different one.
+ *
+ * So every `source` is parsed below with the same library Vercel uses.
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { match as matchRoutePattern, parse as parseRoutePattern } from 'path-to-regexp';
 
 // jest runs from the apps/web package root, so two levels up is the repo root.
 const repoRoot = path.join(process.cwd(), '..', '..');
@@ -139,6 +155,55 @@ describe('deployed response headers', () => {
       'vercel.prod.json',
     ].filter((f) => known.has(f) || fs.existsSync(path.join(repoRoot, f)));
     expect(headerish.sort()).toEqual(['apps/web/public/_headers', 'vercel.json']);
+  });
+});
+
+describe('Vercel route source patterns', () => {
+  it('parses every source, so the config is not rejected before the build', () => {
+    // v6, not v8. Vercel accepts `(.*)` -- the pattern every catch-all rule
+    // here uses, and the one its own docs use -- but v8 rejects it outright.
+    // Parsing with v8 would fail this repo's most important rule and prove
+    // nothing about Vercel.
+    const invalid: string[] = [];
+    for (const rule of vercel.headers ?? []) {
+      try {
+        parseRoutePattern(rule.source);
+      } catch (error) {
+        invalid.push(`${rule.source} -> ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    // An unparseable pattern does not drop just its own rule. Vercel rejects
+    // the file, so every security header above goes unenforced with it.
+    expect(invalid).toEqual([]);
+  });
+
+  it('still catches the icons, which is why the rule exists at all', () => {
+    // A fix that parses but matches nothing would be a silent regression of
+    // the same kind: the deploy succeeds and the caching rule evaporates.
+    // So this asserts the pattern matches real paths, not merely that a rule
+    // with the right shape exists.
+    const iconRule = (vercel.headers ?? []).find((r) => r.source.startsWith('/apple-touch-icon'));
+    if (!iconRule) throw new Error('no /apple-touch-icon headers rule in vercel.json');
+    const keys = iconRule.headers.map((h) => h.key.toLowerCase());
+    expect(keys).toContain('cache-control');
+    // The icons are immutable-by-name, so this must not be the rule that
+    // pins a security header to one path.
+    expect(keys).not.toContain('content-security-policy');
+
+    // v6's match() returns false for a non-match rather than throwing.
+    const matches = matchRoutePattern(iconRule.source);
+    const matchesPath = (url: string) => matches(url) !== false;
+    for (const icon of [
+      '/apple-touch-icon.png',
+      '/apple-touch-icon-precomposed.png',
+      '/apple-touch-icon-180x180.png',
+      '/apple-touch-icon.svg',
+    ]) {
+      expect(matchesPath(icon)).toBe(true);
+    }
+    // And it must not become a catch-all in the process.
+    expect(matchesPath('/favicon.ico')).toBe(false);
+    expect(matchesPath('/api/geocode')).toBe(false);
   });
 });
 

@@ -37,6 +37,7 @@
     "eslint-config-next": "16.2.10",
     "jest": "^30.4.1",
     "jest-environment-jsdom": "^30.4.1",
+    "path-to-regexp": "^6.3.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.1.2",
     "typescript": "^5"
