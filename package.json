@@ -17,6 +17,7 @@
     "start:oracle": "node server/oracle.js",
     "test": "npm run test --workspaces",
     "test:server": "node --test server/__tests__/*.test.js",
+    "check:deployed": "node scripts/validation/check-deployed-headers.js",
     "test:unit": "npm run test:unit --workspaces",
     "lint": "biome check --write .",
     "lint:check": "biome check .",

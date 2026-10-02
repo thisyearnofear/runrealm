@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Nightly, so a header that quietly stopped being served is noticed without
+  # anyone having to remember to look. See the deployed-headers job.
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
 
 jobs:
   setup:
@@ -200,3 +205,31 @@ jobs:
         run: |
           echo "Deploying to production environment"
           # Add actual deployment commands here
+
+  deployed-headers:
+    # Asserts the headers on the wire, not in the repo.
+    #
+    # This is not part of the deploy pipeline because Vercel deploys through
+    # its own Git integration -- the deploy-* jobs below are stubs, so a
+    # post-deploy step there would never run and would look like a safeguard
+    # while checking nothing. Instead this polls the real URL.
+    #
+    # It exists because the Referrer-Policy fix was applied to two configs,
+    # neither of which served production, and stayed broken for two releases
+    # with every test green.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+
+      - name: Check production serves the configured security headers
+        # Optional. Set the repo variable to check a different host; with it
+        # unset the script falls back to the production URL it already knows.
+        env:
+          RUNREALM_URL: ${{ vars.RUNREALM_PRODUCTION_URL }}
+        run: node scripts/validation/check-deployed-headers.js
