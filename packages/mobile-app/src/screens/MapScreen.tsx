@@ -149,8 +149,11 @@ const MapScreen: React.FC<MapScreenProps> = ({ navigation: _navigation, route: _
 
       setCompletedRunData(completedRun);
 
-      // Check if run is eligible for territory claiming
-      if (completedRun.totalDistance >= 500) {
+      // Trust the rule the tracker already applied. Territory eligibility is
+      // 500m *and* a closed loop; re-deriving it from distance alone opened the
+      // claim modal for runs every other surface — including the claim service
+      // itself — considers ineligible.
+      if (completedRun.territoryEligible) {
         setShowClaimModal(true);
       }
     }
