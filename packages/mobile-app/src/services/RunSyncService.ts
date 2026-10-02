@@ -9,6 +9,13 @@
  * Status: SCAFFOLD. The /api/runs endpoint on the server is a stub that
  * acknowledges receipt; chain submission still flows through the existing
  * web app territory-service. See server.js for the receiver.
+ *
+ * PRIVACY: the upload carries no GPS track. A raw track is a home-to-work
+ * trace, and this endpoint is unauthenticated with CORS *, so the full track
+ * would be readable by anything that can reach the API. Only the two points
+ * the server actually needs — where the run started and where it ended, which
+ * is all a closed-loop check requires — plus the totals cross the wire. See
+ * `uploadPayload` and docs/privacy.md.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RunSession } from '@runrealm/shared-core/services/run-tracking-service';
@@ -28,6 +35,43 @@ const BASE_BACKOFF_MS = 5_000;
 export interface RunSyncConfig {
   apiBaseUrl: string;
   getAuthToken?: () => Promise<string | null>;
+}
+
+/**
+ * Reduce a run to the minimum the server can validate it.
+ *
+ * The server checks two things: distance, and that the run ended near where it
+ * started. Start and end are therefore the only coordinates it needs, and they
+ * are the only ones it gets. The track itself never leaves the device — it is
+ * still in AsyncStorage, where the runner can see and delete it.
+ */
+export function uploadPayload(run: RunSession): {
+  run: Record<string, unknown>;
+  pointCount: number;
+} {
+  const points = run.points ?? [];
+  const start = points[0];
+  const end = points[points.length - 1];
+  const endpoints: Array<{ lat: number; lng: number }> = [];
+  if (start) endpoints.push({ lat: start.lat, lng: start.lng });
+  // A one-fix run has nothing to close, so it does not get its only point
+  // sent twice.
+  if (end && end !== start) endpoints.push({ lat: end.lat, lng: end.lng });
+  return {
+    run: {
+      id: run.id,
+      totalDistance: run.totalDistance,
+      totalDuration: run.totalDuration,
+      startTime: run.startTime,
+      endTime: run.endTime,
+      territoryEligible: run.territoryEligible,
+      geohash: run.geohash,
+      // Start and end only — never the intermediate fixes.
+      points: endpoints,
+    },
+    // Count, not content: lets the server log trace density without holding it.
+    pointCount: points.length,
+  };
 }
 
 export class RunSyncService {
@@ -103,7 +147,7 @@ export class RunSyncService {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ run }),
+      body: JSON.stringify(uploadPayload(run)),
     });
     if (!res.ok) {
       throw new Error(`upload failed: ${res.status} ${res.statusText}`);

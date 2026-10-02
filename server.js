@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('node:crypto');
 const path = require('node:path');
 const { mintSessionToken } = require('./server/reactor-token-grant');
 require('dotenv').config();
@@ -137,6 +138,38 @@ app.get('/api/reactor/token', async (req, res) => {
 });
 
 // Strava OAuth callback handler
+// One-time Strava token handover.
+//
+// The OAuth callback cannot hand tokens straight to the browser: a token in a
+// redirect URL ends up in history, in proxy logs, and in Referer headers. So
+// the tokens wait here under a random code the app redeems once over POST,
+// and the entry is destroyed the moment it is claimed (or after HANDOVER_TTL_MS,
+// whichever comes first). Nothing here is durable storage.
+const STRAVA_HANDOVER_TTL_MS = 2 * 60 * 1000;
+const stravaTokenHandover = new Map();
+
+function pruneStaleHandover() {
+  const cutoff = Date.now() - STRAVA_HANDOVER_TTL_MS;
+  for (const [code, entry] of stravaTokenHandover) {
+    if (entry.createdAt < cutoff) stravaTokenHandover.delete(code);
+  }
+}
+
+app.post('/api/strava/handover', (req, res) => {
+  pruneStaleHandover();
+  const entry = stravaTokenHandover.get(String(req.body?.code ?? ''));
+  if (!entry) {
+    return res.status(400).json({ error: 'unknown or expired code' });
+  }
+  // Single use. A code that can be replayed is a token that can be replayed.
+  stravaTokenHandover.delete(String(req.body.code));
+  return res.json({
+    access_token: entry.accessToken,
+    refresh_token: entry.refreshToken,
+    expires_at: entry.expiresAt,
+  });
+});
+
 app.get('/auth/strava/callback', async (req, res) => {
   console.log('Received Strava OAuth callback');
 
@@ -176,9 +209,21 @@ app.get('/auth/strava/callback', async (req, res) => {
 
     console.log('Strava token exchange successful');
 
-    // Redirect back to app with success and temporary access token
-    // In production, you'd want to store this securely and use a session
-    const redirectUrl = `/?strava_success=true&access_token=${tokenData.access_token}&refresh_token=${tokenData.refresh_token}&expires_at=${tokenData.expires_at}`;
+    // Hand the browser a one-time code, never the tokens themselves. A token
+    // in a redirect URL lands in browser history, in any proxy or CDN access
+    // log between here and the runner, and in the Referer header of every
+    // request the landing page makes afterwards. The app redeems the code once
+    // over POST, where it does not belong in a log.
+    const exchangeCode = crypto.randomBytes(32).toString('hex');
+    stravaTokenHandover.set(exchangeCode, {
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresAt: tokenData.expires_at,
+      createdAt: Date.now(),
+    });
+    pruneStaleHandover();
+
+    const redirectUrl = `/?strava_success=true&code=${exchangeCode}`;
     res.redirect(redirectUrl);
   } catch (error) {
     console.error('Strava OAuth callback error:', error);
@@ -302,11 +347,15 @@ app.get('/index.html', (_req, res) => {
 
 // ---------------------------------------------------------------------------
 // /api/runs — Mobile run sync endpoint.
-// The mobile app uploads completed RunSession objects here for off-chain
-// validation. Valid runs are held in an in-memory queue and exposed via
-// GET /api/runs/pending so the web app can claim them on-chain. Actual
-// minting still happens from the wallet client; this endpoint does not
-// hold a private key or submit transactions.
+// The mobile app uploads a reduced run record here for off-chain validation:
+// distance, duration, and the two endpoints needed to check the run closed its
+// loop. It does NOT send the GPS track. Valid runs are held in an in-memory
+// queue as summaries and exposed via GET /api/runs/pending so the web app can
+// claim them on-chain. Actual minting still happens from the wallet client;
+// this endpoint does not hold a private key or submit transactions.
+//
+// This endpoint is unauthenticated and served with CORS *, so nothing
+// sensitive may be accepted here. See docs/privacy.md.
 // See packages/mobile-app/src/services/RunSyncService.ts for the client.
 // ---------------------------------------------------------------------------
 const pendingRuns = new Map();
@@ -325,7 +374,9 @@ function validateRun(run) {
   }
   if (errors.length > 0) return { valid: false, errors };
 
-  // Basic territory eligibility: 500m+ and a closed-ish loop (start/end within 100m)
+  // Basic territory eligibility: 500m+ and a closed-ish loop (start/end within 100m).
+  // The client sends only the first and last fix, which is all this needs —
+  // there is no full track to validate, and none to retain.
   const minClaimDistance = 500;
   const loopThreshold = 100;
   const eligible =
@@ -355,7 +406,7 @@ app.post('/api/runs', express.json({ limit: '5mb' }), (req, res) => {
     return res.status(400).json({ error: 'validation failed', details: validation.errors });
   }
 
-  const pointCount = Array.isArray(run.points) ? run.points.length : 0;
+  const pointCount = Number.isFinite(req.body?.pointCount) ? req.body.pointCount : 0;
   const summary = {
     runId: run.id,
     distance: run.totalDistance,
@@ -365,15 +416,18 @@ app.post('/api/runs', express.json({ limit: '5mb' }), (req, res) => {
     receivedAt: new Date().toISOString(),
   };
 
-  pendingRuns.set(run.id, { ...summary, run });
+  // Retain the summary only. `run.points` arrives as start and end (see
+  // uploadPayload in RunSyncService) so there is no track to keep, and
+  // nothing here should outlive the pending queue.
+  pendingRuns.set(run.id, summary);
   console.log(
-    `[runs] accepted ${run.id} (${pointCount} points, ${run.totalDistance}m, eligible=${validation.eligible})`
+    `[runs] accepted ${run.id} (${pointCount} fixes, ${run.totalDistance}m, eligible=${validation.eligible})`
   );
   res.status(202).json({ status: 'accepted', ...summary });
 });
 
 app.get('/api/runs/pending', (req, res) => {
-  const runs = Array.from(pendingRuns.values()).map((entry) => entry.summary || entry);
+  const runs = Array.from(pendingRuns.values());
   res.json({ pending: runs, count: runs.length });
 });
 

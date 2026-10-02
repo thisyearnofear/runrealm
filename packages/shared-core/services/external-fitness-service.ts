@@ -194,11 +194,17 @@ export class ExternalFitnessService extends BaseService {
   /**
    * Handle OAuth callback from URL parameters
    */
+  /**
+   * Handle OAuth callback from URL parameters.
+   *
+   * The server hands back a one-time code rather than the tokens themselves:
+   * a token in a redirect URL ends up in browser history, in proxy access logs
+   * and in the Referer header of every request the landing page then makes.
+   * The code is redeemed over POST and cannot be replayed.
+   */
   public handleOAuthCallback(): void {
     const urlParams = new URLSearchParams(window.location.search);
-    const accessToken = urlParams.get('access_token');
-    const refreshToken = urlParams.get('refresh_token');
-    const expiresAt = urlParams.get('expires_at');
+    const code = urlParams.get('code');
     const error = urlParams.get('strava_error');
 
     if (error) {
@@ -207,13 +213,33 @@ export class ExternalFitnessService extends BaseService {
       return;
     }
 
-    if (accessToken && refreshToken && expiresAt) {
-      this.storeTokens('strava', accessToken, refreshToken, parseInt(expiresAt, 10));
-      this.safeEmit('fitness:connected', { source: 'strava' });
+    // Drop the code from the address bar before doing anything async, so it
+    // cannot leak from the URL into a later request's Referer header.
+    if (code || urlParams.get('strava_success')) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
-      // Clean up URL
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
+    if (code) void this.redeemHandoverCode(code);
+  }
+
+  private async redeemHandoverCode(code: string): Promise<void> {
+    try {
+      const res = await fetch(this.configService.apiUrl('/api/strava/handover'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) throw new Error(`handover failed: ${res.status}`);
+      const tokens = (await res.json()) as {
+        access_token: string;
+        refresh_token: string;
+        expires_at: number;
+      };
+      this.storeTokens('strava', tokens.access_token, tokens.refresh_token, tokens.expires_at);
+      this.safeEmit('fitness:connected', { source: 'strava' });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      this.safeEmit('fitness:connectionFailed', { source: 'strava', error: message });
     }
   }
 

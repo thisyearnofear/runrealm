@@ -32,8 +32,21 @@ export class GeocodingService {
     }
   }
 
+  /**
+   * Coarsen before anything leaves the device.
+   *
+   * Three decimals is ~110m at the equator — enough for Mapbox to name the
+   * street or neighbourhood, and far too coarse to reconstruct where someone
+   * lives or works. Sending the full fix hands a third party a precise
+   * location record for every time the app asks where you are.
+   */
+  private coarsen(coord: number): number {
+    return Math.round(coord * 1000) / 1000;
+  }
+
   async reverseGeocode(lngLat: [number, number], signal?: AbortSignal): Promise<string | null> {
-    const [lng, lat] = lngLat;
+    const lng = this.coarsen(lngLat[0]);
+    const lat = this.coarsen(lngLat[1]);
     const url = `${this.endpoint}/${lng},${lat}.json?limit=1&access_token=${encodeURIComponent(this.token)}`;
     try {
       const res = await fetch(url, { signal });
