@@ -15,8 +15,8 @@ import {RealmRules} from "../generated/RealmRules.sol";
  * Flow: a defender stakes REALM on an owned territory NFT. Whoever ends
  * up owning that tokenId (verified trustlessly via
  * `universal.ownerOf(tokenId)`) and is NOT the staker claims the bounty:
- * `BOUNTY_ATTACKER_SHARE_BPS` to the winner, the rest burned to
- * `DEAD_ADDRESS` (the REALM sink, matching the boost convention).
+ * protocol fee (`BOUNTY_FEE_BPS`) to the treasury, `BOUNTY_ATTACKER_SHARE_BPS`
+ * of the remainder to the winner, the rest burned to `DEAD_ADDRESS`.
  *
  * Anti-grief / anti-farming (mirrors GAME_RULES.bounty + contest):
  *   - Stake bounds: BOUNTY_MIN/MAX_STAKE_REALM_E18.
@@ -33,14 +33,14 @@ import {RealmRules} from "../generated/RealmRules.sol";
  * NOTE on transfers: bounties convey with the token. A seller MUST
  * withdraw before transferring — otherwise the buyer can immediately
  * claim the bounty as the new owner. Self-dealing round-trips still
- * cost the 20% burn, so the protocol cannot be made insolvent; only
- * careless sellers lose.
+ * cost the protocol fee + burn, so the protocol cannot be made insolvent;
+ * only careless sellers lose.
  *
  * Off-chain `BountyService` (Phase A) mirrors this state machine and
  * settles the same events; the dashboard reads either source.
  */
 contract RunRealmBountyV1 is ReentrancyGuard {
-    /// @notice Canonical burn address for the house cut (sink).
+    /// @notice Canonical burn address for the REALM sink.
     address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     /// @notice ZRC-20 REALM token held in escrow. Immutable.
@@ -49,6 +49,9 @@ contract RunRealmBountyV1 is ReentrancyGuard {
     /// @notice ERC-721 territory registry used to verify the claimant
     /// is the current owner (`RunRealmUniversal`). Immutable.
     IERC721 public immutable territoryRegistry;
+
+    /// @notice Protocol treasury for the escrow fee. Immutable.
+    address public immutable treasury;
 
     struct Bounty {
         address staker;
@@ -72,6 +75,7 @@ contract RunRealmBountyV1 is ReentrancyGuard {
         uint256 indexed tokenId,
         address indexed winner,
         uint256 payout,
+        uint256 protocolFee,
         uint256 burned
     );
 
@@ -83,11 +87,13 @@ contract RunRealmBountyV1 is ReentrancyGuard {
     error WithdrawLocked(uint256 tokenId, uint64 availableAt);
     error NotNewOwner(uint256 tokenId);
 
-    constructor(address _realmTokenAddress, address _territoryRegistry) {
+    constructor(address _realmTokenAddress, address _territoryRegistry, address _treasury) {
         require(_realmTokenAddress != address(0), "RunRealmBountyV1: zero realm token");
         require(_territoryRegistry != address(0), "RunRealmBountyV1: zero registry");
+        require(_treasury != address(0), "RunRealmBountyV1: zero treasury");
         realmToken = IZRC20(_realmTokenAddress);
         territoryRegistry = IERC721(_territoryRegistry);
+        treasury = _treasury;
     }
 
     /**
@@ -164,7 +170,8 @@ contract RunRealmBountyV1 is ReentrancyGuard {
      * @notice Claim a bounty as the territory's new owner. Ownership
      * is verified trustlessly against the territory registry: the
      * caller must currently own the token and must not be the staker.
-     * Pays the winner share, burns the rest.
+     * Pays the protocol fee to the treasury, the winner share to the
+     * caller, burns the rest.
      */
     function claimBounty(uint256 tokenId) external nonReentrant {
         Bounty memory bounty = bounties[tokenId];
@@ -174,16 +181,21 @@ contract RunRealmBountyV1 is ReentrancyGuard {
             revert NotNewOwner(tokenId);
         }
 
-        uint256 payout = (bounty.amount * RealmRules.BOUNTY_ATTACKER_SHARE_BPS) / 10000;
-        uint256 burned = bounty.amount - payout;
+        uint256 protocolFee = (bounty.amount * RealmRules.BOUNTY_FEE_BPS) / 10000;
+        uint256 distributable = bounty.amount - protocolFee;
+        uint256 payout = (distributable * RealmRules.BOUNTY_ATTACKER_SHARE_BPS) / 10000;
+        uint256 burned = distributable - payout;
 
         delete bounties[tokenId];
         lastSettledAt[tokenId] = uint64(block.timestamp);
         lastStaker[tokenId] = bounty.staker;
 
         require(realmToken.transfer(msg.sender, payout), "RunRealmBountyV1: payout failed");
+        if (protocolFee != 0) {
+            require(realmToken.transfer(treasury, protocolFee), "RunRealmBountyV1: fee failed");
+        }
         require(realmToken.transfer(DEAD_ADDRESS, burned), "RunRealmBountyV1: burn failed");
 
-        emit BountyClaimed(tokenId, msg.sender, payout, burned);
+        emit BountyClaimed(tokenId, msg.sender, payout, protocolFee, burned);
     }
 }

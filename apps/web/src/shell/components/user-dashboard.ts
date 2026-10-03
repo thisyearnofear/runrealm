@@ -71,6 +71,9 @@ export class UserDashboard {
   private expandedTerritoryId: string | null = null;
   private preferenceService: PreferenceService;
   private territoryViewMode: 'list' | 'binder' = 'binder';
+  /** Live proof/fog chips — refreshed on attestation + rival events. */
+  private proofChip: { matched: number; total: number; rate: number } | null = null;
+  private fogCount = 0;
   // Stored so render()'s re-init can remove the previous handler
   // instead of stacking anonymous listeners (perf pass).
   private containerClickHandler: ((e: Event) => void) | null = null;
@@ -137,6 +140,36 @@ export class UserDashboard {
       // Ensure content is rendered after tab selection
       setTimeout(() => this.render(), 100);
     });
+
+    // Phase 0/1 live chips: fog count + proof coverage. Read-only, degrade
+    // to zero — the dashboard is fully usable without rivals or quorum.
+    const refreshChips = () => {
+      try {
+        // Dynamic import keeps the ethers chunks out of the boot path.
+        void import('@runrealm/shared-blockchain/services/rival-territory-service')
+          .then(({ RivalTerritoryService }) => {
+            this.fogCount = RivalTerritoryService.getInstance().getRivalTerritories().length;
+            this.render();
+          })
+          .catch(() => undefined);
+      } catch {
+        /* rival layer unavailable — chip stays 0 */
+      }
+      try {
+        void import('@runrealm/shared-core/services/attestation-service').then(
+          ({ AttestationService }) => {
+            this.proofChip = AttestationService.getInstance().getCoverage();
+            this.render();
+          }
+        );
+      } catch {
+        /* attestation unavailable — chip hidden */
+      }
+    };
+    this.eventBus.on('territory:rivalsUpdated', refreshChips);
+    this.eventBus.on('attestation:matched', refreshChips);
+    this.eventBus.on('attestation:created', refreshChips);
+    refreshChips();
 
     console.log('UserDashboard: Subscriptions complete');
   }
@@ -479,6 +512,16 @@ export class UserDashboard {
     if (!userStats)
       return '<div class="dashboard-section"><h3>Player Stats</h3><p>No data available</p></div>';
 
+    // Phase 0/1 chips: fog-of-war presence + proof coverage. Presence,
+    // never points; coverage is matched/total signed.
+    const fogChip =
+      this.fogCount > 0
+        ? `<div class="stat-item"><div class="stat-value">🌫️ ${this.fogCount}</div><div class="stat-label">Rival claims nearby</div></div>`
+        : '';
+    const proofChip = this.proofChip
+      ? `<div class="stat-item"><div class="stat-value">${this.proofChip.matched >= 1 ? '✓' : '●'} ${this.proofChip.matched}/${this.proofChip.total}</div><div class="stat-label">Verified runs</div></div>`
+      : '';
+
     return `
       <div class="dashboard-section">
         <h3>Player Stats</h3>
@@ -499,6 +542,8 @@ export class UserDashboard {
             <div class="stat-value">${userStats.territoriesOwned}</div>
             <div class="stat-label">Territories</div>
           </div>
+          ${fogChip}
+          ${proofChip}
         </div>
       </div>
     `;

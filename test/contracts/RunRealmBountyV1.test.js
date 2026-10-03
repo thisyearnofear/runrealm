@@ -42,7 +42,8 @@ describe('RunRealmBountyV1 (Phase B escrow)', () => {
     const RunRealmBountyV1 = await ethers.getContractFactory('RunRealmBountyV1');
     const bounty = await RunRealmBountyV1.deploy(
       await realmToken.getAddress(),
-      await universal.getAddress()
+      await universal.getAddress(),
+      owner.address // treasury: protocol fee sink for tests
     );
     await bounty.waitForDeployment();
 
@@ -105,8 +106,8 @@ describe('RunRealmBountyV1 (Phase B escrow)', () => {
     expect((await bounty.bounties(1)).amount).to.equal(0);
   });
 
-  it('claim pays the new owner 80/20 and starts cooldown', async () => {
-    const { realmToken, universal, bounty, defender, challenger } =
+  it('claim pays winner + treasury + burn and starts cooldown', async () => {
+    const { realmToken, universal, bounty, defender, challenger, owner } =
       await loadFixture(deployBountyFixture);
     const bountyAddr = await bounty.getAddress();
     const dead = '0x000000000000000000000000000000000000dEaD';
@@ -115,15 +116,26 @@ describe('RunRealmBountyV1 (Phase B escrow)', () => {
     // Steal simulation: NFT moves defender -> challenger on the registry.
     await universal.connect(defender).transferFrom(defender.address, challenger.address, 1);
 
+    // 100 REALM: 5% fee (5) → treasury, 80% of 95 (76) → winner, 19 burns.
     const challengerBefore = await realmToken.balanceOf(challenger.address);
+    const treasuryBefore = await realmToken.balanceOf(owner.address);
     const deadBefore = await realmToken.balanceOf(dead);
     await expect(bounty.connect(challenger).claimBounty(1))
       .to.emit(bounty, 'BountyClaimed')
-      .withArgs(1, challenger.address, ethers.parseEther('80'), ethers.parseEther('20'));
+      .withArgs(
+        1,
+        challenger.address,
+        ethers.parseEther('76'),
+        ethers.parseEther('5'),
+        ethers.parseEther('19')
+      );
     expect(await realmToken.balanceOf(challenger.address)).to.equal(
-      challengerBefore + ethers.parseEther('80')
+      challengerBefore + ethers.parseEther('76')
     );
-    expect(await realmToken.balanceOf(dead)).to.equal(deadBefore + ethers.parseEther('20'));
+    expect(await realmToken.balanceOf(owner.address)).to.equal(
+      treasuryBefore + ethers.parseEther('5')
+    );
+    expect(await realmToken.balanceOf(dead)).to.equal(deadBefore + ethers.parseEther('19'));
     expect(await bounty.lastSettledAt(1)).to.be.gt(0);
 
     // Cooldown: immediate restake reverts.
