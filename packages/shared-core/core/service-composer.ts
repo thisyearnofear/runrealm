@@ -35,6 +35,7 @@ import { AIService } from '../services/ai-service';
 import { AnimationService } from '../services/animation-service';
 import { AttestationService } from '../services/attestation-service';
 import { BountyService } from '../services/bounty-service';
+import { MarketplaceService } from '../services/marketplace-service';
 import { ConfidentialTerritoryService } from '../services/confidential-territory-service';
 import { DOMService } from '../services/dom-service';
 import { ExternalFitnessService } from '../services/external-fitness-service';
@@ -99,6 +100,7 @@ export interface Services {
   externalFitnessService: ExternalFitnessService;
   ghostRunnerService: GhostRunnerService;
   bountyService: BountyService;
+  marketplaceService: MarketplaceService;
   accountService: AccountService;
   attestationService: AttestationService;
   enhancedRunControls: EnhancedRunControls;
@@ -150,6 +152,7 @@ export function createServices(): Services {
   const externalFitnessService = new ExternalFitnessService();
   const ghostRunnerService = GhostRunnerService.getInstance();
   const bountyService = BountyService.getInstance();
+  const marketplaceService = MarketplaceService.getInstance();
   const accountService = AccountService.getInstance();
   const attestationService = AttestationService.getInstance();
   const enhancedRunControls = new EnhancedRunControls();
@@ -205,6 +208,7 @@ export function createServices(): Services {
     externalFitnessService,
     ghostRunnerService,
     bountyService,
+    marketplaceService,
     accountService,
     attestationService,
     enhancedRunControls,
@@ -271,6 +275,7 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     crossChain: services.crossChainService,
     externalFitness: services.externalFitnessService,
     ghostRunnerService: services.ghostRunnerService,
+    marketplace: services.marketplaceService,
     ghostManagement: platformUI.ghostManagement,
     animation: services.animation,
     navigation: services.navigation,

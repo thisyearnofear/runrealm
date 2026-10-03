@@ -620,6 +620,28 @@ export interface AppEvents extends Web3Events {
     /** Phase 3 protocol take (escrow fee → treasury). */
     protocolRealm?: number;
   };
+  // Marketplace mirror (Phase 4, #28): off-chain intent for the
+  // RunRealmEscrowV1 rails. Fees previewed upfront; chain moves REALM.
+  'marketplace:listed': {
+    territoryId: string;
+    seller: string;
+    priceRealm: number;
+    feeRealm: number;
+    netRealm: number;
+  };
+  'marketplace:delisted': { territoryId: string };
+  'marketplace:sold': {
+    territoryId: string;
+    seller: string;
+    buyer: string;
+    priceRealm: number;
+    feeRealm: number;
+    soldAt: number;
+  };
+  // Brand-challenge join (Phase 4, #28): one-tap join with an attested
+  // run; judging settles against the attested board downstream.
+  'challenge:joined': { challengeId: string; accountId: string; runId?: string };
+  'challenge:joinBlocked': { challengeId: string; reason: string };
   // Ghost head-to-head race result (ghost defends a territory vs the
   // owner's recent form). Scores are 0-1000 activity-point scale so the
   // result card reads like the rest of the defense system.

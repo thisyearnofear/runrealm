@@ -50,6 +50,11 @@ export async function initializeGameFi(opts: GameFiBootstrapOptions): Promise<vo
     // subscribes settle-on-claim; memory-only without storage.
     await services.bountyService.initialize();
 
+    // Phase 4 (#28): off-chain marketplace mirror. Loads persisted
+    // listings and subscribes clear-on-transfer; memory-only without
+    // storage. Never blocks boot.
+    await services.marketplaceService.initialize();
+
     // Phase 6: cross-chain anchor relayer. Degrades to a no-op unless
     // RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS is configured; start() only
     // begins polling when configured (operator/relayer context).
