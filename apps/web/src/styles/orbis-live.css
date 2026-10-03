@@ -16,12 +16,40 @@ body.orbis-live-route #maplibre-container {
 
 .orbis-live-page {
   position: relative;
+  /* border-box, not by global reset -- see the note below. */
+  box-sizing: border-box;
   width: min(1440px, 100%);
   min-height: 100vh;
   margin: 0 auto;
   padding: clamp(20px, 4vw, 56px);
   font-family: var(--rr-font-body);
 }
+
+/*
+ * Why `box-sizing` is set here rather than with a global reset.
+ *
+ * This app has no `* { box-sizing: border-box }` reset -- the only three
+ * `box-sizing` declarations in it are scoped rules in components.css. So this
+ * element defaulted to `content-box`, where `width` is the *content* width and
+ * `padding` is added outside it. Combined with `width: min(1440px, 100%)` that
+ * made the page wider than the viewport by exactly the horizontal padding:
+ *
+ *   1280px viewport -> 1264 content + 102.4 padding = 1366px
+ *
+ * Measured across breakpoints, the overflow was present everywhere from 768px
+ * to 1920px (94px of it at 1280). It escaped only at 1920, where `min()` clamps
+ * below the viewport, and on mobile, where `clamp()` drops the padding.
+ *
+ * It did not *look* broken, which is what made it worth fixing. The rule below
+ * sets `overflow-x: hidden` on the body, so the overflow was clipped instead of
+ * scrolled: no scrollbar, no visible error, and the right-hand column silently
+ * pushed out of view. The page just looked subtly wrong.
+ *
+ * A global reset is the more conventional fix and would be correct across the
+ * whole app, but it would shift layout on every route -- a much larger change
+ * than this bug called for, and one that wants its own visual pass. This is
+ * scoped to the one element that was actually overflowing.
+ */
 
 .orbis-live-page::before {
   content: "";
