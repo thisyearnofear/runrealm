@@ -48,6 +48,11 @@ library RealmRules {
   uint256 public constant BOUNTY_WITHDRAW_DELAY_SECONDS     = 48 * 1 hours;
   uint256 public constant BOUNTY_RECLAIM_SHIELD_SECONDS     = 7 * 1 days;
 
+  // Settlement fees (mirrors GAME_RULES.settlement; treasury take)
+  uint256 public constant MARKETPLACE_FEE_BPS              = 250;
+  uint256 public constant BOUNTY_FEE_BPS                   = 500;
+  uint256 public constant CHALLENGE_CREATION_FEE_REALM_E18 = 500 * 10**18;
+
   // Zama fhEVM supported chain IDs (mirrors GAME_RULES.zama.supportedChainIds).
   uint256 public constant ZAMA_CHAIN_ID_0 = 11155111;
 }

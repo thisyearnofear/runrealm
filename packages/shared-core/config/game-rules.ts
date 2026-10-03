@@ -212,6 +212,35 @@ export const GAME_RULES = {
   },
 
   // ---------------------------------------------------------------------
+  // Privacy / visibility — Phase 0 wedge probe.
+  //   Per-territory visibility toggle (shielded/public, default
+  //   shielded) collapses all FHE complexity into a switch users
+  //   already understand (vision.md §Experience). Frictionless:
+  //   shielded is the default, no choice required to play.
+  //   Off-chain only — no Solidity sibling.
+  // ---------------------------------------------------------------------
+  privacy: {
+    defaultShielded: true,
+    silhouetteEnabled: true,
+  },
+
+  // ---------------------------------------------------------------------
+  // Settlement fees — Phase 3 monetisation (into accounts/attestation
+  // frame, cheapest while state is empty). Sourced here, mirrored into
+  // RealmRules.sol via `npm run sync:rules`. Delight rule: fees shown
+  // upfront in REALM, never as gas; sponsored txns micro-burn.
+  // ---------------------------------------------------------------------
+  settlement: {
+    /** 2.5% marketplace take, basis points. */
+    marketplaceFeeBps: 250,
+    /** 5% bounty-protocol take on stake (rest splits 80/20 winner/burn). */
+    bountyFeeBps: 500,
+    /** Brand-challenge creation fee, whole REALM. */
+    challengeCreationFeeRealm: 500,
+    /** Sponsored-gas micro-burn per tx, whole REALM. */
+    sponsoredGasBurnRealm: 0.05,
+  },
+  // ---------------------------------------------------------------------
   // Offline catch-up — reporting rules for absences, not a softcap on
   // decay. Decay applies in full (punishment-as-state: a territory that
   // went claimable stays claimable), which is what removes the

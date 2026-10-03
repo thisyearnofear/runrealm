@@ -268,15 +268,32 @@ export class AttestationService extends BaseService {
 
     // Dual-run: the legacy claim path must never outrun the attestation
     // ledger. A claim with no matching attestation is the gap metric.
-    this.subscribe('territory:claimed', (data: { territory?: { id?: string } }) => {
-      const latest = this.latestAttestation();
-      if (!latest) {
-        this.safeEmit('attestation:mismatch', {
-          territoryId: data.territory?.id ?? '',
-          reason: 'claim-without-attestation',
-        });
+    // Phase 1 cutover rule (frictionless): mismatches are *observed*,
+    // never blocking — runs always complete, contests/brand boards check
+    // attestation at the moment of value, not the moment of play.
+    this.subscribe(
+      'territory:claimed',
+      (data: { territory?: { id?: string }; runId?: string }) => {
+        const runId = data.runId ?? '';
+        const matched = runId ? this.getAttestationForRun(runId) : this.latestAttestation();
+        if (!matched) {
+          this.safeEmit('attestation:mismatch', {
+            territoryId: data.territory?.id ?? '',
+            runId,
+            reason: 'claim-without-attestation',
+          });
+        } else {
+          // Delight: claim ceremony can show "Verified run ✓" vs honest
+          // "Local run — will verify when oracle reachable".
+          this.safeEmit('attestation:matched', {
+            territoryId: data.territory?.id ?? '',
+            runId,
+            status: matched.status,
+            signatures: matched.signatures.length,
+          });
+        }
       }
-    });
+    );
 
     // Ghost performances and race outcomes are attestations too — a
     // ghost's signed history is what makes cross-ghost rivalries real

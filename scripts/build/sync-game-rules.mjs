@@ -93,6 +93,7 @@ function emitRealmRules(r) {
   const t = r.territory;
   const b = r.bounty;
   const c = r.contest;
+  const s = r.settlement;
   const zamaIds = emitZamaChainConstants(r, '  ');
   return `${COMMON_HEADER}
 /**
@@ -140,6 +141,11 @@ library RealmRules {
   uint256 public constant BOUNTY_COOLDOWN_SECONDS           = ${b.cooldownHours} * 1 hours;
   uint256 public constant BOUNTY_WITHDRAW_DELAY_SECONDS     = ${b.withdrawDelayHours} * 1 hours;
   uint256 public constant BOUNTY_RECLAIM_SHIELD_SECONDS     = ${c.reclaimShieldDays} * 1 days;
+
+  // Settlement fees (mirrors GAME_RULES.settlement; treasury take)
+  uint256 public constant MARKETPLACE_FEE_BPS              = ${s.marketplaceFeeBps};
+  uint256 public constant BOUNTY_FEE_BPS                   = ${s.bountyFeeBps};
+  uint256 public constant CHALLENGE_CREATION_FEE_REALM_E18 = ${s.challengeCreationFeeRealm} * 10**18;
 ${zamaIds}}
 `;
 }

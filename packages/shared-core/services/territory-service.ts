@@ -59,6 +59,11 @@ export interface Territory {
   metadata: TerritoryMetadata;
   owner?: string;
   claimedAt?: number;
+  /** Phase 0: per-territory visibility (shielded/public, default shielded).
+   *  Frictionless: set automatically at claim from GAME_RULES.privacy;
+   *  one-switch change later. Shielded = silhouette on rival maps, no
+   *  exact score leaked. Off-chain only. */
+  visibility?: 'shielded' | 'public';
   runData: {
     distance: number;
     duration: number;
@@ -219,9 +224,11 @@ export class TerritoryService extends BaseService {
             this.runToTerritory.set(run.id, result.territory.id);
             // Auto-claim is still a claim: fire the same event the manual
             // path does so the deed ceremony and run arc "Develop" act play.
+            // runId lets AttestationService match claim <-> proof (Phase 1).
             this.safeEmit('territory:claimed', {
               territory: result.territory,
               transactionHash: result.transactionHash || '',
+              runId: run.id,
             });
           } else {
             this.safeEmit('territory:claimFailed', {
@@ -638,6 +645,9 @@ export class TerritoryService extends BaseService {
       geohash: run.geohash,
       bounds,
       metadata,
+      // Phase 0: shielded default — zero-choice privacy. Runner flips
+      // one switch later to go public (flex) if they want.
+      visibility: GAME_RULES.privacy.defaultShielded ? 'shielded' : 'public',
       runData: {
         distance: run.totalDistance,
         duration: run.totalDuration,
@@ -1256,6 +1266,9 @@ export class TerritoryService extends BaseService {
    * territory: GAME_RULES.activity.initialPoints starting from claim time.
    */
   private seedDefenseState(territory: Territory): void {
+    if (territory.visibility === undefined) {
+      territory.visibility = GAME_RULES.privacy.defaultShielded ? 'shielded' : 'public';
+    }
     if (territory.activityPoints === undefined) {
       territory.activityPoints = GAME_RULES.activity.initialPoints;
       territory.lastActivityUpdate = Date.now();
