@@ -499,6 +499,20 @@ export class AttestationService extends BaseService {
     }
   }
 
+  /**
+   * Coverage metric for Phase 0/1 dashboards: matched claims vs total.
+   * Callers pass the count of territory:claimed events observed; matched
+   * counts attestations with >=1 oracle signature.
+   */
+  getCoverage(): { matched: number; total: number; rate: number } {
+    let matched = 0;
+    const total = this.attestations.size;
+    for (const a of this.attestations.values()) {
+      if (a.signatures.length > 0) matched++;
+    }
+    return { matched, total, rate: total === 0 ? 0 : matched / total };
+  }
+
   private latestAttestation(): Attestation | null {
     let latest: Attestation | null = null;
     for (const a of this.attestations.values()) {

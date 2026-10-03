@@ -501,6 +501,7 @@ export class TerritoryService extends BaseService {
         this.safeEmit('territory:claimed', {
           territory: result.territory,
           transactionHash: result.transactionHash || '',
+          runId,
         });
       } else {
         this.safeEmit('territory:claimFailed', {
@@ -1119,6 +1120,30 @@ export class TerritoryService extends BaseService {
    */
   public getClaimedTerritories(): Territory[] {
     return Array.from(this.claimedTerritories.values());
+  }
+
+  /**
+   * One-tap visibility flip: shielded <-> public. Writes the Territory
+   * record (map + deed source of truth) and emits the change event the
+   * dashboard mirror listens to, so the two never drift.
+   * Delight: instant, single switch, no wallet, no gas talk.
+   */
+  public setTerritoryVisibility(
+    territoryId: string,
+    visibility: 'shielded' | 'public'
+  ): Territory | null {
+    let target: Territory | null = null;
+    for (const territory of this.claimedTerritories.values()) {
+      if (territory.id === territoryId || territory.geohash === territoryId) {
+        target = territory;
+        break;
+      }
+    }
+    if (!target) return null;
+    target.visibility = visibility;
+    this.saveTerritoriesToStorage();
+    this.safeEmit('territory:visibilityChanged', { territoryId: target.id, visibility });
+    return target;
   }
 
   /**

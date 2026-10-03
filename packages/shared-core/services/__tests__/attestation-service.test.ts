@@ -208,6 +208,64 @@ describe('AttestationService', () => {
       bus.off('attestation:mismatch', handler);
     });
 
+    it('matches a claim to its run proof by runId (no mismatch)', async () => {
+      const run = fakeRun();
+      await service.attestRun(run);
+      const mismatches: string[] = [];
+      const matched: Array<{ status: string; signatures: number }> = [];
+      const bus = EventBus.getInstance();
+      const mismatchHandler = (data: { reason: string }) => mismatches.push(data.reason);
+      const matchedHandler = (data: { status: string; signatures: number }) =>
+        matched.push(data);
+      bus.on('attestation:mismatch', mismatchHandler);
+      bus.on('attestation:matched', matchedHandler as never);
+
+      bus.emit(
+        'territory:claimed',
+        { territory: { id: 't1' }, transactionHash: '', runId: run.id } as never
+      );
+      expect(mismatches).toEqual([]);
+      expect(matched).toHaveLength(1);
+      expect(matched[0]!.signatures).toBe(0); // local: honest, zero sigs
+      bus.off('attestation:mismatch', mismatchHandler);
+      bus.off('attestation:matched', matchedHandler as never);
+    });
+
+    it('upgrades the deed proof bar when quorum signatures land', async () => {
+      const oracle: AttestationOracle = {
+        id: 'o',
+        sign: async () => ({ oracle: 'o', signature: '0x1', signer: '0xs' }),
+      };
+      const withOracle = await makeService([oracle]);
+      const run = fakeRun();
+      await withOracle.attestRun(run);
+      const matched: Array<{ status: string; signatures: number }> = [];
+      const bus = EventBus.getInstance();
+      const matchedHandler = (data: { status: string; signatures: number }) =>
+        matched.push(data);
+      bus.on('attestation:matched', matchedHandler as never);
+      bus.emit(
+        'territory:claimed',
+        { territory: { id: 't2' }, transactionHash: '', runId: run.id } as never
+      );
+      expect(matched).toHaveLength(1);
+      expect(matched[0]!.status).toBe('pending');
+      expect(matched[0]!.signatures).toBe(1);
+      bus.off('attestation:matched', matchedHandler as never);
+    });
+
+    it('reports coverage for dashboards', async () => {
+      const oracle: AttestationOracle = {
+        id: 'o',
+        sign: async () => ({ oracle: 'o', signature: '0x1', signer: '0xs' }),
+      };
+      const withOracle = await makeService([oracle]);
+      await withOracle.attestRun(fakeRun()); // signed
+      await service.attestRun(fakeRun()); // local — lands on shared ledger of `service` only
+      expect(withOracle.getCoverage().matched).toBe(1);
+      expect(withOracle.getCoverage().total).toBeGreaterThanOrEqual(1);
+    });
+
     it('stays quiet when an attestation covers the claim', async () => {
       await service.attestRun(fakeRun());
       const mismatches: string[] = [];

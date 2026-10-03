@@ -234,7 +234,14 @@ export interface AppEvents extends Web3Events {
   /** Attestation layer (protocol-vision Layer 3): run proofs. */
   'attestation:created': { attestation: import('../services/attestation-service').Attestation };
   'attestation:finalized': { attestationId: string };
-  'attestation:mismatch': { territoryId: string; reason: string };
+  'attestation:mismatch': { territoryId: string; runId?: string; reason: string };
+  /** Claim matched its run proof — deed ceremony shows Verified vs Local. */
+  'attestation:matched': {
+    territoryId: string;
+    runId?: string;
+    status: import('../services/attestation-service').AttestationStatus;
+    signatures: number;
+  };
   'session:authorizationDenied': {
     action: import('../services/account-service').GameAction;
     reason: import('../services/account-service').AuthorizationDenial;
@@ -341,6 +348,8 @@ export interface AppEvents extends Web3Events {
     isCrossChain?: boolean;
     sourceChainId?: number;
     source?: string;
+    /** Run that produced this claim — lets AttestationService match proof. */
+    runId?: string;
   };
   'ui:showDeedModal': {
     territory: Territory;
@@ -598,6 +607,8 @@ export interface AppEvents extends Web3Events {
     winner: string;
     amountRealm: number;
     burnedRealm: number;
+    /** Phase 3 protocol take (escrow fee → treasury). */
+    protocolRealm?: number;
   };
   // Ghost head-to-head race result (ghost defends a territory vs the
   // owner's recent form). Scores are 0-1000 activity-point scale so the

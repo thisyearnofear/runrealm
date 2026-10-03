@@ -15,6 +15,10 @@ export interface DeedData {
   territory: Territory;
   transactionHash?: string;
   isCrossChain?: boolean;
+  /** Phase 1: proof status for the deed's proof bar. Set when the claim
+   *  matched its attestation; absent = still local/unverified. */
+  proofStatus?: 'verified' | 'local';
+  proofSignatures?: number;
 }
 
 export interface SunprintDeedModalOptions {
@@ -30,6 +34,7 @@ export class SunprintDeedModal extends BaseService {
   private domService: DOMService;
   private soundService: SoundService;
   private activeModal: HTMLElement | null = null;
+  private activeDeedRunId: string | null = null;
   private escKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private readonly autoShowOnClaim: boolean;
 
@@ -47,13 +52,33 @@ export class SunprintDeedModal extends BaseService {
     if (this.autoShowOnClaim) {
       this.subscribe(
         'territory:claimed',
-        (data: { territory: Territory; transactionHash?: string; isCrossChain?: boolean }) => {
+        (data: {
+          territory: Territory;
+          transactionHash?: string;
+          isCrossChain?: boolean;
+          runId?: string;
+        }) => {
           if (data && data.territory) {
+            // Delight: deed opens instantly with honest Local proof state,
+            // then upgrades to Verified live when the match event lands.
+            // Frictionless: no waiting on the oracle to celebrate.
             this.showDeed({
               territory: data.territory,
               transactionHash: data.transactionHash,
               isCrossChain: data.isCrossChain,
+              proofStatus: 'local',
+              proofSignatures: 0,
             });
+            this.activeDeedRunId = data.runId ?? null;
+          }
+        }
+      );
+      // Phase 1: live upgrade — claim matched its proof after reveal.
+      this.subscribe(
+        'attestation:matched',
+        (data: { territoryId: string; runId?: string; status: string; signatures: number }) => {
+          if (this.activeDeedRunId && data.runId && data.runId === this.activeDeedRunId) {
+            this.refreshProofBar(data.status, data.signatures);
           }
         }
       );
@@ -121,6 +146,7 @@ export class SunprintDeedModal extends BaseService {
    * Dismiss the deed modal
    */
   public closeDeed(): void {
+    this.activeDeedRunId = null;
     if (this.activeModal) {
       this.activeModal.classList.add('closing');
       setTimeout(() => {
@@ -157,7 +183,7 @@ export class SunprintDeedModal extends BaseService {
     data: DeedData,
     rarity: 'common' | 'rare' | 'epic' | 'legendary'
   ): HTMLElement {
-    const { territory, transactionHash } = data;
+    const { territory, transactionHash, proofStatus, proofSignatures } = data;
     const name =
       territory.metadata?.name || `Sector ${territory.geohash?.substring(0, 7) || 'Alpha'}`;
     const h3Cell = territory.geohash || territory.id || '8928308280fffff';
@@ -272,10 +298,10 @@ export class SunprintDeedModal extends BaseService {
           </div>
         </div>
 
-        <!-- On-Chain Proof Pill -->
-        <div class="deed-proof-bar">
+        <!-- On-Chain Proof Pill — honest proof state, live-upgradable. -->
+        <div class="deed-proof-bar" data-proof-bar>
           <span class="proof-icon">⛓️</span>
-          <span class="proof-status">${transactionHash ? `TX: ${transactionHash.substring(0, 10)}...${transactionHash.slice(-6)}` : 'SECURED IN LOCAL RUN ATLAS'}</span>
+          <span class="proof-status" data-proof-status>${proofStatus === 'verified' ? `✓ VERIFIED RUN${proofSignatures ? ` (${proofSignatures} sig${proofSignatures === 1 ? '' : 's'})` : ''}` : '● LOCAL RUN — VERIFYING…'}</span>
           <span class="proof-guard">GUARD: GHOST DEFENDER ELIGIBLE</span>
         </div>
 
@@ -309,6 +335,25 @@ export class SunprintDeedModal extends BaseService {
     });
 
     return modal;
+  }
+
+  /**
+   * Phase 1 delight: upgrade the open deed's proof bar live when the
+   * claim's attestation lands — Local → Verified without reopening.
+   * No-op when no deed is open (ceremony already dismissed).
+   */
+  private refreshProofBar(status: string, signatures: number): void {
+    const bar = this.activeModal?.querySelector('[data-proof-status]');
+    if (!bar) return;
+    const verified = signatures > 0 && status !== 'local';
+    bar.textContent = verified
+      ? `✓ VERIFIED RUN (${signatures} sig${signatures === 1 ? '' : 's'})`
+      : '● LOCAL RUN — VERIFYING…';
+    this.safeEmit('ui:toast', {
+      message: verified ? '✓ Run verified by oracle quorum' : 'Run recorded locally',
+      type: 'success',
+      duration: 3000,
+    });
   }
 
   private handleShare(

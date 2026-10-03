@@ -29,9 +29,12 @@ describe('BountyService (Phase A escrow)', () => {
     const svc = BountyService.createIsolated();
     await svc.stakeBounty('t-settle', 'alice', 100);
     const result = await svc.settle('t-settle', { winner: 'bob' });
-    const expectedWinner = Math.floor((100 * GAME_RULES.bounty.attackerShareBps) / 10000);
+    const protocol = Math.floor((100 * GAME_RULES.settlement.bountyFeeBps) / 10000);
+    const distributable = 100 - protocol;
+    const expectedWinner = Math.floor((distributable * GAME_RULES.bounty.attackerShareBps) / 10000);
+    expect(result?.protocolRealm).toBe(protocol);
     expect(result?.amountRealm).toBe(expectedWinner);
-    expect(result?.burnedRealm).toBe(100 - expectedWinner);
+    expect(result?.burnedRealm).toBe(distributable - expectedWinner);
     expect(svc.getBounty('t-settle')).toBeNull();
   });
 

@@ -221,7 +221,7 @@ export class UserDashboard {
     this.eventBus.emit('dashboard:territoriesFiltered', { filter });
   }
 
-  private handleAction(action: string, target: HTMLElement): void {
+  private async handleAction(action: string, target: HTMLElement): Promise<void> {
     console.log('Dashboard action:', action);
 
     switch (action) {
@@ -349,13 +349,20 @@ export class UserDashboard {
       case 'toggle-territory-visibility': {
         const territoryId = target.getAttribute('data-territory');
         if (territoryId) {
+          // Single writer: TerritoryService owns the record + emits the
+          // change; the preference mirror follows so dashboard re-renders
+          // and map/deed stay in sync. No drift, one switch.
+          const { TerritoryService } = await import(
+            '@runrealm/shared-core/services/territory-service'
+          );
           const current = this.preferenceService.getTerritoryVisibility(territoryId);
           const next = current === 'public' ? 'shielded' : 'public';
+          TerritoryService.getInstance().setTerritoryVisibility(territoryId, next);
           this.preferenceService.saveTerritoryVisibility(territoryId, next);
-          // Attestation/leaderboard layers consume this; today it drives UI.
-          this.eventBus.emit('territory:visibilityChanged', {
-            territoryId,
-            visibility: next,
+          this.eventBus.emit('ui:toast', {
+            message: next === 'public' ? '🌐 Territory disclosed — rivals see it' : '🛡️ Territory shielded — presence only',
+            type: 'info',
+            duration: 2500,
           });
           this.render();
         }

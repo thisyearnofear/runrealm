@@ -135,13 +135,21 @@ export class BountyService extends BaseService {
   /**
    * Settle on ownership change. No bounty → no-op. Staker reclaiming
    * their own territory returns the stake silently (no payout, no burn).
-   * A new owner triggers the winner/burn split and starts cooldown.
+   * A new owner triggers the winner/protocol/burn split and starts cooldown.
+   * Phase 3: protocol take = GAME_RULES.settlement.bountyFeeBps of stake
+   * (treasury — shown in UI as the escrow fee); winner gets
+   * attackerShareBps of the remainder; the rest burns (sink).
    * Returns the claim event payload for crediting, or null.
    */
   async settle(
     territoryId: string,
     claim: { winner?: string; owner?: string }
-  ): Promise<{ winner: string; amountRealm: number; burnedRealm: number } | null> {
+  ): Promise<{
+    winner: string;
+    amountRealm: number;
+    protocolRealm: number;
+    burnedRealm: number;
+  } | null> {
     const bounty = this.bounties.get(territoryId);
     if (!bounty || !territoryId) return null;
     const winner = claim.winner ?? claim.owner ?? '';
@@ -151,14 +159,24 @@ export class BountyService extends BaseService {
       await this.save();
       return null;
     }
-    const amountRealm = Math.floor(
-      (bounty.amountRealm * GAME_RULES.bounty.attackerShareBps) / 10000
+    const protocolRealm = Math.floor(
+      (bounty.amountRealm * GAME_RULES.settlement.bountyFeeBps) / 10000
     );
-    const burnedRealm = bounty.amountRealm - amountRealm;
+    const distributable = bounty.amountRealm - protocolRealm;
+    const amountRealm = Math.floor(
+      (distributable * GAME_RULES.bounty.attackerShareBps) / 10000
+    );
+    const burnedRealm = distributable - amountRealm;
     this.settled.set(territoryId, { settledAt: Date.now(), staker: bounty.staker });
     await this.save();
-    this.safeEmit('bounty:claimed', { territoryId, winner, amountRealm, burnedRealm });
-    return { winner, amountRealm, burnedRealm };
+    this.safeEmit('bounty:claimed', {
+      territoryId,
+      winner,
+      amountRealm,
+      protocolRealm,
+      burnedRealm,
+    });
+    return { winner, amountRealm, protocolRealm, burnedRealm };
   }
 
   private async load(): Promise<void> {
