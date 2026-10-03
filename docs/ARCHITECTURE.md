@@ -312,6 +312,45 @@ mirrored as a precomputed `boostCostRealmWei: 50n * 10n ** 18n`
 for the JS side. The two values are kept in lockstep by sitting
 side-by-side in the same `game-rules.ts` object literal.
 
+### Phase 4 — Additive Settlement Escrow
+
+The same bytecode-frozen constraint that produced the boost contract applies
+to settlement, so the marketplace and brand challenges ship as a second
+parallel deployment rather than new selectors on `RunRealmUniversal`:
+
+```
+contracts/settlement/RunRealmEscrowV1.sol   (new, additive)
+   ├── constructor(realmToken, territoryRegistry, treasury)
+   ├── listTerritory(tokenId, price)      // ownerOf check, no token pull
+   ├── delistTerritory(tokenId)           // seller-only
+   ├── buyTerritory(tokenId)              // approve(price + fee) first
+   │     ├── re-check ownerOf (a transfer voids a stale listing)
+   │     ├── price → seller, MARKETPLACE_FEE_BPS → treasury
+   │     └── emit TerritorySold(tokenId, seller, buyer, price, fee)
+   └── createChallenge(escrow)            // approve(escrow + creation fee)
+         ├── escrow held in-contract (judging settles it downstream)
+         ├── CHALLENGE_CREATION_FEE_REALM_E18 → treasury
+         └── emit ChallengeCreated(challengeId, brand, escrow, fee)
+```
+
+Fees read `RealmRules.MARKETPLACE_FEE_BPS` and
+`RealmRules.CHALLENGE_CREATION_FEE_REALM_E18`, so a take changes through
+`game-rules.ts` + `npm run sync:rules`, never a logic redeploy.
+
+**Binding.** `contracts.ts` carries the escrow ABI and an `escrow` entry whose
+address comes from `RUNREALM_ESCROW_ADDRESS`; `address(0)` means undeployed and
+binds `null`, exactly like boost. `ContractService` exposes `isEscrowReady()`
+plus `listTerritoryOnChain` / `delistTerritoryOnChain` / `buyTerritoryOnChain` /
+`createChallengeOnChain`, each of which approves exactly the amount the call
+needs (checked against the current allowance) and routes through one
+estimate-then-send path.
+
+**Dependency direction.** `shared-core` must not import `shared-blockchain`, so
+`MarketplaceService` takes a `MarketplaceChainGateway` that
+`core/gamefi-bootstrap.ts` binds to `ContractService`. With no gateway, or with
+the escrow undeployed, the off-chain mirror settles alone; a failing chain write
+emits `marketplace:chainFailed` and leaves the mirror untouched.
+
 ### Phase 3 — EncryptedShield Toggle (`chainSupportsZama`)
 
 The Zama fhEVM confidential layer (phases 4–5) needs a runtime gate so

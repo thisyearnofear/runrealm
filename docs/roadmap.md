@@ -110,6 +110,22 @@ only see a glowing silhouette on the map until they win a contest.
 | `apps/web/src/shell/components/cell-transition-scheduler.ts` | New (H16): small disposable RAF animator over MapLibre feature state; retargets mid-flight from the current visual value, `settleAll()` for style reloads, instant settle under `prefers-reduced-motion`. | H16 |
 | `apps/web/src/shell/components/neighbourhood-map-types.ts` | New (H16): shared cell record/transient-value types and settled-state constants. | H16 |
 
+### Settlement escrow — marketplace + brand challenges (issues #26 / #28)
+
+Tracked outside the numbered roadmap phases (the two GitHub issues are the
+plan of record). Additive next to the frozen `RunRealmUniversal`, following
+the `RunRealmBoostV1` precedent.
+
+| Path | Role |
+|---|---|
+| `contracts/settlement/RunRealmEscrowV1.sol` | New: `listTerritory` / `delistTerritory` / `buyTerritory` (2.5% fee) and `createChallenge` (escrow + 500 REALM fee). Fees read `RealmRules`. |
+| `test/contracts/RunRealmEscrowV1.test.js` | Hardhat suite: fee splits, seller-only delist, insufficient-escrow guard. Not yet compiled in CI (no local `node_modules`). |
+| `scripts/deployment/deploy-escrow.js` | New: Athens deploy; `npm run deploy:escrow`; writes `deployments/zetachain_testnet/RunRealmEscrowV1.json`. |
+| `packages/shared-core/config/contracts.ts` | `ESCROW_CONTRACT_ABI`, `escrow` network entry (`RUNREALM_ESCROW_ADDRESS`, `address(0)` = undeployed), `CONTRACT_METHODS.escrow`, `allowance`. |
+| `packages/shared-core/services/marketplace-service.ts` | New: off-chain listing mirror — `suggestedPrice`, `previewMarketFee`, clear-on-claim, best-effort `MarketplaceChainGateway` writes. |
+| `packages/shared-blockchain/services/contract-service.ts` | `escrowContract` binding + `isEscrowReady` / `listTerritoryOnChain` / `delistTerritoryOnChain` / `buyTerritoryOnChain` / `createChallengeOnChain` with exact-amount approvals. |
+| `apps/web/src/shell/components/user-dashboard.ts` | Market row per territory (sell / remove / buy), listing badges, and the brand-challenge board with one-tap join. |
+
 ## Future horizons (proposed, Sep 2026)
 
 Sequenced product/design/game follow-ups. Statuses updated as horizons

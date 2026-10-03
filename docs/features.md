@@ -54,6 +54,45 @@ Steal/contest spec (steal below 100 pts + run proof, 500-pt start, 7-day reclaim
 24h dispute) is centralized in `GAME_RULES.contest`; the confidential path runs under FHE
 (see [zama-builder-track.md](zama-builder-track.md)).
 
+## Marketplace & Brand Challenges
+
+The settlement escrow (`contracts/settlement/RunRealmEscrowV1.sol`, additive
+next to the frozen `RunRealmUniversal`) puts REALM where the ownership
+already is. Two rails, one fee source:
+
+| Rail | On-chain | Fee |
+| --- | --- | --- |
+| Territory marketplace | `listTerritory` / `delistTerritory` / `buyTerritory` | `MARKETPLACE_FEE_BPS` (2.5%) of price → treasury |
+| Brand challenge | `createChallenge(escrow)` | `CHALLENGE_CREATION_FEE_REALM_E18` (500 REALM) → treasury |
+
+Both fees are sourced from `GAME_RULES.settlement` and mirrored into
+`RealmRules.sol` by `npm run sync:rules`, so changing a take is a config edit
+rather than a logic redeploy. On-chain the escrow moves REALM only — NFT
+custody stays with the registry, and ownership is re-checked at buy time so a
+transfer voids a stale listing.
+
+**Off-chain mirror.** `packages/shared-core/services/marketplace-service.ts`
+mirrors listing intent so the dashboard renders instantly with no wallet:
+`suggestedPrice` (50 REALM floor), `previewMarketFee` (fee + net shown before
+the tap), and clear-on-claim. The chain write is a **best-effort follow-up**:
+with no wallet, or with `RUNREALM_ESCROW_ADDRESS` unset, the mirror alone
+settles and nothing else changes. A chain failure emits
+`marketplace:chainFailed` and the UI says the on-device listing is unchanged —
+it never rolls the user back.
+
+`shared-core` never imports `shared-blockchain`; the mirror takes a
+`MarketplaceChainGateway`, injected in `core/gamefi-bootstrap.ts` from
+`ContractService`. Swapping the chain in or out is therefore one binding, and
+tests inject a fake gateway with no ethers in the graph.
+
+**Dashboard surface** (`apps/web/src/shell/components/user-dashboard.ts`):
+each territory card carries a market row — `Sell territory` (suggested price,
+fee stated before confirm) or, once listed, `Remove listing` + `Buy for N
+$REALM`. A listing badge appears on the deed tile and compact card. The
+Challenges tab carries the brand-challenge boards: one-tap join attached to
+the latest quorum-verified run, with a warm redirect to the oracle quorum when
+the run is still local.
+
 ## User Dashboard
 
 Unified player overview (`packages/shared-core/services/user-dashboard-service.ts`,
