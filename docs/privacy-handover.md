@@ -4,6 +4,21 @@ Everything in `docs/privacy.md` is either shipped or guarded by a test. Two
 items are not, because both need an account or a real session that only a
 person can provide. This file is the checklist for those.
 
+> **Status: blocked on item 1.** `MAPBOX_ACCESS_TOKEN` is set in Vercel and the
+> function reads it, but Mapbox answers `403 Forbidden` — the token carries a
+> URL restriction, and a Vercel function's request has neither a referer nor an
+> IP for Mapbox to match against. Until that is cleared, street labels are
+> blank, and the CSP walk in §2 cannot be completed because its first item is
+> exactly "do street labels appear?". Clear it at
+> https://account.mapbox.com/access-tokens/, then verify without deploying:
+>
+> ```bash
+> curl "https://api.mapbox.com/search/geocode/v6/reverse?longitude=-0.1278&latitude=51.5074&access_token=pk.YOUR_TOKEN"
+> ```
+>
+> A JSON feature means the token is good; `"Forbidden"` means the restriction
+> is still on.
+
 ---
 
 ## 1. Mapbox token — create a scoped public one (5 minutes)
@@ -116,10 +131,24 @@ Cover at minimum:
 - [ ] **Cold load.** The map renders, labels/fonts appear, and the camera works.
 - [ ] **Street labels appear.** This is the one to check first, because it is
       the item that was blocked longest. If they are blank, the function is
-      answering `500 MAPBOX_ACCESS_TOKEN is not set` — check the var is in the
-      Vercel **Production** environment, and that the deployment is newer than
-      the variable (serverless functions snapshot env at deploy time, so a
-      newly added variable needs a redeploy to take effect).
+      answering with an error — and **which** error tells you which fault it
+      is. There are two, and they are fixed in different places:
+
+      - `502` with `Mapbox returned 403 … "Forbidden"` — the token exists and is
+        being read; Mapbox is **rejecting it by origin**. This is a URL
+        restriction on the token. Clear it at
+        https://account.mapbox.com/access-tokens/ (the page should then say
+        *"This token will work for requests originating from any URL"*). No
+        redeploy needed if you save in place. This is the current failure.
+      - `500` with `MAPBOX_ACCESS_TOKEN is not set` — the variable is missing,
+        scoped to Preview rather than Production, or added since the last
+        deploy. Serverless functions snapshot env at deploy time, so a newly
+        added variable needs a redeploy to take effect.
+
+      An earlier version of this checklist only described the second. It is
+      worth keeping both because they look identical from the map — blank
+      labels — and sending someone to the Vercel UI when the fault is in the
+      Mapbox account wastes the whole session.
 - [ ] **Basemap switch.** Streets → dark → satellite → back. All three load.
       This is the one most likely to surface a missing tile origin.
 - [ ] **Run a territory claim** on mobile or web. Exercises the chain RPC

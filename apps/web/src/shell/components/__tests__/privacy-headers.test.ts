@@ -259,7 +259,11 @@ describe('Content-Security-Policy', () => {
     // If one of these disappears from the code, this test should fail and the
     // CSP should be narrowed with it -- not the other way round.
     for (const origin of [
-      'https://api.mapbox.com', // reverse geocoding + directions
+      // Geocoding only, via the self-hosted fallback. Normally the request
+      // goes to the /api/geocode proxy and never reaches Mapbox from a
+      // browser at all. Directions used to be listed here too; that path was
+      // deleted, and this origin stayed because the fallback still needs it.
+      'https://api.mapbox.com',
       'https://www.strava.com', // activities API
       'https://api.reactor.inch', // Reactor WebRTC signalling
       'wss://api.reactor.inch',

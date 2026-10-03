@@ -56,9 +56,14 @@
   #                              URLs. Plain 'unsafe-eval' is NOT granted.
   #   tiles.openfreemap.org     basemap style, tiles, glyphs, sprite.
   #   server.arcgisonline.com   the satellite raster style.
-  #   api.mapbox.com            reverse geocoding + directions only. Tiles do
-  #                              not go here; coordinates are rounded to
-  #                              ~110m before they leave the device.
+  #   api.mapbox.com            geocoding only, and only via the self-hosted
+  #                              fallback in geocoding-service.ts -- the normal
+  #                              path is the /api/geocode proxy, which holds
+  #                              the token server-side. Tiles do not go here;
+  #                              coordinates are rounded to ~110m before they
+  #                              leave the device. (This line also said
+  #                              "directions"; that path was deleted, and the
+  #                              origin stayed because the fallback needs it.)
   #   api.reactor.inch          Reactor WebRTC signalling, and its wss.
   #   www.strava.com            activities API. The OAuth hop is a top-level
   #                              navigation, which CSP does not gate.
