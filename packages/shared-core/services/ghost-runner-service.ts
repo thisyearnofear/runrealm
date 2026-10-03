@@ -355,6 +355,36 @@ export class GhostRunnerService extends BaseService {
     }
   }
 
+  /**
+   * Phase 2 silent play-gate: the app-held session covers play actions
+   * with zero popups. Missing account service (tests/SSR) or missing
+   * account (fresh boot) = no gate. Only an explicit false from an
+   * initialized account service throws — and even that carries warm copy.
+   */
+  private async authorizePlay(action: 'claim' | 'boost' | 'deployGhost'): Promise<void> {
+    let account: {
+      authorize?: (action: string) => Promise<boolean>;
+      getAccount?: () => { id: string } | null;
+    } | null = null;
+    try {
+      account = this.getSiblingService('account');
+    } catch {
+      return;
+    }
+    if (!account || typeof account.authorize !== 'function') return;
+    try {
+      if (typeof account.getAccount === 'function' && !account.getAccount()) return;
+    } catch {
+      return;
+    }
+    const ok = await account.authorize(action);
+    if (!ok) {
+      throw new Error(
+        `ghost: the game session expired — reopen the app to refresh it, then deploy again`
+      );
+    }
+  }
+
   getGhosts(): GhostRunnerNFT[] {
     return Array.from(this.ghosts.values());
   }
@@ -553,6 +583,12 @@ export class GhostRunnerService extends BaseService {
     if (ghost.cooldownUntil && ghost.cooldownUntil > new Date()) {
       throw new Error('Ghost is on cooldown');
     }
+
+    // Phase 2: deploy stays frictionless — the app-held game session
+    // covers play actions with zero popups. The check is silent: no
+    // session at all (private mode, fresh boot race) still deploys;
+    // only an explicit denial is surfaced.
+    await this.authorizePlay('deployGhost');
 
     if (this.userRealmBalance < ghost.deployCost) {
       throw new Error('Insufficient $REALM balance');

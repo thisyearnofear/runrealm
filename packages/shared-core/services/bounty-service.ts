@@ -88,10 +88,16 @@ export class BountyService extends BaseService {
   /**
    * Stake (or replace) a bounty. Throws on out-of-range amounts,
    * contest-cooldown restakes, and reclaim-shield violations.
+   *
+   * Phase 2: spend-gated — the staker's session key must authorize the
+   * REALM cost (moment of value). Zero-friction for play actions is
+   * preserved: claim/boost/deployGhost stay free; staking asks for an
+   * explicit spend key. Denials throw a warm, actionable message.
    */
   async stakeBounty(territoryId: string, staker: string, amountRealm: number): Promise<Bounty> {
     const b = GAME_RULES.bounty;
     if (!territoryId || !staker) throw new RangeError('bounty: territoryId and staker required');
+    await this.authorizeSpend('stakeBounty', amountRealm);
     if (!Number.isFinite(amountRealm) || amountRealm < b.minStakeRealm) {
       throw new RangeError(`bounty: minimum stake is ${b.minStakeRealm} REALM`);
     }
@@ -177,6 +183,33 @@ export class BountyService extends BaseService {
       burnedRealm,
     });
     return { winner, amountRealm, protocolRealm, burnedRealm };
+  }
+
+  /**
+   * Phase 2 spend-gate: staking is the moment of value, so it asks the
+   * account layer — not the chain — for authorization. No account
+   * service (tests, SSR) means no gate: the escrow rules still hold.
+   * Denial throws warm copy the UI toasts directly.
+   */
+  private async authorizeSpend(
+    action: 'stakeBounty' | 'trade',
+    amountRealm: number
+  ): Promise<void> {
+    let account: {
+      authorize?: (action: string, cost?: number) => Promise<boolean>;
+    } | null = null;
+    try {
+      account = this.getSiblingService('account');
+    } catch {
+      return;
+    }
+    if (!account || typeof account.authorize !== 'function') return;
+    const ok = await account.authorize(action, amountRealm);
+    if (!ok) {
+      throw new Error(
+        `bounty: staking ${amountRealm} REALM needs a spend allowance — approve it once in Account, then stake`
+      );
+    }
   }
 
   private async load(): Promise<void> {

@@ -397,6 +397,29 @@ export class AttestationService extends BaseService {
   }
 
   /**
+   * Steal/contest attested-run gate — Phase 1 cutover rule.
+   * Moment of value, not moment of play: runs always complete and claim;
+   * the *steal* requires a signed run proof. Local-only runs get a warm
+   * redirect, not a dead end.
+   *
+   * Returns { ok:true } when the challenger holds a quorum-signed
+   * attestation for runId, else { ok:false, reason } for the toast.
+   */
+  hasAttestedRun(runId: string): { ok: boolean; reason?: string } {
+    const attestation = this.getAttestationForRun(runId);
+    if (!attestation) {
+      return { ok: false, reason: 'No run proof found — finish a run first' };
+    }
+    if (attestation.signatures.length === 0) {
+      return {
+        ok: false,
+        reason: 'Local run — connect to the oracle quorum to verify it, then contest',
+      };
+    }
+    return { ok: true };
+  }
+
+  /**
    * A ghost's aggregated signed history — wins, losses, territories
    * defended — derived from the attestation ledger rather than local
    * counters. Third parties can verify every line independently once

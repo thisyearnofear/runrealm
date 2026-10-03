@@ -63,4 +63,11 @@ describe('BountyService (Phase A escrow)', () => {
     await expect(svc.withdrawBounty('t-withdraw', 'alice')).rejects.toThrow(/unlocks/);
     await expect(svc.withdrawBounty('t-withdraw', 'mallory')).rejects.toThrow(/only the staker/);
   });
+
+  it('spend-gate is silent without an account service (tests/SSR)', async () => {
+    // No account in the registry — BountyService must not gate.
+    const svc = BountyService.createIsolated();
+    const bounty = await svc.stakeBounty('t-nogate', 'alice', MIN);
+    expect(bounty.amountRealm).toBe(MIN);
+  });
 });

@@ -266,6 +266,22 @@ describe('AttestationService', () => {
       expect(withOracle.getCoverage().total).toBeGreaterThanOrEqual(1);
     });
 
+    it('gates steals on quorum-signed proofs (cutover rule)', async () => {
+      const oracle: AttestationOracle = {
+        id: 'o',
+        sign: async () => ({ oracle: 'o', signature: '0x1', signer: '0xs' }),
+      };
+      const withOracle = await makeService([oracle]);
+      const signedRun = fakeRun();
+      await withOracle.attestRun(signedRun);
+      expect(withOracle.hasAttestedRun(signedRun.id)).toEqual({ ok: true });
+
+      const localRun = fakeRun();
+      await service.attestRun(localRun);
+      expect(service.hasAttestedRun(localRun.id).ok).toBe(false);
+      expect(service.hasAttestedRun('missing-run').ok).toBe(false);
+    });
+
     it('stays quiet when an attestation covers the claim', async () => {
       await service.attestRun(fakeRun());
       const mismatches: string[] = [];
