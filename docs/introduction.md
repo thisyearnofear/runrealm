@@ -93,6 +93,20 @@ The additive `RunRealmBountyV1` escrow lives on **ZetaChain Athens Testnet**. De
 RUNREALM_BOUNTY_ADDRESS=0x9Cb90f7b84fEa2775F5Ab4610585a8BB7d8Ad9c1
 ```
 
+#### ZetaChain Marketplace / Challenge Escrow (Phase 4):
+
+The additive `RunRealmEscrowV1` runs the territory marketplace and brand
+challenges beside the frozen `RunRealmUniversal`: sellers list, buyers pay
+`price + 2.5%` (fee to the treasury), and a brand escrows a prize plus a
+`500 $REALM` creation fee. It is built and tested but **not yet deployed** —
+deploy with `npm run deploy:escrow`, then:
+
+```env
+# Web app (Next.js): NEXT_PUBLIC_RUNREALM_ESCROW_ADDRESS
+# Empty means the marketplace runs on its on-device mirror only.
+RUNREALM_ESCROW_ADDRESS=
+```
+
 #### Cross-Chain Anchor Relayer (trial operator):
 
 `CrossChainAnchor` on Sepolia forwards Athens claims into encrypted defense state. It needs a running relayer (`scripts/ops/run-anchor-relayer.js`) holding `RELAYER_ROLE`:
