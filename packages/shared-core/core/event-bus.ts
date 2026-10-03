@@ -512,6 +512,16 @@ export interface AppEvents extends Web3Events {
   'ui:showChallenges': Record<string, never>;
   'territory:manage': { territoryId: string };
   'territory:boostActivity': { territoryId: string };
+  /**
+   * Contest request from the territory card. Carries the challenger's
+   * latest run id so the service can check the quorum-signed proof
+   * (Phase 1 cutover) before touching anything on-chain or local.
+   */
+  'territory:contestRequested': { territoryId: string; runId?: string };
+  /** Contest was blocked before any state changed — UI shows warm redirect. */
+  'territory:contestBlocked': { territoryId: string; reason: string };
+  /** Contest passed both gates — steal flow may proceed. */
+  'territory:contestApproved': { territoryId: string; runId: string };
   'game:claimChallenge': { challengeId: string };
   // Cross-chain events
   'crosschain:territoryClaimRequested': {

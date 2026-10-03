@@ -194,10 +194,25 @@ export default class AccountScreen {
         </div>
       `;
     }
+    // #2: the spend-allowance surface. One-tap presets for the moment of
+    // value (staking, trading) — play actions stay on the silent app key.
+    // Copy states the cap upfront; no chain language leaks.
+    const spendKeys = keys.filter((k) => k.spendLimitRealm > 0);
+    const spendSummary =
+      spendKeys.length === 0
+        ? '<p class="account-copy">Play is covered by the ⚡ app session (free). Staking and trading need a spend allowance — approve one below, once.</p>'
+        : `<p class="account-copy">Spend allowance active: ${spendKeys
+            .map((k) => `${k.spentRealm}/${k.spendLimitRealm} $REALM (${k.scopes.join(', ')})`)
+            .join(' · ')}</p>`;
     return `
       <div class="account-card">
         <h3>Authorizations</h3>
         <p class="account-copy">These let the game act for you — no signature popups. Spending always needs an explicit limit.</p>
+        ${spendSummary}
+        <div class="account-actions">
+          <button class="action-btn" data-account-action="approve-spend-25" title="Approve 25 REALM for bounties and boosts">✅ Approve 25 $REALM</button>
+          <button class="action-btn secondary" data-account-action="approve-spend-100" title="Approve 100 REALM for bounties and trading">✅ Approve 100 $REALM</button>
+        </div>
         <div class="session-key-list">
           ${keys.map((k) => this.renderSessionKey(k)).join('')}
         </div>
@@ -334,6 +349,45 @@ export default class AccountScreen {
         if (id) this.accountService.revokeSessionKey(id);
         break;
       }
+      case 'approve-spend-25':
+        // #2: approve-once spend key for bounties. 25 REALM covers the
+        // minimum stake; staking then never pops a second prompt.
+        this.accountService
+          .issueSessionKey(['stakeBounty'], { spendLimitRealm: 25 })
+          .then(() => {
+            this.render();
+            this.eventBus.emit('ui:toast', {
+              message: '✅ 25 $REALM approved for bounties — stake away',
+              type: 'success',
+              duration: 3000,
+            });
+          })
+          .catch((err) => {
+            this.eventBus.emit('ui:toast', {
+              message: err instanceof Error ? err.message : 'Approval failed',
+              type: 'error',
+            });
+          });
+        break;
+      case 'approve-spend-100':
+        // Same, roomier: bounties + trading in one allowance.
+        this.accountService
+          .issueSessionKey(['stakeBounty', 'trade'], { spendLimitRealm: 100 })
+          .then(() => {
+            this.render();
+            this.eventBus.emit('ui:toast', {
+              message: '✅ 100 $REALM approved for bounties + trading',
+              type: 'success',
+              duration: 3000,
+            });
+          })
+          .catch((err) => {
+            this.eventBus.emit('ui:toast', {
+              message: err instanceof Error ? err.message : 'Approval failed',
+              type: 'error',
+            });
+          });
+        break;
     }
   }
 }

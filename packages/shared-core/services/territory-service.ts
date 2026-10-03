@@ -272,6 +272,16 @@ export class TerritoryService extends BaseService {
     this.subscribe('territory:boostActivity', (data: { territoryId: string }) => {
       this.boostTerritoryActivity(data.territoryId);
     });
+
+    // Contest requests: canSteal + quorum-signed proof, both checked
+    // before anything changes. Denials emit a warm redirect toast —
+    // the runner never stares at a silent button.
+    this.subscribe(
+      'territory:contestRequested',
+      (data: { territoryId: string; runId?: string }) => {
+        this.handleContestRequest(data.territoryId, data.runId);
+      }
+    );
   }
 
   // New: Territory Intent Management Methods
@@ -1459,6 +1469,58 @@ export class TerritoryService extends BaseService {
    */
   isInReclaimShield(stolenAt: number, now: number = Date.now()): boolean {
     return now - stolenAt < GAME_RULES.contest.reclaimShieldDays * 24 * 60 * 60 * 1000;
+  }
+
+  /**
+   * Contest entry point — the single call site for #1.
+   *
+   * Order is deliberate:
+   *   1. canSteal — cheap local guard (defended? own? shield?). Failures
+   *      get training copy: boost/walk/run instead.
+   *   2. hasAttestedRun — quorum-signed proof required at the moment of
+   *      value. Local runs get the quorum redirect, not a dead end.
+   *
+   * Nothing mutates on denial. Approval emits territory:contestApproved;
+   * the confidential/public steal paths consume it downstream.
+   */
+  handleContestRequest(territoryId: string, runId?: string): void {
+    const account = this.getSiblingService('account') as {
+      getAccount?: () => { id?: string; address?: string } | null;
+    } | null;
+    const challenger =
+      account?.getAccount?.()?.address ?? account?.getAccount?.()?.id ?? 'unknown';
+    const steal = this.canSteal(territoryId, challenger);
+    if (!steal.ok) {
+      const reason = steal.reason ?? 'This territory cannot be contested right now';
+      this.safeEmit('territory:contestBlocked', { territoryId, reason });
+      this.safeEmit('ui:toast', { message: `⚔️ ${reason}`, type: 'info', duration: 4000 });
+      return;
+    }
+    if (!runId) {
+      const reason = 'Finish a run first — contests need a fresh run proof';
+      this.safeEmit('territory:contestBlocked', { territoryId, reason });
+      this.safeEmit('ui:toast', { message: `🏃 ${reason}`, type: 'info', duration: 4000 });
+      return;
+    }
+    const attestation = this.getSiblingService('attestation') as {
+      hasAttestedRun?: (id: string) => { ok: boolean; reason?: string };
+    } | null;
+    const proof = attestation?.hasAttestedRun?.(runId) ?? {
+      ok: false,
+      reason: 'Run proofs are unavailable right now — try again shortly',
+    };
+    if (!proof.ok) {
+      const reason = proof.reason ?? 'Run proof not verified yet';
+      this.safeEmit('territory:contestBlocked', { territoryId, reason });
+      this.safeEmit('ui:toast', { message: `🔏 ${reason}`, type: 'info', duration: 4500 });
+      return;
+    }
+    this.safeEmit('territory:contestApproved', { territoryId, runId });
+    this.safeEmit('ui:toast', {
+      message: '⚔️ Proof verified — contest approved, good luck runner',
+      type: 'success',
+      duration: 3500,
+    });
   }
 
   /**

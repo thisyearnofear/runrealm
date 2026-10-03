@@ -446,6 +446,24 @@ export class UserDashboard {
         break;
       }
 
+      case 'contest-territory': {
+        const territoryId = target.getAttribute('data-territory-id');
+        if (!territoryId) break;
+        // #1: one event carries the challenger's latest run id so the
+        // service can run canSteal + quorum-proof in order. The runner
+        // taps once; denials arrive as warm toasts, never silence.
+        const { AttestationService } = await import(
+          '@runrealm/shared-core/services/attestation-service'
+        );
+        const latest = AttestationService.getInstance().getAttestations()[0];
+        const summary = latest?.summary as { runId?: string } | undefined;
+        this.eventBus.emit('territory:contestRequested', {
+          territoryId,
+          runId: summary?.runId,
+        });
+        break;
+      }
+
       case 'claim-challenge': {
         const challengeId = target.getAttribute('data-challenge-id');
         if (challengeId) {
@@ -830,6 +848,14 @@ export class UserDashboard {
             <button class="action-btn secondary" data-action="territory-walk" data-territory-id="${territory.id}" title="Visit this territory in person to verify with GPS">
               🚶 Visit &amp; Collect (+150 pts)
             </button>
+          </div>
+
+          <div class="action-group">
+            <label>Contest</label>
+            <button class="action-btn secondary" data-action="contest-territory" data-territory-id="${territory.id}" title="Contest this territory with a verified run proof">
+              ⚔️ Contest (needs verified run)
+            </button>
+            <p class="info-text">Claimable ground + a quorum-verified run. Runs stay free — proof is checked here, at the moment of value.</p>
           </div>
         </div>
       </div>
