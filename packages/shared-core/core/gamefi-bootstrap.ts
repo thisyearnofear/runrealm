@@ -52,8 +52,19 @@ export async function initializeGameFi(opts: GameFiBootstrapOptions): Promise<vo
 
     // Phase 4 (#28): off-chain marketplace mirror. Loads persisted
     // listings and subscribes clear-on-transfer; memory-only without
-    // storage. Never blocks boot.
+    // storage. Never blocks boot. The escrow gateway is injected so a
+    // connected wallet with RUNREALM_ESCROW_ADDRESS set writes on-chain;
+    // without it the mirror alone settles (demo/test behaviour).
     await services.marketplaceService.initialize();
+    services.marketplaceService.setChainGateway({
+      isEscrowReady: () => services.contractService.isEscrowReady(),
+      listTerritoryOnChain: (tokenId, priceRealm) =>
+        services.contractService.listTerritoryOnChain(tokenId, priceRealm),
+      delistTerritoryOnChain: (tokenId) =>
+        services.contractService.delistTerritoryOnChain(tokenId),
+      buyTerritoryOnChain: (tokenId, priceRealm) =>
+        services.contractService.buyTerritoryOnChain(tokenId, priceRealm),
+    });
 
     // Phase 6: cross-chain anchor relayer. Degrades to a no-op unless
     // RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS is configured; start() only

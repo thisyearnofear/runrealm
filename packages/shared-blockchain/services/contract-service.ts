@@ -12,6 +12,7 @@ import {
   getCurrentNetworkConfig,
   isCorrectNetwork,
 } from '@runrealm/shared-core/config/contracts';
+import { GAME_RULES } from '@runrealm/shared-core/config/game-rules';
 import { BaseService } from '@runrealm/shared-core/core/base-service';
 import { UserContextService } from '@runrealm/shared-core/services/user-context-service';
 import { Web3Service } from '@runrealm/shared-core/services/web3-service';
@@ -73,6 +74,7 @@ export class ContractService extends BaseService {
   private universalContract: any = null;
   private realmTokenContract: any = null;
   private boostContract: any = null;
+  private escrowContract: any = null;
 
   constructor(web3Service: Web3Service) {
     super();
@@ -112,6 +114,7 @@ export class ContractService extends BaseService {
       const universalConfig = getContractConfig('universal');
       const realmTokenConfig = getContractConfig('realmToken');
       const boostConfig = getContractConfig('boost');
+      const escrowConfig = getContractConfig('escrow');
 
       // Initialize Universal Contract
       this.universalContract = this.web3Service.getContract(
@@ -136,10 +139,20 @@ export class ContractService extends BaseService {
           ? null
           : this.web3Service.getContract(boostConfig.address, boostConfig.abi);
 
+      // Initialize Escrow Contract (Phase 4 additive, #28). Same
+      // address(0)-as-undeployed convention as boost: marketplace calls
+      // surface "escrow contract not deployed" and the UI keeps using
+      // the off-chain mirror.
+      this.escrowContract =
+        escrowConfig.address === '0x0000000000000000000000000000000000000000'
+          ? null
+          : this.web3Service.getContract(escrowConfig.address, escrowConfig.abi);
+
       console.log('ContractService: Contracts initialized successfully');
       console.log('Universal Contract:', universalConfig.address);
       console.log('REALM Token:', realmTokenConfig.address);
       console.log('Boost Contract:', boostConfig.address);
+      console.log('Escrow Contract:', escrowConfig.address);
     } catch (error) {
       console.error('ContractService: Failed to initialize contracts:', error);
       throw error;
@@ -390,6 +403,117 @@ export class ContractService extends BaseService {
       console.warn('ContractService: getLastBoostDay failed:', error);
       return 0;
     }
+  }
+
+  // ---- Escrow (Phase 4 additive, #28) ---------------------------------
+  //
+  // Mirrors the boost precedent: the chain moves REALM, the off-chain
+  // marketplace mirror is still what the dashboard renders. Every method
+  // degrades with a clear, actionable message — no generic ethers revert
+  // ever reaches a runner. REALM amounts arrive as plain numbers and are
+  // converted here so callers never touch wei.
+
+  /** True when `RunRealmEscrowV1` is bound (RUNREALM_ESCROW_ADDRESS set). */
+  public isEscrowReady(): boolean {
+    return this.escrowContract !== null;
+  }
+
+  /**
+   * Approve `amountRealm` REALM for the escrow to pull. Called before a
+   * buy or a challenge creation; allowance is exactly what is needed, so
+   * a leaked key can never move a wallet's whole balance.
+   */
+  private async approveRealmFor(spender: string, amountRealm: number): Promise<void> {
+    if (!this.realmTokenContract) throw new Error('REALM token contract not initialized');
+    const ethers = await import('ethers');
+    const amountE18 = ethers.parseEther(String(amountRealm));
+    const current: bigint = await this.realmTokenContract[CONTRACT_METHODS.realmToken.allowance](
+      this.requireAddress(),
+      spender
+    ).catch(() => 0n as unknown as bigint);
+    if (current >= amountE18) return;
+    const tx = await this.realmTokenContract.approve(spender, amountE18);
+    this.safeEmit('web3:transactionSubmitted', { hash: tx.hash, type: 'realm_approve' });
+    await tx.wait(1);
+  }
+
+  /**
+   * List an owned territory at `priceRealm`. The seller's own REALM is
+   * never pulled at list time — only the ownership check runs — so this
+   * costs gas, not tokens.
+   */
+  public async listTerritoryOnChain(tokenId: number | string, priceRealm: number) {
+    this.requireEscrow('list');
+    const ethers = await import('ethers');
+    return this.sendEscrowTx(
+      CONTRACT_METHODS.escrow.listTerritory,
+      [tokenId, ethers.parseEther(String(priceRealm))],
+      'territory_list'
+    );
+  }
+
+  /** Cancel a listing. Seller-only inside the contract. */
+  public async delistTerritoryOnChain(tokenId: number | string) {
+    this.requireEscrow('delist');
+    return this.sendEscrowTx(CONTRACT_METHODS.escrow.delistTerritory, [tokenId], 'territory_delist');
+  }
+
+  /**
+   * Buy a listed territory: approve `price + fee` then call `buyTerritory`.
+   * The fee (2.5%) is paid by the buyer to the treasury, the price to the
+   * seller — both stated in the receipt toast before the tap.
+   */
+  public async buyTerritoryOnChain(tokenId: number | string, priceRealm: number) {
+    const escrow = this.requireEscrow('buy');
+    const ethers = await import('ethers');
+    const priceE18 = ethers.parseEther(String(priceRealm));
+    const feeE18 = (priceE18 * BigInt(GAME_RULES.settlement.marketplaceFeeBps)) / 10000n;
+    await this.approveRealmFor(escrow, Number(ethers.formatEther(priceE18 + feeE18)));
+    return this.sendEscrowTx(CONTRACT_METHODS.escrow.buyTerritory, [tokenId], 'territory_buy');
+  }
+
+  /**
+   * Create a brand challenge: approve `escrow + creation fee` then call
+   * `createChallenge`. The escrowed prize stays in the contract until
+   * judging settles it; the fee goes to the treasury immediately.
+   */
+  public async createChallengeOnChain(escrowRealm: number) {
+    const escrow = this.requireEscrow('create challenge');
+    const total = escrowRealm + GAME_RULES.settlement.challengeCreationFeeRealm;
+    await this.approveRealmFor(escrow, total);
+    const ethers = await import('ethers');
+    return this.sendEscrowTx(
+      CONTRACT_METHODS.escrow.createChallenge,
+      [ethers.parseEther(String(escrowRealm))],
+      'challenge_create'
+    );
+  }
+
+  private requireEscrow(action: string): any {
+    if (!this.escrowContract) {
+      throw new Error(
+        `Escrow contract not deployed — ${action} unavailable. Set RUNREALM_ESCROW_ADDRESS in env and reconnect wallet.`
+      );
+    }
+    if (!this.web3Service.isConnected()) throw new Error('Wallet not connected');
+    return this.escrowContract;
+  }
+
+  private requireAddress(): string {
+    const address = this.web3Service.getCurrentWallet()?.address;
+    if (!address) throw new Error('No wallet connected');
+    return address;
+  }
+
+  /** One estimate-then-send path for every escrow write. */
+  private async sendEscrowTx(method: string, args: unknown[], type: string) {
+    const contract = this.escrowContract;
+    const gasEstimate = await contract[method].estimateGas(...args);
+    const gasLimit = Math.ceil(Number(gasEstimate) * 1.2);
+    const tx = await contract[method](...args, { gasLimit });
+    this.safeEmit('web3:transactionSubmitted', { hash: tx.hash, type });
+    const receipt = await tx.wait(1);
+    return { transactionHash: tx.hash, blockNumber: receipt.blockNumber, status: receipt.status };
   }
 
   /**
@@ -722,5 +846,6 @@ export class ContractService extends BaseService {
     this.universalContract = null;
     this.realmTokenContract = null;
     this.boostContract = null;
+    this.escrowContract = null;
   }
 }

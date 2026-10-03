@@ -27,6 +27,8 @@ declare global {
     RUNREALM_ATTESTATION_ORACLES: string;
     // Public feature flag only; Reactor API credentials stay server-side.
     ENABLE_ORBIS: string;
+    // Additive settlement escrow address (marketplace + brand challenges).
+    RUNREALM_ESCROW_ADDRESS: string;
   };
 
   // Ensure __ENV__ is available at runtime

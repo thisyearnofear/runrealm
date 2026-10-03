@@ -630,6 +630,9 @@ export interface AppEvents extends Web3Events {
     netRealm: number;
   };
   'marketplace:delisted': { territoryId: string };
+  /** Chain write for a mirror op failed (or escrow not deployed). The
+   *  mirror already committed — this is a note, never a rollback. */
+  'marketplace:chainFailed': { op: string; reason: string };
   'marketplace:sold': {
     territoryId: string;
     seller: string;

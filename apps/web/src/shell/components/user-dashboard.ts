@@ -197,6 +197,14 @@ export class UserDashboard {
     this.eventBus.on('marketplace:listed', refreshMarket);
     this.eventBus.on('marketplace:delisted', refreshMarket);
     this.eventBus.on('marketplace:sold', refreshMarket);
+    // Chain write for a mirror op failed — surface it, never roll back.
+    this.eventBus.on('marketplace:chainFailed', (data) => {
+      this.eventBus.emit('ui:toast', {
+        message: `On-chain ${data.op} failed: ${data.reason} — your on-device listing is unchanged`,
+        type: 'warning',
+        duration: 6000,
+      });
+    });
     refreshChips();
 
     console.log('UserDashboard: Subscriptions complete');
@@ -512,7 +520,14 @@ export class UserDashboard {
           AccountService.getInstance().getAccount()?.address ??
           AccountService.getInstance().getAccount()?.id ??
           'you';
-        await MarketplaceService.getInstance().listTerritory(territoryId, seller, price);
+        // chainTokenId is optional: unminted territories list on-device
+        // only, and the gateway is skipped when the escrow isn't deployed.
+        await MarketplaceService.getInstance().listTerritory(
+          territoryId,
+          seller,
+          price,
+          territory?.tokenId
+        );
         this.eventBus.emit('ui:toast', {
           message: `Listed at ${price} $REALM — you keep ${netRealm} after the ${feeRealm} fee`,
           type: 'success',

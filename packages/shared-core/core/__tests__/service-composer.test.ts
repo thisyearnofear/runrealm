@@ -93,6 +93,7 @@ describe('service-composer', () => {
       'externalFitnessService',
       'ghostRunnerService',
       'bountyService',
+      'marketplaceService',
       'accountService',
       'attestationService',
       'enhancedRunControls',

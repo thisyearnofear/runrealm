@@ -21,6 +21,7 @@ export interface NetworkConfig {
     universal: ContractConfig;
     realmToken: ContractConfig;
     boost: ContractConfig;
+    escrow: ContractConfig;
     confidentialTerritoryDefense: ContractConfig;
     crossChainAnchor: ContractConfig;
   };
@@ -190,6 +191,95 @@ const BOOST_CONTRACT_ABI = [
  * `bytes` proof) consumed by `@fhevm/solidity` on the Zama Protocol
  * FHEVM host chain (Ethereum Sepolia testnet by default).
  */
+/**
+ * Phase 4 (#28) - ABI for `RunRealmEscrowV1` (ZetaChain Athens).
+ * Marketplace list/delist/buy plus brand-challenge creation. Additive
+ * next to the bytecode-frozen `RunRealmUniversal`; REALM moves here,
+ * NFT custody stays with the registry.
+ */
+const ESCROW_CONTRACT_ABI = [
+  {
+    inputs: [
+      { internalType: 'address', name: '_realmTokenAddress', type: 'address' },
+      { internalType: 'address', name: '_territoryRegistry', type: 'address' },
+      { internalType: 'address', name: '_treasury', type: 'address' },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'constructor',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { internalType: 'uint256', name: 'price', type: 'uint256' },
+    ],
+    name: 'listTerritory',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'delistTerritory',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'buyTerritory',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'escrow', type: 'uint256' }],
+    name: 'createChallenge',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    name: 'listings',
+    outputs: [
+      { internalType: 'address', name: 'seller', type: 'address' },
+      { internalType: 'uint256', name: 'price', type: 'uint256' },
+      { internalType: 'uint64', name: 'listedAt', type: 'uint64' },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'treasury',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { indexed: true, internalType: 'address', name: 'seller', type: 'address' },
+      { indexed: false, internalType: 'uint256', name: 'price', type: 'uint256' },
+    ],
+    name: 'TerritoryListed',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { indexed: true, internalType: 'address', name: 'seller', type: 'address' },
+      { indexed: true, internalType: 'address', name: 'buyer', type: 'address' },
+      { indexed: false, internalType: 'uint256', name: 'price', type: 'uint256' },
+      { indexed: false, internalType: 'uint256', name: 'fee', type: 'uint256' },
+    ],
+    name: 'TerritorySold',
+    type: 'event',
+  },
+];
+
 const CONFIDENTIAL_TERRITORY_DEFENSE_ABI = [
   {
     inputs: [
@@ -530,6 +620,18 @@ export function getCurrentNetworkConfig(): NetworkConfig {
             ?.RUNREALM_BOOST_ADDRESS || '0x0000000000000000000000000000000000000000',
         abi: BOOST_CONTRACT_ABI,
       },
+      escrow: {
+        // Phase 4 (#28): RunRealmEscrowV1 is the additive settlement
+        // escrow (marketplace + brand challenges). Address comes from
+        // RUNREALM_ESCROW_ADDRESS with a zero-address placeholder until
+        // scripts/deployment/deploy-escrow.js publishes it. Consumers
+        // treat address(0) as "not deployed" and fall back to the
+        // off-chain marketplace mirror.
+        address:
+          (globalThis as { __ENV__?: { RUNREALM_ESCROW_ADDRESS?: string } }).__ENV__
+            ?.RUNREALM_ESCROW_ADDRESS || '0x0000000000000000000000000000000000000000',
+        abi: ESCROW_CONTRACT_ABI,
+      },
       confidentialTerritoryDefense: {
         // The additive `ConfidentialTerritoryDefense` contract, deployed
         // to the Zama Protocol FHEVM host chain (Ethereum Sepolia). Its
@@ -598,6 +700,7 @@ export function getContractConfig(
     | 'universal'
     | 'realmToken'
     | 'boost'
+    | 'escrow'
     | 'confidentialTerritoryDefense'
     | 'crossChainAnchor'
 ): ContractConfig {
@@ -614,6 +717,7 @@ export function getContractAddresses() {
     universal: networkConfig.contracts.universal.address,
     realmToken: networkConfig.contracts.realmToken.address,
     boost: networkConfig.contracts.boost.address,
+    escrow: networkConfig.contracts.escrow.address,
     confidentialTerritoryDefense: networkConfig.contracts.confidentialTerritoryDefense.address,
     crossChainAnchor: networkConfig.contracts.crossChainAnchor.address,
   };
@@ -661,6 +765,7 @@ export const CONTRACT_METHODS = {
     balanceOf: 'balanceOf',
     transfer: 'transfer',
     approve: 'approve',
+    allowance: 'allowance',
     name: 'name',
     symbol: 'symbol',
     decimals: 'decimals',
@@ -669,6 +774,14 @@ export const CONTRACT_METHODS = {
     boostTerritoryActivity: 'boostTerritoryActivity',
     lastBoostDay: 'lastBoostDay',
     BOOST_COST: 'BOOST_COST',
+  },
+  escrow: {
+    listTerritory: 'listTerritory',
+    delistTerritory: 'delistTerritory',
+    buyTerritory: 'buyTerritory',
+    createChallenge: 'createChallenge',
+    listings: 'listings',
+    treasury: 'treasury',
   },
   confidential: {
     anchorFromZeta: 'anchorFromZeta',

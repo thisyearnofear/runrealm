@@ -53,6 +53,8 @@ export interface RunRealmEnv {
   // Zama Protocol FHEVM (confidential territory defense) — Sepolia
   SEPOLIA_RPC_URL: string;
   RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS: string;
+  /** Additive settlement escrow (marketplace + brand challenges), ZetaChain. */
+  RUNREALM_ESCROW_ADDRESS: string;
 }
 
 const DEFAULT_ENV: RunRealmEnv = {
@@ -77,6 +79,9 @@ const DEFAULT_ENV: RunRealmEnv = {
   ENABLE_ORBIS: 'false',
   SEPOLIA_RPC_URL: 'https://ethereum-sepolia-rpc.publicnode.com',
   RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS: '0xa15C61871E4D096093d183040D0c1005CB4Fe0b8',
+  // Empty until scripts/deployment/deploy-escrow.js publishes an address;
+  // the marketplace falls back to the off-chain mirror meanwhile.
+  RUNREALM_ESCROW_ADDRESS: '',
 };
 
 export function createEnvGlobal(): RunRealmEnv {
@@ -112,6 +117,8 @@ export function createEnvGlobal(): RunRealmEnv {
     RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS:
       process.env.NEXT_PUBLIC_RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS ||
       DEFAULT_ENV.RUNREALM_CONFIDENTIAL_DEFENSE_ADDRESS,
+    RUNREALM_ESCROW_ADDRESS:
+      process.env.NEXT_PUBLIC_RUNREALM_ESCROW_ADDRESS || DEFAULT_ENV.RUNREALM_ESCROW_ADDRESS,
   };
 
   if (typeof window !== 'undefined') {
