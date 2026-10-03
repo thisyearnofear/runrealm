@@ -641,10 +641,20 @@ export interface AppEvents extends Web3Events {
     feeRealm: number;
     soldAt: number;
   };
-  // Brand-challenge join (Phase 4, #28): one-tap join with an attested
+  // Brand-challenge board (Phase 4, #28): one-tap join with an attested
   // run; judging settles against the attested board downstream.
   'challenge:joined': { challengeId: string; accountId: string; runId?: string };
   'challenge:joinBlocked': { challengeId: string; reason: string };
+  /** A brand board was created — fee + escrow stated upfront. */
+  'challenge:created': {
+    challengeId: string;
+    brand: string;
+    escrowRealm: number;
+    feeRealm: number;
+    totalRealm: number;
+  };
+  /** Chain write for a board op failed — mirror stands, never rolls back. */
+  'challenge:chainFailed': { challengeId: string; reason: string };
   // Ghost head-to-head race result (ghost defends a territory vs the
   // owner's recent form). Scores are 0-1000 activity-point scale so the
   // result card reads like the rest of the defense system.

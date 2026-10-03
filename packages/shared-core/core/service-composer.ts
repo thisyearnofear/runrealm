@@ -35,6 +35,7 @@ import { AIService } from '../services/ai-service';
 import { AnimationService } from '../services/animation-service';
 import { AttestationService } from '../services/attestation-service';
 import { BountyService } from '../services/bounty-service';
+import { ChallengeService } from '../services/challenge-service';
 import { MarketplaceService } from '../services/marketplace-service';
 import { ConfidentialTerritoryService } from '../services/confidential-territory-service';
 import { DOMService } from '../services/dom-service';
@@ -101,6 +102,7 @@ export interface Services {
   ghostRunnerService: GhostRunnerService;
   bountyService: BountyService;
   marketplaceService: MarketplaceService;
+  challengeService: ChallengeService;
   accountService: AccountService;
   attestationService: AttestationService;
   enhancedRunControls: EnhancedRunControls;
@@ -153,6 +155,7 @@ export function createServices(): Services {
   const ghostRunnerService = GhostRunnerService.getInstance();
   const bountyService = BountyService.getInstance();
   const marketplaceService = MarketplaceService.getInstance();
+  const challengeService = ChallengeService.getInstance();
   const accountService = AccountService.getInstance();
   const attestationService = AttestationService.getInstance();
   const enhancedRunControls = new EnhancedRunControls();
@@ -209,6 +212,7 @@ export function createServices(): Services {
     ghostRunnerService,
     bountyService,
     marketplaceService,
+    challengeService,
     accountService,
     attestationService,
     enhancedRunControls,
@@ -276,6 +280,7 @@ export function registerGlobalServices(services: Services, platformUI: PlatformU
     externalFitness: services.externalFitnessService,
     ghostRunnerService: services.ghostRunnerService,
     marketplace: services.marketplaceService,
+    challenge: services.challengeService,
     ghostManagement: platformUI.ghostManagement,
     animation: services.animation,
     navigation: services.navigation,

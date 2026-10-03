@@ -66,6 +66,16 @@ export async function initializeGameFi(opts: GameFiBootstrapOptions): Promise<vo
         services.contractService.buyTerritoryOnChain(tokenId, priceRealm),
     });
 
+    // Phase 4 (#28): off-chain brand-challenge board. Same gateway shape:
+    // a connected wallet with RUNREALM_ESCROW_ADDRESS set writes the
+    // escrow on-chain; without it the board alone settles.
+    await services.challengeService.initialize();
+    services.challengeService.setChainGateway({
+      isEscrowReady: () => services.contractService.isEscrowReady(),
+      createChallengeOnChain: (escrowRealm) =>
+        services.contractService.createChallengeOnChain(escrowRealm),
+    });
+
     // Phase 6: cross-chain anchor relayer. Degrades to a no-op unless
     // RUNREALM_CROSS_CHAIN_ANCHOR_ADDRESS is configured; start() only
     // begins polling when configured (operator/relayer context).

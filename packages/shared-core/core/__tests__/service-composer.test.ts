@@ -94,6 +94,7 @@ describe('service-composer', () => {
       'ghostRunnerService',
       'bountyService',
       'marketplaceService',
+      'challengeService',
       'accountService',
       'attestationService',
       'enhancedRunControls',

@@ -10,6 +10,7 @@
 
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import { BountyService } from '@runrealm/shared-core/services/bounty-service';
+import type { ChallengeService } from '@runrealm/shared-core/services/challenge-service';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { GhostRunnerService } from '@runrealm/shared-core/services/ghost-runner-service';
 import type { MarketplaceService } from '@runrealm/shared-core/services/marketplace-service';
@@ -80,6 +81,7 @@ export class UserDashboard {
   private domService: DOMService;
   private eventBus: EventBus;
   private marketplaceService: MarketplaceService | null = null;
+  private challengeService: ChallengeService | null = null;
   private unsubscribeDataUpdates: (() => void) | null = null;
   private unsubscribeVisibilityChanges: (() => void) | null = null;
   private expandedTerritoryId: string | null = null;
@@ -112,6 +114,13 @@ export class UserDashboard {
     void import('@runrealm/shared-core/services/marketplace-service')
       .then(({ MarketplaceService }) => {
         this.marketplaceService = MarketplaceService.getInstance();
+        this.render();
+      })
+      .catch(() => undefined);
+    // Same for the brand-challenge board.
+    void import('@runrealm/shared-core/services/challenge-service')
+      .then(({ ChallengeService }) => {
+        this.challengeService = ChallengeService.getInstance();
         this.render();
       })
       .catch(() => undefined);
@@ -197,6 +206,9 @@ export class UserDashboard {
     this.eventBus.on('marketplace:listed', refreshMarket);
     this.eventBus.on('marketplace:delisted', refreshMarket);
     this.eventBus.on('marketplace:sold', refreshMarket);
+    // Brand boards: re-render on create/join/sale-failure notes.
+    this.eventBus.on('challenge:created', refreshMarket);
+    this.eventBus.on('challenge:joined', refreshMarket);
     // Chain write for a mirror op failed — surface it, never roll back.
     this.eventBus.on('marketplace:chainFailed', (data) => {
       this.eventBus.emit('ui:toast', {
@@ -596,6 +608,9 @@ export class UserDashboard {
         const { AccountService } = await import(
           '@runrealm/shared-core/services/account-service'
         );
+        const { ChallengeService } = await import(
+          '@runrealm/shared-core/services/challenge-service'
+        );
         const latest = AttestationService.getInstance().getAttestations()[0];
         const summary = latest?.summary as { runId?: string } | undefined;
         const accountId = AccountService.getInstance().getAccount()?.id ?? 'you';
@@ -611,16 +626,84 @@ export class UserDashboard {
           });
           break;
         }
-        this.eventBus.emit('challenge:joined', {
-          challengeId,
-          accountId,
-          runId: summary?.runId,
-        });
+        await ChallengeService.getInstance().joinBoard(challengeId, accountId, summary?.runId);
         this.eventBus.emit('ui:toast', {
           message: 'Joined — your verified run is on the board',
           type: 'success',
           duration: 3500,
         });
+        break;
+      }
+
+      case 'create-challenge': {
+        // Fund a brand board: read the two inputs, validate, and hand the
+        // whole thing to ChallengeService (spend gate + mirror + chain).
+        // Errors toast warmly; success receipts the escrow + fee split.
+        const scope = target.closest('.action-group') ?? this.container;
+        const titleEl = scope?.querySelector(
+          '[data-challenge-field="title"]'
+        ) as HTMLInputElement | null;
+        const escrowEl = scope?.querySelector(
+          '[data-challenge-field="escrow"]'
+        ) as HTMLInputElement | null;
+        const title = (titleEl?.value ?? '').trim();
+        const escrowRealm = Math.floor(Number(escrowEl?.value ?? ''));
+        const { ChallengeService, challengeMinEscrowRealm, challengeCreationTotalRealm } =
+          await import('@runrealm/shared-core/services/challenge-service');
+        const { AccountService } = await import(
+          '@runrealm/shared-core/services/account-service'
+        );
+        if (!title || !Number.isFinite(escrowRealm)) {
+          this.eventBus.emit('ui:toast', {
+            message: 'Give the board a title and a prize in $REALM',
+            type: 'info',
+            duration: 4000,
+          });
+          break;
+        }
+        if (escrowRealm < challengeMinEscrowRealm()) {
+          this.eventBus.emit('ui:toast', {
+            message: `Prize must be at least ${challengeMinEscrowRealm()} $REALM to be worth contesting`,
+            type: 'warning',
+            duration: 4500,
+          });
+          break;
+        }
+        const brand =
+          AccountService.getInstance().getAccount()?.address ??
+          AccountService.getInstance().getAccount()?.id ??
+          'you';
+        const challengeId =
+          'board-' +
+          title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 32) +
+          '-' +
+          Date.now().toString(36);
+        try {
+          const board = await ChallengeService.getInstance().createBoard({
+            challengeId,
+            title,
+            brand,
+            escrowRealm,
+          });
+          const totals = challengeCreationTotalRealm(board.escrowRealm);
+          if (titleEl) titleEl.value = '';
+          if (escrowEl) escrowEl.value = '';
+          this.eventBus.emit('ui:toast', {
+            message: `Board live: ${totals.escrowRealm} $REALM prize + ${totals.feeRealm} fee approved`,
+            type: 'success',
+            duration: 4500,
+          });
+        } catch (error) {
+          this.eventBus.emit('ui:toast', {
+            message: error instanceof Error ? error.message : 'Board creation failed',
+            type: 'error',
+            duration: 5000,
+          });
+        }
         break;
       }
 
@@ -1256,18 +1339,56 @@ export class UserDashboard {
   private renderChallenges(userStats: DashboardData['userStats']): string {
     const challenges = userStats?.activeChallenges || [];
 
-    // Brand-challenge join row: always visible so the money surface is
-    // discoverable even with zero active challenges. One tap joins with
-    // the latest verified run; local runs get the quorum redirect.
+    // Brand-challenge boards: real boards from ChallengeService (never the
+    // old hardcoded board). Creation form lives underneath so the funded
+    // surface is discoverable with zero boards. Join gates on verified runs.
+    let boards: Array<{
+      challengeId: string;
+      title: string;
+      brand: string;
+      escrowRealm: number;
+      paceBandMax: number;
+      minDistanceMeters: number;
+      endsAt: number;
+    }> = [];
+    try {
+      boards = this.challengeService?.getAllBoards() ?? [];
+    } catch {
+      boards = [];
+    }
+    const boardRows = boards
+      .map((board) => {
+        const entries = this.challengeService?.getEntries(board.challengeId) ?? [];
+        return `
+        <div class="challenge-item brand-board">
+          <div class="challenge-icon">Trophy</div>
+          <div class="challenge-info">
+            <div class="challenge-title">${board.title}</div>
+            <div class="challenge-meta">${board.brand} - ${board.escrowRealm} $REALM prize - ${entries.length} joined - ends ${new Date(board.endsAt).toLocaleDateString()}</div>
+          </div>
+          <button class="challenge-claim-btn"
+            data-action="join-challenge"
+            data-challenge-id="${board.challengeId}">
+            Join
+          </button>
+        </div>`;
+      })
+      .join('');
+
     const joinRow = `
         <div class="dashboard-section">
           <div class="section-header">
             <h3>Brand Challenges</h3>
           </div>
           <p class="info-text">Sponsored pace-band boards — join with a verified run, winnings auto-split. Creation fee funds the protocol.</p>
+          ${boardRows ? `<div class="challenges-list">${boardRows}</div>` : '<p class="info-text">No boards yet — fund the first one below.</p>'}
           <div class="action-group">
-            <button class="action-btn" data-action="join-challenge" data-challenge-id="brand-weekly-5k" title="Join the weekly 5K board">
-              Join weekly 5K board
+            <label>Fund a board</label>
+            <input class="challenge-input" data-challenge-field="title" placeholder="Board title (e.g. Weekly 5K)" maxlength="60" />
+            <input class="challenge-input" data-challenge-field="escrow" inputmode="numeric" placeholder="Prize in $REALM (min 1000)" />
+            <p class="info-text">Prize + 500 $REALM creation fee, stated before you confirm.</p>
+            <button class="action-btn" data-action="create-challenge" title="Fund a brand board">
+              Create board
             </button>
           </div>
         </div>
