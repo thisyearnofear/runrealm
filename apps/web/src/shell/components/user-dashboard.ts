@@ -12,6 +12,7 @@ import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import { BountyService } from '@runrealm/shared-core/services/bounty-service';
 import { DOMService } from '@runrealm/shared-core/services/dom-service';
 import { GhostRunnerService } from '@runrealm/shared-core/services/ghost-runner-service';
+import type { MarketplaceService } from '@runrealm/shared-core/services/marketplace-service';
 import { PreferenceService } from '@runrealm/shared-core/services/preference-service';
 import {
   DashboardData,
@@ -36,6 +37,18 @@ function bountyBadge(territoryId: string | undefined): string {
     const bounty = BountyService.getInstance().getBounty(territoryId);
     if (!bounty) return '';
     return `<span class="tile-bounty" title="Bounty: ${bounty.amountRealm} $REALM to whoever takes this territory">💰 ${bounty.amountRealm}</span>`;
+  } catch {
+    return '';
+  }
+}
+
+/** Territory-listing badge HTML for a territory, or '' when not listed. */
+function marketBadge(service: MarketplaceService | null, territoryId: string | undefined): string {
+  if (!service || !territoryId) return '';
+  try {
+    const listing = service.getListing(territoryId);
+    if (!listing) return '';
+    return `<span class="tile-market" title="Listed at ${listing.priceRealm} $REALM">For sale ${listing.priceRealm}</span>`;
   } catch {
     return '';
   }
@@ -66,6 +79,7 @@ export class UserDashboard {
   private dashboardService: UserDashboardService;
   private domService: DOMService;
   private eventBus: EventBus;
+  private marketplaceService: MarketplaceService | null = null;
   private unsubscribeDataUpdates: (() => void) | null = null;
   private unsubscribeVisibilityChanges: (() => void) | null = null;
   private expandedTerritoryId: string | null = null;
@@ -92,6 +106,15 @@ export class UserDashboard {
       className: 'user-dashboard hidden',
       parent: parentElement,
     });
+
+    // Marketplace mirror resolves lazily so the dashboard never blocks on
+    // it — the market row renders the list CTA until the mirror answers.
+    void import('@runrealm/shared-core/services/marketplace-service')
+      .then(({ MarketplaceService }) => {
+        this.marketplaceService = MarketplaceService.getInstance();
+        this.render();
+      })
+      .catch(() => undefined);
 
     this.render();
     this.setupSubscriptions();
@@ -169,6 +192,11 @@ export class UserDashboard {
     this.eventBus.on('territory:rivalsUpdated', refreshChips);
     this.eventBus.on('attestation:matched', refreshChips);
     this.eventBus.on('attestation:created', refreshChips);
+    // Marketplace mirror: re-render listings on list/delist/sale.
+    const refreshMarket = () => this.render();
+    this.eventBus.on('marketplace:listed', refreshMarket);
+    this.eventBus.on('marketplace:delisted', refreshMarket);
+    this.eventBus.on('marketplace:sold', refreshMarket);
     refreshChips();
 
     console.log('UserDashboard: Subscriptions complete');
@@ -464,6 +492,123 @@ export class UserDashboard {
         break;
       }
 
+      case 'list-territory': {
+        const territoryId = target.getAttribute('data-territory-id');
+        if (!territoryId) break;
+        // Marketplace list: one tap, suggested price, fee shown upfront.
+        // The mirror settles instantly; the chain moves REALM when a
+        // wallet is connected. No gas talk, no second screen.
+        const { MarketplaceService, suggestedPrice, previewMarketFee } = await import(
+          '@runrealm/shared-core/services/marketplace-service'
+        );
+        const { AccountService } = await import(
+          '@runrealm/shared-core/services/account-service'
+        );
+        const data = this.dashboardService.getData();
+        const territory = (data.territories || []).find((t) => t.id === territoryId);
+        const price = suggestedPrice(territory?.estimatedReward);
+        const { feeRealm, netRealm } = previewMarketFee(price);
+        const seller =
+          AccountService.getInstance().getAccount()?.address ??
+          AccountService.getInstance().getAccount()?.id ??
+          'you';
+        await MarketplaceService.getInstance().listTerritory(territoryId, seller, price);
+        this.eventBus.emit('ui:toast', {
+          message: `Listed at ${price} $REALM — you keep ${netRealm} after the ${feeRealm} fee`,
+          type: 'success',
+          duration: 4000,
+        });
+        this.render();
+        break;
+      }
+
+      case 'delist-territory': {
+        const territoryId = target.getAttribute('data-territory-id');
+        if (!territoryId) break;
+        const { MarketplaceService } = await import(
+          '@runrealm/shared-core/services/marketplace-service'
+        );
+        await MarketplaceService.getInstance().delistTerritory(territoryId);
+        this.eventBus.emit('ui:toast', {
+          message: 'Listing removed — territory stays yours',
+          type: 'info',
+          duration: 2500,
+        });
+        this.render();
+        break;
+      }
+
+      case 'buy-territory': {
+        const territoryId = target.getAttribute('data-territory-id');
+        if (!territoryId) break;
+        // One-tap buy: fee already shown on the button; receipt toasts.
+        const { MarketplaceService } = await import(
+          '@runrealm/shared-core/services/marketplace-service'
+        );
+        const { AccountService } = await import(
+          '@runrealm/shared-core/services/account-service'
+        );
+        const buyer =
+          AccountService.getInstance().getAccount()?.address ??
+          AccountService.getInstance().getAccount()?.id ??
+          'you';
+        const sale = await MarketplaceService.getInstance().buyTerritory(territoryId, buyer);
+        if (sale) {
+          this.eventBus.emit('ui:toast', {
+            message: `Bought for ${sale.priceRealm} $REALM (${sale.feeRealm} fee) — run here to claim it`,
+            type: 'success',
+            duration: 4500,
+          });
+        } else {
+          this.eventBus.emit('ui:toast', {
+            message: 'That listing is gone — someone got there first',
+            type: 'info',
+            duration: 3000,
+          });
+        }
+        this.render();
+        break;
+      }
+
+      case 'join-challenge': {
+        const challengeId = target.getAttribute('data-challenge-id');
+        if (!challengeId) break;
+        // Challenge join: one tap with the latest attested run attached.
+        // Local-only runs get the warm quorum redirect, never a dead end.
+        const { AttestationService } = await import(
+          '@runrealm/shared-core/services/attestation-service'
+        );
+        const { AccountService } = await import(
+          '@runrealm/shared-core/services/account-service'
+        );
+        const latest = AttestationService.getInstance().getAttestations()[0];
+        const summary = latest?.summary as { runId?: string } | undefined;
+        const accountId = AccountService.getInstance().getAccount()?.id ?? 'you';
+        if (!latest || latest.signatures.length === 0) {
+          this.eventBus.emit('challenge:joinBlocked', {
+            challengeId,
+            reason: 'Join with a verified run — connect to the oracle quorum first',
+          });
+          this.eventBus.emit('ui:toast', {
+            message: 'Join with a verified run — connect to the oracle quorum first',
+            type: 'info',
+            duration: 4500,
+          });
+          break;
+        }
+        this.eventBus.emit('challenge:joined', {
+          challengeId,
+          accountId,
+          runId: summary?.runId,
+        });
+        this.eventBus.emit('ui:toast', {
+          message: 'Joined — your verified run is on the board',
+          type: 'success',
+          duration: 3500,
+        });
+        break;
+      }
+
       case 'claim-challenge': {
         const challengeId = target.getAttribute('data-challenge-id');
         if (challengeId) {
@@ -703,7 +848,7 @@ export class UserDashboard {
           <div class="deed-tile-meta">
             <span class="tile-defense ${defenseStatus}" title="${shield.headline}">${SHIELD_TIER_EMOJI[shield.tier]} ${shield.tierLabel} · ${shield.daysOfSafety}d</span>
             <span class="tile-reward">+${estReward} $REALM</span>
-            ${bountyBadge(territory.geohash)}
+            ${bountyBadge(territory.geohash)}${marketBadge(this.marketplaceService, territory.id)}
           </div>
         </div>
 
@@ -731,7 +876,7 @@ export class UserDashboard {
             <div class="territory-meta">
               <span class="rarity-badge ${(territory.rarity || 'common').toLowerCase()}">${territory.rarity || 'Common'}</span>
               <span class="territory-reward">+${territory.estimatedReward || 0} $REALM</span>
-              ${bountyBadge(territory.geohash)}
+              ${bountyBadge(territory.geohash)}${marketBadge(this.marketplaceService, territory.id)}
               <span class="defense-badge ${defenseStatus}" title="${shield.headline}">${SHIELD_TIER_EMOJI[shield.tier]} ${shield.tierLabel}</span>
               <span class="visibility-marker" title="${visibility === 'public' ? 'Public — rivals can see your defense score' : 'Shielded — your defense score is private'}">${visibility === 'public' ? '🌐' : '🔒'}</span>
             </div>
@@ -853,13 +998,53 @@ export class UserDashboard {
           <div class="action-group">
             <label>Contest</label>
             <button class="action-btn secondary" data-action="contest-territory" data-territory-id="${territory.id}" title="Contest this territory with a verified run proof">
-              ⚔️ Contest (needs verified run)
+              Contest (needs verified run)
             </button>
             <p class="info-text">Claimable ground + a quorum-verified run. Runs stay free — proof is checked here, at the moment of value.</p>
           </div>
+
+          ${this.renderMarketRow(territory)}
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Marketplace row: list / delist / buy in one tap with the fee shown
+   * upfront. Reads the mirror synchronously (map read, never network)
+   * so an uninitialized mirror renders the list CTA, not a spinner.
+   */
+  private renderMarketRow(territory: DashboardTerritory): string {
+    let listing: { priceRealm: number; seller: string } | null = null;
+    try {
+      const svc = this.marketplaceService as unknown as {
+        getListing?: (id: string) => { priceRealm: number; seller: string } | null;
+      } | null;
+      listing = svc?.getListing?.(territory.id) ?? null;
+    } catch {
+      listing = null;
+    }
+    if (listing) {
+      return `
+          <div class="action-group">
+            <label>Marketplace</label>
+            <p class="info-text">Listed at ${listing.priceRealm} $REALM</p>
+            <button class="action-btn secondary" data-action="delist-territory" data-territory-id="${territory.id}" title="Remove this listing">
+              Remove listing
+            </button>
+            <button class="action-btn secondary" data-action="buy-territory" data-territory-id="${territory.id}" title="Buy this territory for ${listing.priceRealm} REALM plus fee">
+              Buy for ${listing.priceRealm} $REALM
+            </button>
+          </div>`;
+    }
+    return `
+          <div class="action-group">
+            <label>Marketplace</label>
+            <button class="action-btn secondary" data-action="list-territory" data-territory-id="${territory.id}" title="List this territory for sale">
+              Sell territory
+            </button>
+            <p class="info-text">Suggested price shown before you confirm — 2.5% fee, you keep the rest.</p>
+          </div>`;
   }
 
   /**
@@ -1056,24 +1241,42 @@ export class UserDashboard {
   private renderChallenges(userStats: DashboardData['userStats']): string {
     const challenges = userStats?.activeChallenges || [];
 
+    // Brand-challenge join row: always visible so the money surface is
+    // discoverable even with zero active challenges. One tap joins with
+    // the latest verified run; local runs get the quorum redirect.
+    const joinRow = `
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h3>Brand Challenges</h3>
+          </div>
+          <p class="info-text">Sponsored pace-band boards — join with a verified run, winnings auto-split. Creation fee funds the protocol.</p>
+          <div class="action-group">
+            <button class="action-btn" data-action="join-challenge" data-challenge-id="brand-weekly-5k" title="Join the weekly 5K board">
+              Join weekly 5K board
+            </button>
+          </div>
+        </div>
+      `;
+
     if (challenges.length === 0) {
       return `
         <div class="dashboard-section">
           <div class="section-header">
-            <h3>⚔️ Active Challenges</h3>
+            <h3>Active Challenges</h3>
             <button class="action-btn" data-action="find-challenges">Find More</button>
           </div>
           <div class="empty-state">
             <p>No active challenges. Check back tomorrow!</p>
           </div>
         </div>
+        ${joinRow}
       `;
     }
 
     return `
       <div class="dashboard-section">
         <div class="section-header">
-          <h3>⚔️ Active Challenges</h3>
+          <h3>Active Challenges</h3>
           <button class="action-btn" data-action="find-challenges">Find More</button>
         </div>
         <div class="challenges-list">
@@ -1102,6 +1305,7 @@ export class UserDashboard {
             .join('')}
         </div>
       </div>
+      ${joinRow}
     `;
   }
 
