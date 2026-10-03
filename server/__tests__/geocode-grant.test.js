@@ -42,11 +42,11 @@ function recordingFetch(payload) {
   return impl;
 }
 
-function errorFetch(status) {
+function errorFetch(status, body = '') {
   const calls = [];
   const impl = async (url) => {
     calls.push(url);
-    return { ok: false, status, json: async () => ({}) };
+    return { ok: false, status, json: async () => ({}), text: async () => body };
   };
   impl.calls = calls;
   return impl;
@@ -204,6 +204,64 @@ test('transport failure is a 502, not a crash', async () => {
   };
   const result = await geocode({ lat: 40.7, lng: -74, token: 't', fetchImpl });
   assert.equal(result.status, 502);
+});
+
+test("an upstream rejection relays Mapbox's own reason, not just the status", async () => {
+  // "Mapbox returned 403" is a status code, not a diagnosis. Mapbox's body
+  // names the cause -- invalid token, URL restriction, missing scope -- and
+  // those have completely different fixes. A 403 here is almost always a URL
+  // restriction on a token used from a serverless function, which is exactly
+  // the misconfiguration this endpoint has to be diagnosable for.
+  const body = '{"message":"Not Authorized - Invalid Token"}';
+  const fetchImpl = errorFetch(403, body);
+  const result = await geocode({ lat: 40.7, lng: -74, token: 't', fetchImpl });
+
+  assert.equal(result.status, 502);
+  assert.match(result.body.error, /403/);
+  assert.match(result.body.error, /Not Authorized/);
+  // Still no token in the response: the body is Mapbox's, not the request.
+  assert.ok(!JSON.stringify(result).includes('access_token'));
+});
+
+test('still reports the status when the upstream body is unreadable', async () => {
+  for (const bad of [null, undefined, 42, '']) {
+    const fetchImpl = errorFetch(500, bad);
+    const result = await geocode({ lat: 40.7, lng: -74, token: 't', fetchImpl });
+    assert.equal(result.status, 502);
+    assert.match(result.body.error, /500/);
+  }
+});
+
+test('a body that cannot be read does not turn a 502 into a crash', async () => {
+  const fetchImpl = async () => ({
+    ok: false,
+    status: 502,
+    json: async () => ({}),
+    text: async () => {
+      throw new Error('stream already consumed');
+    },
+  });
+  const result = await geocode({ lat: 40.7, lng: -74, token: 't', fetchImpl });
+  assert.equal(result.status, 502);
+  assert.match(result.body.error, /502/);
+});
+
+test('an upstream body cannot inject control characters into our response', async () => {
+  const fetchImpl = errorFetch(400, 'bad\u0000thing\u001b[31mred');
+  const result = await geocode({ lat: 40.7, lng: -74, token: 't', fetchImpl });
+  // Scanned by codepoint rather than by regex, so the check does not itself
+  // need a control-character pattern in source.
+  const hasControl = [...result.body.error].some((ch) => {
+    const code = ch.codePointAt(0);
+    return code !== undefined && (code < 0x20 || code === 0x7f);
+  });
+  assert.equal(hasControl, false, 'a control character survived');
+});
+
+test('an enormous upstream body is truncated rather than relayed whole', async () => {
+  const fetchImpl = errorFetch(500, 'x'.repeat(50_000));
+  const result = await geocode({ lat: 40.7, lng: -74, token: 't', fetchImpl });
+  assert.ok(result.body.error.length < 400, `error was ${result.body.error.length} chars`);
 });
 
 // ── Forward geocoding ─────────────────────────────────────────────────────

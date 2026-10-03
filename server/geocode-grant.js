@@ -82,6 +82,39 @@ function parseCoordinate(raw, limit) {
   return value;
 }
 
+/**
+ * A short, safe explanation for an upstream rejection.
+ *
+ * "Mapbox returned 403" is not a diagnosis, it is a status code. Mapbox's
+ * own body names the cause -- an invalid token, a URL restriction, a missing
+ * scope -- and those have completely different fixes. Relaying a trimmed
+ * version costs nothing and turns a support ticket into a diagnosis.
+ *
+ * Safety: the body is Mapbox's error text, not the request, so it cannot
+ * contain our token. It is truncated regardless, and stripped of control
+ * characters so an upstream cannot inject formatting into our JSON. The
+ * response is not cached, so there is nothing to retain.
+ */
+async function upstreamError(response) {
+  let detail = '';
+  try {
+    const text = await response.text();
+    if (typeof text === 'string' && text.length > 0) {
+      detail = text
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping them is the point
+        .replace(/[\u0000-\u001f\u007f]/g, ' ')
+        .slice(0, 200)
+        .trim();
+    }
+  } catch {
+    // A body we cannot read is not worth failing over; the status still says
+    // something useful on its own.
+  }
+  return detail
+    ? `Mapbox returned ${response.status}: ${detail}`
+    : `Mapbox returned ${response.status}`;
+}
+
 /** Autocomplete fires on every keystroke past three characters. */
 const MAX_QUERY_LENGTH = 256;
 const MAX_LIMIT = 10;
@@ -121,8 +154,9 @@ async function reverseGeocode({ lat, lng, token, fetchImpl = fetch } = {}) {
     const response = await fetchImpl(url);
     if (!response.ok) {
       // Log the status, never the URL: the URL carries the token.
-      console.error('Mapbox reverse geocode failed:', response.status);
-      return { status: 502, body: { error: `Mapbox returned ${response.status}` } };
+      const detail = await upstreamError(response);
+      console.error('Mapbox reverse geocode failed:', detail);
+      return { status: 502, body: { error: detail } };
     }
     const payload = await response.json();
     const name = reverseLabel(payload);
@@ -303,8 +337,9 @@ async function forwardGeocode({ q, limit, near, token, fetchImpl = fetch } = {})
     const response = await fetchImpl(url);
     if (!response.ok) {
       // Log the status, never the URL: the URL carries the token.
-      console.error('Mapbox forward geocode failed:', response.status);
-      return { status: 502, body: { error: `Mapbox returned ${response.status}` } };
+      const detail = await upstreamError(response);
+      console.error('Mapbox forward geocode failed:', detail);
+      return { status: 502, body: { error: detail } };
     }
     const payload = await response.json();
     const features = Array.isArray(payload?.features) ? payload.features : [];
