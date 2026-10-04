@@ -23,12 +23,12 @@ Implemented in `packages/shared-core/services/ghost-runner-service.ts`
 (persisted client-side); UI in `apps/web/src/shell/components/ghost-management.js`
 (+ `ghost-button.js`, `ghost-race-result.ts`).
 
-| Type | Difficulty | Deploy cost | Unlock |
-| --- | --- | --- | --- |
-| All-Rounder | 65 | 25 $REALM | First run |
-| Sprinter | 80 | 50 $REALM | Specialist choice at 10 runs |
-| Hill Climber | 78 | 75 $REALM | Specialist choice at 10 runs |
-| Endurance | 82 | 100 $REALM | Specialist choice at 10 runs |
+| Type         | Difficulty | Deploy cost | Unlock                       |
+| ------------ | ---------- | ----------- | ---------------------------- |
+| All-Rounder  | 65         | 25 $REALM   | First run                    |
+| Sprinter     | 80         | 50 $REALM   | Specialist choice at 10 runs |
+| Hill Climber | 78         | 75 $REALM   | Specialist choice at 10 runs |
+| Endurance    | 82         | 100 $REALM  | Specialist choice at 10 runs |
 
 - **Economy:** runs earn ~100 $REALM per 5K (`realmPer50Meters: 50`); upgrades cost 200 $REALM per level (max level 5); 24-hour cooldown per deployment.
 - **Anti-snowball:** difficulty capped at 85, race score at 850, level bonus at +120, pace gain at 8% total; rubber-banding −80 after 2 losses / +50 after 3 wins.
@@ -40,13 +40,13 @@ Implemented in `packages/shared-core/services/ghost-runner-service.ts`
 Territories hold activity points (0–1000) that decay without engagement.
 Implemented in `packages/shared-core/services/territory-service.ts`.
 
-| Source | Points | Limit |
-| --- | --- | --- |
-| Real run on territory | +100 | — |
-| Ghost run on territory | +50 | — |
-| Territory Walk (GPS-verified visit) | +150 | 1× per territory per day |
-| Boost (burn 50 REALM, `RunRealmBoostV1`) | +100 | 1× per territory per day |
-| Decay | −10/day | Claim starts at 500 → claimable in 40 days idle |
+| Source                                   | Points  | Limit                                           |
+| ---------------------------------------- | ------- | ----------------------------------------------- |
+| Real run on territory                    | +100    | —                                               |
+| Ghost run on territory                   | +50     | —                                               |
+| Territory Walk (GPS-verified visit)      | +150    | 1× per territory per day                        |
+| Boost (burn 50 REALM, `RunRealmBoostV1`) | +100    | 1× per territory per day                        |
+| Decay                                    | −10/day | Claim starts at 500 → claimable in 40 days idle |
 
 **Defense status:** Strong 700–1000 · Moderate 300–699 · Vulnerable 100–299 · Claimable 0–99.
 Deactivation keys off `lastActivityUpdate`, so defended territories never expire.
@@ -60,10 +60,10 @@ The settlement escrow (`contracts/settlement/RunRealmEscrowV1.sol`, additive
 next to the frozen `RunRealmUniversal`) puts REALM where the ownership
 already is. Two rails, one fee source:
 
-| Rail | On-chain | Fee |
-| --- | --- | --- |
-| Territory marketplace | `listTerritory` / `delistTerritory` / `buyTerritory` | `MARKETPLACE_FEE_BPS` (2.5%) of price → treasury |
-| Brand challenge | `createChallenge(escrow)` | `CHALLENGE_CREATION_FEE_REALM_E18` (500 REALM) → treasury |
+| Rail                  | On-chain                                             | Fee                                                       |
+| --------------------- | ---------------------------------------------------- | --------------------------------------------------------- |
+| Territory marketplace | `listTerritory` / `delistTerritory` / `buyTerritory` | `MARKETPLACE_FEE_BPS` (2.5%) of price → treasury          |
+| Brand challenge       | `createChallenge(escrow)`                            | `CHALLENGE_CREATION_FEE_REALM_E18` (500 REALM) → treasury |
 
 Both fees are sourced from `GAME_RULES.settlement` and mirrored into
 `RealmRules.sol` by `npm run sync:rules`, so changing a take is a config edit
@@ -71,27 +71,35 @@ rather than a logic redeploy. On-chain the escrow moves REALM only — NFT
 custody stays with the registry, and ownership is re-checked at buy time so a
 transfer voids a stale listing.
 
-**Off-chain mirror.** `packages/shared-core/services/marketplace-service.ts`
-mirrors listing intent so the dashboard renders instantly with no wallet:
+**Off-chain mirrors.** Two services keep the UI instant with no wallet.
+`packages/shared-core/services/marketplace-service.ts` mirrors listing intent:
 `suggestedPrice` (50 REALM floor), `previewMarketFee` (fee + net shown before
-the tap), and clear-on-claim. The chain write is a **best-effort follow-up**:
-with no wallet, or with `RUNREALM_ESCROW_ADDRESS` unset, the mirror alone
-settles and nothing else changes. A chain failure emits
-`marketplace:chainFailed` and the UI says the on-device listing is unchanged —
-it never rolls the user back.
+the tap), and clear-on-claim. `packages/shared-core/services/challenge-service.ts`
+mirrors brand boards: `createBoard` (minimum prize of one max-bounty stake, so
+a board is always worth contesting), `joinBoard` (idempotent ledger write), and
+`challengeCreationTotalRealm` (prize + fee, the total a creator approves).
 
-`shared-core` never imports `shared-blockchain`; the mirror takes a
-`MarketplaceChainGateway`, injected in `core/gamefi-bootstrap.ts` from
-`ContractService`. Swapping the chain in or out is therefore one binding, and
-tests inject a fake gateway with no ethers in the graph.
+The chain write is a **best-effort follow-up** in both: with no wallet, or with
+`RUNREALM_ESCROW_ADDRESS` unset, the mirror alone settles and nothing else
+changes. A chain failure emits `marketplace:chainFailed` /
+`challenge:chainFailed` and the UI says the on-device record is unchanged — it
+never rolls the user back.
+
+`shared-core` never imports `shared-blockchain`; each mirror takes a gateway
+(`MarketplaceChainGateway`, `ChallengeChainGateway`), injected in
+`core/gamefi-bootstrap.ts` from `ContractService`. Swapping the chain in or out
+is therefore one binding, and tests inject a fake gateway with no ethers in the
+graph.
 
 **Dashboard surface** (`apps/web/src/shell/components/user-dashboard.ts`):
 each territory card carries a market row — `Sell territory` (suggested price,
 fee stated before confirm) or, once listed, `Remove listing` + `Buy for N
 $REALM`. A listing badge appears on the deed tile and compact card. The
-Challenges tab carries the brand-challenge boards: one-tap join attached to
-the latest quorum-verified run, with a warm redirect to the oracle quorum when
-the run is still local.
+Challenges tab lists the live brand boards with prize, join count and end date,
+plus a **Fund a board** form (title and prize inputs, `Prize + 500 $REALM
+creation fee` stated before the tap). Joining is one tap attached to the latest
+quorum-verified run, with a warm redirect to the oracle quorum when the run is
+still local — joining is never a dead end.
 
 ## User Dashboard
 
@@ -107,21 +115,25 @@ collectible showcase (tactile deed tiles, rarity filters, per-tile deed inspecti
 Physical-to-digital collectible mechanics in the athletic loop, in Sunprint Atlas styling.
 
 ### 1. Collectible "Sunprint Deed" Claim & Reveal Modal
+
 - **Location**: `packages/shared-core/components/sunprint-deed-modal.ts` (+ `playDeedRevealSound` in `sound-service.ts`)
 - Chemical-wash exposure animation revealing street geometry, H3 cell address, and cadastral boundaries.
 - Foil rarity wax seals: Common (Verdigris), Rare (Sapphire), Epic (Amethyst), Legendary (Amber/Gold).
 - Telemetry grid (distance, pacing band, daily $REALM yield, verification hash); haptic + Web Audio cues; one-tap social share (Web Share API with clipboard fallback).
 
 ### 2. Dynamic "Realm Relics" & Landmark POIs
+
 - **Location**: `packages/shared-core/services/relic-service.ts` (map layers in `map-service.ts`: `relics-source`, `relics-layer`, `relics-pulse-layer`)
-- Timed GPS supply drops (*Sunprint Cache*, *Cadastral Beacon*, *Ghost Elixir*, *Solana Genesis Shard*) spawn at landmarks 400m–2,200m from the runner.
+- Timed GPS supply drops (_Sunprint Cache_, _Cadastral Beacon_, _Ghost Elixir_, _Solana Genesis Shard_) spawn at landmarks 400m–2,200m from the runner.
 - Proximity radar (audio/haptic pulse quickens within 250m); crossing within 35m unlocks bonus $REALM and defensive shields.
 
 ### 3. Eyes-Free Sensory Feedback Engine
+
 - **Location**: `packages/shared-core/services/sensory-feedback-service.ts`
 - Phone-in-pocket haptic/audio cues: cell exposure pulse, territory-loop chime, contested-territory warning, 1km pacing buzz.
 
 ### 4. "Run First, Mint Later" (Deferred Onboarding)
+
 - **Location**: `packages/shared-core/services/deferred-claim-service.ts`
 - Guests run and capture territories without a wallet; unminted deeds queue in local storage (`runrealm_unminted_deeds`) and are claimed after post-workout wallet connection.
 
