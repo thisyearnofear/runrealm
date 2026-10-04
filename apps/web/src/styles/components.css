@@ -111,7 +111,11 @@
   display: flex;
   align-items: center;
   padding: var(--space-md) var(--space-md);
-  background: linear-gradient(135deg, var(--widget-header-bg), rgba(79, 174, 139, 0.05));
+  background: linear-gradient(
+    135deg,
+    var(--widget-header-bg),
+    rgba(79, 174, 139, 0.05)
+  );
   border-bottom: 1px solid rgba(79, 174, 139, 0.2);
   cursor: pointer;
   user-select: none;
@@ -120,7 +124,11 @@
 }
 
 .widget-header:hover {
-  background: linear-gradient(135deg, var(--widget-header-bg-hover), rgba(79, 174, 139, 0.1));
+  background: linear-gradient(
+    135deg,
+    var(--widget-header-bg-hover),
+    rgba(79, 174, 139, 0.1)
+  );
   transform: translateX(1px);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
@@ -393,12 +401,24 @@
   }
 
   .visibility-toggle.shielded {
-    border-color: color-mix(in srgb, var(--rr-accent, #4fae8b) 40%, transparent);
+    border-color: color-mix(
+      in srgb,
+      var(--rr-accent, #4fae8b) 40%,
+      transparent
+    );
   }
 
   .visibility-toggle.public {
-    border-color: color-mix(in srgb, var(--rr-rarity-rare, #3498db) 60%, transparent);
-    background: color-mix(in srgb, var(--rr-rarity-rare, #3498db) 15%, transparent);
+    border-color: color-mix(
+      in srgb,
+      var(--rr-rarity-rare, #3498db) 60%,
+      transparent
+    );
+    background: color-mix(
+      in srgb,
+      var(--rr-rarity-rare, #3498db) 15%,
+      transparent
+    );
   }
 
   .territory-item-compact {
@@ -748,7 +768,11 @@
     align-items: center;
     justify-content: space-between;
     padding: var(--space-md) var(--space-md);
-    background: linear-gradient(135deg, var(--widget-header-bg), rgba(79, 174, 139, 0.05));
+    background: linear-gradient(
+      135deg,
+      var(--widget-header-bg),
+      rgba(79, 174, 139, 0.05)
+    );
     border-bottom: 1px solid rgba(79, 174, 139, 0.2);
     cursor: pointer;
     user-select: none;
@@ -1131,13 +1155,21 @@
 }
 
 .widget-content::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(79, 174, 139, 0.4), rgba(79, 174, 139, 0.6));
+  background: linear-gradient(
+    180deg,
+    rgba(79, 174, 139, 0.4),
+    rgba(79, 174, 139, 0.6)
+  );
   border-radius: var(--radius-sm);
   border: 1px solid rgba(79, 174, 139, 0.2);
 }
 
 .widget-content::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(79, 174, 139, 0.6), rgba(79, 174, 139, 0.8));
+  background: linear-gradient(
+    180deg,
+    rgba(79, 174, 139, 0.6),
+    rgba(79, 174, 139, 0.8)
+  );
 }
 
 /* Widget States - Enhanced */
@@ -1158,7 +1190,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 14px;
-  background: linear-gradient(135deg, rgba(79, 174, 139, 0.25), rgba(99, 179, 200, 0.15));
+  background: linear-gradient(
+    135deg,
+    rgba(79, 174, 139, 0.25),
+    rgba(99, 179, 200, 0.15)
+  );
   border-bottom: none;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1297,25 +1333,41 @@
 
 /* Button Variants */
 .widget-button.secondary {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05)
+  );
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: #fff;
 }
 
 .widget-button.secondary:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.1)
+  );
   border-color: rgba(255, 255, 255, 0.5);
 }
 
 .widget-button.tertiary {
-  background: linear-gradient(135deg, rgba(79, 174, 139, 0.1) 0%, rgba(99, 179, 200, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(79, 174, 139, 0.1) 0%,
+    rgba(99, 179, 200, 0.1) 100%
+  );
   border: 1px solid rgba(79, 174, 139, 0.3);
   color: var(--color-primary);
   font-size: 12px;
 }
 
 .widget-button.tertiary:hover {
-  background: linear-gradient(135deg, rgba(79, 174, 139, 0.2) 0%, rgba(99, 179, 200, 0.2) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(79, 174, 139, 0.2) 0%,
+    rgba(99, 179, 200, 0.2) 100%
+  );
   border-color: var(--color-primary);
   box-shadow: 0 0 16px rgba(79, 174, 139, 0.3);
 }
@@ -1534,7 +1586,12 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
   animation: shimmer 2s infinite;
 }
 
@@ -1655,7 +1712,8 @@
 .rarity-badge.legendary {
   background: color-mix(in srgb, var(--rr-rarity-legendary) 15%, transparent);
   color: var(--rr-rarity-legendary);
-  border: 1px solid color-mix(in srgb, var(--rr-rarity-legendary) 30%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--rr-rarity-legendary) 30%, transparent);
 }
 
 /* Enhanced Cross-Chain Info */
@@ -1714,7 +1772,12 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(79, 174, 139, 0.8), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(79, 174, 139, 0.8),
+    transparent
+  );
   animation: shimmer 1.5s infinite;
   z-index: 1;
 }
@@ -1748,7 +1811,11 @@
   padding: var(--space-md);
   margin-bottom: var(--space-sm);
   border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, var(--chat-bubble-bg), rgba(0, 123, 255, 0.05));
+  background: linear-gradient(
+    135deg,
+    var(--chat-bubble-bg),
+    rgba(0, 123, 255, 0.05)
+  );
   border: 1px solid var(--chat-bubble-border);
   color: #ffffff;
   font-size: 13px;
@@ -1759,7 +1826,11 @@
 }
 
 .widget-tip.success {
-  background: linear-gradient(135deg, var(--chat-success-bg), rgba(40, 167, 69, 0.05));
+  background: linear-gradient(
+    135deg,
+    var(--chat-success-bg),
+    rgba(40, 167, 69, 0.05)
+  );
   border-color: var(--chat-success-border);
   box-shadow:
     var(--elevation-1),
@@ -1767,7 +1838,11 @@
 }
 
 .widget-tip.error {
-  background: linear-gradient(135deg, rgba(255, 59, 59, 0.15), rgba(255, 59, 59, 0.1));
+  background: linear-gradient(
+    135deg,
+    rgba(255, 59, 59, 0.15),
+    rgba(255, 59, 59, 0.1)
+  );
   border: 1px solid rgba(255, 59, 59, 0.4);
   border-left: 4px solid #ff3b3b;
   color: #ffaaaa;
@@ -1789,11 +1864,19 @@
 @keyframes errorPulseEnhanced {
   0%,
   100% {
-    background: linear-gradient(135deg, rgba(255, 59, 59, 0.15), rgba(255, 59, 59, 0.1));
+    background: linear-gradient(
+      135deg,
+      rgba(255, 59, 59, 0.15),
+      rgba(255, 59, 59, 0.1)
+    );
     box-shadow: var(--elevation-1);
   }
   50% {
-    background: linear-gradient(135deg, rgba(255, 59, 59, 0.25), rgba(255, 59, 59, 0.15));
+    background: linear-gradient(
+      135deg,
+      rgba(255, 59, 59, 0.25),
+      rgba(255, 59, 59, 0.15)
+    );
     box-shadow:
       var(--elevation-2),
       0 0 10px var(--glow-error);
@@ -2281,6 +2364,20 @@ button:disabled,
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
+}
+
+/* The amount is the headline; the note says what it is for. Both ceilings
+   are real buttons that a runner has to choose between, so the purpose is
+   printed rather than left in a `title` a touch screen never shows. */
+.account-screen .action-btn .action-btn-amount {
+  display: block;
+}
+
+.account-screen .action-btn .action-btn-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  opacity: 0.78;
 }
 
 .account-screen .action-btn:hover {

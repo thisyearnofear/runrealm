@@ -19,7 +19,7 @@
  *   the same way (no Math.random, and therefore testable).
  */
 
-import { seedFromString } from './seeded-rng';
+import { seedFromString } from "./seeded-rng";
 
 /** Hard cap for a single narrated line — toasts must not become paragraphs. */
 export const VOICE_MAX_LINE = 140;
@@ -30,18 +30,18 @@ export const VOICE_MAX_LINE = 140;
  * the same rule instead of trusting memory.
  */
 export const VOICE_BANNED_TERMS = [
-  'neon',
-  'glow',
-  'pulse',
-  'crypto card',
-  'optimize',
-  'optimizing',
-  'synergy',
-  'successfully',
-  'failed to',
-  'dashboard',
-  'loading',
-  'error:',
+  "neon",
+  "glow",
+  "pulse",
+  "crypto card",
+  "optimize",
+  "optimizing",
+  "synergy",
+  "successfully",
+  "failed to",
+  "dashboard",
+  "loading",
+  "error:",
 ] as const;
 
 /**
@@ -50,7 +50,7 @@ export const VOICE_BANNED_TERMS = [
  * makes the moment unique — `km:4:steady`, `return:2d:3`.
  */
 export function pickLine<T>(items: readonly T[], key: string): T {
-  if (items.length === 0) throw new Error('pickLine: empty line bank');
+  if (items.length === 0) throw new Error("pickLine: empty line bank");
   return items[seedFromString(key) % items.length] as T;
 }
 
@@ -62,32 +62,35 @@ export function pickLine<T>(items: readonly T[], key: string): T {
 
 export const WORKING_LINES = {
   aiRoute: [
-    'Reading the ground between here and where you want to be.',
-    'Drawing a line across the map. No promises about hills.',
-    'Looking for a route that is worth the paper it is drawn on.',
-    'Plotting something scenic enough to be worth the effort.',
+    "Reading the ground between here and where you want to be.",
+    "Drawing a line across the map. No promises about hills.",
+    "Looking for a route that is worth the paper it is drawn on.",
+    "Plotting something scenic enough to be worth the effort.",
   ],
   walletConnect: [
-    'Opening the ledger — just the handshake, not your history.',
-    'Waking the wallet up. One moment.',
-    'Checking your keys, quietly.',
-    'Knocking on the door of your wallet.',
+    "Opening the ledger — just the handshake, not your history.",
+    "Waking the wallet up. One moment.",
+    "Checking your keys, quietly.",
+    "Knocking on the door of your wallet.",
   ],
   territoryLoad: [
-    'Unrolling the local map.',
-    'Walking the survey — seeing who has been here.',
-    'Counting the claims around you.',
-    'Reading the ground you are standing on.',
+    "Unrolling the local map.",
+    "Walking the survey — seeing who has been here.",
+    "Counting the claims around you.",
+    "Reading the ground you are standing on.",
   ],
   crossChain: [
-    'Carrying the deed across the bridge.',
-    'One network is talking to another. Politely.',
-    'Anchoring the claim where it can be found from both sides.',
+    "Carrying the deed across the bridge.",
+    "One network is talking to another. Politely.",
+    "Anchoring the claim where it can be found from both sides.",
   ],
 } as const;
 
 /** A working line for one of the `WORKING_LINES` banks. */
-export function workingLine(key: keyof typeof WORKING_LINES, salt = ''): string {
+export function workingLine(
+  key: keyof typeof WORKING_LINES,
+  salt = "",
+): string {
   return pickLine(WORKING_LINES[key], `working:${key}:${salt}`);
 }
 
@@ -95,15 +98,15 @@ export function workingLine(key: keyof typeof WORKING_LINES, salt = ''): string 
 // The run — settle in, keep going, come home.
 // ─────────────────────────────────────────────────────────────
 
-export type PaceFeel = 'brisk' | 'steady' | 'easy';
+export type PaceFeel = "brisk" | "steady" | "easy";
 
 /** Pace feel in seconds per kilometre. Non-judgemental by design: nothing
  *  here calls a runner slow. */
 export function paceFeel(secondsPerKm: number): PaceFeel {
-  if (!Number.isFinite(secondsPerKm) || secondsPerKm <= 0) return 'steady';
-  if (secondsPerKm < 330) return 'brisk';
-  if (secondsPerKm < 420) return 'steady';
-  return 'easy';
+  if (!Number.isFinite(secondsPerKm) || secondsPerKm <= 0) return "steady";
+  if (secondsPerKm < 330) return "brisk";
+  if (secondsPerKm < 420) return "steady";
+  return "easy";
 }
 
 export interface MilestoneContext {
@@ -119,8 +122,10 @@ type Template = (ctx: MilestoneContext) => string;
 const MILESTONE_BANDS: Record<MilestoneBand, readonly Template[]> = {
   tenPlus: [
     (c) => `${c.km} km. This is a proper expedition now.`,
-    (c) => `${c.km} km — the distance that ends up in someone else's ghost run.`,
-    (c) => `${c.km} km. Whoever races your ghost next has no idea what is waiting.`,
+    (c) =>
+      `${c.km} km — the distance that ends up in someone else's ghost run.`,
+    (c) =>
+      `${c.km} km. Whoever races your ghost next has no idea what is waiting.`,
   ],
   sevenToNine: [
     (c) => `${c.km} km. You have outlasted the good ideas and the bad ones.`,
@@ -144,33 +149,34 @@ const MILESTONE_BANDS: Record<MilestoneBand, readonly Template[]> = {
   ],
 };
 
-type MilestoneBand = 'one' | 'twoToThree' | 'fourToSix' | 'sevenToNine' | 'tenPlus';
+type MilestoneBand =
+  "one" | "twoToThree" | "fourToSix" | "sevenToNine" | "tenPlus";
 
 /** Band lookup by whole kilometres. Named keys beat array indexing here: no
  *  possibly-missing element to guard, and the thresholds read top-down. */
 function milestoneBand(km: number): MilestoneBand {
-  if (km >= 10) return 'tenPlus';
-  if (km >= 7) return 'sevenToNine';
-  if (km >= 4) return 'fourToSix';
-  if (km >= 2) return 'twoToThree';
-  return 'one';
+  if (km >= 10) return "tenPlus";
+  if (km >= 7) return "sevenToNine";
+  if (km >= 4) return "fourToSix";
+  if (km >= 2) return "twoToThree";
+  return "one";
 }
 
 const PACE_ASIDES: Record<PaceFeel, readonly Template[]> = {
   brisk: [
-    () => 'Moving like weather.',
-    () => 'Quick enough that the map has to hurry to keep up.',
-    () => 'Something in the legs has decided today is a good day.',
+    () => "Moving like weather.",
+    () => "Quick enough that the map has to hurry to keep up.",
+    () => "Something in the legs has decided today is a good day.",
   ],
   steady: [
-    () => 'Holding a rhythm the map can read.',
-    () => 'Settled, and still going.',
-    () => 'Steady is the whole trick.',
+    () => "Holding a rhythm the map can read.",
+    () => "Settled, and still going.",
+    () => "Steady is the whole trick.",
   ],
   easy: [
-    () => 'Unhurried. Unbothered.',
-    () => 'Taking the morning at your own pace.',
-    () => 'Slow miles still develop ground.',
+    () => "Unhurried. Unbothered.",
+    () => "Taking the morning at your own pace.",
+    () => "Slow miles still develop ground.",
   ],
 };
 
@@ -182,9 +188,15 @@ const PACE_ASIDES: Record<PaceFeel, readonly Template[]> = {
 export function milestoneLine(ctx: MilestoneContext): string {
   const km = Math.max(1, Math.floor(ctx.km));
   const band = MILESTONE_BANDS[milestoneBand(km)];
-  const base = pickLine(band, `km:${km}:${paceFeel(ctx.paceSecPerKm ?? 0)}`)({ ...ctx, km });
+  const base = pickLine(
+    band,
+    `km:${km}:${paceFeel(ctx.paceSecPerKm ?? 0)}`,
+  )({ ...ctx, km });
   if (km % 2 !== 0) return base;
-  const aside = pickLine(PACE_ASIDES[paceFeel(ctx.paceSecPerKm ?? 0)], `aside:${km}`);
+  const aside = pickLine(
+    PACE_ASIDES[paceFeel(ctx.paceSecPerKm ?? 0)],
+    `aside:${km}`,
+  );
   return `${base} ${aside({ ...ctx, km })}`;
 }
 
@@ -193,19 +205,19 @@ export function runStartLine(opts: { firstEver?: boolean } = {}): string {
   if (opts.firstEver) {
     return pickLine(
       [
-        'Your first exposure. There is no wrong way to do this.',
-        'Nothing is expected of you today except walking out of the door.',
+        "Your first exposure. There is no wrong way to do this.",
+        "Nothing is expected of you today except walking out of the door.",
       ],
-      'run:start:first'
+      "run:start:first",
     );
   }
   return pickLine(
     [
-      'Paper ready. Take the first step when you are.',
-      'The map is open and the light is on your side. Off you go.',
-      'Starting the exposure. Nothing here but you and the ground.',
+      "Paper ready. Take the first step when you are.",
+      "The map is open and the light is on your side. Off you go.",
+      "Starting the exposure. Nothing here but you and the ground.",
     ],
-    'run:start'
+    "run:start",
   );
 }
 
@@ -219,7 +231,9 @@ export interface RunCompleteContext {
 
 /** '5.02 km in 27 min', or just the distance when no honest duration exists. */
 function distanceAndTime(ctx: RunCompleteContext): string {
-  return ctx.durationLabel ? `${ctx.distanceLabel} in ${ctx.durationLabel}` : ctx.distanceLabel;
+  return ctx.durationLabel
+    ? `${ctx.distanceLabel} in ${ctx.durationLabel}`
+    : ctx.distanceLabel;
 }
 
 /** Wind-down line once a run is filed. */
@@ -235,14 +249,17 @@ export function runCompleteLine(ctx: RunCompleteContext): string {
         `${travelled}. Go and eat something ridiculous.`,
         `${travelled}. Filed under: yours.`,
       ];
-  return pickLine(bank, `run:done:${ctx.distanceLabel}:${ctx.developedCount ?? 0}`);
+  return pickLine(
+    bank,
+    `run:done:${ctx.distanceLabel}:${ctx.developedCount ?? 0}`,
+  );
 }
 
 // ─────────────────────────────────────────────────────────────
 // Territory — nearby, developing, overexposed.
 // ─────────────────────────────────────────────────────────────
 
-export type TerritoryFeel = 'owned' | 'vulnerable' | 'claimable' | 'unknown';
+export type TerritoryFeel = "owned" | "vulnerable" | "claimable" | "unknown";
 
 /** One short line for ground you are standing near. */
 export function nearbyTerritoryLine(opts: {
@@ -270,22 +287,28 @@ export function nearbyTerritoryLine(opts: {
 }
 
 /** Announced when a claim's defense state changes. */
-export function defenseChangedLine(opts: { name: string; feel: TerritoryFeel }): string {
+export function defenseChangedLine(opts: {
+  name: string;
+  feel: TerritoryFeel;
+}): string {
   switch (opts.feel) {
-    case 'vulnerable':
+    case "vulnerable":
       return pickLine(
         [
           `${opts.name} has drifted into overexposure. One more outing would settle it.`,
           `${opts.name} is fading. It is not lost — it just needs feet.`,
         ],
-        `def:vuln:${opts.name}`
+        `def:vuln:${opts.name}`,
       );
-    case 'owned':
+    case "owned":
       return pickLine(
-        [`${opts.name} has settled into verdigris. Good.`, `${opts.name} is holding again.`],
-        `def:owned:${opts.name}`
+        [
+          `${opts.name} has settled into verdigris. Good.`,
+          `${opts.name} is holding again.`,
+        ],
+        `def:owned:${opts.name}`,
       );
-    case 'claimable':
+    case "claimable":
       return `${opts.name} is unclaimed ground with your name half on it.`;
     default:
       return `${opts.name} changed state. The map will show it.`;
@@ -302,37 +325,40 @@ export function defenseChangedLine(opts: { name: string; feel: TerritoryFeel }):
  * return lines drop straight into a sentence.
  */
 export function formatAbsence(absenceMs: number): string {
-  if (!Number.isFinite(absenceMs) || absenceMs <= 0) return 'a moment';
+  if (!Number.isFinite(absenceMs) || absenceMs <= 0) return "a moment";
   const hours = absenceMs / (60 * 60 * 1000);
-  if (hours < 0.75) return 'a moment';
-  if (hours < 20) return 'a few hours';
+  if (hours < 0.75) return "a moment";
+  if (hours < 20) return "a few hours";
   const days = Math.round(hours / 24);
-  if (days <= 1) return 'a day';
+  if (days <= 1) return "a day";
   if (days < 8) return `${days} days`;
   const weeks = Math.round(days / 7);
-  if (weeks <= 1) return 'a week';
+  if (weeks <= 1) return "a week";
   if (weeks < 5) return `${weeks} weeks`;
-  return 'a while';
+  return "a while";
 }
 
 /** Greeting for a return. `absenceLabel` is pre-formatted ('3 days'). */
-export function returnGreeting(absenceLabel: string, salt = ''): string {
+export function returnGreeting(absenceLabel: string, salt = ""): string {
   return pickLine(
     [
       `Back after ${absenceLabel}. The atlas kept your seat.`,
       `You were gone ${absenceLabel}. It is good to have you on the ground again.`,
       `${absenceLabel} away — nothing here was urgent, and it is all still yours.`,
     ],
-    `return:greet:${absenceLabel}:${salt}`
+    `return:greet:${absenceLabel}:${salt}`,
   );
 }
 
 /** What happened to the realm while the runner was away. */
-export function returnSummary(opts: { crossings: number; developedCount?: number }): string {
+export function returnSummary(opts: {
+  crossings: number;
+  developedCount?: number;
+}): string {
   const count = Math.max(0, Math.floor(opts.crossings));
-  const claimWord = count === 1 ? 'claim' : 'claims';
-  const cellWord = count === 1 ? 'cell' : 'cells';
-  const needs = count === 1 ? 'needs' : 'need';
+  const claimWord = count === 1 ? "claim" : "claims";
+  const cellWord = count === 1 ? "cell" : "cells";
+  const needs = count === 1 ? "needs" : "need";
   const bank = [
     `${count} of your ${claimWord} got thin while you were out.`,
     `${count} ${claimWord} ${needs} a look — nothing dramatic, just attention.`,
@@ -340,7 +366,7 @@ export function returnSummary(opts: { crossings: number; developedCount?: number
   ];
   const base = pickLine(bank, `return:summary:${count}`);
   if (!opts.developedCount) return base;
-  const heldWord = opts.developedCount === 1 ? 'claim' : 'claims';
+  const heldWord = opts.developedCount === 1 ? "claim" : "claims";
   return `${base} ${opts.developedCount} ${heldWord} held firm the whole time.`;
 }
 
@@ -351,7 +377,7 @@ export function returnQuiet(absenceLabel: string): string {
       `${absenceLabel} away and the realm is exactly as you left it.`,
       `Everything held while you were gone. Quiet is a good outcome.`,
     ],
-    `return:quiet:${absenceLabel}`
+    `return:quiet:${absenceLabel}`,
   );
 }
 
@@ -366,7 +392,7 @@ export function levelUpLine(level: number): string {
       `Level ${level} — you are getting better at this, and the map agrees.`,
       `Level ${level}. New ground is within reach.`,
     ],
-    `level:${level}`
+    `level:${level}`,
   );
 }
 
@@ -374,10 +400,10 @@ export function levelUpLine(level: number): string {
 export function claimReadyLine(): string {
   return pickLine(
     [
-      'Ground ready to claim — finish the run and it is yours.',
-      'This is claimable ground. A little further and it is on the map for good.',
+      "Ground ready to claim — finish the run and it is yours.",
+      "This is claimable ground. A little further and it is on the map for good.",
     ],
-    'claim:ready'
+    "claim:ready",
   );
 }
 
@@ -387,7 +413,7 @@ export function challengeCompleteLine(title: string): string {
       `${title} done. It was on the list for a reason.`,
       `${title} complete — the list is shorter than it was.`,
     ],
-    `challenge:${title}`
+    `challenge:${title}`,
   );
 }
 
@@ -398,7 +424,7 @@ export function achievementLine(name: string): string {
       `${name} — pinned to the corner of your map.`,
       `${name}. Nobody handed you that.`,
     ],
-    `achv:${name}`
+    `achv:${name}`,
   );
 }
 
@@ -408,22 +434,22 @@ export function achievementLine(name: string): string {
 // ─────────────────────────────────────────────────────────────
 
 /** Whatever is not on the map yet. `what` keeps the sentence specific. */
-export function notOnChainLine(what: 'boost' | 'contest' | 'reads'): string {
-  const action = what === 'reads' ? 'read what it holds' : what;
+export function notOnChainLine(what: "boost" | "contest" | "reads"): string {
+  const action = what === "reads" ? "read what it holds" : what;
   return pickLine(
     [
       `That claim is still only on paper. Finish a run there first, then you can ${action}.`,
       `Nothing to ${action} yet — this ground has not been claimed on chain.`,
     ],
-    `onchain:${what}`
+    `onchain:${what}`,
   );
 }
 
 /** A claim the service was asked about but cannot find. Never a raw 'not found'. */
 export function claimMissingLine(): string {
   return pickLine(
-    ['That claim is not on your map. It may have moved on without you.'],
-    'claim:missing'
+    ["That claim is not on your map. It may have moved on without you."],
+    "claim:missing",
   );
 }
 
@@ -431,24 +457,26 @@ export function claimMissingLine(): string {
 export function claimTakenLine(): string {
   return pickLine(
     [
-      'That ground is yours now — drawn on the map for good.',
-      'Filed and yours. The deed is on the map.',
+      "That ground is yours now — drawn on the map for good.",
+      "Filed and yours. The deed is on the map.",
     ],
-    'claim:taken'
+    "claim:taken",
   );
 }
 
 /** Location trouble. Never a wall of jargon, never the runner's fault. */
-export function locationTroubleLine(kind: 'unavailable' | 'timeout'): string {
-  if (kind === 'timeout') {
+export function locationTroubleLine(kind: "unavailable" | "timeout"): string {
+  if (kind === "timeout") {
     return pickLine(
-      ['Location took its time and gave up. Ask again and it usually answers.'],
-      'loc:timeout'
+      ["Location took its time and gave up. Ask again and it usually answers."],
+      "loc:timeout",
     );
   }
   return pickLine(
-    ['The atlas cannot place you right now. Step into the open and try once more.'],
-    'loc:unavailable'
+    [
+      "The atlas cannot place you right now. Step into the open and try once more.",
+    ],
+    "loc:unavailable",
   );
 }
 
@@ -459,7 +487,7 @@ export function syncFailedLine(source: string): string {
       `${source} did not answer, so nothing was brought over. Your runs are safe where they are.`,
       `Could not reach ${source}. Nothing is lost — worth another try in a moment.`,
     ],
-    `sync:fail:${source}`
+    `sync:fail:${source}`,
   );
 }
 
@@ -467,17 +495,20 @@ export function syncFailedLine(source: string): string {
 export function boostUsedTodayLine(): string {
   return pickLine(
     [
-      'This ground has had its attention today. It takes more after midnight UTC.',
-      'Already tended today — the next feeding is after midnight UTC.',
+      "This ground has had its attention today. It takes more after midnight UTC.",
+      "Already tended today — the next feeding is after midnight UTC.",
     ],
-    'boost:used'
+    "boost:used",
   );
 }
 
 export function boostConfirmedLine(points: number): string {
   return pickLine(
-    [`Ground tended. +${points} to its hold.`, `Fed and firm — +${points} defense on that claim.`],
-    `boost:ok:${points}`
+    [
+      `Ground tended. +${points} to its hold.`,
+      `Fed and firm — +${points} defense on that claim.`,
+    ],
+    `boost:ok:${points}`,
   );
 }
 
@@ -485,27 +516,30 @@ export function boostConfirmedLine(points: number): string {
 export function boostFailedLine(): string {
   return pickLine(
     [
-      'The boost did not take. Your REALM stayed in the wallet and the claim is unchanged.',
-      'That one did not land. Nothing was spent, and the ground is as it was.',
+      "The boost did not take. Your REALM stayed in the wallet and the claim is unchanged.",
+      "That one did not land. Nothing was spent, and the ground is as it was.",
     ],
-    'boost:fail'
+    "boost:fail",
   );
 }
 
 /** Rewards — claiming and staking read as filing, not as a transaction log. */
 export function claimingLine(): string {
-  return pickLine(['Filing your rewards.'], 'rewards:claiming');
+  return pickLine(["Filing your rewards."], "rewards:claiming");
 }
 
 export function claimedLine(amount: string): string {
   return pickLine(
-    [`${amount} REALM filed with the rest.`, `${amount} REALM added to your ledger.`],
-    `rewards:claimed:${amount}`
+    [
+      `${amount} REALM filed with the rest.`,
+      `${amount} REALM added to your ledger.`,
+    ],
+    `rewards:claimed:${amount}`,
   );
 }
 
 export function unstakingLine(): string {
-  return pickLine(['Drawing your stake back in.'], 'rewards:unstaking');
+  return pickLine(["Drawing your stake back in."], "rewards:unstaking");
 }
 
 export function unstakedLine(amount: string, rewards: string): string {
@@ -514,58 +548,61 @@ export function unstakedLine(amount: string, rewards: string): string {
       `${amount} REALM is back in the wallet, with ${rewards} along for the ride.`,
       `${amount} REALM returned — and ${rewards} of rewards came with it.`,
     ],
-    `rewards:unstaked:${amount}:${rewards}`
+    `rewards:unstaked:${amount}:${rewards}`,
   );
 }
 
 export function nothingToClaimLine(): string {
   return pickLine(
-    ['Nothing filed up yet. Claims earn while they sit, so it will fill in.'],
-    'rewards:empty'
+    ["Nothing filed up yet. Claims earn while they sit, so it will fill in."],
+    "rewards:empty",
   );
 }
 
 export function nothingStakedLine(): string {
   return pickLine(
-    ['Nothing staked just now — stake a claim and it starts working.'],
-    'rewards:unstaked:empty'
+    ["Nothing staked just now — stake a claim and it starts working."],
+    "rewards:unstaked:empty",
   );
 }
 
 /** Ledger actions that fell over. Both say the money did not move. */
-export function ledgerFailedLine(kind: 'claim' | 'unstake'): string {
-  const verb = kind === 'claim' ? 'claim' : 'withdrawal';
+export function ledgerFailedLine(kind: "claim" | "unstake"): string {
+  const verb = kind === "claim" ? "claim" : "withdrawal";
   return pickLine(
     [
       `The ${verb} did not go through. Nothing moved out of the wallet — worth another go.`,
       `That ${verb} stopped short. Everything is where it was, and you can retry.`,
     ],
-    `rewards:fail:${kind}`
+    `rewards:fail:${kind}`,
   );
 }
 
 /** Showing or tucking the game widgets away. */
 export function widgetModeLine(visible: boolean): string {
   return visible
-    ? pickLine(['Widgets are laid out on the map now.'], 'widgets:on')
-    : pickLine(['Widgets tucked away — just the map from here.'], 'widgets:off');
+    ? pickLine(["Widgets are laid out on the map now."], "widgets:on")
+    : pickLine(
+        ["Widgets tucked away — just the map from here."],
+        "widgets:off",
+      );
 }
 
 /** A ghost runner filed against one of your claims. */
 export function ghostDeployedLine(): string {
   return pickLine(
     [
-      'Ghost posted. It will hold that ground while you are elsewhere.',
-      'Your ghost is on watch — that claim defends itself now.',
+      "Ghost posted. It will hold that ground while you are elsewhere.",
+      "Your ghost is on watch — that claim defends itself now.",
     ],
-    'ghost:deployed'
+    "ghost:deployed",
   );
 }
 
 export function ghostDeployFailedLine(): string {
   return pickLine(
-    ['The ghost did not take the post. Your claim is untouched — try again.'],
-    'ghost:failed'
+    ["The ghost did not take the post. Your claim is untouched — try again."],
+    "ghost:failed",
   );
 }
 
@@ -578,7 +615,7 @@ export function ghostDeployFailedLine(): string {
 export function ghostLostNeedsWalkLine(
   ghostName: string,
   territoryName: string,
-  walkPoints: number
+  walkPoints: number,
 ): { title: string; body: string } {
   return {
     title: `${ghostName} could not hold ${territoryName}`,
@@ -587,7 +624,7 @@ export function ghostLostNeedsWalkLine(
         `Your ghost gave ground. A 20-minute walk defends it (+${walkPoints}) — no run needed.`,
         `The post is slipping. Walking there tops it up (+${walkPoints}) whenever you like.`,
       ],
-      `ghost:lost:${ghostName}:${territoryName}`
+      `ghost:lost:${ghostName}:${territoryName}`,
     ),
   };
 }
@@ -602,7 +639,7 @@ export function ghostLostNeedsWalkLine(
 export function ghostNeedsWalkLine(
   ghostName: string,
   territoryName: string,
-  walkPoints: number
+  walkPoints: number,
 ): { title: string; body: string } {
   return {
     title: `${territoryName} needs feet`,
@@ -611,43 +648,48 @@ export function ghostNeedsWalkLine(
         `${ghostName} is holding ${territoryName} alone. A walk there backs it up (+${walkPoints}).`,
         `Ground is thin at ${territoryName}. Walking there defends it (+${walkPoints}) — no run needed.`,
       ],
-      `ghost:needs-walk:${ghostName}:${territoryName}`
+      `ghost:needs-walk:${ghostName}:${territoryName}`,
     ),
   };
 }
 
 /** A desk manager trained a ghost; the regimen banks a bonus for its next race. */
-export function ghostTrainedLine(regimen: 'intervals' | 'hills' | 'rest'): string {
+export function ghostTrainedLine(
+  regimen: "intervals" | "hills" | "rest",
+): string {
   return pickLine(
-    regimen === 'rest'
-      ? ['A quiet day for the ghost. It will be fresh when the post calls.']
+    regimen === "rest"
+      ? ["A quiet day for the ghost. It will be fresh when the post calls."]
       : [
-          'Drills done. The ghost carries a small edge into its next race.',
-          'Training banked — a small edge, saved for the next race.',
+          "Drills done. The ghost carries a small edge into its next race.",
+          "Training banked — a small edge, saved for the next race.",
         ],
-    `ghost:trained:${regimen}`
+    `ghost:trained:${regimen}`,
   );
 }
 
-export function ghostTrainFailedLine(reason: 'already' | 'unknown'): string {
+export function ghostTrainFailedLine(reason: "already" | "unknown"): string {
   return pickLine(
-    reason === 'already'
-      ? ['That ghost has already trained today. Tomorrow it goes again.']
-      : ['That training did not take. Nothing was banked — try again.'],
-    `ghost:train-failed:${reason}`
+    reason === "already"
+      ? ["That ghost has already trained today. Tomorrow it goes again."]
+      : ["That training did not take. Nothing was banked — try again."],
+    `ghost:train-failed:${reason}`,
   );
 }
 
 /** A route finished drawing. */
 export function routeReadyLine(): string {
-  return pickLine(['Route drawn. Press start when you are ready to walk it.'], 'route:ready');
+  return pickLine(
+    ["Route drawn. Press start when you are ready to walk it."],
+    "route:ready",
+  );
 }
 
 /** A race replay that does not recompute is refused rather than faked. */
 export function replayRefusedLine(): string {
   return pickLine(
-    ['This replay does not recompute, so we will not pretend it happened.'],
-    'replay:refused'
+    ["This replay does not recompute, so we will not pretend it happened."],
+    "replay:refused",
   );
 }
 
@@ -655,17 +697,19 @@ export function replayRefusedLine(): string {
 export function replayLinkBadLine(): string {
   return pickLine(
     [
-      'That replay link did not open. Nothing is broken — ask for it again and it will come through.',
+      "That replay link did not open. Nothing is broken — ask for it again and it will come through.",
     ],
-    'replay:link'
+    "replay:link",
   );
 }
 
 /** The last onboarding card. */
 export function onboardingWelcomeLine(): string {
   return pickLine(
-    ['That is the tour. The map is yours — walk out the door and it starts filling in.'],
-    'onboarding:welcome'
+    [
+      "That is the tour. The map is yours — walk out the door and it starts filling in.",
+    ],
+    "onboarding:welcome",
   );
 }
 
@@ -676,36 +720,44 @@ export function onboardingWelcomeLine(): string {
  * second is that it must not read as a failure either — the work happened,
  * the phone simply went away mid-stride.
  */
-export function runRecoveredLine(distanceLabel: string, durationLabel: string): string {
+export function runRecoveredLine(
+  distanceLabel: string,
+  durationLabel: string,
+): string {
   return pickLine(
     [
       `Last time out we got ${distanceLabel} in ${durationLabel} before the phone ran out of road. Kept, and still yours.`,
       `There is an unfinished run from before — ${distanceLabel} over ${durationLabel}. The map kept it.`,
     ],
-    `run:recovered:${distanceLabel}`
+    `run:recovered:${distanceLabel}`,
   );
 }
 
 /** The runner chooses to file the interrupted run or let it go. */
 export function runRecoveredActionLine(): string {
-  return pickLine(['Keep it', 'Save this run'], 'run:recovered:action');
+  return pickLine(["Keep it", "Save this run"], "run:recovered:action");
 }
 
 export function runRecoveredDiscardLine(): string {
-  return pickLine(['Let it go', 'Start fresh'], 'run:recovered:discard');
+  return pickLine(["Let it go", "Start fresh"], "run:recovered:discard");
 }
 
 /** A recovered run cannot be claimed — it was never closed. */
 export function runRecoveredNoClaimLine(): string {
   return pickLine(
-    ['That one was never closed, so it does not develop ground. Close a run and it will.'],
-    'run:recovered:no-claim'
+    [
+      "That one was never closed, so it does not develop ground. Close a run and it will.",
+    ],
+    "run:recovered:no-claim",
   );
 }
 
 /** Nothing was waiting to be recovered, said plainly and without fuss. */
 export function runRecoveredNoneLine(): string {
-  return pickLine(['No unfinished run to pick up. Fresh map.'], 'run:recovered:none');
+  return pickLine(
+    ["No unfinished run to pick up. Fresh map."],
+    "run:recovered:none",
+  );
 }
 
 /**
@@ -717,10 +769,10 @@ export function runRecoveredNoneLine(): string {
 export function pocketNoWakeLockLine(): string {
   return pickLine(
     [
-      'This browser will not hold the screen on, so the display may dim. The buzz still works.',
-      'No screen lock on this browser — the display can still sleep. Cues by buzz.',
+      "This browser will not hold the screen on, so the display may dim. The buzz still works.",
+      "No screen lock on this browser — the display can still sleep. Cues by buzz.",
     ],
-    'pocket:no-wake-lock'
+    "pocket:no-wake-lock",
   );
 }
 
@@ -731,8 +783,8 @@ export function pocketNoWakeLockLine(): string {
  */
 export function pocketScreenHeldLine(): string {
   return pickLine(
-    ['Screen stays awake now. Phone away — the buzz will find you.'],
-    'pocket:screen-held'
+    ["Screen stays awake now. Phone away — the buzz will find you."],
+    "pocket:screen-held",
   );
 }
 
@@ -745,27 +797,27 @@ export function pocketScreenHeldLine(): string {
  * Emoji in a title reads as decoration; a title should just name the place.
  */
 export const MOBILE_TITLES = {
-  ghosts: 'Ghost runners',
-  coach: 'Coach',
-  route: 'Suggested route',
-  claim: 'Claim this ground',
-  profile: 'Your record',
-  settings: 'Settings',
-  history: 'Run history',
-  dashboard: 'Your survey',
-  stats: 'Your figures',
-  currentRun: 'This run',
-  activity: 'Recent ground',
-  territories: 'Territories',
-  wallet: 'Wallet',
-  challenges: 'Challenges',
-  insights: 'Coach notes',
-  achievements: 'Achievements',
-  units: 'Units',
-  notifications: 'Notifications',
-  fitness: 'Fitness link',
-  about: 'About',
-  map: 'Map',
+  ghosts: "Ghost runners",
+  coach: "Coach",
+  route: "Suggested route",
+  claim: "Claim this ground",
+  profile: "Your record",
+  settings: "Settings",
+  history: "Run history",
+  dashboard: "Your survey",
+  stats: "Your figures",
+  currentRun: "This run",
+  activity: "Recent ground",
+  territories: "Territories",
+  wallet: "Wallet",
+  challenges: "Challenges",
+  insights: "Coach notes",
+  achievements: "Achievements",
+  units: "Units",
+  notifications: "Notifications",
+  fitness: "Fitness link",
+  about: "About",
+  map: "Map",
 } as const;
 
 export function mobileTitle(kind: keyof typeof MOBILE_TITLES): string {
@@ -775,24 +827,26 @@ export function mobileTitle(kind: keyof typeof MOBILE_TITLES): string {
 /** The mobile tour — four cards, same promise as the web one. */
 export const MOBILE_ONBOARDING = [
   {
-    id: 'mobile-welcome',
-    title: 'Welcome to the realm',
-    description: 'Run, and the world around you starts to show itself.',
+    id: "mobile-welcome",
+    title: "Welcome to the realm",
+    description: "Run, and the world around you starts to show itself.",
   },
   {
-    id: 'mobile-gps',
-    title: 'Finding you',
-    description: 'Location is a one-time ask. It is what lets the map draw itself.',
+    id: "mobile-gps",
+    title: "Finding you",
+    description:
+      "Location is a one-time ask. It is what lets the map draw itself.",
   },
   {
-    id: 'mobile-first-run',
-    title: 'Your first run',
-    description: 'Press start and go. A loop is usually enough to trace your first claim.',
+    id: "mobile-first-run",
+    title: "Your first run",
+    description:
+      "Press start and go. A loop is usually enough to trace your first claim.",
   },
   {
-    id: 'mobile-territories',
-    title: 'Ground you develop',
-    description: 'A claim is a deed — yours to develop, and yours to defend.',
+    id: "mobile-territories",
+    title: "Ground you develop",
+    description: "A claim is a deed — yours to develop, and yours to defend.",
   },
 ] as const;
 
@@ -804,49 +858,50 @@ export const MOBILE_ONBOARDING = [
  */
 export const LEGACY_ONBOARDING_STEPS = [
   {
-    id: 'welcome',
-    title: 'Welcome to RunRealm',
-    description: 'Every run reveals a little more of the map.',
-    targetElement: '#maplibre-container',
-    position: 'bottom' as const,
+    id: "welcome",
+    title: "Welcome to RunRealm",
+    description: "Every run reveals a little more of the map.",
+    targetElement: "#maplibre-container",
+    position: "bottom" as const,
   },
   {
-    id: 'map-intro',
-    title: 'Your streets',
-    description: 'Click anywhere on the map to start planning your route.',
-    targetElement: '#maplibre-container',
-    position: 'bottom' as const,
-    completionCondition: 'run:pointAdded',
+    id: "map-intro",
+    title: "Your streets",
+    description: "Click anywhere on the map to start planning your route.",
+    targetElement: "#maplibre-container",
+    position: "bottom" as const,
+    completionCondition: "run:pointAdded",
   },
   {
-    id: 'territory-claim',
-    title: 'Claiming ground',
+    id: "territory-claim",
+    title: "Claiming ground",
     description:
-      'Finish a run and the ground you traced is yours to develop — a local atlas, not a registered NFT.',
-    targetElement: '#claim-territory-btn',
-    position: 'top' as const,
+      "Finish a run and the ground you traced is yours to develop — a local atlas, not a registered NFT.",
+    targetElement: "#claim-territory-btn",
+    position: "top" as const,
   },
   {
-    id: 'ai-coach',
-    title: 'AI Coaching',
-    description: 'Get personalized route suggestions and running tips from our AI coach.',
-    targetElement: '#get-ai-route',
-    position: 'top' as const,
+    id: "ai-coach",
+    title: "AI Coaching",
+    description:
+      "Get personalized route suggestions and running tips from our AI coach.",
+    targetElement: "#get-ai-route",
+    position: "top" as const,
   },
 ] as const;
 
 /** A wallet that is mid-handshake. */
 export function walletConnectingLine(): string {
   return pickLine(
-    ['Opening the ledger. One moment.', 'Checking your keys, quietly.'],
-    'wallet:connecting'
+    ["Opening the ledger. One moment.", "Checking your keys, quietly."],
+    "wallet:connecting",
   );
 }
 
 export function walletConnectFailedLine(): string {
   return pickLine(
-    ['The wallet did not answer. Nothing moved — worth another go.'],
-    'wallet:connect-failed'
+    ["The wallet did not answer. Nothing moved — worth another go."],
+    "wallet:connect-failed",
   );
 }
 
@@ -857,42 +912,49 @@ export function ghostUpgradedLine(level: number): string {
       `The ghost came back sharper — level ${level} now.`,
       `Level ${level}. It moves a little lighter on its feet.`,
     ],
-    `ghost:upgraded:${level}`
+    `ghost:upgraded:${level}`,
   );
 }
 
 export function ghostUpgradeFailedLine(): string {
   return pickLine(
-    ['The upgrade did not take. Your balance is unchanged — try again when you like.'],
-    'ghost:upgrade-failed'
+    [
+      "The upgrade did not take. Your balance is unchanged — try again when you like.",
+    ],
+    "ghost:upgrade-failed",
   );
 }
 
 /** The ghost roster could not be read. */
 export function ghostRosterFailedLine(): string {
   return pickLine(
-    ['The ghost roster would not open. Pull to try again — nothing is lost.'],
-    'ghost:roster-failed'
+    ["The ghost roster would not open. Pull to try again — nothing is lost."],
+    "ghost:roster-failed",
   );
 }
 
 /** No claim is fading, so there is no post worth filing. */
 export function noPostWorthTakingLine(): string {
   return pickLine(
-    ['Nothing of yours is fading right now, so there is no post to fill.'],
-    'ghost:no-post'
+    ["Nothing of yours is fading right now, so there is no post to fill."],
+    "ghost:no-post",
   );
 }
 
 /** Strava and friends. */
 export function stravaLinkedLine(): string {
-  return pickLine(['Strava is linked. Your runs will walk over on their own.'], 'strava:linked');
+  return pickLine(
+    ["Strava is linked. Your runs will walk over on their own."],
+    "strava:linked",
+  );
 }
 
 export function stravaLinkFailedLine(): string {
   return pickLine(
-    ['Strava did not link up. Nothing was shared — try again when you are ready.'],
-    'strava:link-failed'
+    [
+      "Strava did not link up. Nothing was shared — try again when you are ready.",
+    ],
+    "strava:link-failed",
   );
 }
 
@@ -900,101 +962,121 @@ export function stravaLinkFailedLine(): string {
 export function coachQuietLine(): string {
   return pickLine(
     [
-      'The coach has nothing to say. That is usually a good sign.',
-      'Nothing to add from the coach this time.',
+      "The coach has nothing to say. That is usually a good sign.",
+      "Nothing to add from the coach this time.",
     ],
-    'coach:quiet'
+    "coach:quiet",
   );
 }
 
 export function coachTroubleLine(): string {
   return pickLine(
-    ['The coach is out of earshot for a moment. The run is unaffected.'],
-    'coach:trouble'
+    ["The coach is out of earshot for a moment. The run is unaffected."],
+    "coach:trouble",
   );
 }
 
 export function routeSearchLine(): string {
   return pickLine(
     [
-      'Reading the ground between here and where you want to be.',
-      'Looking for a line worth the paper it is drawn on.',
+      "Reading the ground between here and where you want to be.",
+      "Looking for a line worth the paper it is drawn on.",
     ],
-    'route:search'
+    "route:search",
   );
 }
 
 export function routeSearchFailedLine(): string {
   return pickLine(
-    ['No line came back this time. Your position is fine — try again in a moment.'],
-    'route:search-failed'
+    [
+      "No line came back this time. Your position is fine — try again in a moment.",
+    ],
+    "route:search-failed",
   );
 }
 
 /** A run finished but the device could not file it yet. */
 export function runNotFiledLine(): string {
   return pickLine(
-    ['The run is finished, but the device would not file it. It is safe here and will catch up.'],
-    'run:not-filed'
+    [
+      "The run is finished, but the device would not file it. It is safe here and will catch up.",
+    ],
+    "run:not-filed",
   );
 }
 
 export function trackingStartFailedLine(): string {
   return pickLine(
-    ['The run would not start. Location is the usual reason — worth a look in settings.'],
-    'tracking:start-failed'
+    [
+      "The run would not start. Location is the usual reason — worth a look in settings.",
+    ],
+    "tracking:start-failed",
   );
 }
 
 export function trackingStopFailedLine(): string {
   return pickLine(
-    ['Stopping was awkward, but the run is still on the device. Nothing was lost.'],
-    'tracking:stop-failed'
+    [
+      "Stopping was awkward, but the run is still on the device. Nothing was lost.",
+    ],
+    "tracking:stop-failed",
   );
 }
 
 /** The claim sheet, from preview to signed. */
 export function claimNeedsWalletLine(): string {
   return pickLine(
-    ['A wallet is needed to hold a deed. Connect one and the claim is a tap away.'],
-    'claim:needs-wallet'
+    [
+      "A wallet is needed to hold a deed. Connect one and the claim is a tap away.",
+    ],
+    "claim:needs-wallet",
   );
 }
 
 export function claimConfirmPromptLine(): string {
-  return pickLine(['Confirm in your wallet and the ground becomes yours.'], 'claim:confirm-prompt');
+  return pickLine(
+    ["Confirm in your wallet and the ground becomes yours."],
+    "claim:confirm-prompt",
+  );
 }
 
 export function claimFiledLine(name: string): string {
   return pickLine(
     [`${name} is yours. It will need walking to keep it bright.`],
-    `claim:filed:${name}`
+    `claim:filed:${name}`,
   );
 }
 
 /** A run long enough to trace a claim. */
 export function claimEligibleLine(): string {
-  return pickLine(['Enough ground to claim. The deed is ready when you are.'], 'claim:eligible');
+  return pickLine(
+    ["Enough ground to claim. The deed is ready when you are."],
+    "claim:eligible",
+  );
 }
 
 /** Claims within reach of where the runner is standing. */
 export function nearbyClaimsCountLine(count: number): string {
-  return count === 1 ? 'One claim within reach.' : `${count} claims within reach.`;
+  return count === 1
+    ? "One claim within reach."
+    : `${count} claims within reach.`;
 }
 
 /** A challenge reward landed. `type` is whatever the challenge calls it. */
 export function challengeRewardLine(amount: number, type: string): string {
   return pickLine(
     [`Collected — ${amount} ${type.toUpperCase()} is yours.`],
-    `challenge:reward:${amount}:${type}`
+    `challenge:reward:${amount}:${type}`,
   );
 }
 
 /** A challenge reward did not land. The work still counts. */
 export function challengeRewardFailedLine(): string {
   return pickLine(
-    ['The reward did not arrive. The work still counts — it will be there next time.'],
-    'challenge:reward-failed'
+    [
+      "The reward did not arrive. The work still counts — it will be there next time.",
+    ],
+    "challenge:reward-failed",
   );
 }
 
@@ -1003,12 +1085,12 @@ export function challengeRewardFailedLine(): string {
 // ─────────────────────────────────────────────────────────────
 
 export type ErrorKind =
-  | 'routeFailed'
-  | 'walletFailed'
-  | 'locationMissing'
-  | 'claimFailed'
-  | 'offline'
-  | 'generic';
+  | "routeFailed"
+  | "walletFailed"
+  | "locationMissing"
+  | "claimFailed"
+  | "offline"
+  | "generic";
 
 export interface ErrorCopy {
   message: string;
@@ -1018,27 +1100,32 @@ export interface ErrorCopy {
 
 const ERRORS: Record<ErrorKind, ErrorCopy> = {
   routeFailed: {
-    message: 'That route would not draw. Shall we try another line?',
-    action: 'Try another line',
+    message: "That route would not draw. Shall we try another line?",
+    action: "Try another line",
   },
   walletFailed: {
-    message: 'The wallet did not answer. It does that sometimes — nothing was lost.',
-    action: 'Try again',
+    message:
+      "The wallet did not answer. It does that sometimes — nothing was lost.",
+    action: "Try again",
   },
   locationMissing: {
-    message: 'The atlas cannot place you without location. It is a one-time ask.',
-    action: 'Allow location',
+    message:
+      "The atlas cannot place you without location. It is a one-time ask.",
+    action: "Allow location",
   },
   claimFailed: {
-    message: 'The claim did not go through. Your run is safe and nothing was spent.',
-    action: 'Try the claim again',
+    message:
+      "The claim did not go through. Your run is safe and nothing was spent.",
+    action: "Try the claim again",
   },
   offline: {
-    message: 'No signal out here. The run is safe on the device — it will file itself later.',
+    message:
+      "No signal out here. The run is safe on the device — it will file itself later.",
   },
   generic: {
-    message: 'Something on our side went sideways. Worth another go in a moment.',
-    action: 'Try again',
+    message:
+      "Something on our side went sideways. Worth another go in a moment.",
+    action: "Try again",
   },
 };
 
@@ -1050,254 +1137,290 @@ export function errorCopy(kind: ErrorKind): ErrorCopy {
 // Empty states and the next move.
 // ─────────────────────────────────────────────────────────────
 
-export type EmptySurface = 'leaderboard' | 'fog' | 'dashboard' | 'claims';
+export type EmptySurface = "leaderboard" | "fog" | "dashboard" | "claims";
 
 const EMPTY_STATES: Record<EmptySurface, readonly string[]> = {
   leaderboard: [
-    'No runs on the board yet. Yours would be the first.',
-    'The board is empty and entirely up for grabs.',
+    "No runs on the board yet. Yours would be the first.",
+    "The board is empty and entirely up for grabs.",
   ],
-  fog: ['Nobody has claimed this stretch yet. It is all still open country.'],
-  dashboard: ['Nothing filed yet. Walk out the door and the map will start filling in.'],
-  claims: ['No claims yet. One good run is usually enough for the first one.'],
+  fog: ["Nobody has claimed this stretch yet. It is all still open country."],
+  dashboard: [
+    "Nothing filed yet. Walk out the door and the map will start filling in.",
+  ],
+  claims: ["No claims yet. One good run is usually enough for the first one."],
 };
 
-export function emptyStateLine(surface: EmptySurface, salt = ''): string {
+export function emptyStateLine(surface: EmptySurface, salt = ""): string {
   return pickLine(EMPTY_STATES[surface], `empty:${surface}:${salt}`);
 }
 
 export type NextActionKind =
-  | 'start-run'
-  | 'claim-ground'
-  | 'defend-territory'
-  | 'walk-territory'
-  | 'connect-wallet'
-  | 'connect-location';
+  | "start-run"
+  | "claim-ground"
+  | "defend-territory"
+  | "walk-territory"
+  | "connect-wallet"
+  | "connect-location";
 
 /** The single most useful thing the runner could do right now, in one line. */
 export function nextActionHint(kind: NextActionKind, detail?: string): string {
   switch (kind) {
-    case 'start-run':
+    case "start-run":
       return pickLine(
-        ['Ready when you are — the map is already open.', 'One tap and the exposure starts.'],
-        `next:${kind}`
+        [
+          "Ready when you are — the map is already open.",
+          "One tap and the exposure starts.",
+        ],
+        `next:${kind}`,
       );
-    case 'claim-ground':
+    case "claim-ground":
       return detail
         ? `You just traced ${detail}. Claim it before someone else does.`
-        : 'You have ground ready to claim.';
-    case 'defend-territory':
+        : "You have ground ready to claim.";
+    case "defend-territory":
       return detail
         ? `${detail} is losing ground. An easy run would fix it.`
-        : 'One of your claims is fading.';
-    case 'walk-territory':
+        : "One of your claims is fading.";
+    case "walk-territory":
       return detail
         ? `You are close to ${detail} — walking in tops it up for today.`
-        : 'A territory walk is available nearby.';
-    case 'connect-wallet':
-      return 'Connect a wallet to claim the ground you trace.';
-    case 'connect-location':
-      return 'Let the atlas find you and the map fills in around you.';
+        : "A territory walk is available nearby.";
+    case "connect-wallet":
+      return "Connect a wallet to claim the ground you trace.";
+    case "connect-location":
+      return "Let the atlas find you and the map fills in around you.";
     default:
-      return 'The map is open.';
+      return "The map is open.";
   }
 }
 
 export const NEIGHBOURHOOD_COPY = {
-  headline: 'Your neighbourhood',
-  subline: 'One neighbourhood. Three kinds of outing.',
-  instruction: 'Move 500m to collect the cells you visit. No loop needed.',
+  headline: "Your neighbourhood",
+  subline: "One neighbourhood. Three kinds of outing.",
+  instruction: "Move 500m to collect the cells you visit. No loop needed.",
   // Each states exactly one fact, so no two of them overlap. The ownership
   // caveat below is the only place it appears; both are always visible.
-  honestNote: 'Saved on this device.',
-  emptyAtlasNote: 'Previews and samples do not count.',
+  honestNote: "Saved on this device.",
+  emptyAtlasNote: "Previews and samples do not count.",
   savedStatus: (outings: number, cells: number) =>
-    `${outings} credited outing${outings === 1 ? '' : 's'} · ${cells} collected block${cells === 1 ? '' : 's'} saved on this device.`,
-  ownershipExplanation: 'Not NFTs or registered ownership.',
+    `${outings} credited outing${outings === 1 ? "" : "s"} · ${cells} collected block${cells === 1 ? "" : "s"} saved on this device.`,
+  ownershipExplanation: "Not NFTs or registered ownership.",
   receiptCredit: (newCells: number, revisited: number) =>
-    `${newCells} new block${newCells === 1 ? '' : 's'} · ${revisited} revisited`,
-  receiptNoCredit: 'No blocks credited this outing.',
-  receiptSaved: 'Atlas saved on this device. It does not transfer with a phone link.',
-  receiptOwnership: 'Neighbourhood blocks are not registered ownership or NFTs.',
+    `${newCells} new block${newCells === 1 ? "" : "s"} · ${revisited} revisited`,
+  receiptNoCredit: "No blocks credited this outing.",
+  receiptSaved:
+    "Atlas saved on this device. It does not transfer with a phone link.",
+  receiptOwnership:
+    "Neighbourhood blocks are not registered ownership or NFTs.",
   receiptNotSaved:
-    'Atlas not saved on this device. Keep this page open if you want to review the result.',
+    "Atlas not saved on this device. Keep this page open if you want to review the result.",
   runCreditNote:
-    'Only GPS fixes accurate within 50m can credit blocks. Complete at least 500m, then finish your outing.',
-  notSavedNote: 'Kept in memory but not saved on this device.',
+    "Only GPS fixes accurate within 50m can credit blocks. Complete at least 500m, then finish your outing.",
+  notSavedNote: "Kept in memory but not saved on this device.",
   legend: {
-    unvisited: 'Unvisited',
-    collected: 'Collected',
-    strengthened: 'Strengthened',
+    unvisited: "Unvisited",
+    collected: "Collected",
+    strengthened: "Strengthened",
   },
-  goalGroupLabel: 'Outing goal',
+  goalGroupLabel: "Outing goal",
   goals: {
     explore: {
-      label: 'Explore',
-      hint: 'Visit cells you have not collected yet.',
+      label: "Explore",
+      hint: "Visit cells you have not collected yet.",
     },
     strengthen: {
-      label: 'Strengthen',
-      hint: 'Revisit cells you already know.',
-      locked: 'Collect your first block.',
+      label: "Strengthen",
+      hint: "Revisit cells you already know.",
+      locked: "Collect your first block.",
     },
     challenge: {
-      label: 'Challenge',
-      hint: 'Match your previous distance at your own pace.',
-      locked: 'Two outings in this neighbourhood.',
+      label: "Challenge",
+      hint: "Match your previous distance at your own pace.",
+      locked: "Two outings in this neighbourhood.",
     },
   },
-  lockedPrefix: 'Locked',
+  lockedPrefix: "Locked",
   firstVisit: {
-    kicker: 'Sunprint Atlas',
-    headline: 'Your neighbourhood is uncharted.',
-    lede: 'Every street you run develops onto this map.',
+    kicker: "Sunprint Atlas",
+    headline: "Your neighbourhood is uncharted.",
+    lede: "Every street you run develops onto this map.",
     // The rules are three scannable tokens, not a sentence. Recognising
     // "500m+ / GPS / no loop" is faster than parsing the paragraph it replaced.
-    ruleLabel: 'To collect',
-    rules: ['500m+', 'GPS within 50m', 'No loop needed'],
-    anchorNote: 'Start run asks for location. Your first outing sets this map.',
+    ruleLabel: "To collect",
+    rules: ["500m+", "GPS within 50m", "No loop needed"],
+    anchorNote: "Start run asks for location. Your first outing sets this map.",
   },
   desktop: {
-    invitation: 'Outings happen on your phone.',
-    phoneInvitation: 'Explore the map before your first outing.',
-    defaultCity: 'Sample city.',
-    previewOnly: 'Preview — not collected',
-    showStreets: 'Show my streets',
-    pickSpot: 'Pick a spot',
-    pickInstruction: 'Click a spot on the map to preview its neighbourhood. Esc to cancel.',
-    previewHint: 'Previewing — nothing is collected.',
-    previewError: 'Could not find your streets. Pick a spot on the map instead.',
-    sample: 'Watch a sample outing',
-    sampleBadge: 'Sample — not your atlas',
+    invitation: "Outings happen on your phone.",
+    phoneInvitation: "Explore the map before your first outing.",
+    defaultCity: "Sample city.",
+    previewOnly: "Preview — not collected",
+    showStreets: "Show my streets",
+    pickSpot: "Pick a spot",
+    pickInstruction:
+      "Click a spot on the map to preview its neighbourhood. Esc to cancel.",
+    previewHint: "Previewing — nothing is collected.",
+    previewError:
+      "Could not find your streets. Pick a spot on the map instead.",
+    sample: "Watch a sample outing",
+    sampleBadge: "Sample — not your atlas",
     sampleResult: (cells: number) =>
       `That is one sample outing: ${cells} blocks visited. Yours start when you do.`,
-    replay: 'Replay sample',
-    skip: 'Skip sample',
-    sketch: 'Sketch a route',
-    sketchDone: 'Done sketching',
-    addCentre: 'Add map centre',
-    sketchUndo: 'Undo point',
-    sketchClear: 'Clear plan',
-    sketchHint: 'Click the map to add route points. This plan does not count as a run.',
-    sketchStats: (meters: number, remaining: number, cells: number, outside: number) =>
+    replay: "Replay sample",
+    skip: "Skip sample",
+    sketch: "Sketch a route",
+    sketchDone: "Done sketching",
+    addCentre: "Add map centre",
+    sketchUndo: "Undo point",
+    sketchClear: "Clear plan",
+    sketchHint:
+      "Click the map to add route points. This plan does not count as a run.",
+    sketchStats: (
+      meters: number,
+      remaining: number,
+      cells: number,
+      outside: number,
+    ) =>
       `${meters}m planned · ${remaining}m to 500m · ${cells} blocks in this neighbourhood · ${outside} beyond`,
-    handoff: 'Continue on your phone',
+    handoff: "Continue on your phone",
     handoffNotice:
-      'Your atlas lives on each device for now. This link shares your exact drawn route and an approximate preview centre, not your saved progress. Share it only with people you trust.',
-    copyLink: 'Copy link',
-    share: 'Share link',
-    tour: 'New here? Take the tour',
-    tourAgain: 'Take the tour',
+      "Your atlas lives on each device for now. This link shares your exact drawn route and an approximate preview centre, not your saved progress. Share it only with people you trust.",
+    copyLink: "Copy link",
+    share: "Share link",
+    tour: "New here? Take the tour",
+    tourAgain: "Take the tour",
   },
-  legendHeading: 'Map legend',
-  laterGoalsLabel: 'Unlocks as you run',
-  firstGround: 'Your first ground is on the map.',
-  ghostTeaser: 'Your first outing introduces your ghost.',
+  legendHeading: "Map legend",
+  laterGoalsLabel: "Unlocks as you run",
+  firstGround: "Your first ground is on the map.",
+  ghostTeaser: "Your first outing introduces your ghost.",
   ghostArrived: (name: string) => `${name} runs here now.`,
-  challengeReference: 'Your previous outing sets the pace.',
-  challengeLine: (target: string, refPace: string, curPace: string, reached: boolean) =>
-    `Reference ${target} at ${refPace} · this outing ${curPace}${reached ? ' — distance reached' : ''}`,
+  challengeReference: "Your previous outing sets the pace.",
+  challengeLine: (
+    target: string,
+    refPace: string,
+    curPace: string,
+    reached: boolean,
+  ) =>
+    `Reference ${target} at ${refPace} · this outing ${curPace}${reached ? " — distance reached" : ""}`,
   referenceLine: (name: string, distance: string, pace: string) =>
     `Your previous outing · ${name} · ${distance} at ${pace}.`,
-  startRun: 'Start run',
-  starting: 'Starting…',
-  startError: 'Could not start — try again.',
-  locate: 'Locate me',
-  pause: 'Pause',
-  paused: 'Paused',
-  resume: 'Resume',
-  finish: 'Finish',
-  continue: 'Continue',
-  myAtlas: 'My atlas',
-  account: 'Account',
-  advancedTools: 'Advanced tools',
+  startRun: "Start run",
+  starting: "Starting…",
+  startError: "Could not start — try again.",
+  locate: "Locate me",
+  pause: "Pause",
+  paused: "Paused",
+  resume: "Resume",
+  finish: "Finish",
+  continue: "Continue",
+  myAtlas: "My atlas",
+  account: "Account",
+  advancedTools: "Advanced tools",
+  // Rendered in the advanced view, not beside the button: the panel is
+  // hidden once the wider realm is open, and that is exactly where a
+  // runner crossing the boundary needs to know what changed.
+  // `docs/neighbourhood-exploration.md` points here for the wallet
+  // caveat, so these two lines are load-bearing, not decoration.
+  advancedNote: "Your claims, your ghosts and the rest of the realm.",
   advancedHint:
-    'Dashboard, ghosts and the rest of the realm live here. Registered territories use a separate wallet flow — these outings never register or mint blocks, and a linked wallet does not sync this atlas to another device.',
-  backToNeighbourhood: 'Back to your neighbourhood',
-  gpsDenied: 'Location is off. Allow it in your browser settings, then try again.',
-  gpsRetry: 'Try again',
+    "Registered ground uses a wallet. This atlas stays on this device — it does not travel with a wallet or a phone link.",
+  backToNeighbourhood: "Back to your neighbourhood",
+  gpsDenied:
+    "Location is off. Allow it in your browser settings, then try again.",
+  gpsRetry: "Try again",
   gpsStatus: {
     fix: (meters: number) => `GPS ±${Math.round(meters)}m`,
-    unknown: 'GPS accuracy unknown',
+    unknown: "GPS accuracy unknown",
     poor: (meters: number) =>
       `GPS ±${Math.round(meters)}m — weak fix. Only fixes within 50m count toward collected blocks; wait for a clearer signal.`,
     stale: (seconds: number) => `Last fix ${Math.round(seconds)}s ago`,
-    waiting: 'Waiting for GPS…',
+    waiting: "Waiting for GPS…",
   },
-  mapUnavailable: 'The map could not be drawn — your atlas list still works.',
-  seeGroundOnMap: 'See ground on map',
+  mapUnavailable: "The map could not be drawn — your atlas list still works.",
+  seeGroundOnMap: "See ground on map",
   cellDetail: {
-    label: 'Selected block',
-    clear: 'Clear',
+    label: "Selected block",
+    clear: "Clear",
     status: {
-      unvisited: 'Uncollected ground',
-      collected: 'Collected',
-      strengthened: 'Deepened',
+      unvisited: "Uncollected ground",
+      collected: "Collected",
+      strengthened: "Deepened",
     },
-    line: (label: string, status: string, visits: string) => `${label} · ${status} · ${visits}`,
+    line: (label: string, status: string, visits: string) =>
+      `${label} · ${status} · ${visits}`,
   },
-  mountFailed: 'The neighbourhood view could not open — the map still works.',
-  outsideNote: 'That outing went beyond your neighbourhood — it is saved, but no cells count.',
-  shortNote: 'Under 500m — saved, but too short to collect.',
-  gpsNote: 'Not enough clean GPS fixes to credit cells this time.',
-  recoveredNote: 'A recovered run is filed to history; it does not collect cells.',
-  summaryTitle: 'Outing filed',
-  summaryMeta: (distance: string, duration: string) => `${distance} in ${duration}`,
-  newCells: (n: number) => `${n} new cell${n === 1 ? '' : 's'} collected`,
+  mountFailed: "The neighbourhood view could not open — the map still works.",
+  outsideNote:
+    "That outing went beyond your neighbourhood — it is saved, but no cells count.",
+  shortNote: "Under 500m — saved, but too short to collect.",
+  gpsNote: "Not enough clean GPS fixes to credit cells this time.",
+  recoveredNote:
+    "A recovered run is filed to history; it does not collect cells.",
+  summaryTitle: "Outing filed",
+  summaryMeta: (distance: string, duration: string) =>
+    `${distance} in ${duration}`,
+  newCells: (n: number) => `${n} new cell${n === 1 ? "" : "s"} collected`,
   revisitedCells: (n: number) => `${n} revisited`,
-  visits: (n: number) => `${n} visit${n === 1 ? '' : 's'}`,
-  cellLabel: (index: number) => `Block ${String(index + 1).padStart(2, '0')}`,
+  visits: (n: number) => `${n} visit${n === 1 ? "" : "s"}`,
+  cellLabel: (index: number) => `Block ${String(index + 1).padStart(2, "0")}`,
   progressLine: (outings: number) =>
-    `One neighbourhood · ${outings} outing${outings === 1 ? '' : 's'}`,
+    `One neighbourhood · ${outings} outing${outings === 1 ? "" : "s"}`,
   nextStep: {
-    explore: 'First outing: Explore.',
-    strengthen: 'Next: Strengthen the cells you know.',
-    challenge: 'Ready: Challenge your last outing.',
+    explore: "First outing: Explore.",
+    strengthen: "Next: Strengthen the cells you know.",
+    challenge: "Ready: Challenge your last outing.",
   },
   liveRemaining: (m: number) => `${Math.ceil(m)}m to collect`,
   liveNewCells: (n: number) => `${n} new in reach`,
   liveRevisited: (n: number) => `${n} known in reach`,
-  liveTargetRemaining: (m: number) => `${Math.ceil(m)}m to reach your reference`,
-  liveTargetReached: 'Reference distance reached',
-  liveOutside: 'Outside your neighbourhood — still saved.',
+  liveTargetRemaining: (m: number) =>
+    `${Math.ceil(m)}m to reach your reference`,
+  liveTargetReached: "Reference distance reached",
+  liveOutside: "Outside your neighbourhood — still saved.",
   mapControls: {
-    zoomIn: 'Zoom in',
-    zoomOut: 'Zoom out',
-    followMe: 'Follow me',
-    neighbourhoodView: 'Neighbourhood view',
-    areaShort: 'Area',
-    markerYou: 'You',
-    markerStale: 'Last known location',
-    markerApproximate: 'Approximate location',
-    noNeighbourhoodYet: 'Collect your first cell to frame the neighbourhood.',
-    groupLabel: 'Map controls',
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    followMe: "Follow me",
+    neighbourhoodView: "Neighbourhood view",
+    areaShort: "Area",
+    markerYou: "You",
+    markerStale: "Last known location",
+    markerApproximate: "Approximate location",
+    noNeighbourhoodYet: "Collect your first cell to frame the neighbourhood.",
+    groupLabel: "Map controls",
   },
-  recoveryPending: 'An unfinished run is waiting. Reload to save or discard it before starting.',
+  recoveryPending:
+    "An unfinished run is waiting. Reload to save or discard it before starting.",
   realm: {
-    tabRealm: 'Realm',
-    tabMap: 'Map',
-    tabRealmRecording: 'Pause & view realm',
-    connect: 'Bring realm to life',
-    disconnect: 'Disconnect',
-    retry: 'Retry',
-    connecting: 'Connecting to the realm…',
-    notConnected: 'Live generation is not connected',
-    connectHint: 'Your outings develop this living atlas.',
-    freeStoryboard: 'See a free outing storyboard',
-    capNotice: 'Live sessions are capped at 3 minutes and use Reactor credits.',
-    illustrative: 'Illustrative realm · map is authoritative',
-    statusLive: 'Live',
-    statusReady: 'Ready',
-    statusPriming: 'Priming',
-    statusPaused: 'Paused',
-    statusUnavailable: 'Unavailable',
-    statusStalled: 'The stream went quiet — try resuming it.',
-    connectFailed: 'Live generation could not connect. The map and your ledger still work.',
-    promptFailed: 'The realm did not accept the scene. The map and your ledger still work.',
-    sessionEnded: 'The live session ended. Connect again when you want the realm.',
-    resumeStream: 'Resume stream',
-    tabsLabel: 'Neighbourhood view',
-    localPreviewTitle: 'Local atlas preview — not generated video',
+    tabRealm: "Realm",
+    tabMap: "Map",
+    tabRealmRecording: "Pause & view realm",
+    connect: "Bring realm to life",
+    disconnect: "Disconnect",
+    retry: "Retry",
+    connecting: "Connecting to the realm…",
+    notConnected: "Live generation is not connected",
+    connectHint: "Your outings develop this living atlas.",
+    freeStoryboard: "See a free outing storyboard",
+    capNotice: "Live sessions are capped at 3 minutes and use Reactor credits.",
+    illustrative: "Illustrative realm · map is authoritative",
+    statusLive: "Live",
+    statusReady: "Ready",
+    statusPriming: "Priming",
+    statusPaused: "Paused",
+    statusUnavailable: "Unavailable",
+    statusStalled: "The stream went quiet — try resuming it.",
+    connectFailed:
+      "Live generation could not connect. The map and your ledger still work.",
+    promptFailed:
+      "The realm did not accept the scene. The map and your ledger still work.",
+    sessionEnded:
+      "The live session ended. Connect again when you want the realm.",
+    resumeStream: "Resume stream",
+    tabsLabel: "Neighbourhood view",
+    localPreviewTitle: "Local atlas preview — not generated video",
     localPreviewCounts: (collected: number, strengthened: number) =>
       `${collected} cells collected · ${strengthened} revisited`,
     lastOuting: (goalLabel: string) => `Last outing: ${goalLabel}`,

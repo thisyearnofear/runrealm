@@ -66,6 +66,39 @@ body.neighbourhood-mode .theater-pocket-btn {
   display: none;
 }
 
+/* The wider realm, explained. Sits opposite the return control: the
+   neighbourhood panel is hidden while this is open, so the top-left is
+   empty and the boundary crossing gets a caption instead of a leap. */
+.nh-advanced {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: calc(var(--z-widgets) + 10);
+  max-width: min(22rem, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid var(--rr-border);
+  border-radius: 10px;
+  background: var(--rr-sunprint-bone);
+  color: var(--rr-sunprint-ink);
+  box-shadow: 0 8px 28px rgba(13, 43, 62, 0.35);
+}
+
+.nh-advanced[hidden] {
+  display: none;
+}
+
+.nh-advanced-note {
+  margin: 0;
+  font-family: var(--rr-font-display);
+  font-size: 0.95rem;
+}
+
+.nh-advanced-hint {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 .nh-scroll {
   overflow-y: auto;
   padding: 18px 18px 0;

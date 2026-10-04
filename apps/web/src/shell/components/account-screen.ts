@@ -15,42 +15,45 @@
  *   4. Map credits — who supplies the map and the street labels, read
  *      from the same manifest the map itself uses.
  */
-import { EventBus } from '@runrealm/shared-core/core/event-bus';
+import { EventBus } from "@runrealm/shared-core/core/event-bus";
 import {
   AccountService,
   DEFAULT_GAME_SCOPES,
   type SessionKey,
-} from '@runrealm/shared-core/services/account-service';
-import { PreferenceService } from '@runrealm/shared-core/services/preference-service';
+} from "@runrealm/shared-core/services/account-service";
+import { PreferenceService } from "@runrealm/shared-core/services/preference-service";
 import {
   deviceDataBytes,
   eraseDeviceData,
   listDeviceData,
-} from '@runrealm/shared-core/utils/device-data';
-import { MAP_CREDITS } from '@runrealm/shared-core/utils/map-credits';
+} from "@runrealm/shared-core/utils/device-data";
+import { MAP_CREDITS } from "@runrealm/shared-core/utils/map-credits";
 
 function escapeHtml(value: string): string {
   return value.replace(
     /[&<>"']/g,
-    (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch] ?? ch
+    (ch) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        ch
+      ] ?? ch,
   );
 }
 
 const TIER_DISPLAY = {
   guest: {
-    icon: '🏃',
-    label: 'Guest',
-    copy: 'Your neighbourhood atlas is saved in this browser only. A passkey does not restore it on another device.',
+    icon: "🏃",
+    label: "Guest",
+    copy: "Your neighbourhood atlas is saved in this browser only. A passkey does not restore it on another device.",
   },
   passkey: {
-    icon: '🔑',
-    label: 'Passkey',
-    copy: 'Passkey added to this account on this device. Your neighbourhood atlas remains in this browser and cannot be restored from the passkey.',
+    icon: "🔑",
+    label: "Passkey",
+    copy: "Passkey added to this account on this device. Your neighbourhood atlas remains in this browser and cannot be restored from the passkey.",
   },
   wallet: {
-    icon: '👛',
-    label: 'Wallet linked',
-    copy: 'Wallet linked for trading and withdrawals. Your neighbourhood atlas remains in this browser; linking a wallet does not sync it.',
+    icon: "👛",
+    label: "Wallet linked",
+    copy: "Wallet linked for trading and withdrawals. Your neighbourhood atlas remains in this browser; linking a wallet does not sync it.",
   },
 } as const;
 
@@ -68,20 +71,24 @@ export default class AccountScreen {
   }
 
   public initialize(parentElement: HTMLElement): void {
-    this.container = document.createElement('div');
-    this.container.id = 'account-screen';
-    this.container.className = 'account-screen hidden';
+    this.container = document.createElement("div");
+    this.container.id = "account-screen";
+    this.container.className = "account-screen hidden";
     parentElement.appendChild(this.container);
 
-    this.container.addEventListener('click', (e) => this.handleClick(e));
+    this.container.addEventListener("click", (e) => this.handleClick(e));
 
     // Re-render on identity/session changes while visible.
-    for (const event of ['account:upgraded', 'session:issued', 'session:revoked'] as const) {
+    for (const event of [
+      "account:upgraded",
+      "session:issued",
+      "session:revoked",
+    ] as const) {
       this.eventBus.on(event, () => {
         if (this.visible) this.render();
       });
     }
-    this.eventBus.on('account:showRequested', () => this.show());
+    this.eventBus.on("account:showRequested", () => this.show());
 
     this.render();
   }
@@ -89,12 +96,12 @@ export default class AccountScreen {
   public show(): void {
     this.visible = true;
     this.render();
-    this.container?.classList.remove('hidden');
+    this.container?.classList.remove("hidden");
   }
 
   public hide(): void {
     this.visible = false;
-    this.container?.classList.add('hidden');
+    this.container?.classList.add("hidden");
   }
 
   // ---- Rendering -------------------------------------------------------
@@ -154,17 +161,18 @@ export default class AccountScreen {
     const tier = TIER_DISPLAY[account.tier];
     const shortId = `${account.id.slice(0, 8)}…`;
     const webauthnAvailable =
-      typeof navigator !== 'undefined' && typeof navigator.credentials?.create === 'function';
+      typeof navigator !== "undefined" &&
+      typeof navigator.credentials?.create === "function";
 
     const actions: string[] = [];
-    if (account.tier === 'guest' && webauthnAvailable) {
+    if (account.tier === "guest" && webauthnAvailable) {
       actions.push(
-        `<button class="action-btn" data-account-action="add-passkey">🔑 Add passkey (Face ID)</button>`
+        `<button class="action-btn" data-account-action="add-passkey">🔑 Add passkey (Face ID)</button>`,
       );
     }
-    if (account.tier !== 'wallet') {
+    if (account.tier !== "wallet") {
       actions.push(
-        `<button class="action-btn secondary" data-account-action="link-wallet" title="Optional — for trading and withdrawals">👛 Link wallet <span class="advanced-tag">advanced</span></button>`
+        `<button class="action-btn secondary" data-account-action="link-wallet" title="Optional — for trading and withdrawals">👛 Link wallet <span class="advanced-tag">advanced</span></button>`,
       );
     }
 
@@ -178,8 +186,8 @@ export default class AccountScreen {
           </div>
         </div>
         <p class="account-copy">${tier.copy}</p>
-        ${account.address ? `<div class="account-address" title="${account.address}">Address: ${account.address.slice(0, 6)}…${account.address.slice(-4)}</div>` : ''}
-        ${actions.length ? `<div class="account-actions">${actions.join('')}</div>` : ''}
+        ${account.address ? `<div class="account-address" title="${account.address}">Address: ${account.address.slice(0, 6)}…${account.address.slice(-4)}</div>` : ""}
+        ${actions.length ? `<div class="account-actions">${actions.join("")}</div>` : ""}
       </div>
     `;
   }
@@ -202,19 +210,28 @@ export default class AccountScreen {
       spendKeys.length === 0
         ? '<p class="account-copy">Play is covered by the ⚡ app session (free). Staking and trading need a spend allowance — approve one below, once.</p>'
         : `<p class="account-copy">Spend allowance active: ${spendKeys
-            .map((k) => `${k.spentRealm}/${k.spendLimitRealm} $REALM (${k.scopes.join(', ')})`)
-            .join(' · ')}</p>`;
+            .map(
+              (k) =>
+                `${k.spentRealm}/${k.spendLimitRealm} $REALM (${k.scopes.join(", ")})`,
+            )
+            .join(" · ")}</p>`;
     return `
       <div class="account-card">
         <h3>Authorizations</h3>
-        <p class="account-copy">These let the game act for you — no signature popups. Spending always needs an explicit limit.</p>
+        <p class="account-copy">These let the game act for you — no signature popups. An allowance is a ceiling, not a charge: nothing moves until you spend it.</p>
         ${spendSummary}
         <div class="account-actions">
-          <button class="action-btn" data-account-action="approve-spend-25" title="Approve 25 REALM for bounties and boosts">✅ Approve 25 $REALM</button>
-          <button class="action-btn secondary" data-account-action="approve-spend-100" title="Approve 100 REALM for bounties and trading">✅ Approve 100 $REALM</button>
+          <button class="action-btn" data-account-action="approve-spend-25" title="Sets a 25 $REALM ceiling for bounties and boosts. Nothing moves until you spend it.">
+            <span class="action-btn-amount">Approve 25 $REALM</span>
+            <span class="action-btn-note">for bounties and boosts</span>
+          </button>
+          <button class="action-btn secondary" data-account-action="approve-spend-100" title="Sets a 100 $REALM ceiling for bounties and trading. Nothing moves until you spend it.">
+            <span class="action-btn-amount">Approve 100 $REALM</span>
+            <span class="action-btn-note">for bounties and trading</span>
+          </button>
         </div>
         <div class="session-key-list">
-          ${keys.map((k) => this.renderSessionKey(k)).join('')}
+          ${keys.map((k) => this.renderSessionKey(k)).join("")}
         </div>
       </div>
     `;
@@ -222,25 +239,29 @@ export default class AccountScreen {
 
   private renderSessionKey(key: SessionKey): string {
     const isAppKey =
-      key.spendLimitRealm === 0 && DEFAULT_GAME_SCOPES.every((s) => key.scopes.includes(s));
-    const daysLeft = Math.max(0, Math.ceil((key.expiresAt - Date.now()) / (24 * 60 * 60 * 1000)));
+      key.spendLimitRealm === 0 &&
+      DEFAULT_GAME_SCOPES.every((s) => key.scopes.includes(s));
+    const daysLeft = Math.max(
+      0,
+      Math.ceil((key.expiresAt - Date.now()) / (24 * 60 * 60 * 1000)),
+    );
     const spend =
       key.spendLimitRealm > 0
         ? `<span class="session-spend">${key.spentRealm}/${key.spendLimitRealm} $REALM</span>`
-        : '';
+        : "";
     return `
       <div class="session-key">
         <div class="session-key-info">
           <div class="session-key-title">
-            ${isAppKey ? '⚡ App session <span class="advanced-tag">auto</span>' : '🔐 Custom session'}
+            ${isAppKey ? '⚡ App session <span class="advanced-tag">auto</span>' : "🔐 Custom session"}
           </div>
           <div class="session-key-meta">
-            ${key.scopes.join(', ')} · ${daysLeft}d left ${spend}
+            ${key.scopes.join(", ")} · ${daysLeft}d left ${spend}
           </div>
         </div>
         ${
           isAppKey
-            ? ''
+            ? ""
             : `<button class="territory-action" data-account-action="revoke-session" data-session-id="${key.id}" title="Revoke">🗑</button>`
         }
       </div>
@@ -259,13 +280,13 @@ export default class AccountScreen {
             <div class="account-id">
               ${
                 publicIds.length === 0
-                  ? 'No territories disclosed'
-                  : `${publicIds.length} territor${publicIds.length === 1 ? 'y' : 'ies'} public`
+                  ? "No territories disclosed"
+                  : `${publicIds.length} territor${publicIds.length === 1 ? "y" : "ies"} public`
               }
             </div>
           </div>
         </div>
-        <p class="account-copy">Defense scores, pace, and location history stay private unless you disclose a territory. Manage per-territory visibility from the dashboard.</p>
+        <p class="account-copy">Defense scores, pace, and location history stay private unless you disclose a territory. Disclosure is territory by territory, from each territory's own page.</p>
         ${this.renderDeviceData()}
       </div>
     `;
@@ -281,21 +302,22 @@ export default class AccountScreen {
   private renderDeviceData(): string {
     const entries = listDeviceData();
     const total = deviceDataBytes();
-    const size = total < 1024 ? `${total} bytes` : `${(total / 1024).toFixed(1)} kB`;
+    const size =
+      total < 1024 ? `${total} bytes` : `${(total / 1024).toFixed(1)} kB`;
     return `
       <details class="account-device-data">
         <summary>On this device</summary>
         ${
           entries.length === 0
             ? '<p class="account-copy">Nothing stored yet.</p>'
-            : `<p class="account-copy">${entries.length} item${entries.length === 1 ? '' : 's'} · ${size}</p>
+            : `<p class="account-copy">${entries.length} item${entries.length === 1 ? "" : "s"} · ${size}</p>
                <ul class="account-device-list">
                  ${entries
                    .map(
                      (entry) =>
-                       `<li><span class="account-device-desc">${escapeHtml(entry.description)}</span></li>`
+                       `<li><span class="account-device-desc">${escapeHtml(entry.description)}</span></li>`,
                    )
-                   .join('')}
+                   .join("")}
                </ul>`
         }
         <p class="account-copy">Your routes are not among them. Run history keeps distance, time and pace, never the track.</p>
@@ -307,84 +329,86 @@ export default class AccountScreen {
   // ---- Actions ---------------------------------------------------------
 
   private handleClick(e: Event): void {
-    const target = (e.target as HTMLElement).closest('[data-account-action], #account-close');
+    const target = (e.target as HTMLElement).closest(
+      "[data-account-action], #account-close",
+    );
     if (!target) return;
 
-    if ((target as HTMLElement).id === 'account-close') {
+    if ((target as HTMLElement).id === "account-close") {
       this.hide();
       return;
     }
 
-    const action = (target as HTMLElement).getAttribute('data-account-action');
+    const action = (target as HTMLElement).getAttribute("data-account-action");
     switch (action) {
-      case 'add-passkey':
+      case "add-passkey":
         this.accountService.upgradeToPasskey().catch((err) => {
-          this.eventBus.emit('ui:toast', {
+          this.eventBus.emit("ui:toast", {
             message:
-              err instanceof Error && err.message.includes('unavailable')
-                ? 'Passkeys are not available on this device'
-                : 'Passkey setup was cancelled',
-            type: 'info',
+              err instanceof Error && err.message.includes("unavailable")
+                ? "Passkeys are not available on this device"
+                : "Passkey setup was cancelled",
+            type: "info",
           });
         });
         break;
-      case 'link-wallet':
+      case "link-wallet":
         // The React wallet flow owns the modal; we just ask it to open.
-        this.eventBus.emit('wallet:connect', {});
+        this.eventBus.emit("wallet:connect", {});
         break;
-      case 'erase-device-data': {
+      case "erase-device-data": {
         const removed = eraseDeviceData();
         this.render();
-        this.eventBus.emit('ui:toast', {
+        this.eventBus.emit("ui:toast", {
           message:
             removed.length === 0
-              ? 'There was nothing stored to erase.'
-              : `Erased ${removed.length} item${removed.length === 1 ? '' : 's'} from this device.`,
-          type: 'info',
+              ? "There was nothing stored to erase."
+              : `Erased ${removed.length} item${removed.length === 1 ? "" : "s"} from this device.`,
+          type: "info",
         });
         break;
       }
-      case 'revoke-session': {
-        const id = (target as HTMLElement).getAttribute('data-session-id');
+      case "revoke-session": {
+        const id = (target as HTMLElement).getAttribute("data-session-id");
         if (id) this.accountService.revokeSessionKey(id);
         break;
       }
-      case 'approve-spend-25':
+      case "approve-spend-25":
         // #2: approve-once spend key for bounties. 25 REALM covers the
         // minimum stake; staking then never pops a second prompt.
         this.accountService
-          .issueSessionKey(['stakeBounty'], { spendLimitRealm: 25 })
+          .issueSessionKey(["stakeBounty"], { spendLimitRealm: 25 })
           .then(() => {
             this.render();
-            this.eventBus.emit('ui:toast', {
-              message: '✅ 25 $REALM approved for bounties — stake away',
-              type: 'success',
+            this.eventBus.emit("ui:toast", {
+              message: "✅ 25 $REALM approved for bounties — stake away",
+              type: "success",
               duration: 3000,
             });
           })
           .catch((err) => {
-            this.eventBus.emit('ui:toast', {
-              message: err instanceof Error ? err.message : 'Approval failed',
-              type: 'error',
+            this.eventBus.emit("ui:toast", {
+              message: err instanceof Error ? err.message : "Approval failed",
+              type: "error",
             });
           });
         break;
-      case 'approve-spend-100':
+      case "approve-spend-100":
         // Same, roomier: bounties + trading in one allowance.
         this.accountService
-          .issueSessionKey(['stakeBounty', 'trade'], { spendLimitRealm: 100 })
+          .issueSessionKey(["stakeBounty", "trade"], { spendLimitRealm: 100 })
           .then(() => {
             this.render();
-            this.eventBus.emit('ui:toast', {
-              message: '✅ 100 $REALM approved for bounties + trading',
-              type: 'success',
+            this.eventBus.emit("ui:toast", {
+              message: "✅ 100 $REALM approved for bounties + trading",
+              type: "success",
               duration: 3000,
             });
           })
           .catch((err) => {
-            this.eventBus.emit('ui:toast', {
-              message: err instanceof Error ? err.message : 'Approval failed',
-              type: 'error',
+            this.eventBus.emit("ui:toast", {
+              message: err instanceof Error ? err.message : "Approval failed",
+              type: "error",
             });
           });
         break;

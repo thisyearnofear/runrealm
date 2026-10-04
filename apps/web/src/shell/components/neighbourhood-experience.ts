@@ -1,26 +1,35 @@
-import type { AppEvents, EventBus } from '@runrealm/shared-core/core/event-bus';
-import type { GhostRunnerService } from '@runrealm/shared-core/services/ghost-runner-service';
-import type { LocationService } from '@runrealm/shared-core/services/location-service';
-import type { NeighbourhoodService } from '@runrealm/shared-core/services/neighbourhood-service';
-import type { RunTrackingService } from '@runrealm/shared-core/services/run-tracking-service';
+import type { AppEvents, EventBus } from "@runrealm/shared-core/core/event-bus";
+import type { GhostRunnerService } from "@runrealm/shared-core/services/ghost-runner-service";
+import type { LocationService } from "@runrealm/shared-core/services/location-service";
+import type { NeighbourhoodService } from "@runrealm/shared-core/services/neighbourhood-service";
+import type { RunTrackingService } from "@runrealm/shared-core/services/run-tracking-service";
 import {
   type NeighbourhoodGoal,
   type NeighbourhoodRunSummary,
   type NeighbourhoodState,
-} from '@runrealm/shared-core/types/neighbourhood';
-import { NEIGHBOURHOOD_COPY } from '@runrealm/shared-core/utils/atlas-voice';
-import { formatDistance, formatDuration, formatPace } from '@runrealm/shared-core/utils/run-status';
-import type { Map as MaplibreMap } from 'maplibre-gl';
-import { hasRevealed, REVEAL_EVENT } from '../../lib/reveal';
-import { prefersReducedMotion } from './cell-transition-scheduler';
-import { handoffUrl, isDesk } from './desk-mode';
-import { NeighbourhoodMapController } from './neighbourhood-map-controller';
-import { NeighbourhoodMapRenderer } from './neighbourhood-map-renderer';
-import type { CellRecord } from './neighbourhood-map-types';
-import { type PreviewPoint, previewCells, readPreview, savePreview } from './neighbourhood-preview';
-import { NeighbourhoodTour, tourDismissed } from './neighbourhood-tour';
-import { RouteSketch, sketchStats } from './route-sketch';
-import { SampleOuting } from './sample-outing';
+} from "@runrealm/shared-core/types/neighbourhood";
+import { NEIGHBOURHOOD_COPY } from "@runrealm/shared-core/utils/atlas-voice";
+import {
+  formatDistance,
+  formatDuration,
+  formatPace,
+} from "@runrealm/shared-core/utils/run-status";
+import type { Map as MaplibreMap } from "maplibre-gl";
+import { hasRevealed, REVEAL_EVENT } from "../../lib/reveal";
+import { prefersReducedMotion } from "./cell-transition-scheduler";
+import { handoffUrl, isDesk } from "./desk-mode";
+import { NeighbourhoodMapController } from "./neighbourhood-map-controller";
+import { NeighbourhoodMapRenderer } from "./neighbourhood-map-renderer";
+import type { CellRecord } from "./neighbourhood-map-types";
+import {
+  type PreviewPoint,
+  previewCells,
+  readPreview,
+  savePreview,
+} from "./neighbourhood-preview";
+import { NeighbourhoodTour, tourDismissed } from "./neighbourhood-tour";
+import { RouteSketch, sketchStats } from "./route-sketch";
+import { SampleOuting } from "./sample-outing";
 
 export interface NeighbourhoodExperienceDeps {
   neighbourhood: NeighbourhoodService;
@@ -32,43 +41,46 @@ export interface NeighbourhoodExperienceDeps {
   recoveredRunCard?: { refocusPending(): boolean } | null;
 }
 
-type ShellPhase = 'idle' | 'recording' | 'paused' | 'summary';
+type ShellPhase = "idle" | "recording" | "paused" | "summary";
 
 const STALE_FIX_MS = 30000;
 const ARRIVAL_RIPPLE_WINDOW_MS = 4000;
 
 function escapeHtml(value: string): string {
   return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 type BusEvent = Extract<
   keyof AppEvents,
-  | 'run:started'
-  | 'run:paused'
-  | 'run:resumed'
-  | 'run:statsUpdated'
-  | 'run:cancelled'
-  | 'neighbourhood:updated'
-  | 'neighbourhood:runCompleted'
-  | 'ghost:unlocked'
-  | 'map:styleLoaded'
-  | 'ui:realmViewChanged'
-  | 'location:changed'
+  | "run:started"
+  | "run:paused"
+  | "run:resumed"
+  | "run:statsUpdated"
+  | "run:cancelled"
+  | "neighbourhood:updated"
+  | "neighbourhood:runCompleted"
+  | "ghost:unlocked"
+  | "map:styleLoaded"
+  | "ui:realmViewChanged"
+  | "location:changed"
 >;
 
 export class NeighbourhoodExperience {
   private root: HTMLElement | null = null;
-  private phase: ShellPhase = 'idle';
+  private phase: ShellPhase = "idle";
   private startPending = false;
   private state: NeighbourhoodState;
   private lastSummary: NeighbourhoodRunSummary | null = null;
   private atlasOpen = false;
-  private handlers: Array<{ event: BusEvent; handler: (data: unknown) => void }> = [];
+  private handlers: Array<{
+    event: BusEvent;
+    handler: (data: unknown) => void;
+  }> = [];
   private lastRawFix: { accuracy?: number; at: number } | null = null;
   private mapController: NeighbourhoodMapController | null = null;
   private mapRenderer: NeighbourhoodMapRenderer | null = null;
@@ -86,9 +98,12 @@ export class NeighbourhoodExperience {
   /** Until when a late-drawn neighbourhood may still get its arrival ripple. */
   private arrivalRippleUntil = 0;
   private previewPoint: PreviewPoint | null = readPreview();
-  private previewRing: string[] = this.previewPoint ? previewCells(this.previewPoint) : [];
+  private previewRing: string[] = this.previewPoint
+    ? previewCells(this.previewPoint)
+    : [];
   private pickingSpot = false;
-  private mapPickHandler: ((event: { lngLat: { lat: number; lng: number } }) => void) | null = null;
+  private mapPickHandler:
+    ((event: { lngLat: { lat: number; lng: number } }) => void) | null = null;
   private sketch: RouteSketch | null = null;
   private sample: SampleOuting | null = null;
   private sampleActive = false;
@@ -106,20 +121,21 @@ export class NeighbourhoodExperience {
   }
 
   initialize(container: HTMLElement = document.body): void {
-    this.root = document.createElement('section');
-    this.root.id = 'neighbourhood-shell';
-    this.root.setAttribute('aria-label', NEIGHBOURHOOD_COPY.headline);
-    this.root.addEventListener('click', (e) => e.stopPropagation());
+    this.root = document.createElement("section");
+    this.root.id = "neighbourhood-shell";
+    this.root.setAttribute("aria-label", NEIGHBOURHOOD_COPY.headline);
+    this.root.addEventListener("click", (e) => e.stopPropagation());
     container.appendChild(this.root);
 
-    this.on('neighbourhood:updated', (data) => {
+    this.on("neighbourhood:updated", (data) => {
       const next = (data as { state: NeighbourhoodState }).state;
-      const collectedChanged = next.collectedCount !== this.state.collectedCount;
+      const collectedChanged =
+        next.collectedCount !== this.state.collectedCount;
       this.state = next;
       this.renderIdleBits();
-      if (collectedChanged || this.phase === 'idle') this.syncMap();
+      if (collectedChanged || this.phase === "idle") this.syncMap();
     });
-    this.on('neighbourhood:runCompleted', (data) => {
+    this.on("neighbourhood:runCompleted", (data) => {
       const payload = data as {
         summary: NeighbourhoodRunSummary;
         state: NeighbourhoodState;
@@ -132,14 +148,14 @@ export class NeighbourhoodExperience {
       if (this.isMapVisible()) this.playOutcome(payload.summary);
       else this.pendingReview = payload.summary;
     });
-    this.on('run:started', () => {
+    this.on("run:started", () => {
       this.tour?.close();
       this.stopPicking();
       this.sketch?.stop();
       this.mapController?.stopSampleFollow();
       this.sample?.stop();
       this.sampleActive = false;
-      this.phase = 'recording';
+      this.phase = "recording";
       this.lastRawFix = null;
       this.exposedCellIds.clear();
       this.pendingReview = null;
@@ -149,43 +165,50 @@ export class NeighbourhoodExperience {
       this.focusSelector('[data-action="pause-resume"]');
       this.announce(this.phase);
     });
-    this.on('run:resumed', () => {
-      this.phase = 'recording';
+    this.on("run:resumed", () => {
+      this.phase = "recording";
       this.render();
       this.mapController?.onRunStarted();
       this.focusSelector('[data-action="pause-resume"]');
       this.announce(this.phase);
     });
-    this.on('run:paused', () => {
-      this.phase = 'paused';
+    this.on("run:paused", () => {
+      this.phase = "paused";
       this.render();
       this.focusSelector('[data-action="pause-resume"]');
       this.announce(this.phase);
     });
-    this.on('run:cancelled', () => {
-      this.phase = 'idle';
+    this.on("run:cancelled", () => {
+      this.phase = "idle";
       this.startPending = false;
       this.render();
       this.announce(this.phase);
     });
-    this.on('run:statsUpdated', () => {
+    this.on("run:statsUpdated", () => {
       this.renderRecordingBits();
       this.markExposure();
       this.syncMap();
     });
-    this.on('location:changed', (data) => {
-      const fix = data as { lat?: number; lng?: number; accuracy?: number; timestamp?: number };
+    this.on("location:changed", (data) => {
+      const fix = data as {
+        lat?: number;
+        lng?: number;
+        accuracy?: number;
+        timestamp?: number;
+      };
       if (Number.isFinite(fix.lat) && Number.isFinite(fix.lng)) {
         this.lastRawFix = {
-          accuracy: Number.isFinite(fix.accuracy) ? (fix.accuracy as number) : undefined,
-          at: typeof fix.timestamp === 'number' ? fix.timestamp : Date.now(),
+          accuracy: Number.isFinite(fix.accuracy)
+            ? (fix.accuracy as number)
+            : undefined,
+          at: typeof fix.timestamp === "number" ? fix.timestamp : Date.now(),
         };
       }
     });
-    this.on('ghost:unlocked', () => this.renderGhost());
-    this.on('map:styleLoaded', () => this.syncMap());
-    this.on('ui:realmViewChanged', (data) => {
-      if ((data as { view: string }).view !== 'map') {
+    this.on("ghost:unlocked", () => this.renderGhost());
+    this.on("map:styleLoaded", () => this.syncMap());
+    this.on("ui:realmViewChanged", (data) => {
+      if ((data as { view: string }).view !== "map") {
         this.stopPicking();
         this.sketch?.stop();
         this.stopSample();
@@ -195,7 +218,7 @@ export class NeighbourhoodExperience {
     });
 
     const current = this.deps.runTracking.getCurrentRun();
-    if (current?.status === 'recording' || current?.status === 'paused') {
+    if (current?.status === "recording" || current?.status === "paused") {
       this.phase = current.status;
     }
 
@@ -205,13 +228,17 @@ export class NeighbourhoodExperience {
       map: this.deps.map,
       location: this.deps.location,
       eventBus: this.deps.eventBus,
-      getPanel: () => this.root?.querySelector<HTMLElement>('.nh-panel') ?? null,
+      getPanel: () =>
+        this.root?.querySelector<HTMLElement>(".nh-panel") ?? null,
       getNeighbourhoodCells: () => this.activeCells(),
       getRun: () => this.deps.runTracking.getCurrentRun(),
     });
     this.mapController.initialize(document.body, this.root);
     this.mapController.refreshArea();
-    if (this.previewPoint && !this.deps.neighbourhood.activeRingCellIds().length) {
+    if (
+      this.previewPoint &&
+      !this.deps.neighbourhood.activeRingCellIds().length
+    ) {
       this.mapController.frameCells(this.previewRing);
     }
     this.sketch = new RouteSketch(this.deps.map, () => {
@@ -227,7 +254,7 @@ export class NeighbourhoodExperience {
         if (done) this.mapController?.stopSampleFollow();
         this.updateSampleStatus();
       },
-      (point) => this.mapController?.followSample(point)
+      (point) => this.mapController?.followSample(point),
     );
 
     if (hasRevealed()) {
@@ -252,10 +279,14 @@ export class NeighbourhoodExperience {
     this.arrived = true;
     if (!prefersReducedMotion()) {
       const root = this.root;
-      root.classList.add('nh-shell--arriving');
-      root.addEventListener('animationend', () => root.classList.remove('nh-shell--arriving'), {
-        once: true,
-      });
+      root.classList.add("nh-shell--arriving");
+      root.addEventListener(
+        "animationend",
+        () => root.classList.remove("nh-shell--arriving"),
+        {
+          once: true,
+        },
+      );
     }
     this.arrivalRippleUntil = Date.now() + ARRIVAL_RIPPLE_WINDOW_MS;
     this.tryArrivalRipple();
@@ -267,7 +298,8 @@ export class NeighbourhoodExperience {
    * mechanic, and a sample that fires unasked mid-session is noise.
    */
   private autoplaySample(): void {
-    if (this.sampleAutoplayed || !this.isFirstVisit() || this.phase !== 'idle') return;
+    if (this.sampleAutoplayed || !this.isFirstVisit() || this.phase !== "idle")
+      return;
     this.sampleAutoplayed = true;
     if (!this.deps.map || !this.isMapVisible()) return;
     this.playSample();
@@ -283,7 +315,7 @@ export class NeighbourhoodExperience {
       this.arrivalRippleUntil = 0;
       return;
     }
-    if (this.phase !== 'idle' || !this.isMapVisible()) return;
+    if (this.phase !== "idle" || !this.isMapVisible()) return;
     if (this.mapRenderer?.playArrival()) this.arrivalRippleUntil = 0;
   }
 
@@ -319,7 +351,7 @@ export class NeighbourhoodExperience {
   }
 
   private announce(text: string): void {
-    const live = this.root?.querySelector<HTMLElement>('.nh-live-region');
+    const live = this.root?.querySelector<HTMLElement>(".nh-live-region");
     if (live) live.textContent = text;
   }
 
@@ -330,13 +362,13 @@ export class NeighbourhoodExperience {
 
   private render(): void {
     if (!this.root) return;
-    this.root.innerHTML = '';
+    this.root.innerHTML = "";
     switch (this.phase) {
-      case 'recording':
-      case 'paused':
+      case "recording":
+      case "paused":
         this.renderRecording();
         break;
-      case 'summary':
+      case "summary":
         this.renderSummary();
         break;
       default:
@@ -345,23 +377,28 @@ export class NeighbourhoodExperience {
   }
 
   private renderIdleBits(): void {
-    if (this.phase !== 'idle' || !this.root) return;
+    if (this.phase !== "idle" || !this.root) return;
     // Crossing from invitation to ledger (or back, after a reset) changes the
     // layout, not just text — redraw rather than patch.
-    if (this.renderedFirstVisit !== null && this.renderedFirstVisit !== this.isFirstVisit()) {
+    if (
+      this.renderedFirstVisit !== null &&
+      this.renderedFirstVisit !== this.isFirstVisit()
+    ) {
       this.render();
       return;
     }
-    const progress = this.root.querySelector('.nh-progress');
+    const progress = this.root.querySelector(".nh-progress");
     if (progress) {
-      progress.textContent = NEIGHBOURHOOD_COPY.progressLine(this.state.qualifyingRuns);
+      progress.textContent = NEIGHBOURHOOD_COPY.progressLine(
+        this.state.qualifyingRuns,
+      );
     }
     this.renderGoalLocks();
-    const next = this.root.querySelector('.nh-nextstep');
+    const next = this.root.querySelector(".nh-nextstep");
     if (next) next.textContent = this.nextStepLine();
-    const saved = this.root.querySelector('.nh-saved-status');
+    const saved = this.root.querySelector(".nh-saved-status");
     if (saved) saved.textContent = this.savedStatusLine();
-    const honest = this.root.querySelector('.nh-honest');
+    const honest = this.root.querySelector(".nh-honest");
     if (honest) {
       honest.textContent =
         this.isFirstVisit() && this.state.persisted
@@ -372,9 +409,9 @@ export class NeighbourhoodExperience {
 
   private recommendedGoal(): NeighbourhoodGoal {
     const availability = this.deps.neighbourhood.goalAvailability();
-    if (availability.challenge.available) return 'challenge';
-    if (availability.strengthen.available) return 'strengthen';
-    return 'explore';
+    if (availability.challenge.available) return "challenge";
+    if (availability.strengthen.available) return "strengthen";
+    return "explore";
   }
 
   private nextStepLine(): string {
@@ -382,12 +419,17 @@ export class NeighbourhoodExperience {
   }
 
   private honestLine(): string {
-    return this.state.persisted ? NEIGHBOURHOOD_COPY.honestNote : NEIGHBOURHOOD_COPY.notSavedNote;
+    return this.state.persisted
+      ? NEIGHBOURHOOD_COPY.honestNote
+      : NEIGHBOURHOOD_COPY.notSavedNote;
   }
 
   private savedStatusLine(): string {
     return this.state.persisted
-      ? NEIGHBOURHOOD_COPY.savedStatus(this.state.qualifyingRuns, this.state.collectedCount)
+      ? NEIGHBOURHOOD_COPY.savedStatus(
+          this.state.qualifyingRuns,
+          this.state.collectedCount,
+        )
       : NEIGHBOURHOOD_COPY.notSavedNote;
   }
 
@@ -406,7 +448,7 @@ export class NeighbourhoodExperience {
       <div class="nh-rules" role="group" aria-label="${ruleLabel}">
         <span class="nh-rules-label">${ruleLabel}</span>
         <ul class="nh-rules-list">
-          ${rules.map((rule) => `<li class="nh-rule">${rule}</li>`).join('')}
+          ${rules.map((rule) => `<li class="nh-rule">${rule}</li>`).join("")}
         </ul>
       </div>`;
   }
@@ -414,15 +456,21 @@ export class NeighbourhoodExperience {
   private referenceBlock(): string {
     const availability = this.deps.neighbourhood.goalAvailability();
     const ref = this.state.referenceRun;
-    if (!availability.challenge.available || !ref) return '';
-    const ghost = this.deps.ghostRunnerService?.getGhosts().find((g) => g.type === 'allrounder');
-    const refPace = ref.distanceMeters > 0 ? 1000 / (ref.durationMs / ref.distanceMeters) : 0;
-    const paceText = refPace > 0 && Number.isFinite(refPace) ? formatPace(refPace) : '--:--';
-    const name = escapeHtml(ghost?.name ?? NEIGHBOURHOOD_COPY.goals.challenge.label);
+    if (!availability.challenge.available || !ref) return "";
+    const ghost = this.deps.ghostRunnerService
+      ?.getGhosts()
+      .find((g) => g.type === "allrounder");
+    const refPace =
+      ref.distanceMeters > 0 ? 1000 / (ref.durationMs / ref.distanceMeters) : 0;
+    const paceText =
+      refPace > 0 && Number.isFinite(refPace) ? formatPace(refPace) : "--:--";
+    const name = escapeHtml(
+      ghost?.name ?? NEIGHBOURHOOD_COPY.goals.challenge.label,
+    );
     return `<p class="nh-reference">${NEIGHBOURHOOD_COPY.referenceLine(
       name,
       formatDistance(ref.distanceMeters),
-      paceText
+      paceText,
     )}</p>`;
   }
 
@@ -436,13 +484,13 @@ export class NeighbourhoodExperience {
     const meta = NEIGHBOURHOOD_COPY.goals[goal];
     const available = availability[goal].available;
     const selected = this.state.goal === goal;
-    const locked = 'locked' in meta && !available ? meta.locked : '';
+    const locked = "locked" in meta && !available ? meta.locked : "";
     return `
       <button type="button"
-        class="nh-goal${selected ? ' nh-goal--selected' : ''}${available ? '' : ' nh-goal--locked'}"
+        class="nh-goal${selected ? " nh-goal--selected" : ""}${available ? "" : " nh-goal--locked"}"
         data-goal="${goal}"
         aria-pressed="${selected}"
-        ${available ? '' : 'aria-disabled="true"'}>
+        ${available ? "" : 'aria-disabled="true"'}>
         <span class="nh-goal-label">${available ? meta.label : `${NEIGHBOURHOOD_COPY.lockedPrefix} · ${meta.label}`}</span>
         <span class="nh-goal-hint">${locked || meta.hint}</span>
       </button>`;
@@ -462,23 +510,23 @@ export class NeighbourhoodExperience {
     const laterGoals =
       firstVisit && !lean
         ? `<p class="nh-facts-heading">${NEIGHBOURHOOD_COPY.laterGoalsLabel}</p>
-         <div class="nh-goals nh-goals--later" role="group" aria-label="${NEIGHBOURHOOD_COPY.laterGoalsLabel}">${this.goalButton('strengthen')}${this.goalButton('challenge')}</div>`
-        : '';
+         <div class="nh-goals nh-goals--later" role="group" aria-label="${NEIGHBOURHOOD_COPY.laterGoalsLabel}">${this.goalButton("strengthen")}${this.goalButton("challenge")}</div>`
+        : "";
     // A first visit is already invited to the tour below; only returning
     // runners need the standing link.
     const tourLink = firstVisit
-      ? ''
+      ? ""
       : `<button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tourAgain}</button>`;
     return `
       <div class="nh-facts">
         ${laterGoals}
-        ${lean ? '' : '<div class="nh-ghostline"></div>'}
+        ${lean ? "" : '<div class="nh-ghostline"></div>'}
         <div class="nh-legend" aria-label="${NEIGHBOURHOOD_COPY.legendHeading}">
           <span class="nh-swatch nh-swatch--unvisited"></span>${NEIGHBOURHOOD_COPY.legend.unvisited}
           <span class="nh-swatch nh-swatch--collected"></span>${NEIGHBOURHOOD_COPY.legend.collected}
           <span class="nh-swatch nh-swatch--strengthened"></span>${NEIGHBOURHOOD_COPY.legend.strengthened}
         </div>
-        ${lean ? '' : this.ownershipBlock()}
+        ${lean ? "" : this.ownershipBlock()}
         ${tourLink}
       </div>`;
   }
@@ -487,11 +535,11 @@ export class NeighbourhoodExperience {
     if (!this.root) return;
     const firstVisit = this.isFirstVisit();
     this.renderedFirstVisit = firstVisit;
-    const goals: NeighbourhoodGoal[] = ['explore', 'strengthen', 'challenge'];
+    const goals: NeighbourhoodGoal[] = ["explore", "strengthen", "challenge"];
 
     const summaryBlock = this.lastSummary
       ? `<p class="nh-last">${this.summaryLine(this.lastSummary)}</p>`
-      : '';
+      : "";
 
     // From a desk nothing can be collected, so the running furniture — the goal
     // selector, the credit rules, the unlock ladder — describes an action the
@@ -508,8 +556,8 @@ export class NeighbourhoodExperience {
           <p class="nh-lede">${NEIGHBOURHOOD_COPY.firstVisit.lede}</p>
           ${
             lean
-              ? ''
-              : `<div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${this.goalButton('explore')}</div>
+              ? ""
+              : `<div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${this.goalButton("explore")}</div>
           ${this.ruleChips()}
           <p class="nh-anchor">${NEIGHBOURHOOD_COPY.firstVisit.anchorNote}</p>`
           }`
@@ -524,7 +572,7 @@ export class NeighbourhoodExperience {
           ${this.referenceBlock()}
           <div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${goals
             .map((goal) => this.goalButton(goal))
-            .join('')}</div>`;
+            .join("")}</div>`;
 
     this.root.innerHTML = `
       <div class="nh-panel">
@@ -535,14 +583,14 @@ export class NeighbourhoodExperience {
           <div class="nh-explore" data-tour="preview">
             ${
               lean
-                ? ''
+                ? ""
                 : `<p class="nh-explore-intro">${
                     isDesk()
                       ? NEIGHBOURHOOD_COPY.desktop.invitation
                       : NEIGHBOURHOOD_COPY.desktop.phoneInvitation
                   }</p>`
             }
-            <p class="nh-preview-status">${this.state.anchorCell ? '' : this.previewPoint ? NEIGHBOURHOOD_COPY.desktop.previewHint : NEIGHBOURHOOD_COPY.desktop.defaultCity}</p>
+            <p class="nh-preview-status">${this.state.anchorCell ? "" : this.previewPoint ? NEIGHBOURHOOD_COPY.desktop.previewHint : NEIGHBOURHOOD_COPY.desktop.defaultCity}</p>
             <div class="nh-explore-actions">
               <button type="button" class="nh-secondary nh-secondary--primary" data-action="show-streets">${NEIGHBOURHOOD_COPY.desktop.showStreets}</button>
               <div class="nh-explore-links">
@@ -555,7 +603,7 @@ export class NeighbourhoodExperience {
             <div class="nh-sample-actions" hidden>
               <button type="button" class="nh-secondary" data-action="skip-sample">${NEIGHBOURHOOD_COPY.desktop.skip}</button>
             </div>
-            <div class="nh-sketch-controls" ${this.sketch?.isDrawing ? '' : 'hidden'}>
+            <div class="nh-sketch-controls" ${this.sketch?.isDrawing ? "" : "hidden"}>
               <p>${NEIGHBOURHOOD_COPY.desktop.sketchHint}</p>
               <button type="button" class="nh-secondary" data-action="add-centre">${NEIGHBOURHOOD_COPY.desktop.addCentre}</button>
               <button type="button" class="nh-secondary" data-action="undo">${NEIGHBOURHOOD_COPY.desktop.sketchUndo}</button>
@@ -565,29 +613,29 @@ export class NeighbourhoodExperience {
             ${
               isDesk()
                 ? `<button type="button" class="nh-secondary nh-secondary--handoff" data-action="handoff" data-tour="handoff">${NEIGHBOURHOOD_COPY.desktop.handoff}</button>
-            <div class="nh-handoff" ${this.handoffOpen ? '' : 'hidden'}>
+            <div class="nh-handoff" ${this.handoffOpen ? "" : "hidden"}>
               <div class="nh-qr"></div>
               <p>${NEIGHBOURHOOD_COPY.desktop.handoffNotice}</p>
               <button type="button" class="nh-secondary" data-action="copy-link">${NEIGHBOURHOOD_COPY.desktop.copyLink}</button>
               <button type="button" class="nh-secondary" data-action="share-link">${NEIGHBOURHOOD_COPY.desktop.share}</button>
             </div>`
-                : ''
+                : ""
             }
           </div>
           <div class="nh-celldetail" hidden></div>
           <p class="nh-honest">${firstVisit && this.state.persisted ? NEIGHBOURHOOD_COPY.emptyAtlasNote : this.honestLine()}</p>
           ${this.factsBlock(firstVisit)}
-          ${firstVisit && !this.tourPromptDismissed ? `<div class="nh-tour-invite"><button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tour}</button><button type="button" class="nh-secondary" data-action="dismiss-tour" aria-label="Dismiss tour invitation">Not now</button></div>` : ''}
+          ${firstVisit && !this.tourPromptDismissed ? `<div class="nh-tour-invite"><button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tour}</button><button type="button" class="nh-secondary" data-action="dismiss-tour" aria-label="Dismiss tour invitation">Not now</button></div>` : ""}
           <div class="nh-footer">
             ${
               lean
-                ? ''
+                ? ""
                 : `<button type="button" class="nh-secondary" data-action="atlas" aria-expanded="${this.atlasOpen}">${NEIGHBOURHOOD_COPY.myAtlas}</button>`
             }
             <button type="button" class="nh-secondary" data-action="account">${NEIGHBOURHOOD_COPY.account}</button>
             <button type="button" class="nh-secondary nh-advanced-toggle" data-action="advanced" aria-pressed="false">${NEIGHBOURHOOD_COPY.advancedTools}</button>
           </div>
-          <div class="nh-atlas" ${this.atlasOpen ? '' : 'hidden'}></div>
+          <div class="nh-atlas" ${this.atlasOpen ? "" : "hidden"}></div>
           <p class="nh-error" role="alert" hidden></p>
         </div>
         <div class="nh-dock">
@@ -596,6 +644,10 @@ export class NeighbourhoodExperience {
         </div>
       </div>
       <button type="button" class="nh-return" data-action="back" hidden>${NEIGHBOURHOOD_COPY.backToNeighbourhood}</button>
+      <div class="nh-advanced" hidden>
+        <p class="nh-advanced-note">${NEIGHBOURHOOD_COPY.advancedNote}</p>
+        <p class="nh-advanced-hint">${NEIGHBOURHOOD_COPY.advancedHint}</p>
+      </div>
     `;
     this.bindIdle();
     this.renderGhost();
@@ -609,135 +661,183 @@ export class NeighbourhoodExperience {
 
   private bindIdle(): void {
     if (!this.root) return;
-    for (const btn of Array.from(this.root.querySelectorAll<HTMLButtonElement>('.nh-goal'))) {
-      btn.addEventListener('click', () => {
+    for (const btn of Array.from(
+      this.root.querySelectorAll<HTMLButtonElement>(".nh-goal"),
+    )) {
+      btn.addEventListener("click", () => {
         const goal = btn.dataset.goal as NeighbourhoodGoal;
         this.deps.neighbourhood.setGoal(goal);
       });
     }
-    this.root.querySelector('[data-action="start"]')?.addEventListener('click', () => {
-      void this.startRun();
-    });
-    this.root.querySelector('[data-action="locate"]')?.addEventListener('click', () => {
-      void this.locate();
-    });
-    this.root.querySelector('[data-action="show-streets"]')?.addEventListener('click', () => {
-      void this.showStreets();
-    });
-    this.root.querySelector('[data-action="pick-spot"]')?.addEventListener('click', () => {
-      if (this.pickingSpot) this.stopPicking();
-      else this.pickSpot();
-    });
+    this.root
+      .querySelector('[data-action="start"]')
+      ?.addEventListener("click", () => {
+        void this.startRun();
+      });
+    this.root
+      .querySelector('[data-action="locate"]')
+      ?.addEventListener("click", () => {
+        void this.locate();
+      });
+    this.root
+      .querySelector('[data-action="show-streets"]')
+      ?.addEventListener("click", () => {
+        void this.showStreets();
+      });
+    this.root
+      .querySelector('[data-action="pick-spot"]')
+      ?.addEventListener("click", () => {
+        if (this.pickingSpot) this.stopPicking();
+        else this.pickSpot();
+      });
     for (const btn of this.root.querySelectorAll('[data-action="tour"]')) {
-      btn.addEventListener('click', () => this.startTour());
+      btn.addEventListener("click", () => this.startTour());
     }
-    this.root.querySelector('[data-action="dismiss-tour"]')?.addEventListener('click', () => {
-      this.tourPromptDismissed = true;
-      try {
-        localStorage.setItem('runrealm-nh-tour-v1', 'dismissed');
-      } catch {
-        /* optional */
-      }
-      this.root?.querySelector('.nh-tour-invite')?.remove();
-    });
+    this.root
+      .querySelector('[data-action="dismiss-tour"]')
+      ?.addEventListener("click", () => {
+        this.tourPromptDismissed = true;
+        try {
+          localStorage.setItem("runrealm-nh-tour-v1", "dismissed");
+        } catch {
+          /* optional */
+        }
+        this.root?.querySelector(".nh-tour-invite")?.remove();
+      });
     this.root
       .querySelector('[data-action="sample"]')
-      ?.addEventListener('click', () => this.playSample());
+      ?.addEventListener("click", () => this.playSample());
     this.root
       .querySelector('[data-action="skip-sample"]')
-      ?.addEventListener('click', () => this.stopSample());
+      ?.addEventListener("click", () => this.stopSample());
     this.root
       .querySelector('[data-action="sketch"]')
-      ?.addEventListener('click', () => this.toggleSketch());
-    this.root.querySelector('[data-action="add-centre"]')?.addEventListener('click', () => {
-      const center = this.deps.map?.getCenter?.();
-      if (center) this.sketch?.addPoint({ lat: center.lat, lng: center.lng });
-    });
+      ?.addEventListener("click", () => this.toggleSketch());
+    this.root
+      .querySelector('[data-action="add-centre"]')
+      ?.addEventListener("click", () => {
+        const center = this.deps.map?.getCenter?.();
+        if (center) this.sketch?.addPoint({ lat: center.lat, lng: center.lng });
+      });
     this.root
       .querySelector('[data-action="undo"]')
-      ?.addEventListener('click', () => this.sketch?.undo());
+      ?.addEventListener("click", () => this.sketch?.undo());
     this.root
       .querySelector('[data-action="clear"]')
-      ?.addEventListener('click', () => this.sketch?.clear());
-    this.root.querySelector('[data-action="handoff"]')?.addEventListener('click', () => {
-      this.handoffOpen = !this.handoffOpen;
-      const card = this.root?.querySelector<HTMLElement>('.nh-handoff');
-      if (card) card.hidden = !this.handoffOpen;
-      if (this.handoffOpen) void this.renderHandoff();
-    });
-    this.root.querySelector('[data-action="copy-link"]')?.addEventListener('click', () => {
-      void navigator.clipboard?.writeText(
-        handoffUrl(this.sketch?.getPoints() ?? [], this.previewPoint)
-      );
-    });
-    this.root.querySelector('[data-action="share-link"]')?.addEventListener('click', () => {
-      if (navigator.share)
-        void navigator
-          .share({ url: handoffUrl(this.sketch?.getPoints() ?? [], this.previewPoint) })
-          .catch(() => {});
-    });
-    this.root.querySelector('[data-action="atlas"]')?.addEventListener('click', () => {
-      this.atlasOpen = !this.atlasOpen;
-      this.render();
-    });
-    this.root.querySelector('[data-action="account"]')?.addEventListener('click', () => {
-      this.deps.eventBus.emit('account:showRequested', {} as never);
-    });
-    this.root.querySelector('[data-action="advanced"]')?.addEventListener('click', (e) => {
-      const on = document.body.classList.toggle('neighbourhood-advanced');
-      (e.currentTarget as HTMLElement).setAttribute('aria-pressed', String(on));
-      this.syncAdvancedOverlay();
-    });
-    this.root.querySelector('[data-action="back"]')?.addEventListener('click', () => {
-      document.body.classList.remove('neighbourhood-advanced');
-      this.syncAdvancedOverlay();
-      const toggle = this.root?.querySelector<HTMLElement>('[data-action="advanced"]');
-      toggle?.setAttribute('aria-pressed', 'false');
-    });
+      ?.addEventListener("click", () => this.sketch?.clear());
+    this.root
+      .querySelector('[data-action="handoff"]')
+      ?.addEventListener("click", () => {
+        this.handoffOpen = !this.handoffOpen;
+        const card = this.root?.querySelector<HTMLElement>(".nh-handoff");
+        if (card) card.hidden = !this.handoffOpen;
+        if (this.handoffOpen) void this.renderHandoff();
+      });
+    this.root
+      .querySelector('[data-action="copy-link"]')
+      ?.addEventListener("click", () => {
+        void navigator.clipboard?.writeText(
+          handoffUrl(this.sketch?.getPoints() ?? [], this.previewPoint),
+        );
+      });
+    this.root
+      .querySelector('[data-action="share-link"]')
+      ?.addEventListener("click", () => {
+        if (navigator.share)
+          void navigator
+            .share({
+              url: handoffUrl(
+                this.sketch?.getPoints() ?? [],
+                this.previewPoint,
+              ),
+            })
+            .catch(() => {});
+      });
+    this.root
+      .querySelector('[data-action="atlas"]')
+      ?.addEventListener("click", () => {
+        this.atlasOpen = !this.atlasOpen;
+        this.render();
+      });
+    this.root
+      .querySelector('[data-action="account"]')
+      ?.addEventListener("click", () => {
+        this.deps.eventBus.emit("account:showRequested", {} as never);
+      });
+    this.root
+      .querySelector('[data-action="advanced"]')
+      ?.addEventListener("click", (e) => {
+        const on = document.body.classList.toggle("neighbourhood-advanced");
+        (e.currentTarget as HTMLElement).setAttribute(
+          "aria-pressed",
+          String(on),
+        );
+        this.syncAdvancedOverlay();
+      });
+    this.root
+      .querySelector('[data-action="back"]')
+      ?.addEventListener("click", () => {
+        document.body.classList.remove("neighbourhood-advanced");
+        this.syncAdvancedOverlay();
+        const toggle = this.root?.querySelector<HTMLElement>(
+          '[data-action="advanced"]',
+        );
+        toggle?.setAttribute("aria-pressed", "false");
+      });
     this.syncAdvancedOverlay();
   }
 
   private syncAdvancedOverlay(): void {
-    const on = document.body.classList.contains('neighbourhood-advanced');
-    const panel = this.root?.querySelector<HTMLElement>('.nh-panel');
-    const back = this.root?.querySelector<HTMLElement>('.nh-return');
+    const on = document.body.classList.contains("neighbourhood-advanced");
+    const panel = this.root?.querySelector<HTMLElement>(".nh-panel");
+    const back = this.root?.querySelector<HTMLElement>(".nh-return");
+    const note = this.root?.querySelector<HTMLElement>(".nh-advanced");
     if (panel) panel.hidden = on;
     if (back) back.hidden = !on;
+    // The explanation travels with the mode: a runner who opens the wider
+    // realm is told what is here and that the atlas does not follow a
+    // wallet, in the same beat as the return control appearing.
+    if (note) note.hidden = !on;
   }
 
   private renderGoalLocks(): void {
     if (!this.root) return;
     const availability = this.deps.neighbourhood.goalAvailability();
-    for (const btn of Array.from(this.root.querySelectorAll<HTMLButtonElement>('.nh-goal'))) {
+    for (const btn of Array.from(
+      this.root.querySelectorAll<HTMLButtonElement>(".nh-goal"),
+    )) {
       const goal = btn.dataset.goal as NeighbourhoodGoal;
       const meta = NEIGHBOURHOOD_COPY.goals[goal];
       const available = availability[goal].available;
-      btn.classList.toggle('nh-goal--locked', !available);
-      btn.classList.toggle('nh-goal--selected', this.state.goal === goal);
-      btn.setAttribute('aria-pressed', String(this.state.goal === goal));
+      btn.classList.toggle("nh-goal--locked", !available);
+      btn.classList.toggle("nh-goal--selected", this.state.goal === goal);
+      btn.setAttribute("aria-pressed", String(this.state.goal === goal));
       if (available) {
-        btn.removeAttribute('aria-disabled');
+        btn.removeAttribute("aria-disabled");
       } else {
-        btn.setAttribute('aria-disabled', 'true');
+        btn.setAttribute("aria-disabled", "true");
       }
-      const label = btn.querySelector('.nh-goal-label');
+      const label = btn.querySelector(".nh-goal-label");
       if (label) {
         label.textContent = available
           ? meta.label
           : `${NEIGHBOURHOOD_COPY.lockedPrefix} · ${meta.label}`;
       }
-      const hint = btn.querySelector('.nh-goal-hint');
+      const hint = btn.querySelector(".nh-goal-hint");
       if (hint) {
-        hint.textContent = !available && 'locked' in meta ? meta.locked : meta.hint;
+        hint.textContent =
+          !available && "locked" in meta ? meta.locked : meta.hint;
       }
     }
   }
 
   private renderGhost(): void {
     if (!this.root) return;
-    const el = this.root.querySelector('.nh-ghostline');
+    const el = this.root.querySelector(".nh-ghostline");
     if (!el) return;
-    const ghost = this.deps.ghostRunnerService?.getGhosts().find((g) => g.type === 'allrounder');
+    const ghost = this.deps.ghostRunnerService
+      ?.getGhosts()
+      .find((g) => g.type === "allrounder");
     el.textContent = ghost
       ? NEIGHBOURHOOD_COPY.ghostArrived(ghost.name)
       : NEIGHBOURHOOD_COPY.ghostTeaser;
@@ -745,7 +845,7 @@ export class NeighbourhoodExperience {
 
   private renderAtlasList(): void {
     if (!this.root) return;
-    const el = this.root.querySelector('.nh-atlas');
+    const el = this.root.querySelector(".nh-atlas");
     if (!el) return;
     const order = this.state.ringCellIds;
     const cells = Object.entries(this.state.cells)
@@ -758,21 +858,24 @@ export class NeighbourhoodExperience {
     el.innerHTML = `<ul class="nh-atlas-list">${cells
       .map(([id, c]) => {
         const index = order.indexOf(id);
-        const label = index >= 0 ? NEIGHBOURHOOD_COPY.cellLabel(index) : id.slice(-6).toUpperCase();
+        const label =
+          index >= 0
+            ? NEIGHBOURHOOD_COPY.cellLabel(index)
+            : id.slice(-6).toUpperCase();
         return (
           `<li class="nh-cell"><span class="nh-cell-id" title="${id}">${label}</span>` +
           `<span class="nh-cell-visits">${NEIGHBOURHOOD_COPY.visits(c.visits)}</span></li>`
         );
       })
-      .join('')}</ul>`;
+      .join("")}</ul>`;
   }
 
   private showMapNote(): void {
     if (!this.root || this.deps.map) return;
-    const scroll = this.root.querySelector('.nh-scroll');
-    if (scroll && !scroll.querySelector('.nh-map-note')) {
-      const note = document.createElement('p');
-      note.className = 'nh-map-note';
+    const scroll = this.root.querySelector(".nh-scroll");
+    if (scroll && !scroll.querySelector(".nh-map-note")) {
+      const note = document.createElement("p");
+      note.className = "nh-map-note";
       note.textContent = NEIGHBOURHOOD_COPY.mapUnavailable;
       scroll.appendChild(note);
     }
@@ -780,7 +883,7 @@ export class NeighbourhoodExperience {
 
   private renderRecording(): void {
     if (!this.root) return;
-    const paused = this.phase === 'paused';
+    const paused = this.phase === "paused";
     this.root.innerHTML = `
       <div class="nh-panel nh-panel--recording">
         <div class="nh-live-region" aria-live="polite" style="position:absolute;left:-9999px"></div>
@@ -803,42 +906,55 @@ export class NeighbourhoodExperience {
         </div>
       </div>
     `;
-    this.root.querySelector('[data-action="pause-resume"]')?.addEventListener('click', () => {
-      if (this.phase === 'paused') {
-        this.deps.runTracking.resumeRun();
-      } else {
-        this.deps.runTracking.pauseRun();
-      }
-    });
-    this.root.querySelector('[data-action="finish"]')?.addEventListener('click', () => {
-      this.deps.runTracking.stopRun();
-    });
+    this.root
+      .querySelector('[data-action="pause-resume"]')
+      ?.addEventListener("click", () => {
+        if (this.phase === "paused") {
+          this.deps.runTracking.resumeRun();
+        } else {
+          this.deps.runTracking.pauseRun();
+        }
+      });
+    this.root
+      .querySelector('[data-action="finish"]')
+      ?.addEventListener("click", () => {
+        this.deps.runTracking.stopRun();
+      });
     this.renderRecordingBits();
   }
 
   private renderRecordingBits(): void {
-    if (!this.root || (this.phase !== 'recording' && this.phase !== 'paused')) return;
+    if (!this.root || (this.phase !== "recording" && this.phase !== "paused"))
+      return;
     const session = this.deps.runTracking.getCurrentRun();
     const stats = this.deps.runTracking.getCurrentStats();
-    const dist = this.root.querySelector('.nh-stat--dist');
-    const time = this.root.querySelector('.nh-stat--time');
-    const pace = this.root.querySelector('.nh-stat--pace');
-    if (dist) dist.textContent = formatDistance(session?.totalDistance ?? stats?.distance ?? 0);
+    const dist = this.root.querySelector(".nh-stat--dist");
+    const time = this.root.querySelector(".nh-stat--time");
+    const pace = this.root.querySelector(".nh-stat--pace");
+    if (dist)
+      dist.textContent = formatDistance(
+        session?.totalDistance ?? stats?.distance ?? 0,
+      );
     if (time) {
-      time.textContent = formatDuration(stats?.duration ?? session?.totalDuration ?? 0);
+      time.textContent = formatDuration(
+        stats?.duration ?? session?.totalDuration ?? 0,
+      );
     }
-    if (pace) pace.textContent = formatPace(session?.averageSpeed ?? stats?.averageSpeed ?? 0);
+    if (pace)
+      pace.textContent = formatPace(
+        session?.averageSpeed ?? stats?.averageSpeed ?? 0,
+      );
 
-    const progress = this.root.querySelector('.nh-goalprogress');
+    const progress = this.root.querySelector(".nh-goalprogress");
     if (progress) {
-      if (this.phase === 'paused') {
+      if (this.phase === "paused") {
         progress.textContent = NEIGHBOURHOOD_COPY.paused;
       } else {
         progress.textContent = this.liveProgressLine();
       }
     }
 
-    const gps = this.root.querySelector('.nh-gps');
+    const gps = this.root.querySelector(".nh-gps");
     if (gps) gps.textContent = this.gpsLine(session);
   }
 
@@ -850,41 +966,55 @@ export class NeighbourhoodExperience {
     const preview = this.deps.neighbourhood.previewLive();
     const goal = this.state.goal;
     const parts: string[] = [];
-    if (goal === 'challenge' && this.state.referenceRun) {
+    if (goal === "challenge" && this.state.referenceRun) {
       const remaining = Math.max(
         0,
         this.state.referenceRun.distanceMeters -
-          (this.deps.runTracking.getCurrentRun()?.totalDistance ?? 0)
+          (this.deps.runTracking.getCurrentRun()?.totalDistance ?? 0),
       );
       parts.push(
         remaining > 0
           ? NEIGHBOURHOOD_COPY.liveTargetRemaining(remaining)
-          : NEIGHBOURHOOD_COPY.liveTargetReached
+          : NEIGHBOURHOOD_COPY.liveTargetReached,
       );
     } else {
       if (preview.distanceRemainingM > 0) {
-        parts.push(NEIGHBOURHOOD_COPY.liveRemaining(preview.distanceRemainingM));
+        parts.push(
+          NEIGHBOURHOOD_COPY.liveRemaining(preview.distanceRemainingM),
+        );
       }
-      if (goal === 'strengthen') {
+      if (goal === "strengthen") {
         if (preview.projectedRevisitedCellIds.length > 0) {
-          parts.push(NEIGHBOURHOOD_COPY.liveRevisited(preview.projectedRevisitedCellIds.length));
+          parts.push(
+            NEIGHBOURHOOD_COPY.liveRevisited(
+              preview.projectedRevisitedCellIds.length,
+            ),
+          );
         }
       } else if (preview.projectedNewCellIds.length > 0) {
-        parts.push(NEIGHBOURHOOD_COPY.liveNewCells(preview.projectedNewCellIds.length));
+        parts.push(
+          NEIGHBOURHOOD_COPY.liveNewCells(preview.projectedNewCellIds.length),
+        );
       }
     }
     if (preview.outsideCellCount > 0) {
       parts.push(NEIGHBOURHOOD_COPY.liveOutside);
     }
-    return parts.join(' · ') || NEIGHBOURHOOD_COPY.instruction;
+    return parts.join(" · ") || NEIGHBOURHOOD_COPY.instruction;
   }
 
   private gpsLine(
-    session: { points?: Array<{ timestamp?: number; accuracy?: number }> } | null
+    session: {
+      points?: Array<{ timestamp?: number; accuracy?: number }>;
+    } | null,
   ): string {
     const raw = this.lastRawFix;
     const last = session?.points?.[session.points.length - 1];
-    const timestamp = raw ? raw.at : typeof last?.timestamp === 'number' ? last.timestamp : null;
+    const timestamp = raw
+      ? raw.at
+      : typeof last?.timestamp === "number"
+        ? last.timestamp
+        : null;
     if (timestamp === null) return NEIGHBOURHOOD_COPY.gpsStatus.waiting;
     const ageMs = Date.now() - timestamp;
     if (ageMs >= STALE_FIX_MS) {
@@ -892,7 +1022,8 @@ export class NeighbourhoodExperience {
     }
     const accuracy = raw ? raw.accuracy : last?.accuracy;
     if (!Number.isFinite(accuracy)) return NEIGHBOURHOOD_COPY.gpsStatus.unknown;
-    if ((accuracy as number) > 50) return NEIGHBOURHOOD_COPY.gpsStatus.poor(accuracy as number);
+    if ((accuracy as number) > 50)
+      return NEIGHBOURHOOD_COPY.gpsStatus.poor(accuracy as number);
     return NEIGHBOURHOOD_COPY.gpsStatus.fix(accuracy as number);
   }
 
@@ -902,27 +1033,29 @@ export class NeighbourhoodExperience {
       parts.push(NEIGHBOURHOOD_COPY.newCells(summary.newCellIds.length));
     }
     if (summary.strengthenedCellIds.length > 0) {
-      parts.push(NEIGHBOURHOOD_COPY.revisitedCells(summary.strengthenedCellIds.length));
+      parts.push(
+        NEIGHBOURHOOD_COPY.revisitedCells(summary.strengthenedCellIds.length),
+      );
     }
     if (parts.length === 0) {
       switch (summary.reason) {
-        case 'short':
+        case "short":
           return NEIGHBOURHOOD_COPY.shortNote;
-        case 'gps':
+        case "gps":
           return NEIGHBOURHOOD_COPY.gpsNote;
-        case 'outside':
+        case "outside":
           return NEIGHBOURHOOD_COPY.outsideNote;
-        case 'recovered':
+        case "recovered":
           return NEIGHBOURHOOD_COPY.recoveredNote;
       }
     }
-    return parts.join(' · ');
+    return parts.join(" · ");
   }
 
   private showSummary(_summary: NeighbourhoodRunSummary): void {
-    this.phase = 'summary';
+    this.phase = "summary";
     this.render();
-    const title = this.root?.querySelector<HTMLElement>('.nh-headline');
+    const title = this.root?.querySelector<HTMLElement>(".nh-headline");
     if (title) {
       title.tabIndex = -1;
       title.focus();
@@ -932,13 +1065,13 @@ export class NeighbourhoodExperience {
   private renderSummary(): void {
     if (!this.root) return;
     const summary = this.lastSummary;
-    const line = summary ? this.summaryLine(summary) : '';
+    const line = summary ? this.summaryLine(summary) : "";
     const meta = summary
       ? NEIGHBOURHOOD_COPY.summaryMeta(
           formatDistance(summary.distanceMeters),
-          formatDuration(summary.durationMs)
+          formatDuration(summary.durationMs),
         )
-      : '';
+      : "";
     const persistedNote = summary?.persisted
       ? NEIGHBOURHOOD_COPY.receiptSaved
       : NEIGHBOURHOOD_COPY.receiptNotSaved;
@@ -949,35 +1082,38 @@ export class NeighbourhoodExperience {
       summary && credited
         ? NEIGHBOURHOOD_COPY.receiptCredit(
             summary.newCellIds.length,
-            summary.strengthenedCellIds.length
+            summary.strengthenedCellIds.length,
           )
         : NEIGHBOURHOOD_COPY.receiptNoCredit;
     const challengeBlock =
-      summary?.challenge && this.phase === 'summary'
+      summary?.challenge && this.phase === "summary"
         ? `<p class="nh-challenge">${NEIGHBOURHOOD_COPY.challengeLine(
             formatDistance(summary.challenge.targetDistanceMeters),
             formatPace(1000 / summary.challenge.referencePaceSecPerKm),
             formatPace(1000 / summary.challenge.currentPaceSecPerKm),
-            summary.challenge.targetReached
+            summary.challenge.targetReached,
           )}</p>`
-        : '';
+        : "";
     // Ground that changed is the payoff, so looking at it leads; an outing
     // that collected nothing keeps Continue first and stays calm.
     const changedGround = Boolean(
-      summary && summary.newCellIds.length + summary.strengthenedCellIds.length > 0
+      summary &&
+      summary.newCellIds.length + summary.strengthenedCellIds.length > 0,
     );
     const firstGround =
-      summary && summary.newCellIds.length > 0 && this.state.qualifyingRuns === 1
+      summary &&
+      summary.newCellIds.length > 0 &&
+      this.state.qualifyingRuns === 1
         ? `<p class="nh-summary-celebrate">${NEIGHBOURHOOD_COPY.firstGround}</p>`
-        : '';
+        : "";
     const continueBtn = (cls: string) =>
       `<button type="button" class="${cls}" data-action="continue">${NEIGHBOURHOOD_COPY.continue}</button>`;
     const seeGroundBtn = (cls: string) =>
       `<button type="button" class="${cls}" data-action="see-ground">${NEIGHBOURHOOD_COPY.seeGroundOnMap}</button>`;
     const dock =
       this.canReviewOnMap() && changedGround
-        ? `${seeGroundBtn('nh-start')}${continueBtn('nh-secondary')}`
-        : `${continueBtn('nh-start')}${this.canReviewOnMap() ? seeGroundBtn('nh-secondary') : ''}`;
+        ? `${seeGroundBtn("nh-start")}${continueBtn("nh-secondary")}`
+        : `${continueBtn("nh-start")}${this.canReviewOnMap() ? seeGroundBtn("nh-secondary") : ""}`;
     this.root.innerHTML = `
       <div class="nh-panel nh-panel--summary" role="dialog" aria-label="${NEIGHBOURHOOD_COPY.summaryTitle}">
         <div class="nh-live-region" aria-live="polite" style="position:absolute;left:-9999px"></div>
@@ -986,7 +1122,7 @@ export class NeighbourhoodExperience {
           ${firstGround}
           <p class="nh-summary-meta">${meta}</p>
           <p class="nh-receipt-credit">${creditLine}</p>
-          ${!credited ? `<p class="nh-summary-line">${line}</p>` : ''}
+          ${!credited ? `<p class="nh-summary-line">${line}</p>` : ""}
           ${challengeBlock}
           <p class="nh-receipt-save">${persistedNote}</p>
           <p class="nh-honest">${NEIGHBOURHOOD_COPY.receiptOwnership}</p>
@@ -997,14 +1133,18 @@ export class NeighbourhoodExperience {
         <div class="nh-dock">${dock}</div>
       </div>
     `;
-    this.root.querySelector('[data-action="continue"]')?.addEventListener('click', () => {
-      this.phase = 'idle';
-      this.render();
-      this.focusSelector('[data-action="start"]');
-    });
-    this.root.querySelector('[data-action="see-ground"]')?.addEventListener('click', () => {
-      this.showGroundOnMap();
-    });
+    this.root
+      .querySelector('[data-action="continue"]')
+      ?.addEventListener("click", () => {
+        this.phase = "idle";
+        this.render();
+        this.focusSelector('[data-action="start"]');
+      });
+    this.root
+      .querySelector('[data-action="see-ground"]')
+      ?.addEventListener("click", () => {
+        this.showGroundOnMap();
+      });
   }
 
   /**
@@ -1014,41 +1154,44 @@ export class NeighbourhoodExperience {
   private showGroundOnMap(): void {
     const summary = this.lastSummary;
     if (!summary) return;
-    this.phase = 'idle';
+    this.phase = "idle";
     this.render();
     this.focusSelector('[data-action="start"]');
     if (!this.isMapVisible()) {
       this.pendingReview = summary;
-      this.deps.eventBus.emit('ui:mapViewRequested', {} as never);
+      this.deps.eventBus.emit("ui:mapViewRequested", {} as never);
       return;
     }
     this.playOutcome(summary);
   }
 
-  private setError(message: string | null, retryAction?: (() => void) | null): void {
+  private setError(
+    message: string | null,
+    retryAction?: (() => void) | null,
+  ): void {
     if (!this.root) return;
-    const el = this.root.querySelector<HTMLElement>('.nh-error');
+    const el = this.root.querySelector<HTMLElement>(".nh-error");
     if (!el) return;
     if (!message) {
       el.hidden = true;
-      el.textContent = '';
+      el.textContent = "";
       return;
     }
     el.hidden = false;
     el.textContent = message;
-    if (retryAction && !el.querySelector('button')) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'nh-retry';
+    if (retryAction && !el.querySelector("button")) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "nh-retry";
       btn.textContent = NEIGHBOURHOOD_COPY.gpsRetry;
-      btn.addEventListener('click', () => retryAction());
-      el.appendChild(document.createTextNode(' '));
+      btn.addEventListener("click", () => retryAction());
+      el.appendChild(document.createTextNode(" "));
       el.appendChild(btn);
     }
   }
 
   private startErrorMessage(error: unknown): string {
-    const message = error instanceof Error ? error.message : '';
+    const message = error instanceof Error ? error.message : "";
     return /location|denied|position/i.test(message)
       ? NEIGHBOURHOOD_COPY.gpsDenied
       : NEIGHBOURHOOD_COPY.startError;
@@ -1073,7 +1216,7 @@ export class NeighbourhoodExperience {
     this.renderCellDetail();
     this.updateSketchStatus();
     this.renderIdleBits();
-    const status = this.root?.querySelector('.nh-preview-status');
+    const status = this.root?.querySelector(".nh-preview-status");
     if (status) status.textContent = NEIGHBOURHOOD_COPY.desktop.previewHint;
     if (this.handoffOpen) void this.renderHandoff();
     this.announce(NEIGHBOURHOOD_COPY.desktop.previewHint);
@@ -1091,107 +1234,121 @@ export class NeighbourhoodExperience {
     if (!map) return;
     this.pickingSpot = true;
     const btn = this.root?.querySelector('[data-action="pick-spot"]');
-    btn?.setAttribute('aria-pressed', 'true');
+    btn?.setAttribute("aria-pressed", "true");
     this.announce(NEIGHBOURHOOD_COPY.desktop.pickInstruction);
     this.mapPickHandler = (event) => {
       this.stopPicking();
       this.setPreview(event.lngLat);
     };
-    map.on('click', this.mapPickHandler);
-    window.addEventListener('keydown', this.onPickKey);
+    map.on("click", this.mapPickHandler);
+    window.addEventListener("keydown", this.onPickKey);
   }
 
   private onPickKey = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') {
+    if (event.key === "Escape") {
       event.preventDefault();
       this.stopPicking();
-      this.root?.querySelector<HTMLElement>('[data-action="pick-spot"]')?.focus();
+      this.root
+        ?.querySelector<HTMLElement>('[data-action="pick-spot"]')
+        ?.focus();
     }
   };
 
   private stopPicking(): void {
-    if (this.mapPickHandler) this.deps.map?.off('click', this.mapPickHandler);
+    if (this.mapPickHandler) this.deps.map?.off("click", this.mapPickHandler);
     this.mapPickHandler = null;
     this.pickingSpot = false;
-    window.removeEventListener('keydown', this.onPickKey);
-    this.root?.querySelector('[data-action="pick-spot"]')?.setAttribute('aria-pressed', 'false');
+    window.removeEventListener("keydown", this.onPickKey);
+    this.root
+      ?.querySelector('[data-action="pick-spot"]')
+      ?.setAttribute("aria-pressed", "false");
   }
 
   private startTour(): void {
-    if (this.phase !== 'idle') return;
+    if (this.phase !== "idle") return;
     this.tour?.dispose();
     this.tour = new NeighbourhoodTour(
       [
         {
-          title: 'Your streets, your atlas',
-          body: 'RunRealm develops a map of the streets you run. Your first outing sets this neighbourhood.',
-          target: '.nh-headline',
+          title: "Your streets, your atlas",
+          body: "RunRealm develops a map of the streets you run. Your first outing sets this neighbourhood.",
+          target: ".nh-headline",
         },
         {
-          title: 'Preview your neighbourhood',
-          body: 'Use Show my streets or Pick a spot to explore. This preview never collects or claims ground.',
+          title: "Preview your neighbourhood",
+          body: "Use Show my streets or Pick a spot to explore. This preview never collects or claims ground.",
           target: '[data-tour="preview"]',
           enter: () => {
             if (!this.activeCells().length && this.deps.map) {
               const point = this.deps.map.getCenter?.();
-              if (point && Number.isFinite(point.lat) && Number.isFinite(point.lng)) {
+              if (
+                point &&
+                Number.isFinite(point.lat) &&
+                Number.isFinite(point.lng)
+              ) {
                 this.setPreview({ lat: point.lat, lng: point.lng });
               }
             }
           },
         },
         {
-          title: 'Watch an example',
-          body: 'Watch a sample route and its cells light up. Sample — not your atlas.',
+          title: "Watch an example",
+          body: "Watch a sample route and its cells light up. Sample — not your atlas.",
           target: '[data-tour="sample"]',
           enter: () => this.playSample(),
           leave: () => this.stopSample(),
         },
         {
-          title: 'Three ways to explore',
-          body: 'Explore collects new blocks. Strengthen revisits familiar ones. Challenge unlocks after two outings.',
-          target: '.nh-facts',
+          title: "Three ways to explore",
+          body: "Explore collects new blocks. Strengthen revisits familiar ones. Challenge unlocks after two outings.",
+          target: ".nh-facts",
         },
         {
-          title: 'Plan your first route',
-          body: 'Sketch a route on the map and check your distance against 500m. It is a plan, not an outing.',
+          title: "Plan your first route",
+          body: "Sketch a route on the map and check your distance against 500m. It is a plan, not an outing.",
           target: '[data-tour="sketch"]',
         },
         {
-          title: 'See the Realm',
-          body: 'Open the Realm tab for a free storyboard. Live generation is optional and uses credits.',
+          title: "See the Realm",
+          body: "Open the Realm tab for a free storyboard. Live generation is optional and uses credits.",
           target: '[data-tour="realm"]',
         },
         {
-          title: 'Beyond the first outing',
-          body: 'Advanced tools include the dashboard, ghosts, leaderboard and optional wallet. Your atlas is local, not registered ownership.',
+          title: "Beyond the first outing",
+          // Same two lines the caption shows when the tools open, so the
+          // tour and the boundary can never disagree.
+          body: `${NEIGHBOURHOOD_COPY.advancedNote} ${NEIGHBOURHOOD_COPY.advancedHint}`,
           target: '[data-action="advanced"]',
         },
         {
-          title: 'Take it outside',
+          title: "Take it outside",
           body: isDesk()
-            ? 'Continue on your phone. Your link shares your exact drawn route and approximate preview centre, not saved progress.'
-            : 'Start a real run when you are ready. Your first 500m outing sets this neighbourhood.',
+            ? "Continue on your phone. Your link shares your exact drawn route and approximate preview centre, not saved progress."
+            : "Start a real run when you are ready. Your first 500m outing sets this neighbourhood.",
           target: isDesk() ? '[data-tour="handoff"]' : '[data-action="start"]',
         },
       ],
       () => {
         this.stopSample();
         this.tourPromptDismissed = true;
-        this.root?.querySelector('.nh-tour-invite')?.remove();
-      }
+        this.root?.querySelector(".nh-tour-invite")?.remove();
+      },
     );
     this.tour.start();
   }
 
   private playSample(): void {
-    if (this.phase !== 'idle' || !this.deps.map) return;
+    if (this.phase !== "idle" || !this.deps.map) return;
     this.stopPicking();
     this.sketch?.stop();
     const ring = this.activeCells();
     if (!ring.length) {
       const center = this.deps.map.getCenter?.();
-      if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lng)) {
+      if (
+        !center ||
+        !Number.isFinite(center.lat) ||
+        !Number.isFinite(center.lng)
+      ) {
         this.setError(NEIGHBOURHOOD_COPY.desktop.previewError);
         return;
       }
@@ -1216,8 +1373,8 @@ export class NeighbourhoodExperience {
   }
 
   private updateSampleStatus(): void {
-    const status = this.root?.querySelector<HTMLElement>('.nh-sample-status');
-    const actions = this.root?.querySelector<HTMLElement>('.nh-sample-actions');
+    const status = this.root?.querySelector<HTMLElement>(".nh-sample-status");
+    const actions = this.root?.querySelector<HTMLElement>(".nh-sample-actions");
     if (!status || !actions) return;
     status.hidden = !this.sampleActive;
     // Nothing to skip once it has finished — otherwise the completed sample
@@ -1227,7 +1384,9 @@ export class NeighbourhoodExperience {
       ? NEIGHBOURHOOD_COPY.desktop.sampleResult(this.sampleVisited)
       : NEIGHBOURHOOD_COPY.desktop.sampleBadge;
     // Once seen, the button offers a replay rather than a first watch.
-    const button = this.root?.querySelector<HTMLElement>('[data-action="sample"]');
+    const button = this.root?.querySelector<HTMLElement>(
+      '[data-action="sample"]',
+    );
     if (button) {
       button.textContent = this.sampleSeen
         ? NEIGHBOURHOOD_COPY.desktop.replay
@@ -1242,18 +1401,22 @@ export class NeighbourhoodExperience {
     if (this.sketch.isDrawing) this.sketch.stop();
     else this.sketch.start();
     const active = this.sketch.isDrawing;
-    const btn = this.root?.querySelector<HTMLButtonElement>('[data-action="sketch"]');
+    const btn = this.root?.querySelector<HTMLButtonElement>(
+      '[data-action="sketch"]',
+    );
     if (btn)
       btn.textContent = active
         ? NEIGHBOURHOOD_COPY.desktop.sketchDone
         : NEIGHBOURHOOD_COPY.desktop.sketch;
-    const controls = this.root?.querySelector<HTMLElement>('.nh-sketch-controls');
+    const controls = this.root?.querySelector<HTMLElement>(
+      ".nh-sketch-controls",
+    );
     if (controls) controls.hidden = !active;
     this.updateSketchStatus();
   }
 
   private updateSketchStatus(): void {
-    const status = this.root?.querySelector<HTMLElement>('.nh-sketch-status');
+    const status = this.root?.querySelector<HTMLElement>(".nh-sketch-status");
     if (!status) return;
     const points = this.sketch?.getPoints() ?? [];
     const stats = sketchStats(points, this.activeCells());
@@ -1262,27 +1425,27 @@ export class NeighbourhoodExperience {
           stats.meters,
           stats.remaining,
           stats.collected,
-          stats.outside
+          stats.outside,
         )
-      : '';
+      : "";
   }
 
   private async renderHandoff(): Promise<void> {
-    const qr = this.root?.querySelector<HTMLElement>('.nh-qr');
+    const qr = this.root?.querySelector<HTMLElement>(".nh-qr");
     if (!qr || !this.handoffOpen) return;
     try {
-      const { default: QRCode } = await import('qrcode');
+      const { default: QRCode } = await import("qrcode");
       if (!this.root?.contains(qr) || !this.handoffOpen) return;
       const image = await QRCode.toDataURL(
         handoffUrl(this.sketch?.getPoints() ?? [], this.previewPoint),
-        { margin: 1, width: 200 }
+        { margin: 1, width: 200 },
       );
-      const img = document.createElement('img');
+      const img = document.createElement("img");
       img.src = image;
-      img.alt = 'Scan to open RunRealm on your phone';
+      img.alt = "Scan to open RunRealm on your phone";
       qr.replaceChildren(img);
     } catch {
-      qr.textContent = 'Use Copy link to open RunRealm on your phone.';
+      qr.textContent = "Use Copy link to open RunRealm on your phone.";
     }
   }
 
@@ -1311,7 +1474,8 @@ export class NeighbourhoodExperience {
   private async startRun(): Promise<void> {
     if (this.startPending) return;
     const active = this.deps.runTracking.getCurrentRun();
-    const running = active?.status === 'recording' || active?.status === 'paused';
+    const running =
+      active?.status === "recording" || active?.status === "paused";
     if (!running && this.deps.runTracking.readCheckpoint?.()) {
       if (this.deps.recoveredRunCard?.refocusPending?.()) return;
       this.setError(NEIGHBOURHOOD_COPY.recoveryPending);
@@ -1320,7 +1484,9 @@ export class NeighbourhoodExperience {
     const goal = this.deps.neighbourhood.getGoal();
     this.deps.neighbourhood.setGoal(goal);
     this.startPending = true;
-    const btn = this.root?.querySelector<HTMLButtonElement>('[data-action="start"]');
+    const btn = this.root?.querySelector<HTMLButtonElement>(
+      '[data-action="start"]',
+    );
     if (btn) {
       btn.disabled = true;
       btn.textContent = NEIGHBOURHOOD_COPY.starting;
@@ -1330,13 +1496,15 @@ export class NeighbourhoodExperience {
       this.setError(null);
     } catch (error) {
       const message = this.startErrorMessage(error);
-      this.phase = 'idle';
+      this.phase = "idle";
       this.render();
       this.setError(message, () => void this.startRun());
     } finally {
       this.startPending = false;
-      const reset = this.root?.querySelector<HTMLButtonElement>('[data-action="start"]');
-      if (reset && this.phase === 'idle') {
+      const reset = this.root?.querySelector<HTMLButtonElement>(
+        '[data-action="start"]',
+      );
+      if (reset && this.phase === "idle") {
         reset.disabled = false;
         reset.textContent = NEIGHBOURHOOD_COPY.startRun;
       }
@@ -1357,12 +1525,13 @@ export class NeighbourhoodExperience {
   }
 
   private isMapVisible(): boolean {
-    return !document.body.classList.contains('living-realm-view');
+    return !document.body.classList.contains("living-realm-view");
   }
 
   private activeCells(): string[] {
     const real = this.deps.neighbourhood.activeRingCellIds();
-    if (real.length || this.phase === 'recording' || this.phase === 'paused') return real;
+    if (real.length || this.phase === "recording" || this.phase === "paused")
+      return real;
     return this.previewRing;
   }
 
@@ -1378,7 +1547,9 @@ export class NeighbourhoodExperience {
     const renderer = this.mapRenderer;
     if (!renderer) return;
     const preview = this.deps.neighbourhood.previewLive();
-    const fresh = preview.projectedNewCellIds.filter((id) => !this.exposedCellIds.has(id));
+    const fresh = preview.projectedNewCellIds.filter(
+      (id) => !this.exposedCellIds.has(id),
+    );
     if (fresh.length === 0) return;
     for (const id of fresh) this.exposedCellIds.add(id);
     renderer.markExposure(fresh);
@@ -1405,19 +1576,22 @@ export class NeighbourhoodExperience {
   }
 
   private renderCellDetail(): void {
-    const el = this.root?.querySelector<HTMLElement>('.nh-celldetail');
+    const el = this.root?.querySelector<HTMLElement>(".nh-celldetail");
     if (!el) return;
     const cell = this.selectedCell;
     if (!cell) {
       el.hidden = true;
-      el.textContent = '';
+      el.textContent = "";
       return;
     }
     const isPreview =
-      !this.deps.neighbourhood.activeRingCellIds().length && this.previewRing.includes(cell.id);
+      !this.deps.neighbourhood.activeRingCellIds().length &&
+      this.previewRing.includes(cell.id);
     const index = this.activeCells().indexOf(cell.id);
     const label =
-      index >= 0 ? NEIGHBOURHOOD_COPY.cellLabel(index) : cell.id.slice(-6).toUpperCase();
+      index >= 0
+        ? NEIGHBOURHOOD_COPY.cellLabel(index)
+        : cell.id.slice(-6).toUpperCase();
     el.hidden = false;
     el.innerHTML = `
       <span class="nh-celldetail-line">${NEIGHBOURHOOD_COPY.cellDetail.line(
@@ -1425,11 +1599,14 @@ export class NeighbourhoodExperience {
         isPreview
           ? NEIGHBOURHOOD_COPY.desktop.previewOnly
           : NEIGHBOURHOOD_COPY.cellDetail.status[cell.status],
-        NEIGHBOURHOOD_COPY.visits(cell.visits)
+        NEIGHBOURHOOD_COPY.visits(cell.visits),
       )}</span>
       <button type="button" class="nh-secondary nh-celldetail-clear" data-action="clear-cell">${NEIGHBOURHOOD_COPY.cellDetail.clear}</button>`;
-    el.querySelector('[data-action="clear-cell"]')?.addEventListener('click', () => {
-      this.mapRenderer?.setSelection(null);
-    });
+    el.querySelector('[data-action="clear-cell"]')?.addEventListener(
+      "click",
+      () => {
+        this.mapRenderer?.setSelection(null);
+      },
+    );
   }
 }

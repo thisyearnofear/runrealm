@@ -18,6 +18,7 @@
 **What the user sees:** "Show my streets" requests a lower-accuracy browser location and draws a 19-cell preview around it, then frames the camera. They can choose "Pick a spot" to click anywhere on the map, or press Escape to cancel. The panel labels an unpreviewed default map as a sample city. Tapped preview cells are identified as "Preview — not collected."
 
 **How:**
+
 - Compute the preview ring from a point with the existing geometry helpers: `coordsToCell` → `neighboringCells(…, 2)`. This needs no change to the service.
 - `NeighbourhoodExperience` holds the preview ring separately. The displayed map ring uses the saved neighbourhood when one exists, the service's provisional ring during a run, and the preview otherwise. During an unanchored real run, preview cells are removed from view so sample planning cannot appear to be run progress.
 - **Location:** use the browser's lower-accuracy location request, or a click on the map. `highAccuracy: false` still asks browser geolocation; it does not guarantee a Wi-Fi-based fix. There is no IP lookup.
@@ -30,14 +31,16 @@
 ## Phase 2: watch a sample outing
 
 **What the user sees:** a 22-second scene inside the preview neighbourhood (or around the current map centre). It plays automatically once, on a first visit, after the splash lifts; a returning runner starts it from the panel:
+
 - a route draws itself and a runner marker moves along it;
 - the camera eases after the runner until the visitor drags or zooms the map;
 - each cell the runner enters lights up amber, then settles to the collected colour;
-- the status line closes with *"That is one sample outing: N blocks visited. Yours start when you do."*; the displayed count is the sample route's visited blocks, not an atlas reward.
+- the status line closes with _"That is one sample outing: N blocks visited. Yours start when you do."_; the displayed count is the sample route's visited blocks, not an atlas reward.
 
 Skip is available while it plays. Once the sample has played, the panel button reads "Replay sample" and starts it again on demand; the autoplay never re-arms itself.
 
 **How:** a new `sample-outing.ts`.
+
 - **Route:** follow a loop through the centre and radius-one H3 neighbours, which stays inside the radius-two ring and exceeds the 500 m qualification distance. The route line is drawn from interpolated positions along that loop.
 - **Map layers:** dedicated sources and layers for the route line, the runner and the sample cells, separate from the atlas cells. Sample cells are drawn on a layer of their own because the atlas cells' collection animation is tied to their saved status.
 - **Animation:** one requestAnimationFrame loop updates a separate sample source. Reached cells light amber and settle verdigris; reduced motion shows the completed sample immediately.
@@ -49,26 +52,30 @@ Skip is available while it plays. Once the sample has played, the panel button r
 ## Phase 3: sketch your first outing
 
 **What the user sees:**
+
 - "Sketch a route" turns on drawing: clicking the map adds points, with Undo, Clear and Done.
 - A live readout shows distance against 500 m, plus the number of neighbourhood cells the route would collect and how many fall outside it.
 - The route the user draws is kept on this device. Keyboard users can add a point at the current map centre.
 
 **How:** a new `route-sketch.ts`.
+
 - **Map:** one map-wide click listener, active only while sketching and removed afterwards. It has its own line and point layers.
 - **Measuring:** distance uses `calculateDistance` along the route; sampled points feed `routeToCells`, then unique cells are counted inside or outside the displayed ring. These are estimates, not qualification guarantees.
 - **Planning only:** the copy says the sketch is a plan and doesn't count as an outing. Keyboard users can add the map centre as a point, then undo or clear points.
-- **Sharing:** the sketch can be encoded into a URL parameter (`?sketch=`) for the phone handoff in phase 4. When the phone opens that link, it shows the route as *"Planned on your desktop"*. It doesn't affect any run or the anchor.
+- **Sharing:** the sketch can be encoded into a URL parameter (`?sketch=`) for the phone handoff in phase 4. When the phone opens that link, it shows the route as _"Planned on your desktop"_. It doesn't affect any run or the anchor.
 
 **Files:** `route-sketch.ts` reads `?sketch=` when the neighbourhood shell initializes; `neighbourhood-experience.ts`, copy and CSS supply the controls.
 
 ## Phase 4: desktop copy and the phone handoff
 
-**What the user sees:** on desktop, the first-visit panel leads with *"Outings happen on your phone. Here's what to try from here."* Under that come the actions from phases 1–3 and the tour, and Start run moves to second place. A "Continue on your phone" card offers:
+**What the user sees:** on desktop, the first-visit panel leads with _"Outings happen on your phone. Here's what to try from here."_ Under that come the actions from phases 1–3 and the tour, and Start run moves to second place. A "Continue on your phone" card offers:
+
 - a QR code;
 - Copy link;
 - a share button, where the browser supports sharing.
 
 **How:**
+
 - **Desktop detection:** `matchMedia('(hover: hover) and (pointer: fine)')` and a width above 768 px. That's a styling hint; it doesn't lock anyone out, and Start run stays available.
 - **QR code:** `qrcode` and `@types/qrcode` are installed; the browser QR code is loaded only when the handoff card opens.
 - **Link contents:** the app address, exact sketch coordinates if present, and the preview centre rounded to three decimal places (roughly 100 m in latitude). Sharing the URL reveals the route; the handoff card warns about that. The receiving device draws the sketch and restores its preview.
@@ -78,28 +85,31 @@ Skip is available while it plays. Once the sample has played, the panel button r
 
 ## Phase 5: a free look at the Realm
 
-**What the user sees:** the Realm poster leads with *"See what an outing does to the realm — free storyboard"*, which links to `/orbis-live`. The button that uses Reactor credits becomes the secondary option.
+**What the user sees:** the Realm poster leads with _"See what an outing does to the realm — free storyboard"_, which links to `/orbis-live`. The button that uses Reactor credits becomes the secondary option.
 
 **Files:** `LivingRealmRoot.tsx`, copy, `living-realm.css`.
 
 ## Phase 6: the optional tour
 
 **What the user sees:**
+
 - The first-visit panel offers "New here? Take the tour". The tour is optional and never starts automatically.
 - A returning runner can reopen it from a standing "Take the tour" link at the end of the panel.
 - It never starts by itself. The card can be dismissed, and the app remembers that.
 
 **Steps.** Each step points at a relevant control; the preview and sample steps demonstrate behavior, while the others explain or highlight controls without starting them:
+
 1. **Welcome.** What RunRealm is: your streets as a map that develops as you run.
 2. **Your neighbourhood.** If no ring exists, previews the current map centre and plays the ripple (phase 1).
 3. **An outing.** Plays the sample outing (phase 2); leaving that step stops the sample.
 4. **Goals.** Points at the always-visible facts block and explains Explore, Strengthen, Challenge, and their unlocks.
 5. **Plan.** Points to the route-sketch control without starting map click capture; the visitor can try it after closing the tour.
 6. **The Realm.** Highlights the Realm tab and explains the free storyboard; the visitor opens the tab after the tour.
-7. **Beyond.** Highlights Advanced tools and explains the dashboard, ghosts, leaderboard, optional wallet, and local-versus-registered ownership.
+7. **Beyond.** Highlights Advanced tools and reads the same two lines the advanced caption shows — what is beyond the neighbourhood, and that registered ground needs a wallet while this atlas stays on the device.
 8. **Take it outside.** Explains the phone handoff on desktop or highlights Start run on a narrow/touch device.
 
 **Behaviour:**
+
 - Next, Back and Skip on every step; a step counter ("3 of 8"); Esc closes.
 - Focus moves into each step and returns to where it was when the tour closes.
 - With reduced motion, steps change instantly.
