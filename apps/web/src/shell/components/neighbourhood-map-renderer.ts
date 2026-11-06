@@ -263,7 +263,8 @@ export class NeighbourhoodMapRenderer {
         `<path d="M15 3 C8 3 4 8 4 15 L4 29 L9 25 L13 29 L17 25 L21 29 L26 25 L26 15 C26 8 22 3 15 3 Z" fill="rgba(13,43,62,0.72)" stroke="${C.chalk}" stroke-width="1.5"/>` +
         `<circle cx="11.5" cy="14" r="1.4" fill="${C.amber}"/>` +
         `<circle cx="18.5" cy="14" r="1.4" fill="${C.amber}"/>` +
-        '</svg>';
+        '</svg>' +
+        '<span class="nh-ghost-name"></span>';
       this.ghostMarker = new Marker({ element: el, anchor: 'center' });
     }
     const ring = cellToPolygon(anchorCellId).coordinates[0];
@@ -276,9 +277,13 @@ export class NeighbourhoodMapRenderer {
     }
     this.ghostMarker.addTo(map);
     // Set after addTo: MapLibre stamps its own "Map marker" label on attach.
-    this.ghostMarker
-      .getElement()
-      .setAttribute('aria-label', name ? `Your ghost — ${name}` : 'Your ghost');
+    const markerEl = this.ghostMarker.getElement();
+    markerEl.setAttribute('aria-label', name ? `Your ghost — ${name}` : 'Your ghost');
+    const nameTag = markerEl.querySelector<HTMLElement>('.nh-ghost-name');
+    if (nameTag) {
+      nameTag.textContent = name ?? '';
+      nameTag.hidden = !name;
+    }
   }
 
   /**

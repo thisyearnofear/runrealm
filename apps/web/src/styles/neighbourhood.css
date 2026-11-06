@@ -936,6 +936,24 @@ body.pocket-mode .nh-map-toolbar {
   display: block;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  /* The runner's seal breathes — alive, not a map pin. */
+  .nh-marker-seal {
+    animation: nh-marker-breathe 4.5s ease-in-out infinite;
+    transform-origin: 18px 18px;
+  }
+}
+
+@keyframes nh-marker-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
 .nh-marker--stale .nh-marker-seal {
   opacity: 0.55;
   stroke-dasharray: 3 3;
@@ -999,14 +1017,52 @@ body.pocket-mode .nh-map-toolbar {
    on patrol, rather than blinking like a badge. */
 .nh-ghost-marker {
   width: 30px;
-  height: 34px;
+  height: 52px;
   filter: drop-shadow(0 2px 6px rgba(4, 14, 22, 0.55));
   pointer-events: none;
+}
+
+.nh-ghost-name {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 2px;
+  background: var(--rr-sunprint-bone);
+  color: var(--rr-sunprint-ink);
+  border: 1px solid var(--rr-border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-family: var(--rr-font-body);
+  font-size: 0.68rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.nh-ghost-name[hidden] {
+  display: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .nh-ghost-marker .nh-ghost-seal {
     animation: nh-ghost-drift 5.5s ease-in-out infinite;
+  }
+
+  /* Arrival: the wisp fades up out of the blueprint the first time it is
+     drawn — a figure arriving, not a badge appearing. */
+  .nh-ghost-marker {
+    animation: nh-ghost-in 900ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  }
+}
+
+@keyframes nh-ghost-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -1019,6 +1075,84 @@ body.pocket-mode .nh-map-toolbar {
   50% {
     transform: translateY(-4px) rotate(2deg);
     opacity: 1;
+  }
+}
+
+/* Deed card — after an outing that changed ground, the summary stops being
+   a panel and becomes the receipt itself: a floating card over the map the
+   runner just developed, stamped like a wax seal. */
+.nh-panel--deed {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0));
+  transform: translateX(-50%);
+  width: min(400px, calc(100vw - 24px));
+  z-index: calc(var(--z-widgets) + 5);
+}
+
+.nh-deed-seal {
+  position: absolute;
+  top: -26px;
+  right: 18px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f7c877, var(--rr-sunprint-amber) 55%, #b96f1e);
+  border: 2px solid rgba(13, 43, 62, 0.65);
+  box-shadow: 0 3px 10px rgba(13, 43, 62, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--rr-sunprint-ink);
+  font-family: var(--rr-font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  transform: rotate(-8deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nh-deed-seal {
+    animation: nh-seal-stamp 480ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  }
+}
+
+@keyframes nh-seal-stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-24deg) scale(1.8);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-8deg) scale(1);
+  }
+}
+
+/* Sheet grab handle — the bottom sheet announces itself is draggable-looking
+   on touch layouts. Pure affordance; the sheet already scrolls. */
+.nh-grab {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .nh-grab {
+    display: block;
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(13, 43, 62, 0.28);
+    margin: 8px auto 0;
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 768px) {
+  /* The deed card sits above the sheet zone, centred — the developed map
+     stays the hero around it. */
+  .nh-panel--deed {
+    bottom: auto;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-height: 72dvh;
   }
 }
 

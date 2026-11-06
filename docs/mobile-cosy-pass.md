@@ -75,3 +75,48 @@ Status: **shipped to dev server (localhost:3001), ready for device retest.**
 - Chain/realml economy changes, decay retuning, NPC rivals, friend challenges.
 - Full legacy-widget deletion (`?race=` mode still uses them).
 - Account screen reskin (already atlas-adjacent; revisit if testers flag it).
+
+---
+
+# Pass 2 — character, ceremony & review mode
+
+Second playtest round feedback: realms/runners feel cheap and unengaging,
+capture lacks magic, no identity/character, sterile; menu-vs-viewport and
+mobile/desktop review UX questioned. Direction chosen: both identity layers,
+visual only (no audio), bottom sheet + review mode.
+
+## Shipped
+- [x] **Ghost identity on the map** — ghost marker now carries its name as a
+      visible tag (`nh-ghost-name`), fades up out of the blueprint on first
+      draw (`nh-ghost-in`), keeps the slow patrol drift. Panel line now reads
+      "Name runs here now · Ability" via `NEIGHBOURHOOD_COPY.ghostLine`.
+- [x] **Runner marker life** — the amber seal breathes gently
+      (`nh-marker-breathe`, 4.5s, reduced-motion safe).
+- [x] **Deed card review mode** — when an outing changes ground and the map
+      is reviewable, the summary becomes a floating deed card
+      (`nh-panel--deed`): centred over the map on mobile, bottom-centre on
+      desktop, with a wax-seal stamp (`nh-deed-seal`, "+N" new cells) that
+      stamps in with rotation. Map auto-frames the new cells on completion.
+- [x] **Collect haptic** — `navigator.vibrate` pulse on ground change
+      (guarded, no-op on unsupported/desktop).
+- [x] **Sheet affordance** — `.nh-grab` handle on all three panel states,
+      visible on ≤768px touch layouts.
+
+## Verified
+- [x] `npx tsc --noEmit` clean · `npm run build:shared` clean
+- [x] neighbourhood-experience jest: 55/55 pass
+- [x] biome: no errors on changed files (warnings only, pre-existing style)
+- [x] `check:globals` / `check:singletons` pass
+- [x] Live QA (geo-jog stub): completed run → summary renders
+      `nh-panel--deed nh-panel--ceremony`, seal reads "+2", ghost name tag
+      "Lightning Bolt" on map. Screenshot: /tmp/rr-shots/deed-card.png
+- [ ] Real-device retest (Android + iPhone) — vibration, stamp feel,
+      deed card layout on small screens.
+
+## Still open (next pass candidates)
+- [ ] Deeper ghost personality (per-ghost crest/colour variants, arrival
+      ceremony beyond the fade-up).
+- [ ] Runner avatar/crest beyond the breathing seal.
+- [ ] True bottom-sheet drag states (peek/half/full) — currently a static
+      max-height sheet with a grab affordance.
+- [ ] Review-mode route replay scrubber.

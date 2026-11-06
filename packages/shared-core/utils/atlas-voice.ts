@@ -1196,6 +1196,10 @@ export const NEIGHBOURHOOD_COPY = {
   firstGround: 'Your first ground is on the map.',
   ghostTeaser: 'Your first outing introduces your ghost.',
   ghostArrived: (name: string) => `${name} runs here now.`,
+  ghostLine: (name: string, ability?: string) =>
+    ability && ability.trim()
+      ? `${name} runs here now · ${ability.trim()}`
+      : `${name} runs here now.`,
   challengeReference: 'Your previous outing sets the pace.',
   challengeLine: (target: string, refPace: string, curPace: string, reached: boolean) =>
     `Reference ${target} at ${refPace} · this outing ${curPace}${reached ? ' — distance reached' : ''}`,

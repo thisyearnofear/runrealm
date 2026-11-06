@@ -137,6 +137,14 @@ export class NeighbourhoodExperience {
       this.syncMap();
       if (this.isMapVisible()) this.playOutcome(payload.summary);
       else this.pendingReview = payload.summary;
+      const changed =
+        payload.summary.newCellIds.length + payload.summary.strengthenedCellIds.length > 0;
+      if (changed) {
+        this.pulseCollect(payload.summary.newCellIds.length);
+        if (this.isMapVisible() && payload.summary.newCellIds.length > 0) {
+          this.mapController?.frameCells(payload.summary.newCellIds);
+        }
+      }
     });
     this.on('run:started', () => {
       this.tour?.close();
@@ -543,6 +551,7 @@ export class NeighbourhoodExperience {
 
     this.root.innerHTML = `
       <div class="nh-panel">
+        <div class="nh-grab" aria-hidden="true"></div>
         <div class="nh-live-region" aria-live="polite" style="position:absolute;left:-9999px"></div>
         <div class="nh-scroll">
           ${intro}
@@ -799,13 +808,26 @@ export class NeighbourhoodExperience {
     }
   }
 
+  /**
+   * A short tactile stamp when ground changes — the phone confirms the deed
+   * the eyes may miss mid-run. No-op where vibration is unsupported.
+   */
+  private pulseCollect(newCells: number): void {
+    if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+    try {
+      navigator.vibrate(newCells > 0 ? [35, 45, 25] : [20]);
+    } catch {
+      // Unsupported or permission-gated; the visual ceremony still lands.
+    }
+  }
+
   private renderGhost(): void {
     if (!this.root) return;
     const el = this.root.querySelector('.nh-ghostline');
     if (!el) return;
     const ghost = this.deps.ghostRunnerService?.getGhosts().find((g) => g.type === 'allrounder');
     el.textContent = ghost
-      ? NEIGHBOURHOOD_COPY.ghostArrived(ghost.name)
+      ? NEIGHBOURHOOD_COPY.ghostLine(ghost.name, ghost.specialAbility)
       : NEIGHBOURHOOD_COPY.ghostTeaser;
   }
 
@@ -849,6 +871,7 @@ export class NeighbourhoodExperience {
     const paused = this.phase === 'paused';
     this.root.innerHTML = `
       <div class="nh-panel nh-panel--recording">
+        <div class="nh-grab" aria-hidden="true"></div>
         <div class="nh-live-region" aria-live="polite" style="position:absolute;left:-9999px"></div>
         <div class="nh-scroll">
           <div class="nh-stats">
@@ -1064,7 +1087,15 @@ export class NeighbourhoodExperience {
         ? `${seeGroundBtn('nh-start')}${continueBtn('nh-secondary')}`
         : `${continueBtn('nh-start')}${this.canReviewOnMap() ? seeGroundBtn('nh-secondary') : ''}`;
     this.root.innerHTML = `
-      <div class="nh-panel nh-panel--summary${changedGround ? ' nh-panel--ceremony' : ''}" role="dialog" aria-label="${NEIGHBOURHOOD_COPY.summaryTitle}">
+      <div class="nh-panel nh-panel--summary${changedGround && this.canReviewOnMap() ? ' nh-panel--deed' : ''}${changedGround ? ' nh-panel--ceremony' : ''}" role="dialog" aria-label="${NEIGHBOURHOOD_COPY.summaryTitle}">
+        ${
+          changedGround && this.canReviewOnMap()
+            ? `<div class="nh-deed-seal" aria-hidden="true">${
+                summary && summary.newCellIds.length > 0 ? `+${summary.newCellIds.length}` : '✓'
+              }</div>`
+            : ''
+        }
+        <div class="nh-grab" aria-hidden="true"></div>
         <div class="nh-live-region" aria-live="polite" style="position:absolute;left:-9999px"></div>
         <div class="nh-scroll">
           <h2 class="nh-headline">${NEIGHBOURHOOD_COPY.summaryTitle}</h2>
