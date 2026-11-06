@@ -60,9 +60,8 @@ Status: **shipped to dev server (localhost:3001), ready for device retest.**
 - [x] agent-browser pass (iPhone 15 Pro profile): idle → wider realm →
       ledger → start run → two-tap finish → "Outing filed". No Orbis, no
       legacy dashboard, no new console errors.
-- [ ] `npm run sync:check` — script references missing
-      `scripts/build/sync-game-rules.mjs` (pre-existing repo issue,
-      unrelated to this pass).
+- [x] `npm run sync:check` — was broken by a deleted
+      `scripts/build/sync-game-rules.mjs`; script restored, check green.
 
 ## Retest checklist for the two runners
 - [ ] Cold-open on mobile data: time to interactive map.
@@ -121,23 +120,7 @@ visual only (no audio), bottom sheet + review mode.
       max-height sheet with a grab affordance.
 - [ ] Review-mode route replay scrubber.
 
-## Pass 3 — atmosphere layer (in progress)
-Testers still report "sterile" after identity/ceremony pass. Diagnosis: the
-map itself is inert — flat polygons, one drifting wisp, no ambient life.
-
-- [x] `neighbourhood-atmosphere.ts` — single canvas above basemap, below DOM
-      markers. Drifting chalk motes, two slow "sun" shafts, verdigris glows
-      on ledger cells (strength ∝ visits), the runner's fading amber chalk
-      trail (accurate fixes only, 90s decay), claim ripples on collect, and
-      soft halos on the runner seal + ghost wisp.
-- [x] Wired: cells on syncMap, fixes on location:changed, ripples on
-      neighbourhood:runCompleted. Reduced-motion freezes ambient motion but
-      keeps live projection. DPR capped 1.5, ~30fps throttle.
-- [x] Verified live: canvas paints, trail pixels present mid-run, deed card
-      + ripples on finish. tsc + jest 55/55 + biome clean.
-- [ ] Real-device retest — GPU cost of the overlay on low-end Android.
-
-## Pass 3 — atmosphere layer (in progress)
+## Pass 3 — atmosphere layer — SHIPPED (`a00090f`)
 Testers still report "sterile" after identity/ceremony pass. Diagnosis: the
 map itself is inert — flat polygons, one drifting wisp, no ambient life.
 
