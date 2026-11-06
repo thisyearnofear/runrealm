@@ -22,6 +22,7 @@ import type {
 import { cellToPolygon } from '@runrealm/shared-core/utils/h3-territory';
 import { SUNPRINT_ATLAS_COLORS as C } from '@runrealm/shared-core/utils/sunprint-atlas';
 import type { GeoJSONSource, Map as MaplibreMap } from 'maplibre-gl';
+import { Marker } from 'maplibre-gl';
 import { CellTransitionScheduler } from './cell-transition-scheduler';
 import {
   type CellRecord,
@@ -36,6 +37,7 @@ export const UNVISITED_LAYER = 'neighbourhood-cells-unvisited';
 export const COLLECTED_LAYER = 'neighbourhood-cells-collected';
 export const STRENGTHENED_LAYER = 'neighbourhood-cells-strengthened';
 export const EXPOSURE_LAYER = 'neighbourhood-cells-exposure';
+export const REACH_LAYER = 'neighbourhood-cells-reach';
 export const SELECT_LAYER = 'neighbourhood-cells-select';
 export const CELL_LAYERS = [
   FILL_LAYER,
@@ -43,6 +45,7 @@ export const CELL_LAYERS = [
   COLLECTED_LAYER,
   STRENGTHENED_LAYER,
   EXPOSURE_LAYER,
+  REACH_LAYER,
   SELECT_LAYER,
 ];
 
@@ -79,6 +82,10 @@ export class NeighbourhoodMapRenderer {
   private onStyleData: (() => void) | null = null;
   private disposed = false;
   private arrivalPlayed = false;
+  private reachIds = new Set<string>();
+  private ghostMarker: Marker | null = null;
+  private ghostAnchorId: string | null = null;
+  private pendingGhost: { id: string | null; name?: string } | null = null;
 
   constructor(private readonly deps: NeighbourhoodMapRendererDeps) {
     this.scheduler = new CellTransitionScheduler(deps.map, CELLS_SOURCE);
@@ -100,6 +107,11 @@ export class NeighbourhoodMapRenderer {
       this.onLoad = null;
       this.mapReady = true;
       this.restoreSettled();
+      if (this.pendingGhost) {
+        const pending = this.pendingGhost;
+        this.pendingGhost = null;
+        this.syncGhost(pending.id, pending.name);
+      }
     };
     this.onStyleData = () => this.restoreSettled();
     map.on('styledata', this.onStyleData);
@@ -182,6 +194,75 @@ export class NeighbourhoodMapRenderer {
         },
       });
     }
+  }
+
+  /**
+   * The aim affordance: unvisited cells the live run projection says are
+   * collectable get a soft amber outline — the spatial answer to "N new in
+   * reach", so the text line is not the only place the goal lives. Picture
+   * only; reach is recomputed from projections and never touches the ledger.
+   */
+  markReach(cellIds: string[]): void {
+    if (this.disposed || !this.mapReady) return;
+    const next = new Set(cellIds);
+    for (const id of this.reachIds) {
+      if (!next.has(id)) this.scheduler.seed(id, { reach: 0 });
+    }
+    for (const id of next) {
+      if (this.recordOf(id)?.status === 'unvisited') {
+        this.scheduler.seed(id, { reach: 1 });
+      }
+    }
+    this.reachIds = next;
+  }
+
+  /**
+   * Your ghost, present on the map. It stands over the deepest ground the
+   * ledger knows — the cell with the most visits — so the thing "defending
+   * the neighbourhood" is a figure in the world, not a line in the panel.
+   * Only the player's own ghost is ever drawn; a rival's exact position is
+   * private state and stays inside the fog. Purely cosmetic: the anchor
+   * comes from the same ledger the cells do.
+   */
+  syncGhost(anchorCellId: string | null, name?: string): void {
+    const map = this.deps.map;
+    if (!map || this.disposed) return;
+    if (!this.mapReady) {
+      // Style still loading: remember the intent, apply it from onLoad —
+      // an early syncMap must not silently drop the figure.
+      this.pendingGhost = { id: anchorCellId, name };
+      return;
+    }
+    if (!anchorCellId) {
+      this.ghostMarker?.remove();
+      this.ghostMarker = null;
+      this.ghostAnchorId = null;
+      return;
+    }
+    if (anchorCellId === this.ghostAnchorId) return;
+    this.ghostAnchorId = anchorCellId;
+    if (!this.ghostMarker) {
+      const el = document.createElement('div');
+      el.className = 'nh-ghost-marker';
+      el.setAttribute('role', 'img');
+      el.setAttribute('aria-label', 'Your ghost');
+      el.innerHTML =
+        '<svg class="nh-ghost-seal" width="30" height="34" viewBox="0 0 30 34" aria-hidden="true">' +
+        `<path d="M15 3 C8 3 4 8 4 15 L4 29 L9 25 L13 29 L17 25 L21 29 L26 25 L26 15 C26 8 22 3 15 3 Z" fill="rgba(13,43,62,0.72)" stroke="${C.chalk}" stroke-width="1.5"/>` +
+        `<circle cx="11.5" cy="14" r="1.4" fill="${C.amber}"/>` +
+        `<circle cx="18.5" cy="14" r="1.4" fill="${C.amber}"/>` +
+        '</svg>';
+      this.ghostMarker = new Marker({ element: el, anchor: 'center' });
+    }
+    const ring = cellToPolygon(anchorCellId).coordinates[0];
+    const lng = ring.reduce((sum, p) => sum + p[0], 0) / ring.length;
+    const lat = ring.reduce((sum, p) => sum + p[1], 0) / ring.length;
+    this.ghostMarker.setLngLat([lng, lat]);
+    this.ghostMarker.addTo(map);
+    // Set after addTo: MapLibre stamps its own "Map marker" label on attach.
+    this.ghostMarker
+      .getElement()
+      .setAttribute('aria-label', name ? `Your ghost — ${name}` : 'Your ghost');
   }
 
   /**
@@ -469,6 +550,21 @@ export class NeighbourhoodMapRenderer {
         });
         continue;
       }
+      if (id === REACH_LAYER) {
+        map.addLayer({
+          id: REACH_LAYER,
+          type: 'line',
+          source: CELLS_SOURCE,
+          filter: ['==', ['get', 'status'], 'unvisited'],
+          paint: {
+            'line-color': C.amber,
+            'line-width': 1.5,
+            'line-dasharray': [2, 3],
+            'line-opacity': ['*', 0.65, ['coalesce', ['feature-state', 'reach'], 0]],
+          },
+        });
+        continue;
+      }
       map.addLayer({
         id: SELECT_LAYER,
         type: 'line',
@@ -485,6 +581,8 @@ export class NeighbourhoodMapRenderer {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.ghostMarker?.remove();
+    this.ghostMarker = null;
     this.scheduler.dispose();
     for (const fn of this.detachFns) fn();
     this.detachFns.length = 0;

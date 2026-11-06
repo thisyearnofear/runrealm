@@ -721,6 +721,12 @@ body.orbis-live-route #maplibre-container {
   color: var(--rr-text-2);
   font-size: var(--rr-text-xs);
   font-style: italic;
+  /* Clamp rather than run under the telemetry strip — a caption cut
+     mid-glyph reads as a bug, an ellipsis reads as a caption. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   animation: orbis-act-fade 0.7s 0.24s ease both;
 }
 

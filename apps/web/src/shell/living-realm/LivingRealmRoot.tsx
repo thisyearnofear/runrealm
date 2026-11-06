@@ -719,7 +719,7 @@ function LivingRealmExperience({
       <div ref={stageRef} className="living-realm-stage" aria-hidden={view !== 'realm'}>
         {sessionActive && <ViskoOrbisDynamicMainVideoView className="living-realm-video" muted />}
         <div className="living-realm-shade" />
-        <p className="living-realm-caption">{COPY.illustrative}</p>
+        {sessionActive && <p className="living-realm-caption">{COPY.illustrative}</p>}
       </div>
 
       {view === 'realm' && !sessionActive && !connecting && (

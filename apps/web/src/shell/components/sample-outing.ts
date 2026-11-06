@@ -47,8 +47,17 @@ export class SampleOuting {
   }
 
   start(ring: string[]): void {
+    this.startPath(samplePath(ring), ring);
+  }
+
+  /**
+   * Walk an arbitrary path (e.g. a sketched route). Only cells inside the
+   * ring light up — ground outside the neighbourhood is honestly out of
+   * reach in the sample too.
+   */
+  startPath(path: PreviewPoint[], ring: string[]): void {
     this.stop();
-    this.path = samplePath(ring);
+    this.path = path;
     if (!this.path.length) return;
     this.visibleCells = routeToCells(this.path)
       .map((cell) => cell.h3Index)
@@ -100,6 +109,7 @@ export class SampleOuting {
     const traveledCells = new Set(
       routeToCells([...this.path.slice(0, at + 1), runner]).map((cell) => cell.h3Index)
     );
+    const finished = this.progress === 1;
     const data: GeoJSON.FeatureCollection = {
       type: 'FeatureCollection',
       features: [
@@ -110,7 +120,13 @@ export class SampleOuting {
               type: 'Feature',
               properties: {
                 kind: 'cell',
-                developed: this.progress === 1 || index < traveledCells.size - 1,
+                // 'ghost' — a finished sample fades to a chalk print so it
+                // can never be mistaken for owned ground on an uncharted map.
+                state: finished
+                  ? 'ghost'
+                  : index < traveledCells.size - 1
+                    ? 'developed'
+                    : 'exposed',
               },
               geometry: cellToPolygon(id),
             })
@@ -143,8 +159,16 @@ export class SampleOuting {
           source: SOURCE,
           filter: ['==', ['get', 'kind'], 'cell'],
           paint: {
-            'fill-color': ['case', ['get', 'developed'], '#4fae8b', '#d79639'],
-            'fill-opacity': 0.35,
+            'fill-color': [
+              'match',
+              ['get', 'state'],
+              'ghost',
+              '#f8f4e8',
+              'developed',
+              '#4fae8b',
+              '#d79639',
+            ],
+            'fill-opacity': ['match', ['get', 'state'], 'ghost', 0.12, 0.35],
           },
         });
       if (!map.getLayer(LINE))

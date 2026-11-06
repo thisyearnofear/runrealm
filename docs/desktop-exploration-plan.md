@@ -105,7 +105,7 @@ Skip is available while it plays. Once the sample has played, the panel button r
 4. **Goals.** Points at the always-visible facts block and explains Explore, Strengthen, Challenge, and their unlocks.
 5. **Plan.** Points to the route-sketch control without starting map click capture; the visitor can try it after closing the tour.
 6. **The Realm.** Highlights the Realm tab and explains the free storyboard; the visitor opens the tab after the tour.
-7. **Beyond.** Highlights Advanced tools and reads the same two lines the advanced caption shows — what is beyond the neighbourhood, and that registered ground needs a wallet while this atlas stays on the device.
+7. **Beyond.** Highlights **The wider realm** menu and reads the same lines the wider-realm caption shows — what is beyond the neighbourhood, and that registered ground needs a wallet while this atlas stays on the device.
 8. **Take it outside.** Explains the phone handoff on desktop or highlights Start run on a narrow/touch device.
 
 **Behaviour:**

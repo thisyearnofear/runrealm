@@ -1,15 +1,18 @@
-body.neighbourhood-mode:not(.neighbourhood-advanced) .widget,
-body.neighbourhood-mode:not(.neighbourhood-advanced) .widget-zone,
-body.neighbourhood-mode:not(.neighbourhood-advanced) #user-dashboard-root,
-body.neighbourhood-mode:not(.neighbourhood-advanced) #next-action-root,
-body.neighbourhood-mode:not(.neighbourhood-advanced) .gamefi-ui,
-body.neighbourhood-mode:not(.neighbourhood-advanced) .demo-ghost-chip,
-body.neighbourhood-mode:not(.neighbourhood-advanced) .ghost-management,
-body.neighbourhood-mode:not(.neighbourhood-advanced) .onboarding-overlay,
-body.neighbourhood-mode:not(.neighbourhood-advanced) .onboarding-tooltip,
-body.neighbourhood-mode:not(.neighbourhood-advanced) #widget-run-tracker,
-body.neighbourhood-mode:not(.neighbourhood-advanced) #enhanced-run-controls,
-body.neighbourhood-mode:not(.neighbourhood-advanced) .run-controls {
+/* In neighbourhood mode the floating legacy widget chrome never renders —
+   the "wider realm" menu opens the mounted screens (dashboard, account,
+   leaderboard) directly, so a second visual era can never leak onto the
+   map. The screens keep managing their own .hidden state. */
+body.neighbourhood-mode .widget,
+body.neighbourhood-mode .widget-zone,
+body.neighbourhood-mode #next-action-root,
+body.neighbourhood-mode .gamefi-ui,
+body.neighbourhood-mode .demo-ghost-chip,
+body.neighbourhood-mode .ghost-management,
+body.neighbourhood-mode .onboarding-overlay,
+body.neighbourhood-mode .onboarding-tooltip,
+body.neighbourhood-mode #widget-run-tracker,
+body.neighbourhood-mode #enhanced-run-controls,
+body.neighbourhood-mode .run-controls {
   display: none !important;
 }
 
@@ -25,6 +28,9 @@ body.neighbourhood-mode #run-theater-act {
 body.neighbourhood-mode .theater-top {
   background: none;
   pointer-events: none;
+  /* The map-controls row (+ / − / Follow / Area) already owns the top-right;
+     the pocket cue sits beneath it instead of overlapping it. */
+  top: 76px;
 }
 
 body.neighbourhood-mode .theater-pocket-btn {
@@ -99,11 +105,109 @@ body.neighbourhood-mode .theater-pocket-btn {
   line-height: 1.45;
 }
 
+.nh-advanced-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.nh-advanced-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border: 1px solid var(--rr-border);
+  border-radius: 9px;
+  background: var(--rr-sunprint-chalk);
+  color: var(--rr-sunprint-ink);
+  font-family: var(--rr-font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nh-advanced-item:hover {
+  border-color: var(--rr-sunprint-amber);
+}
+
+.nh-advanced-item-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.nh-advanced-item-hint {
+  font-size: 0.75rem;
+  color: var(--rr-text-4);
+}
+
 .nh-scroll {
   overflow-y: auto;
   padding: 18px 18px 0;
   flex: 1;
   min-height: 0;
+}
+
+/* Development ceremony — the receipt develops like a print: an
+   exposure-amber wash sweeps to verdigris, then the facts settle in.
+   Only when ground changed; instant under reduced motion. */
+.nh-panel--ceremony {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nh-panel--ceremony::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: linear-gradient(
+      105deg,
+      transparent 32%,
+      rgba(242, 165, 65, 0.5) 47%,
+      rgba(79, 174, 139, 0.45) 60%,
+      transparent 78%
+    );
+    transform: translateX(-100%);
+    animation: nh-develop-wash 2.2s ease-out 0.1s forwards;
+    pointer-events: none;
+  }
+
+  .nh-panel--ceremony .nh-scroll > * {
+    animation: nh-develop-in 0.45s ease both;
+  }
+
+  .nh-panel--ceremony .nh-scroll > *:nth-child(2) {
+    animation-delay: 0.25s;
+  }
+  .nh-panel--ceremony .nh-scroll > *:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  .nh-panel--ceremony .nh-scroll > *:nth-child(4) {
+    animation-delay: 0.55s;
+  }
+  .nh-panel--ceremony .nh-scroll > *:nth-child(5) {
+    animation-delay: 0.7s;
+  }
+  .nh-panel--ceremony .nh-scroll > *:nth-child(n + 6) {
+    animation-delay: 0.8s;
+  }
+}
+
+@keyframes nh-develop-wash {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes nh-develop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .nh-dock {
@@ -856,6 +960,66 @@ body.pocket-mode .nh-map-toolbar {
 
 .nh-marker-label:empty {
   display: none;
+}
+
+/* The folded secondary surface — pick-spot, sketch and handoff live one
+   level down so the first visit reads: headline, two verbs, one summary. */
+.nh-more {
+  margin-top: 10px;
+}
+
+.nh-more > summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--rr-text-4);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 4px 0;
+}
+
+.nh-more > summary::before {
+  content: "▸ ";
+}
+
+.nh-more[open] > summary::before {
+  content: "▾ ";
+}
+
+.nh-more > summary:hover {
+  color: var(--rr-sunprint-ink);
+}
+
+.nh-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Your ghost — a presence on the map, standing over your deepest ground.
+   Chalk wisp with amber eyes on blueprint; it drifts slowly, like a figure
+   on patrol, rather than blinking like a badge. */
+.nh-ghost-marker {
+  width: 30px;
+  height: 34px;
+  filter: drop-shadow(0 2px 6px rgba(4, 14, 22, 0.55));
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nh-ghost-marker .nh-ghost-seal {
+    animation: nh-ghost-drift 5.5s ease-in-out infinite;
+  }
+}
+
+@keyframes nh-ghost-drift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+    opacity: 0.92;
+  }
+  50% {
+    transform: translateY(-4px) rotate(2deg);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 768px) {

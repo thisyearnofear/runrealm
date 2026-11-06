@@ -14,6 +14,9 @@ export interface CellTransientValues {
   exposure: number;
   /** 1 while the cell is being inspected. */
   select: number;
+  /** 1 while the current run projects this cell as collectable — the
+   * "in reach" affordance drawn as a soft amber outline. */
+  reach: number;
 }
 
 export type CellStatus = 'unvisited' | 'collected' | 'strengthened';
@@ -29,6 +32,7 @@ export const SETTLED_CELL_VALUES: CellTransientValues = {
   press: 0,
   exposure: 0,
   select: 0,
+  reach: 0,
 };
 
 export function statusForVisits(visits: number): CellStatus {

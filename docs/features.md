@@ -192,5 +192,5 @@ The **Realm** tab links to the free `/orbis-live` storyboard before offering
 optional live generation, which uses Reactor credits. The neighbourhood tour is
 opt-in, has eight steps, can be skipped or closed with Escape, and never starts
 a real run. It explains the preview, sample route, goals, planning, Realm,
-advanced tools, and phone handoff. Preview and sample activity never award
+the wider-realm menu, and phone handoff. Preview and sample activity never award
 progress or register territory ownership.

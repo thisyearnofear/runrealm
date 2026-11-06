@@ -1,0 +1,293 @@
+/* Realm screens reskin — Dashboard, Account and Pace board on the Sunprint
+   contract. Scoped to neighbourhood mode, where the legacy widget chrome is
+   retired and these screens are reached from "The wider realm" menu. The
+   markup stays untouched; the treatment is what moves. */
+
+body.neighbourhood-mode .user-dashboard,
+body.neighbourhood-mode .account-screen,
+body.neighbourhood-mode .leaderboard-screen {
+  background: rgba(13, 43, 62, 0.96); /* blueprint, dimmed */
+  color: var(--rr-sunprint-ink);
+  font-family: var(--rr-font-body);
+}
+
+/* Header: bone strip, display type, quiet close control. */
+body.neighbourhood-mode .user-dashboard .dashboard-header,
+body.neighbourhood-mode .account-screen .dashboard-header,
+body.neighbourhood-mode .leaderboard-header {
+  background: var(--rr-sunprint-bone);
+  border-bottom: 1px solid var(--rr-border);
+  color: var(--rr-sunprint-ink);
+}
+
+body.neighbourhood-mode .user-dashboard .dashboard-header h2,
+body.neighbourhood-mode .account-screen .dashboard-header h2,
+body.neighbourhood-mode .leaderboard-header h2 {
+  font-family: var(--rr-font-display);
+  color: var(--rr-sunprint-ink);
+}
+
+body.neighbourhood-mode .dashboard-close-btn,
+body.neighbourhood-mode .leaderboard-close {
+  background: transparent;
+  border: 1px solid var(--rr-border);
+  color: var(--rr-sunprint-ink);
+  border-radius: 8px;
+}
+
+body.neighbourhood-mode .dashboard-close-btn:hover,
+body.neighbourhood-mode .leaderboard-close:hover {
+  border-color: var(--rr-sunprint-amber);
+}
+
+/* Tabs: chalk text, amber underline for the active act. */
+body.neighbourhood-mode .dashboard-tab {
+  color: var(--rr-sunprint-muted);
+  border-bottom: 2px solid transparent;
+}
+
+body.neighbourhood-mode .dashboard-tab.active {
+  color: var(--rr-sunprint-bone);
+  border-bottom-color: var(--rr-sunprint-amber);
+}
+
+body.neighbourhood-mode .dashboard-tab:hover {
+  color: var(--rr-sunprint-chalk);
+}
+
+/* Cards and list rows: bone paper with blueprint rules. */
+body.neighbourhood-mode .account-card,
+body.neighbourhood-mode .leaderboard-card,
+body.neighbourhood-mode .dashboard-section,
+body.neighbourhood-mode .challenge-item,
+body.neighbourhood-mode .session-key,
+body.neighbourhood-mode .deed-tile,
+body.neighbourhood-mode .ghost-card,
+body.neighbourhood-mode .territory-card {
+  background: var(--rr-sunprint-bone);
+  border: 1px solid var(--rr-border);
+  color: var(--rr-sunprint-ink);
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgba(4, 14, 22, 0.35);
+}
+
+body.neighbourhood-mode .account-card h3,
+body.neighbourhood-mode .dashboard-section h3,
+body.neighbourhood-mode .challenge-title,
+body.neighbourhood-mode .deed-tile-name {
+  font-family: var(--rr-font-display);
+  color: var(--rr-sunprint-ink);
+}
+
+body.neighbourhood-mode .account-copy,
+body.neighbourhood-mode .info-text,
+body.neighbourhood-mode .challenge-meta,
+body.neighbourhood-mode .deed-tile-info,
+body.neighbourhood-mode .session-key-meta {
+  color: #285a72; /* blueprint mid-tone on bone */
+}
+
+/* Table rows on the pace board. */
+body.neighbourhood-mode .leaderboard-table {
+  color: var(--rr-sunprint-ink);
+}
+
+body.neighbourhood-mode .leaderboard-table .row,
+body.neighbourhood-mode .leaderboard-table tr {
+  border-bottom: 1px solid var(--rr-border);
+}
+
+body.neighbourhood-mode .leaderboard-table .is-you {
+  background: rgba(242, 165, 65, 0.16); /* exposure-amber wash */
+}
+
+body.neighbourhood-mode .leaderboard-empty,
+body.neighbourhood-mode .leaderboard-footer {
+  color: var(--rr-sunprint-muted);
+}
+
+/* Actions: amber is the verb; secondary stays quiet. Neon gradients
+   and green CTAs retire here. */
+body.neighbourhood-mode .action-btn,
+body.neighbourhood-mode .challenge-claim-btn {
+  background: var(--rr-sunprint-amber);
+  color: var(--rr-sunprint-ink);
+  border: none;
+  border-radius: 8px;
+  font-family: var(--rr-font-body);
+  font-weight: 600;
+}
+
+body.neighbourhood-mode .action-btn:hover,
+body.neighbourhood-mode .challenge-claim-btn:hover {
+  background: var(--rr-sunprint-amber-hover);
+}
+
+body.neighbourhood-mode .action-btn.secondary {
+  background: transparent;
+  border: 1px solid var(--rr-border);
+  color: var(--rr-sunprint-ink);
+}
+
+body.neighbourhood-mode .action-btn.secondary:hover {
+  border-color: var(--rr-sunprint-amber);
+}
+
+body.neighbourhood-mode .action-btn:disabled {
+  opacity: 0.45;
+}
+
+/* Progress and meter chrome: blueprint track, verdigris fill. */
+body.neighbourhood-mode .challenge-progress-bar {
+  background: var(--rr-sunprint-blueprint);
+  border-radius: 999px;
+}
+
+body.neighbourhood-mode .challenge-progress-bar > * {
+  background: var(--rr-sunprint-verdigris);
+}
+
+/* Status tones stay semantic — but on-palette. */
+body.neighbourhood-mode .proof-attested {
+  color: var(--rr-sunprint-verdigris);
+}
+
+body.neighbourhood-mode .proof-local {
+  color: var(--rr-sunprint-cyan);
+}
+
+/* Small tags ("advanced", "auto") — ink on bone, never neon. */
+body.neighbourhood-mode .advanced-tag {
+  background: rgba(13, 43, 62, 0.1);
+  color: #285a72;
+  border-radius: 4px;
+}
+
+/* ── Inner content pass ──────────────────────────────────────────────── */
+
+/* Scroll regions sit on the blueprint depth, not on card bone. */
+body.neighbourhood-mode .dashboard-content {
+  background: transparent;
+}
+
+/* Lists and sub-panels inside the bone cards. */
+body.neighbourhood-mode .challenges-list,
+body.neighbourhood-mode .action-group {
+  background: transparent;
+}
+
+/* Inputs and selects: bone surface, blueprint rule, amber focus. */
+body.neighbourhood-mode .challenge-input input,
+body.neighbourhood-mode .challenge-input select,
+body.neighbourhood-mode .dashboard-section input,
+body.neighbourhood-mode .dashboard-section select,
+body.neighbourhood-mode .account-screen input,
+body.neighbourhood-mode .account-screen select {
+  background: var(--rr-sunprint-chalk);
+  border: 1px solid var(--rr-border);
+  color: var(--rr-sunprint-ink);
+  border-radius: 8px;
+  font-family: var(--rr-font-body);
+}
+
+body.neighbourhood-mode .challenge-input input:focus,
+body.neighbourhood-mode .dashboard-section input:focus,
+body.neighbourhood-mode .account-screen input:focus {
+  outline: 2px solid var(--rr-sunprint-amber);
+  outline-offset: 1px;
+}
+
+/* Wallet state accents — disconnected reads blueprint-quiet, not red-alert;
+   the coral signal is reserved for actual loss. */
+body.neighbourhood-mode .wallet-section.disconnected {
+  border-style: dashed;
+}
+
+body.neighbourhood-mode .wallet-section.connected {
+  border-color: var(--rr-sunprint-verdigris);
+}
+
+/* Deed tiles: the collectible treatment — chalk face, cadastral label. */
+body.neighbourhood-mode .deed-tile-top {
+  background: var(--rr-sunprint-blueprint-raised);
+}
+
+body.neighbourhood-mode .deed-tile-cadastral {
+  font-family: var(--rr-font-mono);
+  color: var(--rr-sunprint-muted);
+}
+
+/* Muted/microcopy lines across all three screens and the GPS prompt. */
+body.neighbourhood-mode .alternatives-label,
+body.neighbourhood-mode .dashboard-section p,
+body.neighbourhood-mode .account-screen .muted,
+.gps-modal-benefits .benefit-text,
+body.neighbourhood-mode .benefit-text {
+  color: #285a72;
+}
+
+/* ── GPS prompt ──────────────────────────────────────────────────────────
+   The "Enable GPS" prompt was a white card with a green CTA — the same era
+   clash as the blocked-permissions modal. Same fix: bone card, ink type,
+   amber verb. */
+.gps-permission-overlay {
+  background: rgba(13, 43, 62, 0.8) !important;
+}
+
+.gps-permission-overlay .gps-modal-content,
+.gps-modal-content {
+  background: var(--rr-sunprint-bone) !important;
+  border: 1px solid var(--rr-border) !important;
+  color: var(--rr-sunprint-ink);
+}
+
+.gps-modal-title {
+  font-family: var(--rr-font-display);
+  color: var(--rr-sunprint-ink) !important;
+}
+
+.gps-modal-description,
+.gps-modal-note,
+.gps-modal-body p {
+  color: #285a72 !important;
+}
+
+.gps-btn-enable {
+  background: var(--rr-sunprint-amber) !important;
+  color: var(--rr-sunprint-ink) !important;
+  border: none;
+}
+
+.gps-btn-enable:hover {
+  background: var(--rr-sunprint-amber-hover) !important;
+}
+
+.gps-btn-later {
+  background: transparent !important;
+  border: 1px solid var(--rr-border) !important;
+  color: var(--rr-sunprint-ink) !important;
+}
+
+/* Stat numerals: the ledger's accent is verdigris, not GameFi mint. */
+body.neighbourhood-mode .stat-value,
+body.neighbourhood-mode .stat-number,
+body.neighbourhood-mode .stats-value,
+body.neighbourhood-mode .overview-stat .value,
+body.neighbourhood-mode .dashboard-section .stat-card .value {
+  color: var(--rr-sunprint-verdigris) !important;
+}
+
+body.neighbourhood-mode .stat-card,
+body.neighbourhood-mode .overview-stat {
+  background: rgba(13, 43, 62, 0.05) !important;
+  border: 1px solid var(--rr-border) !important;
+}
+
+body.neighbourhood-mode .stat-label,
+body.neighbourhood-mode .overview-stat .label {
+  color: #285a72 !important;
+  font-family: var(--rr-font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}

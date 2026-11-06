@@ -174,6 +174,56 @@ body.living-realm-view .nh-marker {
   padding: 24px;
   text-align: center;
   pointer-events: auto;
+  overflow: hidden;
+}
+
+/* The illustrative realm is an atmosphere, not a disclaimer box: blueprint
+   depth with a slow chalk-light exposure drifting across it — the same
+   grammar the generated video speaks, at zero cost. */
+.living-realm-poster::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 30% 20%, rgba(99, 179, 200, 0.16), transparent 55%),
+    radial-gradient(100% 80% at 75% 85%, rgba(79, 174, 139, 0.12), transparent 60%),
+    var(--rr-sunprint-blueprint);
+  pointer-events: none;
+}
+
+.living-realm-poster::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    105deg,
+    transparent 42%,
+    rgba(248, 244, 232, 0.09) 50%,
+    transparent 58%
+  );
+  animation: realm-exposure-drift 9s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.living-realm-poster > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes realm-exposure-drift {
+  from {
+    transform: translateX(-18%) rotate(8deg);
+  }
+  to {
+    transform: translateX(18%) rotate(8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .living-realm-poster::after {
+    animation: none;
+    transform: none;
+  }
 }
 
 .living-realm[data-view="map"] .living-realm-poster {

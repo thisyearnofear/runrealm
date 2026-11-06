@@ -97,6 +97,14 @@ authoritative geometry        generated atmosphere
 - Web rendering direction is **MapLibre + deck.gl**. MapLibre owns camera,
   controls, basemap, and interaction. deck.gl owns high-volume H3, route,
   ghost, heatmap, and future 3D game layers.
+- The basemap is the **Realm Atlas** cyanotype style
+  (`apps/web/public/styles/realm-atlas.json`, generated from the OpenMapTiles
+  liberty schema by `scripts/generation/generate-realm-atlas-style.mjs`):
+  blueprint ground, chalk road hierarchy, bone labels, deep water. Tiles,
+  glyphs and sprites still come from OpenFreeMap; only the paint is ours.
+  Amber and verdigris are deliberately absent from the basemap so they stay
+  meaningful as gameplay colours. The stock liberty style remains available
+  as `bright` in the style switcher for comparison and fallback.
 - Native mobile direction is **MapLibre React Native** after the required
   Expo/React Native upgrade. Consistency comes from shared world state, visual
   semantics, and behavior—not from forcing identical renderers.
@@ -130,7 +138,8 @@ mobile, tests, and future API adapters use the same language.
 3. Add a demo-run adapter that emits canonical `location:changed` events.
 4. Introduce deck.gl in overlaid mode for H3 territories after upgrading
    MapLibre past the documented `MapLibreOverlay` support floor.
-5. Replace the basemap with a custom cyanotype Realm Atlas style.
+5. Replace the basemap with a custom cyanotype Realm Atlas style. ✅ Shipped —
+   see above.
 6. Build the challenge slice: expose → trace → develop → ghost overexposure →
    fixed territory.
 7. Converge mobile on MapLibre React Native after the platform upgrade.
@@ -140,6 +149,77 @@ mobile, tests, and future API adapters use the same language.
 A change is on-direction only if it is recognizable with color and motion
 removed. If a screen still reads as generic neon-dark dashboard UI, it is not
 Sunprint Atlas yet.
+
+## Alignment pass (Nov 2026)
+
+Three consistency rules decided while bringing the shipped UI onto this
+contract:
+
+- **One visual era at a time.** The legacy floating widget layer (emoji chips,
+  neon-on-black HUD panels) no longer renders in neighbourhood mode — not even
+  behind a toggle. "The wider realm" menu in the neighbourhood panel routes to
+  the mounted Dashboard, Pace board and Account screens instead, so every
+  destination stays reachable and a second design language never leaks onto
+  the map. The widget services still initialize; only their chrome is retired.
+- **Samples can never look like ownership.** A finished sample outing fades
+  its cells to a low-opacity chalk print (`state: 'ghost'` in
+  `sample-outing.ts`), so painted sample ground can never be mistaken for
+  collected ground on an uncharted map. One honest line ("Sample — not your
+  atlas") replaces stacked disclaimers.
+- **The preview is playable.** "Walk this route" plays the sample runner
+  along a player-sketched path (`SampleOuting.startPath`) — the develop
+  mechanic is interactive at a desk, without GPS. Only cells inside the ring
+  light, matching real credit rules.
+
+Honesty rules confirmed while here: the outing summary shows the ownership
+caveat exactly once (`.nh-ownership`, pinned by test), and each surface
+carries at most one honesty line.
+
+Follow-through shipped in the same pass:
+
+- **Screens reskinned, not rewritten.** Dashboard, Account and Pace board
+  keep their markup; `styles/realm-screens.css` maps their chrome onto
+  Sunprint tokens under `body.neighbourhood-mode` (bone cards, blueprint
+  depth, amber verbs, no neon). Screens reached in legacy mode keep the
+  legacy era — one era per shell, never mixed.
+- **The finish is a small ceremony.** An outing that changed ground renders
+  `nh-panel--ceremony`: an exposure-amber wash sweeps to verdigris and the
+  facts settle in staggered. Uncredited outings stay calm; reduced motion
+  skips to the settled state.
+- **The Realm tab is an atmosphere, not a disclaimer panel.** The local
+  preview carries blueprint depth with a drifting chalk-light exposure
+  (CSS, zero cost, reduced-motion aware) — the same grammar the generated
+  video speaks. The "illustrative · map is authoritative" caption shows
+  only while a live session runs; the poster's own label is the honesty
+  line otherwise.
+- **Goals are spatial, not textual.** Cells the live projection calls
+  collectable draw a persistent amber aim outline (`markReach` /
+  `neighbourhood-cells-reach` layer) — "N new in reach" now exists on the
+  ground, not only in the status line. Reach is a picture value (feature
+  state) that never touches the ledger; it clears on entry, finish, or
+  cancel. It reads distinct from the entry flash: thin persistent dash
+  vs the transient exposure rise.
+- **Reskin coverage extended inward.** `realm-screens.css` now also treats
+  screen internals (inputs, lists, wallet states, deed tiles, pace-board
+  rows) and the "Enable GPS" prompt — the last white-and-green card.
+- **The ghost is a presence, not a mention.** Once your first outing
+  introduces a ghost, a chalk wisp stands over your deepest ground — the
+  ledger's most-visited cell — and drifts on patrol (`syncGhost` /
+  `.nh-ghost-marker`). Only the player's own ghost is drawn; a rival's
+  exact position is private state and stays inside the fog. The anchor
+  moves as the ledger deepens, so the figure defends what is actually
+  deepest, not wherever it first appeared.
+- **The first visit reads in one breath.** Headline, then two verbs —
+  "Show my streets" and the sample ("see it work") — then a folded "More
+  ways to explore" holding pick-spot, sketch and phone handoff. Facts and
+  legend never sit inside the disclosure (pinned by test); the open state
+  survives re-renders and auto-opens while sketching or handing off.
+- **Two ghost registries, deliberately.** The neighbourhood ghost (unlocked
+  by your first outing, drawn on the map) is an atmosphere figure for this
+  atlas; the dashboard's Ghost Runners are deployable NFT defenders and sit
+  in the wider-realm registry. Both are honest, but the copy should never
+  blur them — "No ghost runners yet" on the Ghosts tab refers to the
+  deployable kind.
 
 ## Runner orientation and map visibility
 

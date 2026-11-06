@@ -477,14 +477,15 @@ export class LocationService extends BaseService {
           }
 
           .location-permission-blocked-modal {
-            background: white;
+            background: #f3ead8; /* --rr-sunprint-bone */
+            border: 1px solid #3d6b7e; /* --rr-border */
             border-radius: 16px;
             padding: 28px;
             max-width: 500px;
             width: 90%;
             max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 8px 32px rgba(13, 43, 62, 0.45); /* blueprint */
             animation: slideUp 0.3s ease;
           }
 
@@ -494,7 +495,7 @@ export class LocationService extends BaseService {
             gap: 12px;
             margin-bottom: 20px;
             padding-bottom: 16px;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 1px solid #3d6b7e;
           }
 
           .blocked-icon {
@@ -504,7 +505,7 @@ export class LocationService extends BaseService {
           .blocked-header h3 {
             margin: 0;
             font-size: 22px;
-            color: #1a1a1a;
+            color: #102633; /* --rr-sunprint-ink */
           }
 
           .blocked-content {
@@ -513,13 +514,13 @@ export class LocationService extends BaseService {
 
           .blocked-content > p {
             margin: 0 0 16px 0;
-            color: #666;
+            color: #285a72; /* blueprint mid-tone on bone */
             font-size: 15px;
             line-height: 1.5;
           }
 
           .instructions {
-            background: #f8f9fa;
+            background: rgba(13, 43, 62, 0.06);
             border-radius: 8px;
             padding: 16px;
             margin: 16px 0;
@@ -527,18 +528,18 @@ export class LocationService extends BaseService {
 
           .instruction-step {
             margin: 12px 0;
-            color: #333;
+            color: #285a72;
             font-size: 14px;
             line-height: 1.6;
           }
 
           .instruction-step strong {
-            color: #1a1a1a;
+            color: #102633;
           }
 
           .browser-hints {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
+            background: rgba(242, 165, 65, 0.14); /* exposure-amber tint */
+            border-left: 4px solid #f2a541; /* --rr-sunprint-amber */
             border-radius: 4px;
             padding: 12px;
             margin-top: 16px;
@@ -547,7 +548,7 @@ export class LocationService extends BaseService {
           .browser-hints p {
             margin: 8px 0;
             font-size: 13px;
-            color: #856404;
+            color: #6b4a12; /* deepened amber — readable on bone */
             line-height: 1.5;
           }
 
@@ -577,18 +578,19 @@ export class LocationService extends BaseService {
           }
 
           .blocked-btn.primary {
-            background: linear-gradient(135deg, #00ff88, #00cc6a);
-            color: #1a1a1a;
+            background: #f2a541; /* --rr-sunprint-amber */
+            color: #102633; /* --rr-sunprint-ink */
           }
 
           .blocked-btn.primary:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
+            background: #ffbd63; /* --rr-sunprint-amber-hover */
+            box-shadow: 0 4px 12px rgba(242, 165, 65, 0.35);
           }
 
           .blocked-btn.secondary {
-            background: rgba(0, 0, 0, 0.05);
-            color: #666;
+            background: rgba(13, 43, 62, 0.08);
+            color: #102633;
           }
 
           .blocked-btn.secondary:hover {
