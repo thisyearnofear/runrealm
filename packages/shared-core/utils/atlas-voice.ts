@@ -1209,6 +1209,7 @@ export const NEIGHBOURHOOD_COPY = {
   paused: 'Paused',
   resume: 'Resume',
   finish: 'Finish',
+  finishConfirm: 'Tap again to finish',
   continue: 'Continue',
   myAtlas: 'My atlas',
   account: 'Account',
@@ -1223,7 +1224,7 @@ export const NEIGHBOURHOOD_COPY = {
     'Registered ground uses a wallet. This atlas stays on this device — it does not travel with a wallet or a phone link.',
   realmMenu: {
     dashboard: 'Your ledger',
-    dashboardHint: 'Claims, ghosts, challenges and rewards',
+    dashboardHint: 'Blocks, outings, distance and ghosts',
     leaderboard: 'Pace board',
     leaderboardHint: 'Bands ranked from signed outings',
     account: 'Account',

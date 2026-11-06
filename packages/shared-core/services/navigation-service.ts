@@ -373,6 +373,13 @@ export class NavigationService extends BaseService {
         icon: '🏅',
         visible: true,
       },
+      {
+        id: 'ledger',
+        path: '/ledger',
+        title: 'Ledger',
+        icon: '📖',
+        visible: false,
+      },
     ]);
 
     this.safeEmit('service:initialized', { service: 'NavigationService', success: true });

@@ -69,6 +69,14 @@ export async function createMap(
     zoom: focus.zoom,
     container: opts.containerId ?? 'maplibre-container',
     style: style as string,
+    // Cap the backing-store ratio: phones report DPR 3, and a full-screen
+    // map at 3x is the single biggest GPU/memory cost on the run screen.
+    // 2x is visually indistinguishable at arm's length; 1.5x on coarse
+    // pointers keeps low-end Android inside its frame budget.
+    pixelRatio: Math.min(
+      typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1,
+      opts.isMobile ? 1.5 : 2
+    ),
   });
 
   // Resolve on `load`. A single tile/style `error` (e.g. a flaky

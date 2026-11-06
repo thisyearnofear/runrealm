@@ -216,13 +216,17 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
       ZamaSupportService.getInstance()
     );
 
-    // Initialize User Dashboard (consolidated command center)
-    onPhase?.('Preparing your expedition');
-    const userDashboard = new UserDashboard();
-    const dashboardContainer = document.createElement('div');
-    dashboardContainer.id = 'user-dashboard-root';
-    document.body.appendChild(dashboardContainer);
-    userDashboard.initialize(dashboardContainer);
+    // The neighbourhood atlas gets its own ledger screen (Sunprint
+    // language). The legacy GameFi dashboard stays mounted only for the
+    // `?race=` spectator path — in neighbourhood mode it is unreachable
+    // chrome that broke the visual contract in playtests.
+    if (!neighbourhoodMode) {
+      const userDashboard = new UserDashboard();
+      const dashboardContainer = document.createElement('div');
+      dashboardContainer.id = 'user-dashboard-root';
+      document.body.appendChild(dashboardContainer);
+      userDashboard.initialize(dashboardContainer);
+    }
 
     // Accounts layer (protocol-vision Layer 2): identity, session keys,
     // privacy posture. Opened from the dashboard header 👤 or via
@@ -243,6 +247,23 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
       new LeaderboardScreen().initialize(leaderboardContainer);
     } catch (err) {
       console.warn('Leaderboard screen not available:', err);
+    }
+
+    // Atlas ledger — the neighbourhood-mode replacement for the legacy
+    // dashboard. Sunprint-styled; mounted in every mode but only reachable
+    // through the wider-realm menu.
+    try {
+      const { default: LedgerScreen } = await import('../shell/components/ledger-screen');
+      const ledgerServices = app.getServices();
+      const ledgerContainer = document.createElement('div');
+      ledgerContainer.id = 'ledger-screen-root';
+      document.body.appendChild(ledgerContainer);
+      new LedgerScreen({
+        neighbourhood: ledgerServices.neighbourhood,
+        runTracking: ledgerServices.runTracking,
+      }).initialize(ledgerContainer);
+    } catch (err) {
+      console.warn('Ledger screen not available:', err);
     }
 
     // Return warmth: the "while you were away" card, drawn from the offline
@@ -354,42 +375,11 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
     );
     window.reactWalletRoot = reactRoot;
 
-    if (
-      neighbourhoodMode &&
-      document.body.classList.contains('neighbourhood-mode') &&
-      document.querySelector('#neighbourhood-shell')
-    ) {
-      try {
-        const { LivingRealmRoot } = await import('../shell/living-realm/LivingRealmRoot');
-        const services = app.getServices();
-        if (!services.worldState.getIsInitialized()) await services.worldState.initialize();
-        if (!services.orbisDirector.getIsInitialized()) await services.orbisDirector.initialize();
-        const restoreDirectorEnabled = services.orbisDirector.isEnabled();
-        services.orbisDirector.setEnabled(true);
-        services.worldState.setNeighbourhoodState(services.neighbourhood.getState());
-        const realmContainer = document.createElement('div');
-        realmContainer.id = 'living-realm-root';
-        document.body.appendChild(realmContainer);
-        createRoot(realmContainer).render(
-          createElement(LivingRealmRoot, {
-            eventBus: app.getEventBus(),
-            worldState: services.worldState,
-            orbisDirector: services.orbisDirector,
-            neighbourhood: services.neighbourhood,
-            runTracking: services.runTracking,
-            map: app.getMap(),
-            getPanel: () => document.querySelector<HTMLElement>('#neighbourhood-shell .nh-panel'),
-            restoreDirectorEnabled,
-            onFatal: () => {
-              document.body.classList.remove('living-realm-view');
-              services.orbisDirector.setEnabled(restoreDirectorEnabled);
-            },
-          })
-        );
-      } catch (err) {
-        console.warn('Living realm not available:', err);
-      }
-    }
+    // The Living Realm (Orbis video layer) is deliberately not mounted in
+    // the main experience — playtests found it broke the phone experience's
+    // performance and visual coherence. It survives as the standalone
+    // `/orbis-live` demo page; remounting here is a product decision, not a
+    // bug fix.
 
     // Remove loading indicator from template
     const loadingDiv = document.getElementById('loading');

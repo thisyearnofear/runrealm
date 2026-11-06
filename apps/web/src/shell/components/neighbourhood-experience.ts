@@ -747,7 +747,7 @@ export class NeighbourhoodExperience {
       item.addEventListener('click', () => {
         const dest = item.dataset.realm;
         if (dest === 'dashboard') {
-          this.deps.eventBus.emit('dashboard:open', {} as never);
+          NavigationService.getInstance().navigateTo('ledger');
         } else if (dest === 'leaderboard') {
           NavigationService.getInstance().navigateTo('leaderboard');
         } else if (dest === 'account') {
@@ -876,7 +876,24 @@ export class NeighbourhoodExperience {
         this.deps.runTracking.pauseRun();
       }
     });
-    this.root.querySelector('[data-action="finish"]')?.addEventListener('click', () => {
+    // Two-tap finish: the first tap arms the button, the second ends the
+    // run. Finish sits next to Pause under a thumb mid-stride, so a single
+    // stray tap must not end an outing.
+    let finishArmed = false;
+    let finishArmTimer: ReturnType<typeof setTimeout> | null = null;
+    const finishBtn = this.root.querySelector<HTMLButtonElement>('[data-action="finish"]');
+    finishBtn?.addEventListener('click', () => {
+      if (!finishBtn) return;
+      if (!finishArmed) {
+        finishArmed = true;
+        finishBtn.textContent = NEIGHBOURHOOD_COPY.finishConfirm;
+        finishArmTimer = setTimeout(() => {
+          finishArmed = false;
+          if (finishBtn.isConnected) finishBtn.textContent = NEIGHBOURHOOD_COPY.finish;
+        }, 3000);
+        return;
+      }
+      if (finishArmTimer) clearTimeout(finishArmTimer);
       this.deps.runTracking.stopRun();
     });
     this.renderRecordingBits();

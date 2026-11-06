@@ -491,7 +491,11 @@ describe('NeighbourhoodExperience', () => {
     } as never);
     const pauseAgain = root.querySelector<HTMLButtonElement>('[data-action="pause-resume"]');
     expect(document.activeElement).toBe(pauseAgain);
-    root.querySelector<HTMLButtonElement>('[data-action="finish"]')?.click();
+    // Finish is two-tap: the first tap arms, the second ends the run.
+    const finishBtn = root.querySelector<HTMLButtonElement>('[data-action="finish"]');
+    finishBtn?.click();
+    expect(deps.runTracking.stopRun).not.toHaveBeenCalled();
+    finishBtn?.click();
     expect(deps.runTracking.stopRun).toHaveBeenCalled();
   });
 

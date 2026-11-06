@@ -336,6 +336,7 @@ export class RunRealmApp {
       { id: 'territories', path: '/territories', title: 'Territories', icon: '🏆', visible: true },
       { id: 'profile', path: '/profile', title: 'Profile', icon: '👤', visible: true },
       { id: 'leaderboard', path: '/leaderboard', title: 'Leaderboard', icon: '🏅', visible: true },
+      { id: 'ledger', path: '/ledger', title: 'Ledger', icon: '📖', visible: false },
     ]);
   }
 
