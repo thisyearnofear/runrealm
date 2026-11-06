@@ -38,7 +38,10 @@ describe('RunRealmEscrowV1 (marketplace + challenges)', () => {
   it('lists only for the owner, buys with a 2.5% treasury fee', async () => {
     const { realmToken, escrow, seller, buyer, owner } = await loadFixture(deployEscrowFixture);
     const escrowAddr = await escrow.getAddress();
-    await expect(escrow.connect(buyer).listTerritory(1, PRICE)).to.be.revertedWithCustomError(escrow, 'NotOwner');
+    await expect(escrow.connect(buyer).listTerritory(1, PRICE)).to.be.revertedWithCustomError(
+      escrow,
+      'NotOwner'
+    );
     await expect(escrow.connect(seller).listTerritory(1, PRICE)).to.emit(escrow, 'TerritoryListed');
     await realmToken.connect(buyer).approve(escrowAddr, ethers.parseEther('10000'));
     const fee = (PRICE * 250n) / 10000n;
@@ -54,7 +57,10 @@ describe('RunRealmEscrowV1 (marketplace + challenges)', () => {
   it('delists only for the seller', async () => {
     const { escrow, seller, buyer } = await loadFixture(deployEscrowFixture);
     await escrow.connect(seller).listTerritory(1, PRICE);
-    await expect(escrow.connect(buyer).delistTerritory(1)).to.be.revertedWithCustomError(escrow, 'NotSeller');
+    await expect(escrow.connect(buyer).delistTerritory(1)).to.be.revertedWithCustomError(
+      escrow,
+      'NotSeller'
+    );
     await expect(escrow.connect(seller).delistTerritory(1)).to.emit(escrow, 'TerritoryDelisted');
   });
 
@@ -62,12 +68,16 @@ describe('RunRealmEscrowV1 (marketplace + challenges)', () => {
     const { realmToken, escrow, brand, owner } = await loadFixture(deployEscrowFixture);
     const escrowAddr = await escrow.getAddress();
     await realmToken.connect(brand).approve(escrowAddr, ethers.parseEther('100000'));
-    await expect(escrow.connect(brand).createChallenge(ethers.parseEther('10'))).to.be.revertedWithCustomError(escrow, 'InsufficientEscrow');
+    await expect(
+      escrow.connect(brand).createChallenge(ethers.parseEther('10'))
+    ).to.be.revertedWithCustomError(escrow, 'InsufficientEscrow');
     const treasuryBefore = await realmToken.balanceOf(owner.address);
     await expect(escrow.connect(brand).createChallenge(ESCROW))
       .to.emit(escrow, 'ChallengeCreated')
       .withArgs(1, brand.address, ESCROW, ethers.parseEther('500'));
-    expect(await realmToken.balanceOf(owner.address)).to.equal(treasuryBefore + ethers.parseEther('500'));
+    expect(await realmToken.balanceOf(owner.address)).to.equal(
+      treasuryBefore + ethers.parseEther('500')
+    );
     expect(await realmToken.balanceOf(escrowAddr)).to.equal(ESCROW);
   });
 });

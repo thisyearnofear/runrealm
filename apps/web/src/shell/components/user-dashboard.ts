@@ -441,7 +441,10 @@ export class UserDashboard {
           TerritoryService.getInstance().setTerritoryVisibility(territoryId, next);
           this.preferenceService.saveTerritoryVisibility(territoryId, next);
           this.eventBus.emit('ui:toast', {
-            message: next === 'public' ? '🌐 Territory disclosed — rivals see it' : '🛡️ Territory shielded — presence only',
+            message:
+              next === 'public'
+                ? '🌐 Territory disclosed — rivals see it'
+                : '🛡️ Territory shielded — presence only',
             type: 'info',
             duration: 2500,
           });
@@ -521,9 +524,7 @@ export class UserDashboard {
         const { MarketplaceService, suggestedPrice, previewMarketFee } = await import(
           '@runrealm/shared-core/services/marketplace-service'
         );
-        const { AccountService } = await import(
-          '@runrealm/shared-core/services/account-service'
-        );
+        const { AccountService } = await import('@runrealm/shared-core/services/account-service');
         const data = this.dashboardService.getData();
         const territory = (data.territories || []).find((t) => t.id === territoryId);
         const price = suggestedPrice(territory?.estimatedReward);
@@ -572,9 +573,7 @@ export class UserDashboard {
         const { MarketplaceService } = await import(
           '@runrealm/shared-core/services/marketplace-service'
         );
-        const { AccountService } = await import(
-          '@runrealm/shared-core/services/account-service'
-        );
+        const { AccountService } = await import('@runrealm/shared-core/services/account-service');
         const buyer =
           AccountService.getInstance().getAccount()?.address ??
           AccountService.getInstance().getAccount()?.id ??
@@ -605,9 +604,7 @@ export class UserDashboard {
         const { AttestationService } = await import(
           '@runrealm/shared-core/services/attestation-service'
         );
-        const { AccountService } = await import(
-          '@runrealm/shared-core/services/account-service'
-        );
+        const { AccountService } = await import('@runrealm/shared-core/services/account-service');
         const { ChallengeService } = await import(
           '@runrealm/shared-core/services/challenge-service'
         );
@@ -650,9 +647,7 @@ export class UserDashboard {
         const escrowRealm = Math.floor(Number(escrowEl?.value ?? ''));
         const { ChallengeService, challengeMinEscrowRealm, challengeCreationTotalRealm } =
           await import('@runrealm/shared-core/services/challenge-service');
-        const { AccountService } = await import(
-          '@runrealm/shared-core/services/account-service'
-        );
+        const { AccountService } = await import('@runrealm/shared-core/services/account-service');
         if (!title || !Number.isFinite(escrowRealm)) {
           this.eventBus.emit('ui:toast', {
             message: 'Give the board a title and a prize in $REALM',

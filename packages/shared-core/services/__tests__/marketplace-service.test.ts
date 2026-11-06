@@ -66,10 +66,7 @@ describe('MarketplaceService', () => {
   });
 
   describe('chain gateway (escrow bridge)', () => {
-    function fakeGateway(opts: {
-      ready?: boolean;
-      fail?: boolean;
-    } = {}) {
+    function fakeGateway(opts: { ready?: boolean; fail?: boolean } = {}) {
       const calls: string[] = [];
       const gateway = {
         isEscrowReady: () => opts.ready ?? true,

@@ -1487,8 +1487,7 @@ export class TerritoryService extends BaseService {
     const account = this.getSiblingService('account') as {
       getAccount?: () => { id?: string; address?: string } | null;
     } | null;
-    const challenger =
-      account?.getAccount?.()?.address ?? account?.getAccount?.()?.id ?? 'unknown';
+    const challenger = account?.getAccount?.()?.address ?? account?.getAccount?.()?.id ?? 'unknown';
     const steal = this.canSteal(territoryId, challenger);
     if (!steal.ok) {
       const reason = steal.reason ?? 'This territory cannot be contested right now';

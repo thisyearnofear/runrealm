@@ -12,14 +12,14 @@
  * Palette contract: packages/shared-core/utils/sunprint-atlas.ts and
  * apps/web/src/styles/design-tokens.css. Keep the three in sync.
  */
-import { writeFile, mkdir } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const SOURCE_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const OUT = join(
   dirname(fileURLToPath(import.meta.url)),
-  '../../apps/web/public/styles/realm-atlas.json',
+  '../../apps/web/public/styles/realm-atlas.json'
 );
 
 // Sunprint Atlas palette (mirror of SUNPRINT_ATLAS_COLORS)
@@ -232,7 +232,6 @@ function transform(style) {
         'text-halo-color': C.blueprint,
         'text-halo-width': 1.3,
       });
-      continue;
     }
   }
   return style;

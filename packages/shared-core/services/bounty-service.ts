@@ -169,9 +169,7 @@ export class BountyService extends BaseService {
       (bounty.amountRealm * GAME_RULES.settlement.bountyFeeBps) / 10000
     );
     const distributable = bounty.amountRealm - protocolRealm;
-    const amountRealm = Math.floor(
-      (distributable * GAME_RULES.bounty.attackerShareBps) / 10000
-    );
+    const amountRealm = Math.floor((distributable * GAME_RULES.bounty.attackerShareBps) / 10000);
     const burnedRealm = distributable - amountRealm;
     this.settled.set(territoryId, { settledAt: Date.now(), staker: bounty.staker });
     await this.save();

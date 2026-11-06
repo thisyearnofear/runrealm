@@ -44,11 +44,15 @@ export interface MarketSale {
   soldAt: number;
 }
 
-interface MarketplaceStore { version: 1; listings: MarketListing[]; }
+interface MarketplaceStore {
+  version: 1;
+  listings: MarketListing[];
+}
 const STORE_KEY = 'runrealm_marketplace';
 
 export function suggestedPrice(estimatedReward?: number): number {
-  const base = Number.isFinite(estimatedReward) && (estimatedReward ?? 0) > 0 ? estimatedReward! : 50;
+  const base =
+    Number.isFinite(estimatedReward) && (estimatedReward ?? 0) > 0 ? estimatedReward! : 50;
   return Math.max(50, Math.round(base));
 }
 
@@ -66,7 +70,9 @@ export class MarketplaceService extends BaseService {
     if (!MarketplaceService.instance) MarketplaceService.instance = new MarketplaceService();
     return MarketplaceService.instance;
   }
-  static createIsolated(): MarketplaceService { return new MarketplaceService(); }
+  static createIsolated(): MarketplaceService {
+    return new MarketplaceService();
+  }
 
   /** Inject the escrow gateway (called by the composer). */
   setChainGateway(gateway: MarketplaceChainGateway | null): void {
@@ -78,7 +84,10 @@ export class MarketplaceService extends BaseService {
    * here is reported (`marketplace:chainFailed`) and never rolls the UI
    * back — a runner who listed on device keeps a listing on device.
    */
-  private pushToChain(op: string, fn: (gateway: MarketplaceChainGateway) => Promise<unknown>): void {
+  private pushToChain(
+    op: string,
+    fn: (gateway: MarketplaceChainGateway) => Promise<unknown>
+  ): void {
     const gateway = this.chain;
     if (!gateway) return;
     void Promise.resolve()
@@ -117,9 +126,11 @@ export class MarketplaceService extends BaseService {
     priceRealm?: number,
     chainTokenId?: string
   ): Promise<MarketListing> {
-    if (!territoryId || !seller) throw new RangeError('marketplace: territoryId and seller required');
+    if (!territoryId || !seller)
+      throw new RangeError('marketplace: territoryId and seller required');
     const price = priceRealm ?? suggestedPrice();
-    if (!Number.isFinite(price) || price <= 0) throw new RangeError('marketplace: price must be positive');
+    if (!Number.isFinite(price) || price <= 0)
+      throw new RangeError('marketplace: price must be positive');
     const listing: MarketListing = {
       territoryId,
       seller,
@@ -129,10 +140,17 @@ export class MarketplaceService extends BaseService {
     };
     this.listings.set(territoryId, listing);
     await this.save();
-    this.safeEmit('marketplace:listed', { territoryId, seller, priceRealm: listing.priceRealm, ...previewMarketFee(listing.priceRealm) });
+    this.safeEmit('marketplace:listed', {
+      territoryId,
+      seller,
+      priceRealm: listing.priceRealm,
+      ...previewMarketFee(listing.priceRealm),
+    });
     if (listing.chainTokenId) {
       const tokenId = listing.chainTokenId;
-      this.pushToChain('list', (gateway) => gateway.listTerritoryOnChain(tokenId, listing.priceRealm));
+      this.pushToChain('list', (gateway) =>
+        gateway.listTerritoryOnChain(tokenId, listing.priceRealm)
+      );
     }
     return listing;
   }
@@ -156,11 +174,20 @@ export class MarketplaceService extends BaseService {
     const { feeRealm } = previewMarketFee(listing.priceRealm);
     this.listings.delete(territoryId);
     await this.save();
-    const sale: MarketSale = { territoryId, seller: listing.seller, buyer, priceRealm: listing.priceRealm, feeRealm, soldAt: Date.now() };
+    const sale: MarketSale = {
+      territoryId,
+      seller: listing.seller,
+      buyer,
+      priceRealm: listing.priceRealm,
+      feeRealm,
+      soldAt: Date.now(),
+    };
     this.safeEmit('marketplace:sold', sale);
     if (listing.chainTokenId) {
       const tokenId = listing.chainTokenId;
-      this.pushToChain('buy', (gateway) => gateway.buyTerritoryOnChain(tokenId, listing.priceRealm));
+      this.pushToChain('buy', (gateway) =>
+        gateway.buyTerritoryOnChain(tokenId, listing.priceRealm)
+      );
     }
     return sale;
   }
@@ -168,19 +195,29 @@ export class MarketplaceService extends BaseService {
     try {
       const raw = await StorageAdapter.getItem(STORE_KEY);
       if (raw == null) return;
-      const opened = openVersioned<MarketplaceStore>(raw, { floor: 1, head: 1, steps: [], fresh: () => ({ version: 1 as const, listings: [] }) });
+      const opened = openVersioned<MarketplaceStore>(raw, {
+        floor: 1,
+        head: 1,
+        steps: [],
+        fresh: () => ({ version: 1 as const, listings: [] }),
+      });
       if (opened.status !== 'ok' && opened.status !== 'fresh') return;
       if (opened.readOnly) this.readOnly = true;
       for (const listing of opened.state?.listings ?? []) {
-        if (listing?.territoryId && listing.priceRealm > 0) this.listings.set(listing.territoryId, listing);
+        if (listing?.territoryId && listing.priceRealm > 0)
+          this.listings.set(listing.territoryId, listing);
       }
-    } catch { /* memory-only mirror */ }
+    } catch {
+      /* memory-only mirror */
+    }
   }
   private async save(): Promise<void> {
     if (this.readOnly) return;
     try {
       const store: MarketplaceStore = { version: 1, listings: Array.from(this.listings.values()) };
       await StorageAdapter.setItem(STORE_KEY, writeVersioned(1, store, Date.now()));
-    } catch { /* memory-only mirror */ }
+    } catch {
+      /* memory-only mirror */
+    }
   }
 }

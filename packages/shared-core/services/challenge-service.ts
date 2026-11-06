@@ -154,7 +154,9 @@ export class ChallengeService extends BaseService {
     const floor = Math.floor(escrowRealm);
     if (!Number.isFinite(floor) || floor < challengeMinEscrowRealm()) {
       throw new RangeError(
-        'challenge: escrow must be at least ' + challengeMinEscrowRealm() + ' REALM to be worth contesting'
+        'challenge: escrow must be at least ' +
+          challengeMinEscrowRealm() +
+          ' REALM to be worth contesting'
       );
     }
 
@@ -191,7 +193,11 @@ export class ChallengeService extends BaseService {
    * pure ledger write so judging and attestations stay separate concerns.
    * Duplicate joins are idempotent no-ops.
    */
-  async joinBoard(challengeId: string, accountId: string, runId?: string): Promise<BoardEntry | null> {
+  async joinBoard(
+    challengeId: string,
+    accountId: string,
+    runId?: string
+  ): Promise<BoardEntry | null> {
     if (!this.boards.has(challengeId) || !accountId) return null;
     const boardEntries = this.entries.get(challengeId) ?? [];
     const existing = boardEntries.find((entry) => entry.accountId === accountId);
@@ -210,7 +216,9 @@ export class ChallengeService extends BaseService {
     const escrowRealm = board.escrowRealm;
     const challengeId = board.challengeId;
     void Promise.resolve()
-      .then(() => (gateway.isEscrowReady() ? gateway.createChallengeOnChain(escrowRealm) : undefined))
+      .then(() =>
+        gateway.isEscrowReady() ? gateway.createChallengeOnChain(escrowRealm) : undefined
+      )
       .catch((error) => {
         this.safeEmit('challenge:chainFailed', {
           challengeId,
@@ -235,7 +243,9 @@ export class ChallengeService extends BaseService {
     const ok = await account.authorize(action, amountRealm);
     if (!ok) {
       throw new Error(
-        'challenge: funding ' + amountRealm + ' REALM needs a spend allowance — approve it once in Account, then create'
+        'challenge: funding ' +
+          amountRealm +
+          ' REALM needs a spend allowance — approve it once in Account, then create'
       );
     }
   }

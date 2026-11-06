@@ -68,7 +68,10 @@ class RunRealmEscrowDeployer {
   async run() {
     const { realmTokenAddress, territoryRegistryAddress } = this.config;
     assert(realmTokenAddress && realmTokenAddress !== ZERO, 'Set REALM_TOKEN_ADDRESS');
-    assert(territoryRegistryAddress && territoryRegistryAddress !== ZERO, 'Set TERRITORY_REGISTRY_ADDRESS');
+    assert(
+      territoryRegistryAddress && territoryRegistryAddress !== ZERO,
+      'Set TERRITORY_REGISTRY_ADDRESS'
+    );
     const treasury =
       process.env.TREASURY_ADDRESS && process.env.TREASURY_ADDRESS !== ZERO
         ? process.env.TREASURY_ADDRESS

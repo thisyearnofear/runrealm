@@ -6,9 +6,9 @@ import { GAME_RULES } from '../../config/game-rules';
 import { EventBus } from '../../core/event-bus';
 import {
   BOARD_BAND_LABELS,
+  ChallengeService,
   challengeCreationTotalRealm,
   challengeMinEscrowRealm,
-  ChallengeService,
 } from '../challenge-service';
 
 describe('challengeCreationTotalRealm', () => {
@@ -122,7 +122,12 @@ describe('ChallengeService', () => {
           return { transactionHash: '0x1' };
         },
       });
-      await svc.createBoard({ challengeId: 't-notready', title: 'x', brand: 'y', escrowRealm: 1000 });
+      await svc.createBoard({
+        challengeId: 't-notready',
+        title: 'x',
+        brand: 'y',
+        escrowRealm: 1000,
+      });
       await flush();
       expect(calls).toEqual([]);
       expect(svc.getBoard('t-notready')?.escrowRealm).toBe(1000);

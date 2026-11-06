@@ -455,7 +455,11 @@ export class ContractService extends BaseService {
   /** Cancel a listing. Seller-only inside the contract. */
   public async delistTerritoryOnChain(tokenId: number | string) {
     this.requireEscrow('delist');
-    return this.sendEscrowTx(CONTRACT_METHODS.escrow.delistTerritory, [tokenId], 'territory_delist');
+    return this.sendEscrowTx(
+      CONTRACT_METHODS.escrow.delistTerritory,
+      [tokenId],
+      'territory_delist'
+    );
   }
 
   /**

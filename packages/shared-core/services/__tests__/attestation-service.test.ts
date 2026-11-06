@@ -215,15 +215,15 @@ describe('AttestationService', () => {
       const matched: Array<{ status: string; signatures: number }> = [];
       const bus = EventBus.getInstance();
       const mismatchHandler = (data: { reason: string }) => mismatches.push(data.reason);
-      const matchedHandler = (data: { status: string; signatures: number }) =>
-        matched.push(data);
+      const matchedHandler = (data: { status: string; signatures: number }) => matched.push(data);
       bus.on('attestation:mismatch', mismatchHandler);
       bus.on('attestation:matched', matchedHandler as never);
 
-      bus.emit(
-        'territory:claimed',
-        { territory: { id: 't1' }, transactionHash: '', runId: run.id } as never
-      );
+      bus.emit('territory:claimed', {
+        territory: { id: 't1' },
+        transactionHash: '',
+        runId: run.id,
+      } as never);
       expect(mismatches).toEqual([]);
       expect(matched).toHaveLength(1);
       expect(matched[0]!.signatures).toBe(0); // local: honest, zero sigs
@@ -241,13 +241,13 @@ describe('AttestationService', () => {
       await withOracle.attestRun(run);
       const matched: Array<{ status: string; signatures: number }> = [];
       const bus = EventBus.getInstance();
-      const matchedHandler = (data: { status: string; signatures: number }) =>
-        matched.push(data);
+      const matchedHandler = (data: { status: string; signatures: number }) => matched.push(data);
       bus.on('attestation:matched', matchedHandler as never);
-      bus.emit(
-        'territory:claimed',
-        { territory: { id: 't2' }, transactionHash: '', runId: run.id } as never
-      );
+      bus.emit('territory:claimed', {
+        territory: { id: 't2' },
+        transactionHash: '',
+        runId: run.id,
+      } as never);
       expect(matched).toHaveLength(1);
       expect(matched[0]!.status).toBe('pending');
       expect(matched[0]!.signatures).toBe(1);

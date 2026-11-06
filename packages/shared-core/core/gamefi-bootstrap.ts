@@ -60,8 +60,7 @@ export async function initializeGameFi(opts: GameFiBootstrapOptions): Promise<vo
       isEscrowReady: () => services.contractService.isEscrowReady(),
       listTerritoryOnChain: (tokenId, priceRealm) =>
         services.contractService.listTerritoryOnChain(tokenId, priceRealm),
-      delistTerritoryOnChain: (tokenId) =>
-        services.contractService.delistTerritoryOnChain(tokenId),
+      delistTerritoryOnChain: (tokenId) => services.contractService.delistTerritoryOnChain(tokenId),
       buyTerritoryOnChain: (tokenId, priceRealm) =>
         services.contractService.buyTerritoryOnChain(tokenId, priceRealm),
     });
