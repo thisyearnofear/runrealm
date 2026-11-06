@@ -1221,7 +1221,7 @@ export const NEIGHBOURHOOD_COPY = {
   advancedNote: 'Your claims, your ghosts and the rest of the realm.',
   advancedHint:
     'Registered ground uses a wallet. This atlas stays on this device — it does not travel with a wallet or a phone link.',
-  advancedMenu: {
+  realmMenu: {
     dashboard: 'Your ledger',
     dashboardHint: 'Claims, ghosts, challenges and rewards',
     leaderboard: 'Pace board',

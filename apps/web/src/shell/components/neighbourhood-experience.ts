@@ -621,16 +621,16 @@ export class NeighbourhoodExperience {
         <p class="nh-advanced-note">${NEIGHBOURHOOD_COPY.advancedNote}</p>
         <nav class="nh-advanced-menu" aria-label="${NEIGHBOURHOOD_COPY.advancedTools}">
           <button type="button" class="nh-advanced-item" data-realm="dashboard">
-            <span class="nh-advanced-item-label">${NEIGHBOURHOOD_COPY.advancedMenu.dashboard}</span>
-            <span class="nh-advanced-item-hint">${NEIGHBOURHOOD_COPY.advancedMenu.dashboardHint}</span>
+            <span class="nh-advanced-item-label">${NEIGHBOURHOOD_COPY.realmMenu.dashboard}</span>
+            <span class="nh-advanced-item-hint">${NEIGHBOURHOOD_COPY.realmMenu.dashboardHint}</span>
           </button>
           <button type="button" class="nh-advanced-item" data-realm="leaderboard">
-            <span class="nh-advanced-item-label">${NEIGHBOURHOOD_COPY.advancedMenu.leaderboard}</span>
-            <span class="nh-advanced-item-hint">${NEIGHBOURHOOD_COPY.advancedMenu.leaderboardHint}</span>
+            <span class="nh-advanced-item-label">${NEIGHBOURHOOD_COPY.realmMenu.leaderboard}</span>
+            <span class="nh-advanced-item-hint">${NEIGHBOURHOOD_COPY.realmMenu.leaderboardHint}</span>
           </button>
           <button type="button" class="nh-advanced-item" data-realm="account">
-            <span class="nh-advanced-item-label">${NEIGHBOURHOOD_COPY.advancedMenu.account}</span>
-            <span class="nh-advanced-item-hint">${NEIGHBOURHOOD_COPY.advancedMenu.accountHint}</span>
+            <span class="nh-advanced-item-label">${NEIGHBOURHOOD_COPY.realmMenu.account}</span>
+            <span class="nh-advanced-item-hint">${NEIGHBOURHOOD_COPY.realmMenu.accountHint}</span>
           </button>
         </nav>
         <p class="nh-advanced-hint">${NEIGHBOURHOOD_COPY.advancedHint}</p>

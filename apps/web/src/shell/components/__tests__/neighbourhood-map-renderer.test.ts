@@ -187,7 +187,7 @@ describe('NeighbourhoodMapRenderer', () => {
     const { map, renderer } = mount();
     renderer.syncLedger(state({ [IDS[0]]: 1 }), IDS);
     const seeded = map.featureState.get(IDS[0]) as unknown as CellTransientValues;
-    expect(seeded).toEqual({ develop: 1, press: 0, exposure: 0, select: 0 });
+    expect(seeded).toEqual({ develop: 1, press: 0, exposure: 0, select: 0, reach: 0 });
   });
 
   it('finishes a collection on the exact settled value', () => {
@@ -200,6 +200,7 @@ describe('NeighbourhoodMapRenderer', () => {
       develop: 1,
       press: 0,
       exposure: 0,
+      reach: 0,
       select: 0,
     });
     expect(renderer.hasPendingTransitions).toBe(false);
@@ -240,6 +241,7 @@ describe('NeighbourhoodMapRenderer', () => {
         develop: 1,
         press: 0,
         exposure: 0,
+        reach: 0,
         select: 0,
       });
     }
@@ -307,7 +309,13 @@ describe('NeighbourhoodMapRenderer', () => {
 
     jest.advanceTimersByTime(5000);
     for (const id of IDS) {
-      expect(map.featureState.get(id)).toEqual({ develop: 1, press: 0, exposure: 0, select: 0 });
+      expect(map.featureState.get(id)).toEqual({
+        develop: 1,
+        press: 0,
+        exposure: 0,
+        select: 0,
+        reach: 0,
+      });
     }
     expect(renderer.hasPendingTransitions).toBe(false);
     expect(renderer.playArrival()).toBe(false);
