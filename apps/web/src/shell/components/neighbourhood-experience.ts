@@ -15,6 +15,7 @@ import type { Map as MaplibreMap } from 'maplibre-gl';
 import { hasRevealed, REVEAL_EVENT } from '../../lib/reveal';
 import { prefersReducedMotion } from './cell-transition-scheduler';
 import { handoffUrl, isDesk } from './desk-mode';
+import { NeighbourhoodAtmosphere } from './neighbourhood-atmosphere';
 import { NeighbourhoodMapController } from './neighbourhood-map-controller';
 import { NeighbourhoodMapRenderer } from './neighbourhood-map-renderer';
 import type { CellRecord } from './neighbourhood-map-types';
@@ -76,6 +77,7 @@ export class NeighbourhoodExperience {
   private lastRawFix: { accuracy?: number; at: number } | null = null;
   private mapController: NeighbourhoodMapController | null = null;
   private mapRenderer: NeighbourhoodMapRenderer | null = null;
+  private atmosphere: NeighbourhoodAtmosphere | null = null;
   private selectedCell: CellRecord | null = null;
   /** Cells already flashed as provisional during the current run. */
   private exposedCellIds = new Set<string>();
@@ -141,6 +143,8 @@ export class NeighbourhoodExperience {
         payload.summary.newCellIds.length + payload.summary.strengthenedCellIds.length > 0;
       if (changed) {
         this.pulseCollect(payload.summary.newCellIds.length);
+        this.atmosphere?.pulse(payload.summary.newCellIds, true);
+        this.atmosphere?.pulse(payload.summary.strengthenedCellIds, false);
         if (this.isMapVisible() && payload.summary.newCellIds.length > 0) {
           this.mapController?.frameCells(payload.summary.newCellIds);
         }
@@ -200,6 +204,7 @@ export class NeighbourhoodExperience {
           accuracy: Number.isFinite(fix.accuracy) ? (fix.accuracy as number) : undefined,
           at: typeof fix.timestamp === 'number' ? fix.timestamp : Date.now(),
         };
+        this.atmosphere?.pushFix(fix.lng as number, fix.lat as number, fix.accuracy);
       }
     });
     this.on('ghost:unlocked', () => {
@@ -328,6 +333,8 @@ export class NeighbourhoodExperience {
     this.mapController = null;
     this.mapRenderer?.dispose();
     this.mapRenderer = null;
+    this.atmosphere?.dispose();
+    this.atmosphere = null;
     for (const { event, handler } of this.handlers) {
       this.deps.eventBus.off(event, handler as never);
     }
@@ -1493,6 +1500,11 @@ export class NeighbourhoodExperience {
       },
     });
     this.mapRenderer.initialize();
+    try {
+      this.atmosphere = new NeighbourhoodAtmosphere(this.deps.map);
+    } catch {
+      this.atmosphere = null;
+    }
     this.syncMap();
   }
 
@@ -1508,6 +1520,12 @@ export class NeighbourhoodExperience {
 
   private syncMap(): void {
     this.mapRenderer?.syncLedger(this.state, this.activeCells());
+    this.atmosphere?.setCells(
+      Object.entries(this.state.cells).map(([id, cell]) => ({
+        id,
+        visits: cell?.visits ?? 0,
+      }))
+    );
     this.syncGhostPresence();
     this.mapController?.refreshArea();
     this.updateSketchStatus();
