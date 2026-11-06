@@ -150,6 +150,11 @@ export class NeighbourhoodService extends BaseService {
         seen.add(coordsToCell(p.lat, p.lng).h3Index);
       } catch {}
     }
+    // Single-fix visits count on purpose: A→B→A is the out-and-back pattern
+    // runners actually run. A teleport spike is indistinguishable from a
+    // fast cell crossing at cell resolution — rejecting outliers belongs at
+    // the tracking layer (speed/distance), not here, where it would drop
+    // real visits. The ±50 m accuracy gate is the jitter defence.
     return [...seen];
   }
 

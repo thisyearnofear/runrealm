@@ -35,6 +35,10 @@ const ACCURACY_FILL = 'neighbourhood-user-accuracy-fill';
 const ACCURACY_LINE = 'neighbourhood-user-accuracy-line';
 const STALE_MS = 30_000;
 const FOLLOW_THROTTLE_MS = 1000;
+/** Fraction of the shorter viewport edge the marker may drift off-centre
+   before follow mode re-pans — the camera deadzone that stops ±9m GPS
+   jitter from swimming the map under a standing runner. */
+const FOLLOW_DEADZONE_FRACTION = 0.25;
 const FIRST_FIX_ZOOM = 16;
 
 function isUsableGpsFix(info: LocationInfo | null | undefined): info is LocationInfo {
@@ -519,11 +523,31 @@ export class NeighbourhoodMapController {
     }
   }
 
-  private recenter(animate: boolean): void {
+  /**
+   * Camera deadzone: while already framed, a fresh fix only re-pans once
+   * the runner's marker has drifted off the centre region. Explicit
+   * recentres (Follow-me, run start) pass `force` and always move.
+   */
+  private withinDeadzone(): boolean {
+    const map = this.deps.map;
+    const canvas = map?.getCanvas?.();
+    if (!map || !canvas || typeof map.project !== 'function' || !this.lastFix) {
+      return false;
+    }
+    const point = map.project([this.lastFix.lng, this.lastFix.lat]);
+    const radius = Math.min(canvas.clientWidth, canvas.clientHeight) * FOLLOW_DEADZONE_FRACTION;
+    return Math.hypot(point.x - canvas.clientWidth / 2, point.y - canvas.clientHeight / 2) < radius;
+  }
+
+  private recenter(animate: boolean, force = false): void {
     const map = this.deps.map;
     if (!map || !this.lastFix) return;
     const now = performance.now();
     if (animate && now - this.lastFollowAt < FOLLOW_THROTTLE_MS) return;
+    if (!force && this.initialFramed && this.withinDeadzone()) {
+      this.refreshMarker();
+      return;
+    }
     this.lastFollowAt = now;
     const zoom =
       !this.initialFramed && !this.hasUserZoomed
@@ -570,7 +594,7 @@ export class NeighbourhoodMapController {
       this.setMode('follow');
       this.flashYou();
       this.lastFollowAt = Number.NEGATIVE_INFINITY;
-      this.recenter(true);
+      this.recenter(true, true);
       return true;
     } catch {
       return silentOnFail ? false : fail();
@@ -585,7 +609,7 @@ export class NeighbourhoodMapController {
     this.setMode('follow');
     if (this.isFresh()) {
       this.lastFollowAt = Number.NEGATIVE_INFINITY;
-      this.recenter(true);
+      this.recenter(true, true);
     }
   }
 

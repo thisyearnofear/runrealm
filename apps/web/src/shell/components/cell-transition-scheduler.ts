@@ -47,6 +47,17 @@ function easeOutCubic(t: number): number {
   return 1 - (1 - t) ** 3;
 }
 
+/** Slight overshoot-then-settle — reserved for `develop`, so a collected
+   cell lands like a print fixing, not a value arriving. */
+function easeOutBack(t: number): number {
+  const c = 1.4;
+  return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
+}
+
+function easeFor(key: string): (t: number) => number {
+  return key === 'develop' ? easeOutBack : easeOutCubic;
+}
+
 function clamp01(value: number): number {
   return Math.min(Math.max(value, 0), 1);
 }
@@ -167,10 +178,9 @@ export class CellTransitionScheduler {
 
   private interpolated(tween: ActiveTween): Record<string, number> {
     const t = clamp01((now() - tween.startAt) / tween.duration);
-    const eased = easeOutCubic(t);
     const values: Record<string, number> = {};
     for (const key of Object.keys(tween.to)) {
-      values[key] = tween.from[key] + (tween.to[key] - tween.from[key]) * eased;
+      values[key] = tween.from[key] + (tween.to[key] - tween.from[key]) * easeFor(key)(t);
     }
     return values;
   }
@@ -196,11 +206,10 @@ export class CellTransitionScheduler {
     for (const [key, tween] of this.tweens) {
       if (time < tween.startAt) continue;
       const t = clamp01((time - tween.startAt) / tween.duration);
-      const eased = easeOutCubic(t);
       const values: Record<string, number> = {};
       for (const valueKey of Object.keys(tween.to)) {
         values[valueKey] =
-          tween.from[valueKey] + (tween.to[valueKey] - tween.from[valueKey]) * eased;
+          tween.from[valueKey] + (tween.to[valueKey] - tween.from[valueKey]) * easeFor(valueKey)(t);
       }
       this.write(tween.cellId, values);
       if (t >= 1) {
