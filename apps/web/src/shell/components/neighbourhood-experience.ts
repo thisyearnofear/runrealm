@@ -1477,14 +1477,15 @@ export class NeighbourhoodExperience {
       return;
     }
     let anchor: string | null = null;
-    let best = 0;
-    for (const [id, cell] of Object.entries(this.state.cells)) {
-      if ((cell?.visits ?? 0) > best) {
-        best = cell.visits;
-        anchor = id;
-      }
-    }
+    const byVisits = Object.entries(this.state.cells)
+      .map(([id, cell]) => ({ id, visits: cell?.visits ?? 0 }))
+      .filter((c) => c.visits > 0)
+      .sort((a, b) => b.visits - a.visits);
+    anchor = byVisits[0]?.id ?? null;
     this.mapRenderer?.syncGhost(anchor, ghost.name);
+    // The patrol wanders the deepest ground — every waypoint is a cell the
+    // ledger already holds.
+    this.mapRenderer?.patrolGhost(byVisits.slice(0, 4).map((c) => c.id));
   }
 
   /** Accepted visits to uncollected ground, flashed once per run. */

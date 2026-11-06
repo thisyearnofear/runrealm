@@ -23,7 +23,7 @@ import { cellToPolygon } from '@runrealm/shared-core/utils/h3-territory';
 import { SUNPRINT_ATLAS_COLORS as C } from '@runrealm/shared-core/utils/sunprint-atlas';
 import type { GeoJSONSource, Map as MaplibreMap } from 'maplibre-gl';
 import { Marker } from 'maplibre-gl';
-import { CellTransitionScheduler } from './cell-transition-scheduler';
+import { CellTransitionScheduler, prefersReducedMotion } from './cell-transition-scheduler';
 import {
   type CellRecord,
   type CellTransientValues,
@@ -64,6 +64,10 @@ const PRESS_RELEASE_MS = 700;
 export const ARRIVAL_STAGGER_MS = 55;
 const ARRIVAL_RISE_MS = 260;
 const ARRIVAL_FADE_MS = 520;
+/** Ghost steering: a slow patrol leg every few beats, eased over seconds —
+   the wisp reads as a figure on rounds, not a sticker. */
+const GHOST_PATROL_MS = 12_000;
+const GHOST_SEEK_MS = 2_800;
 
 export interface NeighbourhoodMapRendererDeps {
   map: MaplibreMap | null;
@@ -86,6 +90,11 @@ export class NeighbourhoodMapRenderer {
   private ghostMarker: Marker | null = null;
   private ghostAnchorId: string | null = null;
   private pendingGhost: { id: string | null; name?: string } | null = null;
+  private ghostPatrolIds: string[] = [];
+  private patrolSignature = '';
+  private ghostPatrolIndex = 0;
+  private ghostPatrolTimer: ReturnType<typeof setInterval> | null = null;
+  private ghostSeekFrame: number | null = null;
 
   constructor(private readonly deps: NeighbourhoodMapRendererDeps) {
     this.scheduler = new CellTransitionScheduler(deps.map, CELLS_SOURCE);
@@ -234,12 +243,15 @@ export class NeighbourhoodMapRenderer {
       return;
     }
     if (!anchorCellId) {
+      this.clearPatrol();
+      this.ghostSeekCancel();
       this.ghostMarker?.remove();
       this.ghostMarker = null;
       this.ghostAnchorId = null;
       return;
     }
     if (anchorCellId === this.ghostAnchorId) return;
+    const moved = this.ghostAnchorId !== null;
     this.ghostAnchorId = anchorCellId;
     if (!this.ghostMarker) {
       const el = document.createElement('div');
@@ -257,12 +269,83 @@ export class NeighbourhoodMapRenderer {
     const ring = cellToPolygon(anchorCellId).coordinates[0];
     const lng = ring.reduce((sum, p) => sum + p[0], 0) / ring.length;
     const lat = ring.reduce((sum, p) => sum + p[1], 0) / ring.length;
-    this.ghostMarker.setLngLat([lng, lat]);
+    if (moved) {
+      this.seekGhost([lng, lat]); // steer to deeper ground, don't teleport
+    } else {
+      this.ghostMarker.setLngLat([lng, lat]);
+    }
     this.ghostMarker.addTo(map);
     // Set after addTo: MapLibre stamps its own "Map marker" label on attach.
     this.ghostMarker
       .getElement()
       .setAttribute('aria-label', name ? `Your ghost — ${name}` : 'Your ghost');
+  }
+
+  /**
+   * Slow patrol: the wisp drifts between the ledger's deepest cells, cycling
+   * the supplied shortlist in order. Every waypoint is real owned ground —
+   * the patrol only ever stands where the ledger already does. Reduced
+   * motion means a still sentry: no timer, no drift.
+   */
+  patrolGhost(cellIds: string[]): void {
+    const next = cellIds.filter((id) => id !== this.ghostAnchorId);
+    // syncMap calls this every tick — only restart when the route changed.
+    if (this.ghostPatrolTimer !== null && next.join('|') === this.patrolSignature) return;
+    this.clearPatrol();
+    this.ghostPatrolIds = next;
+    this.patrolSignature = next.join('|');
+    if (this.ghostPatrolIds.length === 0 || prefersReducedMotion()) return;
+    this.ghostPatrolTimer = setInterval(() => {
+      if (this.disposed || !this.ghostMarker || this.ghostPatrolIds.length === 0) return;
+      const id = this.ghostPatrolIds[this.ghostPatrolIndex % this.ghostPatrolIds.length];
+      this.ghostPatrolIndex += 1;
+      const ring = cellToPolygon(id).coordinates[0];
+      this.seekGhost([
+        ring.reduce((sum, p) => sum + p[0], 0) / ring.length,
+        ring.reduce((sum, p) => sum + p[1], 0) / ring.length,
+      ]);
+    }, GHOST_PATROL_MS);
+  }
+
+  /** Seek steering: ease toward the target over a few seconds. */
+  private seekGhost(target: [number, number]): void {
+    const marker = this.ghostMarker;
+    if (!marker) return;
+    this.ghostSeekCancel();
+    if (prefersReducedMotion()) {
+      marker.setLngLat(target);
+      return;
+    }
+    const start = marker.getLngLat();
+    const from: [number, number] = [start.lng, start.lat];
+    const t0 = performance.now();
+    const step = () => {
+      if (this.disposed || !this.ghostMarker) return;
+      const t = Math.min(1, (performance.now() - t0) / GHOST_SEEK_MS);
+      const e = 1 - (1 - t) ** 3;
+      this.ghostMarker.setLngLat([
+        from[0] + (target[0] - from[0]) * e,
+        from[1] + (target[1] - from[1]) * e,
+      ]);
+      this.ghostSeekFrame = t < 1 ? requestAnimationFrame(step) : null;
+    };
+    this.ghostSeekFrame = requestAnimationFrame(step);
+  }
+
+  private ghostSeekCancel(): void {
+    if (this.ghostSeekFrame !== null) {
+      cancelAnimationFrame(this.ghostSeekFrame);
+      this.ghostSeekFrame = null;
+    }
+  }
+
+  private clearPatrol(): void {
+    if (this.ghostPatrolTimer !== null) {
+      clearInterval(this.ghostPatrolTimer);
+      this.ghostPatrolTimer = null;
+    }
+    this.ghostPatrolIds = [];
+    this.ghostPatrolIndex = 0;
   }
 
   /**
@@ -581,6 +664,8 @@ export class NeighbourhoodMapRenderer {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.clearPatrol();
+    this.ghostSeekCancel();
     this.ghostMarker?.remove();
     this.ghostMarker = null;
     this.scheduler.dispose();
