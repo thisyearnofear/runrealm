@@ -1223,6 +1223,7 @@ export class NeighbourhoodExperience {
           ${challengeBlock}
           <p class="nh-receipt-save">${persistedNote}</p>
           <p class="nh-nextstep">${this.nextStepLine()}</p>
+          <p class="nh-atlas-link"><a href="/atlas-vr/">${NEIGHBOURHOOD_COPY.summaryAtlasLink}</a></p>
           ${this.ownershipBlock()}
           <p class="nh-error" role="alert" hidden></p>
         </div>

@@ -1310,6 +1310,7 @@ export const NEIGHBOURHOOD_COPY = {
   },
   mapUnavailable: 'The map could not be drawn — your atlas list still works.',
   seeGroundOnMap: 'See ground on map',
+  summaryAtlasLink: 'Walk your atlas as a map table — in your browser or a headset.',
   cellDetail: {
     label: 'Selected block',
     clear: 'Clear',

@@ -41,6 +41,7 @@ Optional: the network pace-band leaderboard needs an attestation-oracle quorum. 
 | [Orbis Live](docs/orbis-live.md) | Wallet-free live demo slice (`/orbis-live`) |
 | [Zama Builder Track](docs/zama-builder-track.md) | FHE submission: demo flow, deploys, pitch assets |
 | [Experience Differentiation](docs/experience-differentiation.md) | The four bets that make the protocol visible: claim ceremony, fog-of-war, race replays, leaderboards |
+| [Modalities](docs/modalities.md) | One artifact, many lenses — adaptive surfaces and their principles |
 | [The Warmth Pass](docs/warmth-pass.md) | The voice layer, run companionship, return warmth, milestone ceremony, intuitive clarity, the reachability pass, and the four runner-moment phases (don't lose a run, survive the pocket, split the backend, move hosts) |
 | [Mobile Cosy Pass](docs/mobile-cosy-pass.md) | Playtest-driven passes: atlas-only realm, ledger screen, deed card, ghost identity, atmosphere layer — with retest checklist |
 
