@@ -116,6 +116,36 @@ describe('neighbourhood workflow through real services', () => {
     expect(worldState.getSnapshot().territoryStatus).not.toBe('claimed');
   });
 
+  it('a pause mid-outing neither splits the run nor banks the drift', async () => {
+    const { bus, tracker, neighbourhood } = await stack();
+    const settled: string[] = [];
+    bus.on('neighbourhood:runCompleted', (d: any) => settled.push(d.summary.runId));
+
+    neighbourhood.setGoal('explore');
+    await tracker.startRun({ neighbourhoodGoal: 'explore' });
+    walk(bus, HOME.lng, 6);
+    const distanceAtPause = tracker.getCurrentStats()?.distance ?? 0;
+    expect(distanceAtPause).toBeGreaterThan(0);
+
+    tracker.pauseRun();
+    // Fixes that land while paused are not the runner moving — a long pause
+    // must not inflate the run it pauses.
+    walk(bus, HOME.lng + 0.05, 8);
+    expect(tracker.getCurrentStats()?.distance).toBe(distanceAtPause);
+
+    tracker.resumeRun();
+    walk(bus, HOME.lng + 0.008, 8);
+    const run = tracker.stopRun();
+
+    // One outing, one settlement — the pause and resume did not fork the id
+    // and the dedupe did not eat the finish.
+    expect(settled).toEqual([run?.id]);
+    const state = neighbourhood.getState();
+    expect(state.qualifyingRuns).toBe(1);
+    expect(state.lastSummary?.reason).toBe('collected');
+    expect(state.lastSummary?.runId).toBe(run?.id);
+  });
+
   it('a second real outing over the same cells strengthens them', async () => {
     const { bus, tracker, neighbourhood, worldState } = await stack();
 

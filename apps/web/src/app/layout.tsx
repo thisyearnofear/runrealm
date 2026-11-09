@@ -1,3 +1,4 @@
+import { NEIGHBOURHOOD_COPY } from '@runrealm/shared-core/utils/atlas-voice';
 import type { Metadata, Viewport } from 'next';
 import '../styles/design-tokens.css';
 import '../styles/loading-splash.css';
@@ -17,25 +18,13 @@ import '../styles/living-realm.css';
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://runrealm.example.com'),
   title: {
-    default: 'RunRealm — Run. Claim. Defend.',
+    default: NEIGHBOURHOOD_COPY.product.title,
     template: '%s · RunRealm',
   },
-  description:
-    'RunRealm turns real-world runs into NFT territories you claim, boost, and defend. Connect Strava, run your streets, grow your realm — with optional private defense scores powered by Zama FHE.',
+  description: NEIGHBOURHOOD_COPY.product.description,
   applicationName: 'RunRealm',
   authors: [{ name: 'RunRealm' }],
-  keywords: [
-    'GameFi',
-    'fitness',
-    'running',
-    'NFT territories',
-    'Zama',
-    'FHE',
-    'fully homomorphic encryption',
-    'ZetaChain',
-    'confidential defense',
-    'web3',
-  ],
+  keywords: ['fitness', 'running', 'personal atlas', 'neighbourhood exploration'],
   category: 'fitness',
   robots: { index: true, follow: true },
   manifest: '/manifest.webmanifest',
@@ -56,16 +45,14 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    title: 'RunRealm — Run. Claim. Defend.',
-    description:
-      'Turn your runs into living territory. Claim streets, defend them by staying active, race ghost rivals — with optional private defense via Zama FHE.',
+    title: NEIGHBOURHOOD_COPY.product.title,
+    description: NEIGHBOURHOOD_COPY.product.description,
     siteName: 'RunRealm',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'RunRealm — Run. Claim. Defend.',
-    description:
-      'Turn your runs into living territory. Claim, defend, and race ghosts in your city.',
+    title: NEIGHBOURHOOD_COPY.product.title,
+    description: NEIGHBOURHOOD_COPY.product.description,
   },
 };
 

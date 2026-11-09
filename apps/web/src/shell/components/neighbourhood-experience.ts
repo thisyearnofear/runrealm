@@ -57,6 +57,7 @@ type BusEvent = Extract<
   | 'run:cancelled'
   | 'neighbourhood:updated'
   | 'neighbourhood:runCompleted'
+  | 'neighbourhood:restored'
   | 'ghost:unlocked'
   | 'map:styleLoaded'
   | 'ui:realmViewChanged'
@@ -85,6 +86,8 @@ export class NeighbourhoodExperience {
   private pendingReview: NeighbourhoodRunSummary | null = null;
   /** Which idle layout is on screen; null until the idle panel first renders. */
   private renderedFirstVisit: boolean | null = null;
+  /** Page count and viewed anchor as last rendered, so a page change redraws the header. */
+  private renderedPagesKey = '';
   private arrived = false;
   /** The first-visit sample has auto-played; never repeat it unasked. */
   private sampleAutoplayed = false;
@@ -104,6 +107,8 @@ export class NeighbourhoodExperience {
   private sampleVisited = 0;
   private handoffOpen = false;
   private moreOpen = false;
+  private previewToolsOpen = false;
+  private sampleBadge: HTMLElement | null = null;
   private tour: NeighbourhoodTour | null = null;
   private tourPromptDismissed = tourDismissed();
 
@@ -117,7 +122,27 @@ export class NeighbourhoodExperience {
     this.root.id = 'neighbourhood-shell';
     this.root.setAttribute('aria-label', NEIGHBOURHOOD_COPY.headline);
     this.root.addEventListener('click', (e) => e.stopPropagation());
+    this.root.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !document.body.classList.contains('neighbourhood-advanced'))
+        return;
+      event.preventDefault();
+      this.root?.querySelector<HTMLButtonElement>('[data-action="back"]')?.click();
+    });
     container.appendChild(this.root);
+    const badge = document.createElement('div');
+    badge.className = 'nh-sample-badge';
+    badge.hidden = true;
+    const badgeLabel = document.createElement('span');
+    badgeLabel.textContent = NEIGHBOURHOOD_COPY.desktop.sampleBadge;
+    const badgeClose = document.createElement('button');
+    badgeClose.type = 'button';
+    badgeClose.textContent = '×';
+    badgeClose.setAttribute('aria-label', NEIGHBOURHOOD_COPY.desktop.skip);
+    badgeClose.addEventListener('click', () => this.stopSample());
+    badge.appendChild(badgeLabel);
+    badge.appendChild(badgeClose);
+    document.body.appendChild(badge);
+    this.sampleBadge = badge;
 
     this.on('neighbourhood:updated', (data) => {
       const next = (data as { state: NeighbourhoodState }).state;
@@ -125,6 +150,20 @@ export class NeighbourhoodExperience {
       this.state = next;
       this.renderIdleBits();
       if (collectedChanged || this.phase === 'idle') this.syncMap();
+    });
+    this.on('neighbourhood:restored', (data) => {
+      this.stopSample();
+      this.stopPicking();
+      this.sketch?.stop();
+      this.state = (data as { state: NeighbourhoodState }).state;
+      this.lastSummary = this.state.lastSummary;
+      this.phase = 'idle';
+      this.pendingReview = null;
+      this.selectedCell = null;
+      this.exposedCellIds.clear();
+      this.render();
+      this.syncMap();
+      if (this.state.ringCellIds.length) this.mapController?.frameCells(this.state.ringCellIds);
     });
     this.on('neighbourhood:runCompleted', (data) => {
       const payload = data as {
@@ -157,6 +196,7 @@ export class NeighbourhoodExperience {
       this.mapController?.stopSampleFollow();
       this.sample?.stop();
       this.sampleActive = false;
+      this.updateSampleStatus();
       this.phase = 'recording';
       this.lastRawFix = null;
       this.exposedCellIds.clear();
@@ -295,6 +335,7 @@ export class NeighbourhoodExperience {
    * mechanic, and a sample that fires unasked mid-session is noise.
    */
   private autoplaySample(): void {
+    if (!isDesk()) return;
     if (this.sampleAutoplayed || !this.isFirstVisit() || this.phase !== 'idle') return;
     this.sampleAutoplayed = true;
     if (!this.deps.map || !this.isMapVisible()) return;
@@ -325,6 +366,8 @@ export class NeighbourhoodExperience {
     this.tour?.dispose();
     this.tour = null;
     this.stopPicking();
+    this.sampleBadge?.remove();
+    this.sampleBadge = null;
     this.sample?.dispose();
     this.sketch?.dispose();
     this.sample = null;
@@ -360,6 +403,7 @@ export class NeighbourhoodExperience {
 
   private render(): void {
     if (!this.root) return;
+    this.root.classList.toggle('nh-first-visit', this.phase === 'idle' && this.isFirstVisit());
     this.root.innerHTML = '';
     switch (this.phase) {
       case 'recording':
@@ -382,6 +426,10 @@ export class NeighbourhoodExperience {
       this.render();
       return;
     }
+    if (this.renderedPagesKey !== this.pagesKey()) {
+      this.render();
+      return;
+    }
     const progress = this.root.querySelector('.nh-progress');
     if (progress) {
       progress.textContent = NEIGHBOURHOOD_COPY.progressLine(this.state.qualifyingRuns);
@@ -400,6 +448,16 @@ export class NeighbourhoodExperience {
     }
   }
 
+  private pagesKey(): string {
+    return `${this.state.pages.length}:${this.state.viewAnchorCell ?? ''}`;
+  }
+
+  /** Index of the viewed page within the atlas, clamped into range. */
+  private viewedPageIndex(): number {
+    const index = this.state.pages.findIndex((p) => p.anchorCell === this.state.viewAnchorCell);
+    return index >= 0 ? index : 0;
+  }
+
   private recommendedGoal(): NeighbourhoodGoal {
     const availability = this.deps.neighbourhood.goalAvailability();
     if (availability.challenge.available) return 'challenge';
@@ -408,6 +466,7 @@ export class NeighbourhoodExperience {
   }
 
   private nextStepLine(): string {
+    if (this.state.collectedCount >= 19) return NEIGHBOURHOOD_COPY.pageComplete;
     return NEIGHBOURHOOD_COPY.nextStep[this.recommendedGoal()];
   }
 
@@ -517,6 +576,7 @@ export class NeighbourhoodExperience {
     if (!this.root) return;
     const firstVisit = this.isFirstVisit();
     this.renderedFirstVisit = firstVisit;
+    this.renderedPagesKey = this.pagesKey();
     const goals: NeighbourhoodGoal[] = ['explore', 'strengthen', 'challenge'];
 
     const summaryBlock = this.lastSummary
@@ -536,23 +596,28 @@ export class NeighbourhoodExperience {
             <h1 class="nh-headline nh-headline--invite">${NEIGHBOURHOOD_COPY.firstVisit.headline}</h1>
           </header>
           <p class="nh-lede">${NEIGHBOURHOOD_COPY.firstVisit.lede}</p>
-          ${
-            lean
-              ? ''
-              : `<div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${this.goalButton('explore')}</div>
+          <p class="nh-objective">${NEIGHBOURHOOD_COPY.firstVisit.objective}</p>
           ${this.ruleChips()}
-          <p class="nh-anchor">${NEIGHBOURHOOD_COPY.firstVisit.anchorNote}</p>`
-          }`
+          <p class="nh-anchor">${NEIGHBOURHOOD_COPY.firstVisit.anchorNote}</p>
+          <p class="nh-boundary">${NEIGHBOURHOOD_COPY.firstVisit.boundary}</p>
+          <p class="nh-storage">${
+            this.state.persisted
+              ? NEIGHBOURHOOD_COPY.firstVisit.storage
+              : NEIGHBOURHOOD_COPY.notSavedNote
+          }</p>
+          ${this.ownershipBlock()}`
       : `
           <header class="nh-header">
             <h1 class="nh-headline">${NEIGHBOURHOOD_COPY.headline}</h1>
             <p class="nh-progress">${NEIGHBOURHOOD_COPY.progressLine(this.state.qualifyingRuns)}</p>
+            ${this.pageNav()}
           </header>
           <p class="nh-instruction">${NEIGHBOURHOOD_COPY.instruction}</p>
           <p class="nh-saved-status">${this.savedStatusLine()}</p>
           <p class="nh-nextstep">${this.nextStepLine()}</p>
           ${this.referenceBlock()}
           <div class="nh-goals" role="group" aria-label="${NEIGHBOURHOOD_COPY.goalGroupLabel}">${goals
+            .filter((goal) => this.deps.neighbourhood.goalAvailability()[goal].available)
             .map((goal) => this.goalButton(goal))
             .join('')}</div>`;
 
@@ -563,6 +628,7 @@ export class NeighbourhoodExperience {
         <div class="nh-scroll">
           ${intro}
           ${summaryBlock}
+          ${firstVisit ? `<details class="nh-preview-tools" ${this.previewToolsOpen ? 'open' : ''}><summary>${NEIGHBOURHOOD_COPY.firstVisit.previewTools}</summary>` : ''}
           <div class="nh-explore" data-tour="preview">
             ${
               lean
@@ -599,6 +665,11 @@ export class NeighbourhoodExperience {
               </div>
               <p class="nh-sketch-status" role="status"></p>
               ${
+                firstVisit && !this.tourPromptDismissed
+                  ? `<div class="nh-tour-invite"><button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tour}</button><button type="button" class="nh-secondary" data-action="dismiss-tour" aria-label="Dismiss tour invitation">Not now</button></div>`
+                  : ''
+              }
+              ${
                 isDesk()
                   ? `<button type="button" class="nh-secondary nh-secondary--handoff" data-action="handoff" data-tour="handoff">${NEIGHBOURHOOD_COPY.desktop.handoff}</button>
               <div class="nh-handoff" ${this.handoffOpen ? '' : 'hidden'}>
@@ -611,10 +682,10 @@ export class NeighbourhoodExperience {
               }
             </details>
           </div>
+          ${firstVisit ? '</details>' : ''}
           <div class="nh-celldetail" hidden></div>
           <p class="nh-honest">${firstVisit && this.state.persisted ? NEIGHBOURHOOD_COPY.emptyAtlasNote : this.honestLine()}</p>
-          ${this.factsBlock(firstVisit)}
-          ${firstVisit && !this.tourPromptDismissed ? `<div class="nh-tour-invite"><button type="button" class="nh-secondary" data-action="tour">${NEIGHBOURHOOD_COPY.desktop.tour}</button><button type="button" class="nh-secondary" data-action="dismiss-tour" aria-label="Dismiss tour invitation">Not now</button></div>` : ''}
+          ${firstVisit ? '' : this.factsBlock(false)}
           <div class="nh-footer">
             ${
               lean
@@ -662,8 +733,41 @@ export class NeighbourhoodExperience {
     if (this.handoffOpen) void this.renderHandoff();
   }
 
+  /**
+   * The atlas page controls: only rendered once the atlas holds more than
+   * one neighbourhood. Prev/next cycle the viewed page; crediting is always
+   * by ring overlap, never by which page is on screen.
+   */
+  private pageNav(): string {
+    const pages = this.state.pages;
+    if (pages.length < 2) return '';
+    const label = NEIGHBOURHOOD_COPY.pageIndicator(this.viewedPageIndex() + 1, pages.length);
+    return `
+      <p class="nh-page">${label}</p>
+      <div class="nh-page-nav">
+        <button type="button" class="nh-link" data-action="page-prev">${NEIGHBOURHOOD_COPY.prevPage}</button>
+        <button type="button" class="nh-link" data-action="page-next">${NEIGHBOURHOOD_COPY.nextPage}</button>
+      </div>`;
+  }
+
+  private stepPage(delta: number): void {
+    const pages = this.state.pages;
+    if (pages.length < 2) return;
+    const next = pages[(this.viewedPageIndex() + delta + pages.length) % pages.length];
+    if (!next || !this.deps.neighbourhood.viewPage(next.anchorCell)) return;
+    this.render();
+    this.syncMap();
+    if (this.state.ringCellIds.length) this.mapController?.frameCells(this.state.ringCellIds);
+  }
+
   private bindIdle(): void {
     if (!this.root) return;
+    this.root
+      .querySelector('[data-action="page-prev"]')
+      ?.addEventListener('click', () => this.stepPage(-1));
+    this.root
+      .querySelector('[data-action="page-next"]')
+      ?.addEventListener('click', () => this.stepPage(1));
     for (const btn of Array.from(this.root.querySelectorAll<HTMLButtonElement>('.nh-goal'))) {
       btn.addEventListener('click', () => {
         const goal = btn.dataset.goal as NeighbourhoodGoal;
@@ -712,6 +816,11 @@ export class NeighbourhoodExperience {
       this.moreOpen = (e.target as HTMLDetailsElement).open;
     });
     this.root
+      .querySelector<HTMLDetailsElement>('.nh-preview-tools')
+      ?.addEventListener('toggle', (e) => {
+        this.previewToolsOpen = (e.target as HTMLDetailsElement).open;
+      });
+    this.root
       .querySelector('[data-action="walk-sketch"]')
       ?.addEventListener('click', () => this.walkSketch());
     this.root
@@ -756,6 +865,7 @@ export class NeighbourhoodExperience {
       this.syncAdvancedOverlay();
       const toggle = this.root?.querySelector<HTMLElement>('[data-action="advanced"]');
       toggle?.setAttribute('aria-pressed', 'false');
+      toggle?.focus();
     });
     // The wider realm menu opens the mounted screens directly — the legacy
     // widget chrome stays retired.
@@ -1340,6 +1450,7 @@ export class NeighbourhoodExperience {
   }
 
   private updateSampleStatus(): void {
+    if (this.sampleBadge) this.sampleBadge.hidden = !this.sampleActive;
     const status = this.root?.querySelector<HTMLElement>('.nh-sample-status');
     const actions = this.root?.querySelector<HTMLElement>('.nh-sample-actions');
     if (!status || !actions) return;

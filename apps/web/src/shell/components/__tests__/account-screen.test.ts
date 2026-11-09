@@ -1,5 +1,6 @@
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import { AccountService } from '@runrealm/shared-core/services/account-service';
+import { NavigationService } from '@runrealm/shared-core/services/navigation-service';
 import { PreferenceService } from '@runrealm/shared-core/services/preference-service';
 import { VOICE_BANNED_TERMS } from '@runrealm/shared-core/utils/atlas-voice';
 import AccountScreen from '../account-screen';
@@ -126,6 +127,7 @@ describe('AccountScreen device-local atlas copy', () => {
       const screen = new AccountScreen();
       screen.initialize(document.body);
       screen.show();
+      (document.querySelector('[data-account-action="realm-tools"]') as HTMLButtonElement).click();
       const heading = [...document.querySelectorAll('.account-card h3')].find(
         (h) => h.textContent === 'Authorizations'
       );
@@ -184,5 +186,155 @@ describe('AccountScreen device-local atlas copy', () => {
         });
       }
     }
+  });
+
+  describe('navigation and focus', () => {
+    let navigation: NavigationService;
+
+    function mountAccount(): AccountScreen {
+      (PreferenceService as jest.Mock).mockImplementation(() => ({
+        getPublicTerritoryIds: () => [],
+      }));
+      (AccountService.getInstance as jest.Mock).mockReturnValue({
+        getAccount: () => ({
+          id: 'account-example-1234',
+          tier: 'guest',
+          createdAt: Date.now(),
+        }),
+        getActiveSessionKeys: () => [],
+      });
+      const screen = new AccountScreen();
+      screen.initialize(document.body);
+      return screen;
+    }
+
+    function container(): HTMLElement {
+      return document.getElementById('account-screen') as HTMLElement;
+    }
+
+    function mountOpener(): HTMLButtonElement {
+      const opener = document.createElement('button');
+      document.body.appendChild(opener);
+      opener.focus();
+      return opener;
+    }
+
+    beforeEach(() => {
+      navigation = NavigationService.getInstance();
+      navigation.registerRoutes([
+        { id: 'map', path: '/', title: 'Map' },
+        { id: 'ledger', path: '/ledger', title: 'Ledger' },
+        { id: 'leaderboard', path: '/leaderboard', title: 'Pace bands' },
+      ]);
+      navigation.navigateTo('map');
+    });
+
+    it('still opens on the direct account event and focuses its close button', () => {
+      mountAccount();
+      EventBus.getInstance().emit('account:showRequested', {} as never);
+      expect(container().classList.contains('hidden')).toBe(false);
+      expect(document.activeElement).toBe(container().querySelector('#account-close'));
+    });
+
+    it('returns to the map route when opened over a routed screen', () => {
+      mountAccount();
+      navigation.navigateTo('ledger');
+      EventBus.getInstance().emit('account:showRequested', {} as never);
+      expect(navigation.isRouteActive('map')).toBe(true);
+      expect(container().classList.contains('hidden')).toBe(false);
+      expect(document.activeElement).toBe(container().querySelector('#account-close'));
+    });
+
+    it('closes on a route change and restores focus to the opener', () => {
+      const screen = mountAccount();
+      const opener = mountOpener();
+      screen.show();
+      expect(document.activeElement).toBe(container().querySelector('#account-close'));
+      navigation.navigateTo('ledger');
+      expect(container().classList.contains('hidden')).toBe(true);
+      expect(document.activeElement).toBe(opener);
+    });
+
+    it('hides on Escape and restores focus to the opener', () => {
+      const screen = mountAccount();
+      const opener = mountOpener();
+      screen.show();
+      container().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(container().classList.contains('hidden')).toBe(true);
+      expect(document.activeElement).toBe(opener);
+    });
+
+    it('hides via the close button and restores focus to the opener', () => {
+      const screen = mountAccount();
+      const opener = mountOpener();
+      screen.show();
+      (container().querySelector('#account-close') as HTMLButtonElement).click();
+      expect(container().classList.contains('hidden')).toBe(true);
+      expect(document.activeElement).toBe(opener);
+    });
+  });
+});
+
+describe('optional territory tools', () => {
+  beforeEach(() => {
+    EventBus.getInstance().clear();
+    document.body.replaceChildren();
+    (PreferenceService as jest.Mock).mockImplementation(() => ({
+      getPublicTerritoryIds: () => [],
+    }));
+  });
+
+  function mount(tier: string, keys: unknown[] = []) {
+    const issueSessionKey = jest.fn(() => Promise.resolve({}));
+    (AccountService.getInstance as jest.Mock).mockReturnValue({
+      getAccount: () => ({ id: 'a-1', tier, createdAt: 0 }),
+      getActiveSessionKeys: () => keys,
+      issueSessionKey,
+    });
+    const screen = new AccountScreen();
+    screen.initialize(document.body);
+    screen.show();
+    return { screen, issueSessionKey };
+  }
+
+  it.each([
+    'guest',
+    'passkey',
+    'wallet',
+  ])('hides session keys, approvals and wallet link by default (%s)', (tier) => {
+    mount(tier, [{ id: 'k1', scopes: ['claim'], expiresAt: 1, spendLimitRealm: 0, spentRealm: 0 }]);
+    expect(document.querySelector('[data-account-action="realm-tools"]')).toBeTruthy();
+    expect(document.querySelector('[data-account-action="link-wallet"]')).toBeNull();
+    expect(document.querySelector('[data-account-action="approve-spend-25"]')).toBeNull();
+    expect(document.querySelector('[data-account-action="approve-spend-100"]')).toBeNull();
+  });
+
+  it('a forged financial action does nothing while tools stay closed', () => {
+    const { issueSessionKey } = mount('passkey');
+    const forged = document.createElement('button');
+    forged.setAttribute('data-account-action', 'approve-spend-25');
+    document.getElementById('account-screen')!.appendChild(forged);
+    forged.click();
+    expect(issueSessionKey).not.toHaveBeenCalled();
+  });
+
+  it('opening shows the existing controls and closing or reopening resets them', () => {
+    mount('passkey', [
+      { id: 'k1', scopes: ['claim'], expiresAt: 1, spendLimitRealm: 0, spentRealm: 0 },
+    ]);
+    const toggle = document.querySelector(
+      '[data-account-action="realm-tools"]'
+    ) as HTMLButtonElement;
+    toggle.click();
+    const container = [...document.querySelectorAll('#account-screen')].at(-1)!;
+    expect(container.querySelector('[data-account-action="approve-spend-25"]')).toBeTruthy();
+    expect(container.querySelector('[data-account-action="link-wallet"]')).toBeTruthy();
+    container.querySelector<HTMLElement>('#account-close')?.click();
+    const reopened = new AccountScreen();
+    reopened.initialize(document.body);
+    reopened.show();
+    const reopenedCard = [...document.querySelectorAll('#account-screen')].at(-1)!;
+    expect(reopenedCard.querySelector('#account-realm-content')?.hasAttribute('hidden')).toBe(true);
+    expect(reopenedCard.querySelector('[data-account-action="approve-spend-25"]')).toBeNull();
   });
 });

@@ -235,6 +235,20 @@ body.neighbourhood-mode .theater-pocket-btn {
   margin: 2px 0 0;
 }
 
+.nh-page {
+  font-family: var(--rr-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: #3f6372;
+  margin: 6px 0 0;
+}
+
+.nh-page-nav {
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+}
+
 .nh-instruction,
 .nh-nextstep,
 .nh-honest,
@@ -909,6 +923,10 @@ body.pocket-mode .nh-map-toolbar {
   display: none;
 }
 
+body.neighbourhood-advanced .nh-map-toolbar {
+  display: none;
+}
+
 .nh-marker {
   width: 44px;
   height: 44px;
@@ -1164,5 +1182,63 @@ body.pocket-mode .nh-map-toolbar {
 
   #neighbourhood-shell {
     max-height: 48dvh;
+  }
+}
+
+.nh-objective {
+  font-weight: 600;
+  margin: 10px 0 6px;
+}
+
+.nh-boundary,
+.nh-storage {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  opacity: 0.82;
+  margin: 4px 0;
+}
+
+.nh-preview-tools > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.nh-sample-badge {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: calc(var(--z-widgets) + 15);
+  max-width: calc(100vw - 32px);
+  background: var(--rr-sunprint-blueprint, #0d2b3e);
+  color: var(--rr-sunprint-chalk, #f8f4e8);
+  border: 1px solid var(--rr-sunprint-chalk, #f8f4e8);
+  border-radius: 999px;
+  padding: 4px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.nh-sample-badge[hidden] {
+  display: none;
+}
+
+.nh-sample-badge button {
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  #neighbourhood-shell.nh-first-visit {
+    max-height: 72dvh;
   }
 }

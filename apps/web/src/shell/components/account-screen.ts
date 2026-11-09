@@ -21,7 +21,15 @@ import {
   DEFAULT_GAME_SCOPES,
   type SessionKey,
 } from '@runrealm/shared-core/services/account-service';
+import { NavigationService } from '@runrealm/shared-core/services/navigation-service';
+import type { NeighbourhoodService } from '@runrealm/shared-core/services/neighbourhood-service';
 import { PreferenceService } from '@runrealm/shared-core/services/preference-service';
+import {
+  ATLAS_BACKUP_MAX_BYTES,
+  AtlasBackupError,
+  type AtlasRestorePreview,
+} from '@runrealm/shared-core/utils/atlas-backup';
+import { NEIGHBOURHOOD_COPY } from '@runrealm/shared-core/utils/atlas-voice';
 import {
   deviceDataBytes,
   eraseDeviceData,
@@ -60,8 +68,17 @@ export default class AccountScreen {
   private preferenceService: PreferenceService;
   private eventBus: EventBus;
   private visible = false;
+  private returnFocus: HTMLElement | null = null;
+  private backupPreview: AtlasRestorePreview | null = null;
+  private backupMessage = '';
+  private backupError = false;
+  private backupReading = false;
+  private backupRequest = 0;
+  private backupAcknowledged = false;
+  private backupFilename = '';
+  private realmToolsOpen = false;
 
-  constructor() {
+  constructor(private readonly neighbourhood?: NeighbourhoodService) {
     this.accountService = AccountService.getInstance();
     this.preferenceService = new PreferenceService();
     this.eventBus = EventBus.getInstance();
@@ -74,6 +91,26 @@ export default class AccountScreen {
     parentElement.appendChild(this.container);
 
     this.container.addEventListener('click', (e) => this.handleClick(e));
+    this.container.addEventListener('change', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('atlas-backup-file')) {
+        this.handleBackupFile(target as HTMLInputElement);
+      } else if (target.classList.contains('atlas-backup-ack')) {
+        this.backupAcknowledged = (target as HTMLInputElement).checked;
+        const confirm = this.container?.querySelector<HTMLButtonElement>(
+          '[data-account-action="atlas-confirm"]'
+        );
+        if (confirm) confirm.disabled = !this.backupAcknowledged;
+      }
+    });
+    this.container.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !this.visible) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.hide();
+    });
+
+    this.eventBus.on('navigation:routeChanged', () => this.hide());
 
     // Re-render on identity/session changes while visible.
     for (const event of ['account:upgraded', 'session:issued', 'session:revoked'] as const) {
@@ -87,32 +124,58 @@ export default class AccountScreen {
   }
 
   public show(): void {
+    if (!this.container) return;
+    if (!this.visible) {
+      const opener = document.activeElement;
+      const navigation = NavigationService.getInstance();
+      if (!navigation.isRouteActive('map')) navigation.navigateTo('map');
+      this.returnFocus = opener instanceof HTMLElement ? opener : null;
+    }
     this.visible = true;
     this.render();
-    this.container?.classList.remove('hidden');
+    this.container.classList.remove('hidden');
+    this.container.querySelector<HTMLButtonElement>('#account-close')?.focus();
   }
 
   public hide(): void {
+    if (!this.visible) return;
+    const focusWasInside = this.container?.contains(document.activeElement);
     this.visible = false;
+    this.backupRequest += 1;
+    this.backupReading = false;
+    this.backupPreview = null;
+    this.backupAcknowledged = false;
+    this.backupFilename = '';
+    this.backupMessage = '';
+    this.backupError = false;
+    this.realmToolsOpen = false;
+    this.neighbourhood?.cancelAtlasRestore();
     this.container?.classList.add('hidden');
+    if (focusWasInside && this.returnFocus?.isConnected) this.returnFocus.focus();
+    this.returnFocus = null;
   }
 
   // ---- Rendering -------------------------------------------------------
 
   private render(): void {
     if (!this.container) return;
+    const focusWasInside = this.container.contains(document.activeElement);
     this.container.innerHTML = `
       <div class="dashboard-header">
         <h2>Account</h2>
         <button id="account-close" class="dashboard-close-btn" aria-label="Close">✕</button>
       </div>
       <div class="account-content">
+        ${this.neighbourhood ? this.renderBackupCard() : ''}
         ${this.renderIdentityCard()}
-        ${this.renderSessionKeys()}
+        ${this.renderRealmTools()}
         ${this.renderPrivacyCard()}
         ${this.renderMapCredits()}
       </div>
     `;
+    if (focusWasInside && !this.container.contains(document.activeElement)) {
+      this.container.querySelector<HTMLButtonElement>('#account-close')?.focus();
+    }
   }
 
   /**
@@ -146,6 +209,179 @@ export default class AccountScreen {
     `;
   }
 
+  private renderBackupCard(): string {
+    const copy = NEIGHBOURHOOD_COPY.backup;
+    const saved = this.neighbourhood ? this.neighbourhood.getState().persisted : true;
+    const status = this.backupReading
+      ? `<p class="account-copy" role="status" aria-live="polite">${escapeHtml(copy.reading)}</p>`
+      : this.backupMessage
+        ? `<p class="account-copy" tabindex="-1" role="${this.backupError ? 'alert' : 'status'}" ${this.backupError ? '' : 'aria-live="polite"'}>${escapeHtml(this.backupMessage)}</p>`
+        : '';
+    const preview = this.backupPreview
+      ? `
+      <div class="atlas-backup-preview">
+        <h4 tabindex="-1" class="atlas-backup-preview-title">${escapeHtml(copy.preview)}</h4>
+        <p class="account-copy">${escapeHtml(copy.created)} ${escapeHtml(new Date(this.backupPreview.exportedAt).toLocaleString())}${this.backupFilename ? ` · ${escapeHtml(this.backupFilename)}` : ''}</p>
+        <p class="account-copy">${escapeHtml(copy.current)}: ${escapeHtml(copy.summary(this.backupPreview.currentBlocks, this.backupPreview.currentOutings))}</p>
+        <p class="account-copy">${escapeHtml(copy.incoming)}: ${escapeHtml(copy.summary(this.backupPreview.incomingBlocks, this.backupPreview.incomingOutings))}</p>
+        ${this.backupPreview.incomingPages > 1 ? `<p class="account-copy">${escapeHtml(copy.pages(this.backupPreview.incomingPages))}</p>` : ''}
+        ${this.backupPreview.differentNeighbourhood ? `<p class="account-copy"><strong>${escapeHtml(copy.different)}</strong></p>` : ''}
+        <p class="account-copy">${escapeHtml(copy.replaceWarning)}</p>
+        <label class="atlas-backup-ack-row">
+          <input type="checkbox" class="atlas-backup-ack" ${this.backupAcknowledged ? 'checked' : ''} />
+          <span>${escapeHtml(copy.acknowledgement)}</span>
+        </label>
+        <div class="account-actions">
+          <button class="action-btn" data-account-action="atlas-confirm" ${this.backupAcknowledged ? '' : 'disabled'}>${escapeHtml(copy.confirm)}</button>
+          <button class="action-btn secondary" data-account-action="atlas-cancel">${escapeHtml(copy.cancel)}</button>
+        </div>
+      </div>`
+      : '';
+    return `
+      <div class="account-card atlas-backup-card">
+        <h3>${escapeHtml(copy.heading)}</h3>
+        <p class="account-copy">${escapeHtml(saved ? copy.local : copy.unsaved)}</p>
+        <p class="account-copy">${escapeHtml(copy.scope)}</p>
+        <p class="account-copy">${escapeHtml(copy.privacy)}</p>
+        <div class="account-actions">
+          <button class="action-btn secondary" data-account-action="atlas-export">${escapeHtml(copy.export)}</button>
+          <button class="action-btn secondary" data-account-action="atlas-choose">${escapeHtml(copy.import)}</button>
+          <input type="file" class="atlas-backup-file" accept="application/json,.json" aria-label="${escapeHtml(copy.fileLabel)}" hidden />
+        </div>
+        ${status}
+        ${preview}
+      </div>
+    `;
+  }
+
+  private backupErrorMessage(error: unknown): string {
+    const copy = NEIGHBOURHOOD_COPY.backup.errors;
+    if (error instanceof AtlasBackupError) {
+      return copy[error.code] ?? copy.invalid;
+    }
+    return copy.invalid;
+  }
+
+  private setBackupStatus(message: string, isError: boolean): void {
+    this.backupMessage = message;
+    this.backupError = isError;
+  }
+
+  private renderBackupStatus(): void {
+    this.render();
+    this.container
+      ?.querySelector<HTMLElement>(
+        '.atlas-backup-card [role="alert"], .atlas-backup-card [role="status"]'
+      )
+      ?.focus();
+  }
+
+  private handleBackupExport(): void {
+    if (!this.neighbourhood) return;
+    try {
+      const text = this.neighbourhood.exportAtlasBackup();
+      const blob = new Blob([text], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `runrealm-atlas-${new Date().toISOString().slice(0, 10)}.json`;
+      try {
+        document.body.appendChild(anchor);
+        anchor.click();
+      } finally {
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      this.setBackupStatus(NEIGHBOURHOOD_COPY.backup.exported, false);
+    } catch (error) {
+      this.setBackupStatus(
+        error instanceof AtlasBackupError && error.code === 'readonly'
+          ? NEIGHBOURHOOD_COPY.backup.errors.readonly
+          : NEIGHBOURHOOD_COPY.backup.errors.exportFailed,
+        true
+      );
+    }
+    this.renderBackupStatus();
+  }
+
+  private handleBackupFile(input: HTMLInputElement): void {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !this.neighbourhood) return;
+    const requestId = ++this.backupRequest;
+    this.backupPreview = null;
+    this.backupAcknowledged = false;
+    this.backupFilename = file.name;
+    this.neighbourhood.cancelAtlasRestore();
+    const copy = NEIGHBOURHOOD_COPY.backup;
+    if (file.size > ATLAS_BACKUP_MAX_BYTES) {
+      this.backupReading = false;
+      this.setBackupStatus(copy.errors['too-large'], true);
+      this.renderBackupStatus();
+      return;
+    }
+    this.backupReading = true;
+    this.backupMessage = '';
+    this.backupError = false;
+    this.render();
+    const service = this.neighbourhood;
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(new Error('read'));
+      reader.readAsText(file);
+    })
+      .then((text) => {
+        if (requestId !== this.backupRequest || !this.visible) return;
+        this.backupReading = false;
+        try {
+          this.backupPreview = service.previewAtlasRestore(text);
+          this.backupMessage = '';
+          this.render();
+          this.container?.querySelector<HTMLElement>('.atlas-backup-preview-title')?.focus();
+        } catch (error) {
+          this.backupPreview = null;
+          this.setBackupStatus(this.backupErrorMessage(error), true);
+          this.renderBackupStatus();
+        }
+      })
+      .catch(() => {
+        if (requestId !== this.backupRequest || !this.visible) return;
+        this.backupReading = false;
+        this.setBackupStatus(copy.errors.readFailed, true);
+        this.renderBackupStatus();
+      });
+  }
+
+  private handleBackupConfirm(): void {
+    if (!this.neighbourhood || !this.backupPreview || !this.backupAcknowledged) return;
+    try {
+      this.neighbourhood.confirmAtlasRestore();
+      this.backupPreview = null;
+      this.backupAcknowledged = false;
+      this.backupFilename = '';
+      this.setBackupStatus(NEIGHBOURHOOD_COPY.backup.restored, false);
+    } catch (error) {
+      this.backupPreview = null;
+      this.backupAcknowledged = false;
+      this.neighbourhood.cancelAtlasRestore();
+      this.setBackupStatus(this.backupErrorMessage(error), true);
+    }
+    this.renderBackupStatus();
+  }
+
+  private handleBackupCancel(): void {
+    this.backupRequest += 1;
+    this.backupPreview = null;
+    this.backupAcknowledged = false;
+    this.backupFilename = '';
+    this.backupReading = false;
+    this.neighbourhood?.cancelAtlasRestore();
+    this.backupMessage = '';
+    this.backupError = false;
+    this.render();
+  }
+
   private renderIdentityCard(): string {
     const account = this.accountService.getAccount();
     if (!account) {
@@ -162,7 +398,7 @@ export default class AccountScreen {
         `<button class="action-btn" data-account-action="add-passkey">🔑 Add passkey (Face ID)</button>`
       );
     }
-    if (account.tier !== 'wallet') {
+    if (this.realmToolsOpen && account.tier !== 'wallet') {
       actions.push(
         `<button class="action-btn secondary" data-account-action="link-wallet" title="Optional — for trading and withdrawals">👛 Link wallet <span class="advanced-tag">advanced</span></button>`
       );
@@ -182,6 +418,11 @@ export default class AccountScreen {
         ${actions.length ? `<div class="account-actions">${actions.join('')}</div>` : ''}
       </div>
     `;
+  }
+
+  private renderRealmTools(): string {
+    const copy = NEIGHBOURHOOD_COPY.realmAccount;
+    return `<section class="account-card account-realm-tools"><h3>${escapeHtml(copy.title)}</h3><p class="account-copy">${escapeHtml(copy.description)}</p><button type="button" class="action-btn secondary" data-account-action="realm-tools" aria-expanded="${this.realmToolsOpen}" aria-controls="account-realm-content">${escapeHtml(this.realmToolsOpen ? copy.close : copy.open)}</button><div id="account-realm-content" ${this.realmToolsOpen ? '' : 'hidden'}>${this.realmToolsOpen ? this.renderSessionKeys() : ''}</div></section>`;
   }
 
   private renderSessionKeys(): string {
@@ -322,7 +563,33 @@ export default class AccountScreen {
     }
 
     const action = (target as HTMLElement).getAttribute('data-account-action');
+    if (
+      !this.realmToolsOpen &&
+      (action === 'link-wallet' || action === 'approve-spend-25' || action === 'approve-spend-100')
+    ) {
+      return;
+    }
     switch (action) {
+      case 'realm-tools': {
+        this.realmToolsOpen = !this.realmToolsOpen;
+        this.render();
+        this.container
+          ?.querySelector<HTMLButtonElement>('[data-account-action="realm-tools"]')
+          ?.focus();
+        break;
+      }
+      case 'atlas-export':
+        this.handleBackupExport();
+        break;
+      case 'atlas-choose':
+        this.container?.querySelector<HTMLInputElement>('.atlas-backup-file')?.click();
+        break;
+      case 'atlas-confirm':
+        this.handleBackupConfirm();
+        break;
+      case 'atlas-cancel':
+        this.handleBackupCancel();
+        break;
       case 'add-passkey':
         this.accountService.upgradeToPasskey().catch((err) => {
           this.eventBus.emit('ui:toast', {

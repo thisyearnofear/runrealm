@@ -4,6 +4,9 @@ import { H3_RESOLUTION, neighboringCells } from '../utils/h3-territory';
 export const NEIGHBOURHOOD_STORAGE_KEY = 'runrealm-neighbourhood-ledger-v1';
 export const NEIGHBOURHOOD_SCHEMA_VERSION = 1;
 
+export const ATLAS_STORAGE_KEY = 'runrealm-atlas-v2';
+export const ATLAS_SCHEMA_VERSION = 2;
+
 export const NEIGHBOURHOOD_MIN_DISTANCE_M = 500;
 export const NEIGHBOURHOOD_MAX_ACCURACY_M = 50;
 export const NEIGHBOURHOOD_RING_SIZE = 2;
@@ -66,6 +69,18 @@ export interface NeighbourhoodLivePreview {
   usablePointCount: number;
 }
 
+export interface NeighbourhoodAtlas {
+  version: number;
+  pages: NeighbourhoodLedger[];
+  viewAnchor: string | null;
+}
+
+export interface AtlasPageSummary {
+  anchorCell: string | null;
+  collectedCount: number;
+  qualifyingRuns: number;
+}
+
 export interface NeighbourhoodState {
   anchorCell: string | null;
   cells: Record<string, NeighbourhoodCellRecord>;
@@ -78,6 +93,8 @@ export interface NeighbourhoodState {
   referenceRun: NeighbourhoodReferenceRun | null;
   persisted: boolean;
   readOnly: boolean;
+  pages: AtlasPageSummary[];
+  viewAnchorCell: string | null;
 }
 
 export function emptyNeighbourhoodLedger(): NeighbourhoodLedger {
@@ -215,6 +232,33 @@ export function isNeighbourhoodLedger(value: unknown): value is NeighbourhoodLed
   if (ledger.referenceRun !== null && !isReferenceRun(ledger.referenceRun)) return false;
   if (ledger.lastSummary !== null && !isRunSummary(ledger.lastSummary, ring)) {
     return false;
+  }
+  return true;
+}
+
+export function emptyNeighbourhoodAtlas(): NeighbourhoodAtlas {
+  return {
+    version: ATLAS_SCHEMA_VERSION,
+    pages: [emptyNeighbourhoodLedger()],
+    viewAnchor: null,
+  };
+}
+
+export function isNeighbourhoodAtlas(value: unknown): value is NeighbourhoodAtlas {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const atlas = value as Partial<NeighbourhoodAtlas>;
+  if (atlas.version !== ATLAS_SCHEMA_VERSION) return false;
+  if (!Array.isArray(atlas.pages) || atlas.pages.length === 0) return false;
+  const seenAnchors = new Set<string | null>();
+  for (const page of atlas.pages) {
+    if (!isNeighbourhoodLedger(page)) return false;
+    const anchor = page.anchorCell;
+    if (seenAnchors.has(anchor)) return false;
+    seenAnchors.add(anchor);
+  }
+  if (atlas.viewAnchor !== null) {
+    if (typeof atlas.viewAnchor !== 'string') return false;
+    if (!seenAnchors.has(atlas.viewAnchor)) return false;
   }
   return true;
 }

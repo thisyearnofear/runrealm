@@ -37,6 +37,8 @@ function state(visits: Record<string, number> = {}) {
     referenceRun: null,
     persisted: true,
     readOnly: false,
+    pages: [],
+    viewAnchorCell: IDS[0],
   };
 }
 

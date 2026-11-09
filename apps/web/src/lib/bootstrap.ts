@@ -231,7 +231,7 @@ async function bootApp({ onPhase }: BootstrapOptions = {}): Promise<void> {
     // Accounts layer (protocol-vision Layer 2): identity, session keys,
     // privacy posture. Opened from the dashboard header 👤 or via
     // `account:showRequested`.
-    const accountScreen = new AccountScreen();
+    const accountScreen = new AccountScreen(app.getServices().neighbourhood);
     const accountContainer = document.createElement('div');
     accountContainer.id = 'account-screen-root';
     document.body.appendChild(accountContainer);

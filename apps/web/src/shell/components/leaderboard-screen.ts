@@ -35,6 +35,7 @@ export default class LeaderboardScreen {
   private navigation: NavigationService;
   private eventBus: EventBus;
   private visible = false;
+  private returnFocus: HTMLElement | null = null;
   private networkEntries: PaceBandEntry[] = [];
 
   constructor() {
@@ -51,6 +52,12 @@ export default class LeaderboardScreen {
     parentElement.appendChild(this.container);
 
     this.container.addEventListener('click', (e) => this.handleClick(e));
+    this.container.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !this.visible) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.navigation.navigateTo('map');
+    });
 
     // Nav owns open/close; the board re-renders while visible so a fresh
     // attestation appears without reopening.
@@ -65,16 +72,24 @@ export default class LeaderboardScreen {
 
   private show(): void {
     if (!this.container) return;
+    if (!this.visible) {
+      const opener = document.activeElement;
+      this.returnFocus = opener instanceof HTMLElement ? opener : null;
+    }
     this.visible = true;
     this.container.classList.remove('hidden');
     this.render();
+    this.container.querySelector<HTMLButtonElement>('[data-leaderboard-action="close"]')?.focus();
     void this.refreshNetwork();
   }
 
   private hide(): void {
-    if (!this.container) return;
+    if (!this.visible) return;
+    const focusWasInside = this.container?.contains(document.activeElement);
     this.visible = false;
-    this.container.classList.add('hidden');
+    this.container?.classList.add('hidden');
+    if (focusWasInside && this.returnFocus?.isConnected) this.returnFocus.focus();
+    this.returnFocus = null;
   }
 
   /** Pull the oracle ledger, then re-render. Failures are silent — the
@@ -144,6 +159,7 @@ export default class LeaderboardScreen {
   private render(): void {
     if (!this.container) return;
     this.ensureStyles();
+    const focusWasInside = this.container.contains(document.activeElement);
 
     const rows = rankPaceBandLeaderboard(this.buildEntries());
     const userRow = rows.find((r) => r.kind === 'run' && r.label === 'You');
@@ -198,6 +214,9 @@ export default class LeaderboardScreen {
         </footer>
       </div>
     `;
+    if (focusWasInside && !this.container.contains(document.activeElement)) {
+      this.container.querySelector<HTMLButtonElement>('[data-leaderboard-action="close"]')?.focus();
+    }
   }
 
   private ensureStyles(): void {
@@ -206,7 +225,7 @@ export default class LeaderboardScreen {
     style.id = STYLE_ID;
     style.textContent = `
       .leaderboard-screen {
-        position: fixed; inset: 0; z-index: 9200;
+        position: fixed; inset: 0; z-index: var(--z-modals, 2000);
         display: flex; align-items: center; justify-content: center;
         background: rgba(7, 26, 38, 0.72);
         backdrop-filter: blur(3px);
@@ -214,8 +233,9 @@ export default class LeaderboardScreen {
       }
       .leaderboard-screen.hidden { display: none; }
       .leaderboard-card {
+        box-sizing: border-box;
         width: min(560px, calc(100vw - 32px));
-        max-height: min(78vh, 720px);
+        max-height: min(calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), 720px);
         overflow: auto;
         background: linear-gradient(165deg, #103248 0%, var(--rr-sunprint-blueprint, #0d2b3e) 60%, #071a26 100%);
         border: 1px solid var(--rr-sunprint-verdigris, #4fae8b);

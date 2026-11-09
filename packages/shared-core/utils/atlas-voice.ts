@@ -1147,15 +1147,32 @@ export const NEIGHBOURHOOD_COPY = {
     },
   },
   lockedPrefix: 'Locked',
+  product: {
+    title: 'RunRealm — Build your personal atlas',
+    description:
+      'Run familiar streets. Discover new ones. Build a personal atlas, starting with one neighbourhood. Territory play is optional.',
+  },
   firstVisit: {
     kicker: 'Sunprint Atlas',
     headline: 'Your neighbourhood is uncharted.',
-    lede: 'Every street you run develops onto this map.',
+    lede: 'Run familiar streets. Discover new ones. Build your personal atlas.',
     // The rules are three scannable tokens, not a sentence. Recognising
     // "500m+ / GPS / no loop" is faster than parsing the paragraph it replaced.
     ruleLabel: 'To collect',
     rules: ['500m+', 'GPS within 50m', 'No loop needed'],
-    anchorNote: 'Start run asks for location. Your first outing sets this map.',
+    objective: 'First goal: finish a 500m outing in this neighbourhood.',
+    anchorNote: 'Start run asks for location.',
+    boundary:
+      'Your first qualifying outing anchors 19 blocks. Run somewhere new to open another page.',
+    storage: 'Saved only in this browser. Export a backup from Account to keep a copy.',
+    previewTools: 'Preview and plan',
+  },
+  realmAccount: {
+    title: 'Optional territory play',
+    description:
+      'Wallets and spending permissions apply only to registered territory play, not your personal atlas.',
+    open: 'Open territory tools',
+    close: 'Close territory tools',
   },
   desktop: {
     invitation: 'Outings happen on your phone.',
@@ -1223,9 +1240,9 @@ export const NEIGHBOURHOOD_COPY = {
   // runner crossing the boundary needs to know what changed.
   // `docs/neighbourhood-exploration.md` points here for the wallet
   // caveat, so these two lines are load-bearing, not decoration.
-  advancedNote: 'Your claims, your ghosts and the rest of the realm.',
+  advancedNote: 'Optional territory play and your running records.',
   advancedHint:
-    'Registered ground uses a wallet. This atlas stays on this device — it does not travel with a wallet or a phone link.',
+    'Registered ground uses a wallet. Your personal atlas is separate: export it from Account to move a copy to another browser.',
   realmMenu: {
     dashboard: 'Your ledger',
     dashboardHint: 'Blocks, outings, distance and ghosts',
@@ -1235,6 +1252,52 @@ export const NEIGHBOURHOOD_COPY = {
     accountHint: 'Identity, authorizations and privacy',
   },
   backToNeighbourhood: 'Back to your neighbourhood',
+  backup: {
+    heading: 'Keep your atlas safe',
+    scope:
+      'Backs up collected blocks, visits and the latest outing summaries. Full run history, ghosts and account access are not included.',
+    privacy:
+      'This file is not encrypted. It contains location-derived blocks. Keep it private; it has no GPS tracks, wallet keys or permissions.',
+    local:
+      'Saved only in this browser. A downloaded backup can restore your atlas on another device.',
+    unsaved:
+      'This atlas is only in memory. Export it before closing this page; this browser has not saved it.',
+    export: 'Export atlas',
+    import: 'Choose backup',
+    fileLabel: 'Choose an atlas backup file',
+    reading: 'Reading your backup…',
+    preview: 'Review this backup',
+    created: 'Exported',
+    current: 'On this device',
+    incoming: 'In this backup',
+    summary: (blocks: number, outings: number) =>
+      `${blocks} collected blocks · ${outings} credited outings`,
+    different: 'This backup belongs to a different neighbourhood.',
+    pages: (n: number) => `${n} neighbourhood${n === 1 ? '' : 's'} in this backup.`,
+    replaceWarning:
+      'Restoring replaces the atlas on this device; it does not merge progress. Export your current atlas first if you want to keep it.',
+    acknowledgement: 'I understand this replaces my current atlas.',
+    confirm: 'Replace atlas',
+    cancel: 'Keep current atlas',
+    restored:
+      'Atlas restored and saved on this device. Your account and run history were not changed.',
+    exported: 'Backup download requested. Check your downloads and keep the file somewhere safe.',
+    errors: {
+      invalid: 'This is not a valid atlas backup. Choose another file; your atlas has not changed.',
+      version: 'This backup needs another app version. Nothing was replaced.',
+      'too-large': 'This file is too large. Choose an atlas backup smaller than 2 MB.',
+      busy: 'Finish or recover your current outing before restoring an atlas.',
+      storage:
+        'This browser could not save the backup. Nothing was replaced; check storage access and try again.',
+      changed:
+        'Your atlas changed since it was loaded or reviewed. Export any unsaved progress, reload, then choose the backup again.',
+      readonly:
+        'This browser holds atlas data this version cannot read. It has been left untouched. Try the app version that saved it.',
+      'no-preview': 'Choose and review a backup before replacing your atlas.',
+      readFailed: 'The file could not be read. Choose it again; your atlas has not changed.',
+      exportFailed: 'A backup could not be downloaded. Keep this page open and try again.',
+    },
+  },
   gpsDenied: 'Location is off. Allow it in your browser settings, then try again.',
   gpsRetry: 'Try again',
   gpsStatus: {
@@ -1270,6 +1333,11 @@ export const NEIGHBOURHOOD_COPY = {
   cellLabel: (index: number) => `Block ${String(index + 1).padStart(2, '0')}`,
   progressLine: (outings: number) =>
     `One neighbourhood · ${outings} outing${outings === 1 ? '' : 's'}`,
+  pageIndicator: (index: number, total: number) => `Neighbourhood ${index} of ${total}`,
+  prevPage: 'Previous neighbourhood',
+  nextPage: 'Next neighbourhood',
+  pageComplete: 'This neighbourhood is complete — a run somewhere new opens another page.',
+  atlasPages: (n: number) => `${n} neighbourhood page${n === 1 ? '' : 's'}`,
   nextStep: {
     explore: 'First outing: Explore.',
     strengthen: 'Next: Strengthen the cells you know.',

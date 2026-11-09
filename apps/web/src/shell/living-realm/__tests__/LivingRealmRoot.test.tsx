@@ -71,6 +71,8 @@ const nhState = (overrides: Partial<NeighbourhoodState> = {}): NeighbourhoodStat
   referenceRun: null,
   persisted: true,
   readOnly: false,
+  pages: [],
+  viewAnchorCell: null,
   ...overrides,
 });
 

@@ -23,6 +23,7 @@ import {
   RunTrackingService,
 } from '@runrealm/shared-core/services/run-tracking-service';
 import type { NeighbourhoodGoal } from '@runrealm/shared-core/types/neighbourhood';
+import { NEIGHBOURHOOD_COPY } from '@runrealm/shared-core/utils/atlas-voice';
 import { formatPaceBand } from '@runrealm/shared-core/utils/pace-leaderboard';
 import { formatDistance, formatDuration, formatPace } from '@runrealm/shared-core/utils/run-status';
 
@@ -62,6 +63,7 @@ export default class LedgerScreen {
   private navigation: NavigationService;
   private eventBus: EventBus;
   private visible = false;
+  private returnFocus: HTMLElement | null = null;
 
   constructor(deps: LedgerScreenDeps) {
     this.neighbourhood = deps.neighbourhood;
@@ -78,6 +80,12 @@ export default class LedgerScreen {
     parentElement.appendChild(this.container);
 
     this.container.addEventListener('click', (e) => this.handleClick(e));
+    this.container.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !this.visible) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.navigation.navigateTo('map');
+    });
 
     this.eventBus.on('navigation:routeChanged', (data) => {
       if (data.routeId === 'ledger') this.show();
@@ -96,15 +104,23 @@ export default class LedgerScreen {
 
   private show(): void {
     if (!this.container) return;
+    if (!this.visible) {
+      const opener = document.activeElement;
+      this.returnFocus = opener instanceof HTMLElement ? opener : null;
+    }
     this.visible = true;
     this.container.classList.remove('hidden');
     this.render();
+    this.container.querySelector<HTMLButtonElement>('[data-ledger-action="close"]')?.focus();
   }
 
   private hide(): void {
-    if (!this.container) return;
+    if (!this.visible) return;
+    const focusWasInside = this.container?.contains(document.activeElement);
     this.visible = false;
-    this.container.classList.add('hidden');
+    this.container?.classList.add('hidden');
+    if (focusWasInside && this.returnFocus?.isConnected) this.returnFocus.focus();
+    this.returnFocus = null;
   }
 
   private handleClick(e: Event): void {
@@ -126,6 +142,7 @@ export default class LedgerScreen {
   private render(): void {
     if (!this.container) return;
     this.ensureStyles();
+    const focusWasInside = this.container.contains(document.activeElement);
 
     const state = this.neighbourhood.getState();
     const outings = this.outings();
@@ -208,6 +225,7 @@ export default class LedgerScreen {
           <div>
             <h2>Your ledger</h2>
             <p class="ledger-scope">This device only — nothing here is registered ownership.</p>
+            <p class="ledger-scope ledger-pages">${escapeHtml(NEIGHBOURHOOD_COPY.atlasPages(state.pages.length))}</p>
           </div>
           <button class="ledger-close" data-ledger-action="close" aria-label="Close">✕</button>
         </header>
@@ -223,6 +241,9 @@ export default class LedgerScreen {
         </footer>
       </div>
     `;
+    if (focusWasInside && !this.container.contains(document.activeElement)) {
+      this.container.querySelector<HTMLButtonElement>('[data-ledger-action="close"]')?.focus();
+    }
   }
 
   /** Best local pace band for the runner, if any attestation exists. */
@@ -248,7 +269,7 @@ export default class LedgerScreen {
     style.id = STYLE_ID;
     style.textContent = `
       .ledger-screen {
-        position: fixed; inset: 0; z-index: 9200;
+        position: fixed; inset: 0; z-index: var(--z-modals, 2000);
         display: flex; align-items: center; justify-content: center;
         background: rgba(7, 26, 38, 0.72);
         backdrop-filter: blur(3px);
@@ -256,8 +277,9 @@ export default class LedgerScreen {
       }
       .ledger-screen.hidden { display: none; }
       .ledger-card {
+        box-sizing: border-box;
         width: min(560px, calc(100vw - 32px));
-        max-height: min(80vh, 760px);
+        max-height: min(calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), 760px);
         overflow: auto;
         background: linear-gradient(165deg, #103248 0%, var(--rr-sunprint-blueprint, #0d2b3e) 60%, #071a26 100%);
         border: 1px solid var(--rr-sunprint-verdigris, #4fae8b);

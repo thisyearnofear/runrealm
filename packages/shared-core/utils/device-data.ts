@@ -13,6 +13,8 @@
  * user did not ask us to touch.
  */
 
+import { ATLAS_STORAGE_KEY, NEIGHBOURHOOD_STORAGE_KEY } from '../types/neighbourhood';
+
 /** Keys this app owns. Anything not listed here is left alone on erase. */
 export const DEVICE_DATA_KEYS = [
   // Runs and the local ledger
@@ -21,6 +23,8 @@ export const DEVICE_DATA_KEYS = [
   'runrealm_run_upload_queue',
   'runrealm_player_stats',
   'runrealm_neighbourhood_ledger_v1',
+  NEIGHBOURHOOD_STORAGE_KEY,
+  ATLAS_STORAGE_KEY,
   'user-runs',
   // Derived, rebuildable from a fresh run
   'user-analytics',
@@ -53,6 +57,9 @@ const DESCRIPTIONS: Record<string, string> = {
   runrealm_run_upload_queue: 'Runs waiting to be checked for a claim.',
   runrealm_player_stats: 'Your progress and level.',
   runrealm_neighbourhood_ledger_v1: 'The blocks you have collected on your map.',
+  [NEIGHBOURHOOD_STORAGE_KEY]: 'The blocks you have collected on your map.',
+  [ATLAS_STORAGE_KEY]:
+    'The neighbourhood pages of your atlas — blocks across every place you have run.',
   'user-runs': 'Your run history, used to suggest distances.',
   'user-analytics': 'Which buttons you pressed. Never sent anywhere.',
   runrealm_strava_access_token: 'Your Strava connection.',

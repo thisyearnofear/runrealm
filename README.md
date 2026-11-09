@@ -1,13 +1,13 @@
 # RunRealm
 
-A fitness game where you truly own everything: your runs become NFT territories, with **private proof-of-movement** — cryptographically provable athletic achievement over location data that stays encrypted (Zama FHEVM). Connect Strava, track runs, claim ground, beat rivals. The chain is the court, not the product — the north-star architecture lives in [docs/protocol-vision.md](docs/protocol-vision.md).
+Run familiar streets. Discover new ones. Build your personal atlas. RunRealm starts with a wallet-free, browser-local neighbourhood map: qualifying outings collect visited blocks, and atlas export/restore lets you keep a copy. Registered territory play is a separate, optional experience; its north-star architecture lives in [docs/protocol-vision.md](docs/protocol-vision.md).
 
 **Live:** <https://runrealm-psi.vercel.app> (Orbis Live slice: <https://runrealm-psi.vercel.app/orbis-live/>)
 
-- **Run-to-territory gameplay** — runs auto-claim H3 territories as NFTs; activity points decay without regular engagement
+- **Sunprint Atlas** — a bounded 19-block first neighbourhood where real outings collect visited blocks; preview a neighbourhood, watch a sample outing, sketch a route, and export a backup from Account. Try the wallet-free Realm storyboard at `/orbis-live`
+- **Optional territory play — Run-to-territory gameplay** — runs auto-claim H3 territories as NFTs; activity points decay without regular engagement
 - **Ghost Runners** — AI virtual competitors that defend your territories when you can't run
-- **Confidential defense (live on Sepolia)** — encrypted activity-point state; rivals see only a silhouette until they win a contest
-- **Sunprint Atlas** — preview a neighbourhood, watch a sample outing, sketch a route, and take the optional tour; real runs develop the local atlas. Try the wallet-free Realm storyboard at `/orbis-live`
+- **Optional territory play — Confidential defense (live on Sepolia)** — encrypted activity-point state; rivals see only a silhouette until they win a contest
 - **Collectibles** — animated Sunprint Deed reveals, Atlas Binder showcase, GPS-anchored Realm Relics supply drops
 
 ## Quick start

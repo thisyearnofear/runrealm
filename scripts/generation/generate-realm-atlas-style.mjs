@@ -14,7 +14,7 @@
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const SOURCE_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const OUT = join(
@@ -63,7 +63,7 @@ function roadFill(layer) {
   return C.faint; // service_track, path_pedestrian
 }
 
-function transform(style) {
+export function transform(style) {
   for (const layer of style.layers) {
     const id = layer.id;
 
@@ -138,7 +138,7 @@ function transform(style) {
     if (layer.type === 'line' && /^(tunnel|road|bridge)_/.test(id)) {
       if (id.endsWith('_casing')) {
         // Casings stay darker than the road fill — the engraved edge.
-        paint(layer, { 'line-color': C.edge, 'line-opacity': 0.9 });
+        paint(layer, { 'line-color': C.edge, 'line-opacity': 0.55 });
         continue;
       }
       if (id.includes('rail')) {
@@ -149,7 +149,9 @@ function transform(style) {
       // Tunnels read dimmer than surface streets.
       paint(layer, {
         'line-color': fill,
-        'line-opacity': id.startsWith('tunnel_') ? 0.55 : 1,
+        'line-opacity': id.startsWith('tunnel_')
+          ? 0.4
+          : ['interpolate', ['linear'], ['zoom'], 10, 0.8, 13, 0.45, 16, 0.55, 20, 0.75],
       });
       continue;
     }
@@ -159,7 +161,7 @@ function transform(style) {
       continue;
     }
     if (id === 'road_one_way_arrow' || id === 'road_one_way_arrow_opposite') {
-      paint(layer, { 'icon-opacity': 0.4 });
+      paint(layer, { 'icon-opacity': 0.2 });
       continue;
     }
 
@@ -193,8 +195,9 @@ function transform(style) {
       }
       if (id.startsWith('highway-shield') || id === 'road_shield_us') {
         // Colored shield sprites clash with the print — keep, but dim.
+        layer.minzoom = Math.max(layer.minzoom ?? 0, 16);
         paint(layer, {
-          'icon-opacity': 0.55,
+          'icon-opacity': 0.35,
           'text-color': C.bone,
           'text-halo-color': C.blueprint,
           'text-halo-width': 1,
@@ -202,19 +205,23 @@ function transform(style) {
         continue;
       }
       if (id.startsWith('highway-name')) {
+        layer.minzoom = Math.max(layer.minzoom ?? 0, 15);
         paint(layer, {
           'text-color': C.muted,
           'text-halo-color': C.blueprint,
           'text-halo-width': 1.2,
+          'text-opacity': 0.75,
         });
         continue;
       }
       if (id.startsWith('poi_') || id === 'airport') {
+        layer.minzoom = Math.max(layer.minzoom ?? 0, 16);
         paint(layer, {
-          'icon-opacity': 0.5,
+          'icon-opacity': 0.35,
           'text-color': C.muted,
           'text-halo-color': C.blueprint,
           'text-halo-width': 1.2,
+          'text-opacity': 0.65,
         });
         continue;
       }
@@ -237,14 +244,20 @@ function transform(style) {
   return style;
 }
 
-const res = await fetch(SOURCE_STYLE);
-if (!res.ok) {
-  console.error(`Failed to fetch ${SOURCE_STYLE}: ${res.status}`);
-  process.exit(1);
-}
-const style = transform(await res.json());
-style.name = 'RunRealm Realm Atlas';
+async function main() {
+  const res = await fetch(SOURCE_STYLE);
+  if (!res.ok) {
+    console.error(`Failed to fetch ${SOURCE_STYLE}: ${res.status}`);
+    process.exit(1);
+  }
+  const style = transform(await res.json());
+  style.name = 'RunRealm Realm Atlas';
 
-await mkdir(dirname(OUT), { recursive: true });
-await writeFile(OUT, JSON.stringify(style));
-console.log(`Wrote ${OUT} (${style.layers.length} layers)`);
+  await mkdir(dirname(OUT), { recursive: true });
+  await writeFile(OUT, JSON.stringify(style));
+  console.log(`Wrote ${OUT} (${style.layers.length} layers)`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}

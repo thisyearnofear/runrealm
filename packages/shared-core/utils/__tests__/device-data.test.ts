@@ -69,3 +69,23 @@ describe('device data', () => {
     }
   });
 });
+
+describe('neighbourhood atlas key', () => {
+  it('lists and erases the real hyphenated atlas key without touching foreign keys', () => {
+    localStorage.setItem('runrealm-neighbourhood-ledger-v1', '{"version":1}');
+    localStorage.setItem('unrelated-credential', 'keep');
+    expect(listDeviceData().some((e) => e.key === 'runrealm-neighbourhood-ledger-v1')).toBe(true);
+    const removed = eraseDeviceData();
+    expect(removed).toContain('runrealm-neighbourhood-ledger-v1');
+    expect(localStorage.getItem('runrealm-neighbourhood-ledger-v1')).toBeNull();
+    expect(localStorage.getItem('unrelated-credential')).toBe('keep');
+  });
+
+  it('lists and erases the v2 multi-page atlas key', () => {
+    localStorage.setItem('runrealm-atlas-v2', '{"version":2,"pages":[]}');
+    expect(listDeviceData().some((e) => e.key === 'runrealm-atlas-v2')).toBe(true);
+    const removed = eraseDeviceData();
+    expect(removed).toContain('runrealm-atlas-v2');
+    expect(localStorage.getItem('runrealm-atlas-v2')).toBeNull();
+  });
+});

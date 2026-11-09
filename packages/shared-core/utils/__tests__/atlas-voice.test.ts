@@ -492,7 +492,7 @@ describe('neighbourhood panel copy', () => {
       });
     }
     const hint = boundary.find(({ source }) => source === 'neighbourhood:advancedHint');
-    expect(hint?.line).toContain('stays on this device');
+    expect(hint?.line).toContain('personal atlas is separate');
   });
 });
 

@@ -35,6 +35,8 @@ function baseState(over: Partial<NeighbourhoodState> = {}): NeighbourhoodState {
     referenceRun: null,
     persisted: true,
     readOnly: false,
+    pages: [],
+    viewAnchorCell: null,
     ...over,
   };
 }
@@ -91,6 +93,20 @@ function makeDeps(over: Record<string, unknown> = {}) {
     ),
     setGoal: jest.fn(() => true),
     getGoal: jest.fn(() => (over.goal as string) ?? 'explore'),
+    viewPage: jest.fn((anchor: string | null) => {
+      const state = (over.state ?? {}) as {
+        pages?: Array<{ anchorCell: string | null }>;
+      };
+      if (!(state.pages ?? []).some((p) => p.anchorCell === anchor)) return false;
+      const mutable = over.state as Record<string, unknown>;
+      mutable.viewAnchorCell = anchor;
+      mutable.anchorCell = anchor;
+      bus.emit('neighbourhood:updated', {
+        state: baseState(over.state as Partial<NeighbourhoodState>),
+      } as never);
+      return true;
+    }),
+    isPageComplete: jest.fn(() => false),
     activeRingCellIds: jest.fn((): string[] => []),
     previewLive: jest.fn(() => ({
       projectedNewCellIds: [],
@@ -180,11 +196,11 @@ describe('NeighbourhoodExperience', () => {
     expect(root.textContent).toContain('Move 500m');
     expect(root.textContent).toContain('Not NFTs');
     expect(root.querySelector('[data-action="start"]')).toBeTruthy();
-    expect(root.querySelectorAll('.nh-goal')).toHaveLength(3);
-    expect(root.querySelector('.nh-goal--locked')).toBeTruthy();
+    expect(root.querySelectorAll('.nh-goal')).toHaveLength(1);
+    expect(root.querySelector('.nh-goal--locked')).toBeNull();
   });
 
-  it('opens a first visit as an invitation with one Explore goal and scannable rule chips', () => {
+  it('opens a first visit with one objective and scannable rule chips', () => {
     const { root } = mount();
     expect(root.querySelector('.nh-headline')?.textContent).toBe(
       'Your neighbourhood is uncharted.'
@@ -200,21 +216,21 @@ describe('NeighbourhoodExperience', () => {
       'Previews and samples do not count'
     );
 
-    // Explore is the only offered goal; the locked pair sits below it.
-    const mainGoals = root.querySelectorAll('.nh-goals:not(.nh-goals--later) .nh-goal');
-    expect(mainGoals).toHaveLength(1);
-    expect((mainGoals[0] as HTMLElement).dataset.goal).toBe('explore');
+    expect(root.querySelectorAll('.nh-goal')).toHaveLength(0);
+    expect(root.querySelector('.nh-objective')?.textContent).toContain('500m');
+    expect(root.querySelector('.nh-boundary')?.textContent).toContain('19 blocks');
+    expect(root.querySelector('.nh-storage')?.textContent).toContain('only in this browser');
+    expect(root.querySelectorAll('.nh-ownership')).toHaveLength(1);
+    expect(root.querySelector('.nh-ghostline')).toBeNull();
+
+    const tools = root.querySelector<HTMLDetailsElement>('.nh-preview-tools');
+    expect(tools).toBeTruthy();
+    expect(tools?.open).toBe(false);
+    expect(root.querySelector('.nh-objective')?.closest('details')).toBeNull();
+    expect(root.querySelectorAll('.nh-more [data-action="tour"]')).toHaveLength(1);
 
     // The facts sit at rest: no rulebook to open and miss. Secondary
     // affordances may fold, but the facts never hide inside a disclosure.
-    expect(root.querySelector('.nh-facts')?.closest('details')).toBeNull();
-    expect(root.querySelector('.nh-facts')).toBeTruthy();
-    expect(root.querySelector('.nh-legend')).toBeTruthy();
-    expect(root.querySelector('.nh-ghostline')).toBeTruthy();
-    expect(root.querySelector('.nh-goals--later .nh-goal[data-goal="strengthen"]')).toBeTruthy();
-    expect(root.querySelector('.nh-goals--later .nh-goal[data-goal="challenge"]')).toBeTruthy();
-
-    // Honesty stays in plain sight.
     expect(root.querySelector('.nh-honest')?.textContent).toContain('Previews and samples');
   });
 
@@ -255,6 +271,13 @@ describe('NeighbourhoodExperience', () => {
   });
 
   it('autoplays the sample once on a first visit, then offers a replay', () => {
+    window.matchMedia = jest.fn(
+      (query: string) =>
+        ({
+          matches: query === '(hover: hover) and (pointer: fine)',
+          addEventListener: jest.fn(),
+        }) as never
+    ) as never;
     announceReveal();
     const map = fakeMap();
     const { root, deps, shell } = mount({ map });
@@ -307,7 +330,7 @@ describe('NeighbourhoodExperience', () => {
     expect(returning.querySelectorAll('[data-action="tour"]')).toHaveLength(1);
   });
 
-  it('shows returning runners every goal with the facts visible', () => {
+  it('shows returning runners the available goals with the facts visible', () => {
     const { root } = mount({
       state: { collectedCount: 3, qualifyingRuns: 1 },
       availability: {
@@ -320,7 +343,7 @@ describe('NeighbourhoodExperience', () => {
     expect(root.querySelector('.nh-saved-status')?.textContent).toContain(
       '3 collected blocks saved on this device'
     );
-    expect(root.querySelectorAll('.nh-goals:not(.nh-goals--later) .nh-goal')).toHaveLength(3);
+    expect(root.querySelectorAll('.nh-goals:not(.nh-goals--later) .nh-goal')).toHaveLength(2);
     expect(root.querySelector('.nh-goals--later')).toBeNull();
     expect(root.querySelector('.nh-rules')).toBeNull();
     expect(root.querySelector('.nh-anchor')).toBeNull();
@@ -335,6 +358,71 @@ describe('NeighbourhoodExperience', () => {
     } as never);
     expect(root.querySelector('.nh-rules')).toBeNull();
     expect(root.querySelector('.nh-headline')?.textContent).toBe('Your neighbourhood');
+  });
+
+  it('tells a first visit that running somewhere new opens another page', () => {
+    const { root } = mount();
+    expect(root.querySelector('.nh-boundary')?.textContent).toContain('19 blocks');
+    expect(root.querySelector('.nh-boundary')?.textContent).toContain('another page');
+  });
+
+  it('shows a page indicator only when the atlas holds more than one page', () => {
+    const single = mount({ state: { collectedCount: 2, qualifyingRuns: 1 } }).root;
+    expect(single.querySelector('.nh-page')).toBeNull();
+
+    const { root } = mount({
+      state: {
+        collectedCount: 2,
+        qualifyingRuns: 1,
+        anchorCell: 'a1',
+        viewAnchorCell: 'a1',
+        pages: [
+          { anchorCell: 'a1', collectedCount: 2, qualifyingRuns: 1 },
+          { anchorCell: 'a2', collectedCount: 5, qualifyingRuns: 3 },
+        ],
+      },
+    });
+    expect(root.querySelector('.nh-page')?.textContent).toBe('Neighbourhood 1 of 2');
+    expect(root.querySelector('[data-action="page-prev"]')).toBeTruthy();
+    expect(root.querySelector('[data-action="page-next"]')).toBeTruthy();
+  });
+
+  it('cycles atlas pages with prev and next through viewPage', () => {
+    const { deps, root } = mount({
+      state: {
+        collectedCount: 2,
+        qualifyingRuns: 1,
+        anchorCell: 'a1',
+        viewAnchorCell: 'a1',
+        pages: [
+          { anchorCell: 'a1', collectedCount: 2, qualifyingRuns: 1 },
+          { anchorCell: 'a2', collectedCount: 5, qualifyingRuns: 3 },
+        ],
+      },
+    });
+    root.querySelector<HTMLButtonElement>('[data-action="page-next"]')?.click();
+    expect(deps.neighbourhood.viewPage).toHaveBeenCalledWith('a2');
+    expect(root.querySelector('.nh-page')?.textContent).toBe('Neighbourhood 2 of 2');
+
+    root.querySelector<HTMLButtonElement>('[data-action="page-next"]')?.click();
+    expect(deps.neighbourhood.viewPage).toHaveBeenLastCalledWith('a1');
+    expect(root.querySelector('.nh-page')?.textContent).toBe('Neighbourhood 1 of 2');
+
+    root.querySelector<HTMLButtonElement>('[data-action="page-prev"]')?.click();
+    expect(deps.neighbourhood.viewPage).toHaveBeenLastCalledWith('a2');
+  });
+
+  it('shows the page-complete hint when every block is collected', () => {
+    const { root } = mount({
+      state: {
+        collectedCount: 19,
+        qualifyingRuns: 3,
+        anchorCell: 'a1',
+        viewAnchorCell: 'a1',
+        pages: [{ anchorCell: 'a1', collectedCount: 19, qualifyingRuns: 3 }],
+      },
+    });
+    expect(root.querySelector('.nh-nextstep')?.textContent).toContain('opens another page');
   });
 
   it('keeps the primary start in a dock that survives scroll', () => {
@@ -633,18 +721,31 @@ describe('NeighbourhoodExperience', () => {
     expect(text).toContain('distance reached');
   });
 
-  it('keeps locked goals locked in the shell', () => {
-    const { deps, root } = mount();
-    const locked = root.querySelector<HTMLButtonElement>('.nh-goal[data-goal="challenge"]');
-    expect(locked?.getAttribute('aria-disabled')).toBe('true');
-    expect(locked?.textContent).toContain('Locked');
-    locked?.click();
-    expect(deps.neighbourhood.setGoal).toHaveBeenCalledWith('challenge');
+  it('offers only available goals and unlocks them as outings qualify', () => {
+    const { root } = mount({ state: { collectedCount: 2, qualifyingRuns: 1 } });
+    const goals = [...root.querySelectorAll<HTMLButtonElement>('.nh-goal')].map(
+      (b) => b.dataset.goal
+    );
+    expect(goals).toEqual(['explore']);
+
+    const twoRuns = mount({
+      state: { collectedCount: 4, qualifyingRuns: 2 },
+      availability: {
+        explore: { available: true },
+        strengthen: { available: true },
+        challenge: { available: true },
+      },
+    });
+    const later = [...twoRuns.root.querySelectorAll<HTMLButtonElement>('.nh-goal')].map(
+      (b) => b.dataset.goal
+    );
+    expect(later).toEqual(['explore', 'strengthen', 'challenge']);
   });
 
   it('names the first unlocked allrounder ghost', () => {
     const { deps, root } = mount({
       ghosts: [{ type: 'allrounder', name: 'Steady Mara' }],
+      state: { collectedCount: 2, qualifyingRuns: 1 },
     });
     expect(root.querySelector('.nh-ghostline')?.textContent).toContain('Steady Mara');
 
@@ -713,18 +814,79 @@ describe('NeighbourhoodExperience', () => {
     const { root } = mount();
     const note = root.querySelector<HTMLElement>('.nh-advanced');
     expect(note?.hidden).toBe(true);
-    expect(note?.textContent).toContain('rest of the realm');
+    expect(note?.textContent).toContain('Optional territory play');
 
     root.querySelector<HTMLButtonElement>('[data-action="advanced"]')?.click();
     // The panel is gone, so the caption is the only thing left to read.
     expect(note?.hidden).toBe(false);
     expect(note?.textContent).toContain('wallet');
-    expect(note?.textContent).toContain('stays on this device');
+    expect(note?.textContent).toContain('personal atlas is separate');
     // The banned register never makes it into player-facing copy.
     expect(note?.textContent?.toLowerCase()).not.toContain('dashboard');
 
     root.querySelector<HTMLButtonElement>('[data-action="back"]')?.click();
     expect(note?.hidden).toBe(true);
+  });
+
+  it('returns focus to the launcher from advanced tools, via Back or Escape', () => {
+    const { root } = mount();
+    const toggle = root.querySelector<HTMLButtonElement>('[data-action="advanced"]') as HTMLElement;
+    toggle.click();
+    expect(document.body.classList.contains('neighbourhood-advanced')).toBe(true);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.body.classList.contains('neighbourhood-advanced')).toBe(false);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(document.activeElement).toBe(toggle);
+
+    toggle.click();
+    root.querySelector<HTMLButtonElement>('[data-action="back"]')?.click();
+    expect(document.body.classList.contains('neighbourhood-advanced')).toBe(false);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(document.activeElement).toBe(toggle);
+  });
+
+  it('applies a restored atlas as settled state, clearing any prior receipt', () => {
+    const { deps, root } = mount({ state: { collectedCount: 2, qualifyingRuns: 1 } });
+    const summary = {
+      runId: 'r5',
+      goal: 'explore' as const,
+      distanceMeters: 800,
+      durationMs: 300_000,
+      newCellIds: [latLngToCell(37.7749, -122.4194, 9)],
+      strengthenedCellIds: [],
+      outsideCellCount: 0,
+      reason: 'collected' as const,
+      persisted: true,
+    };
+    deps.bus.emit('neighbourhood:runCompleted', {
+      summary,
+      state: baseState({ collectedCount: 3, qualifyingRuns: 2 }),
+    } as never);
+    expect(root.querySelector('.nh-panel--summary')).not.toBeNull();
+    deps.bus.emit('neighbourhood:restored', {
+      state: baseState({
+        anchorCell: '8928342e20fffff',
+        collectedCount: 2,
+        qualifyingRuns: 1,
+        ringCellIds: [],
+        lastSummary: {
+          runId: 'r9',
+          goal: 'explore',
+          distanceMeters: 700,
+          durationMs: 280_000,
+          newCellIds: [],
+          strengthenedCellIds: [],
+          outsideCellCount: 0,
+          reason: 'collected',
+          persisted: true,
+        },
+      }),
+    } as never);
+    expect(root.querySelector('.nh-panel--summary')).toBeNull();
+    expect(root.querySelector('.nh-headline')?.textContent).toBe('Your neighbourhood');
+    expect(root.querySelector('.nh-progress')?.textContent).toContain('1 outing');
   });
 });
 
@@ -828,19 +990,18 @@ describe('NeighbourhoodExperience desktop exploration', () => {
     asDesktop();
   });
 
-  it('shows a desk first visit without running furniture', () => {
+  it('shows a desk first visit with the essentials and folded preview tools', () => {
     const map = fakeMap();
     const { root, shell } = mount({ map });
-    // Everything here describes an action a desk cannot take.
-    expect(root.querySelector('.nh-goals')).toBeNull();
-    expect(root.querySelector('.nh-rules')).toBeNull();
-    expect(root.querySelector('.nh-anchor')).toBeNull();
-    expect(root.querySelector('.nh-ghostline')).toBeNull();
-    expect(root.querySelector('.nh-ownership')).toBeNull();
-    expect(root.querySelector('[data-action="atlas"]')).toBeNull();
-    expect(root.querySelector('.nh-explore-intro')).toBeNull();
+    // Everything here describes an action a desk cannot take, yet it is the
+    // handoff explainer — facts stay, preview machinery folds.
+    expect(root.querySelector('.nh-rules')).toBeTruthy();
+    expect(root.querySelector('.nh-anchor')).toBeTruthy();
+    expect(root.querySelector('.nh-objective')).toBeTruthy();
+    expect(root.querySelectorAll('.nh-goal')).toHaveLength(0);
+    expect(root.querySelector('.nh-ownership')).toBeTruthy();
+    expect(root.querySelector('.nh-preview-tools')).toBeTruthy();
 
-    // What it keeps: the hook, the way to see it, and the way to actually run.
     expect(root.querySelector('.nh-headline')?.textContent).toBe(
       'Your neighbourhood is uncharted.'
     );
@@ -849,10 +1010,6 @@ describe('NeighbourhoodExperience desktop exploration', () => {
     expect(root.querySelector('.nh-honest')?.textContent).toContain(
       'Previews and samples do not count'
     );
-    expect(root.querySelector('.nh-legend')).toBeTruthy();
-
-    const words = visiblePanelText(root).trim().split(/\s+/).filter(Boolean);
-    expect(words.length).toBeLessThanOrEqual(60);
     shell.destroy();
   });
 
@@ -900,7 +1057,7 @@ describe('NeighbourhoodExperience desktop exploration', () => {
     const map = fakeMap();
     const { root, deps, shell } = mount({ map });
     const trigger = root.querySelector<HTMLButtonElement>(
-      '.nh-tour-invite [data-action="tour"]'
+      '.nh-more [data-action="tour"]'
     ) as HTMLButtonElement;
     trigger.focus();
     trigger.click();
@@ -910,9 +1067,9 @@ describe('NeighbourhoodExperience desktop exploration', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(deps.runTracking.startRun).not.toHaveBeenCalled();
     expect(document.querySelector('.nh-tour')).toBeNull();
-    // The invitation is dismissed on close, so its removed trigger cannot
-    // receive focus again; return to the persistent Start control instead.
-    expect(document.activeElement).toBe(root.querySelector('[data-action="start"]'));
+    expect(document.activeElement).toBe(
+      root.querySelector('[data-action="tour"]') ?? root.querySelector('[data-action="start"]')
+    );
     shell.destroy();
   });
 });
@@ -925,7 +1082,12 @@ describe('NeighbourhoodExperience regressions', () => {
   it('marks exactly the selected goal aria-pressed', () => {
     const { root } = mount({
       goal: 'strengthen',
-      state: baseState({ goal: 'strengthen' }),
+      state: baseState({ goal: 'strengthen', collectedCount: 2, qualifyingRuns: 1 }),
+      availability: {
+        explore: { available: true },
+        strengthen: { available: true },
+        challenge: { available: true },
+      },
     });
     const pressed = [...root.querySelectorAll<HTMLButtonElement>('.nh-goal')].filter(
       (b) => b.getAttribute('aria-pressed') === 'true'
@@ -1285,6 +1447,58 @@ describe('NeighbourhoodExperience arrival and first reward', () => {
     expect((root.querySelector('.nh-dock .nh-start') as HTMLElement).dataset.action).toBe(
       'see-ground'
     );
+    shell.destroy();
+  });
+});
+
+describe('sample badge', () => {
+  beforeEach(() => {
+    EventBus.getInstance().clear();
+  });
+
+  it('does not autoplay on a phone-sized first visit', () => {
+    const { root, shell } = mount();
+    expect(document.querySelector<HTMLElement>('.nh-sample-badge')?.hidden ?? true).toBe(true);
+    expect(root.querySelector('[data-action="sample"]')?.textContent).toBe('Watch a sample outing');
+    shell.destroy();
+  });
+
+  it('shows while a sample plays, stays after it finishes, dismisses on close', () => {
+    window.matchMedia = jest.fn(
+      (query: string) =>
+        ({
+          matches: query === '(hover: hover) and (pointer: fine)',
+          addEventListener: jest.fn(),
+        }) as never
+    ) as never;
+    announceReveal();
+    const map = fakeMap();
+    const { shell } = mount({ map });
+    const badge = document.querySelector<HTMLElement>('.nh-sample-badge');
+    expect(badge).toBeTruthy();
+    expect(badge?.hidden).toBe(false);
+    expect(badge?.textContent).toContain('Sample — not your atlas');
+    (badge?.querySelector('button') as HTMLButtonElement).click();
+    expect(badge?.hidden).toBe(true);
+    shell.destroy();
+    expect(document.querySelector('.nh-sample-badge')).toBeNull();
+  });
+
+  it('hides when a real run starts', () => {
+    window.matchMedia = jest.fn(
+      (query: string) =>
+        ({
+          matches: query === '(hover: hover) and (pointer: fine)',
+          addEventListener: jest.fn(),
+        }) as never
+    ) as never;
+    announceReveal();
+    const map = fakeMap();
+    const { deps, shell } = mount({ map });
+    const badge = document.querySelector<HTMLElement>('.nh-sample-badge');
+    expect(badge?.hidden).toBe(false);
+    deps.bus.emit('run:started', { runId: 'r1' } as never);
+    expect(badge?.hidden).toBe(true);
     shell.destroy();
   });
 });

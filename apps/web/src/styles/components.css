@@ -2169,7 +2169,7 @@ button:disabled,
   width: 350px;
   max-height: 85vh;
   overflow-y: auto;
-  z-index: var(--z-modal);
+  z-index: var(--z-modals);
   background: rgba(26, 26, 26, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 16px;
@@ -2190,18 +2190,26 @@ button:disabled,
    dashboard so identity feels like part of the same surface. */
 .account-screen {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 350px;
-  max-height: 85vh;
+  top: max(16px, env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  width: min(350px, calc(100vw - 32px));
+  max-height: calc(
+    100dvh -
+    32px -
+    env(safe-area-inset-top, 0px) -
+    env(safe-area-inset-bottom, 0px)
+  );
+  box-sizing: border-box;
   overflow-y: auto;
-  z-index: var(--z-modal);
+  z-index: var(--z-modals);
   background: rgba(26, 26, 26, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: all;
 }
 

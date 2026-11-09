@@ -149,9 +149,12 @@ Local-only collection slice for the default web experience
 - Goals: Explore always available; Strengthen unlocks after a collected cell;
   Challenge unlocks after two outings and compares against the previous outing's
   distance and pace.
-- The atlas ledger is local and separate from the registered (receipt-gated)
-  territory registry — neighbourhood runs never touch wallet or claim flows, and
-  summaries say "saved on this device; not registered ownership".
+- The atlas is a versioned set of 19-block neighbourhood pages, local and
+  separate from the registered (receipt-gated) territory registry —
+  neighbourhood runs never touch wallet or claim flows. A qualifying run
+  credits every page whose ring it crosses; a run outside all rings anchors a
+  new page. Account offers export/restore of the whole atlas; summaries say
+  "saved on this device; not registered ownership".
 - Map interaction: a compass-seal position marker with an honest accuracy halo,
   Follow/browse camera modes, explicit zoom and neighbourhood-fit controls —
   present only where MapLibre WebGL is available; otherwise the run controls

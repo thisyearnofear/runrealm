@@ -32,6 +32,7 @@ export class SampleOuting {
   private frame: number | null = null;
   private started = 0;
   private path: PreviewPoint[] = [];
+  private generation = 0;
   private visibleCells: string[] = [];
   private progress = 0;
   private map: MaplibreMap | null;
@@ -57,7 +58,7 @@ export class SampleOuting {
    */
   startPath(path: PreviewPoint[], ring: string[]): void {
     this.stop();
-    this.path = path;
+    this.path = path.map((point) => ({ ...point }));
     if (!this.path.length) return;
     this.visibleCells = routeToCells(this.path)
       .map((cell) => cell.h3Index)
@@ -69,13 +70,16 @@ export class SampleOuting {
       this.draw();
       this.onProgress(true, this.visibleCells.length);
     } else {
-      this.tick(this.started);
+      this.tick(this.started, this.generation);
     }
   }
 
-  private tick = (now: number): void => {
-    this.progress = Math.min(1, (now - this.started) / DURATION_MS);
+  private tick(now: number, generation: number): void {
+    if (generation !== this.generation || !this.path.length) return;
+    this.frame = null;
+    this.progress = Math.max(0, Math.min(1, (now - this.started) / DURATION_MS));
     this.draw();
+    if (generation !== this.generation || !this.path.length) return;
     const reached = Math.min(
       this.path.length,
       Math.floor(this.progress * (this.path.length - 1)) + 1
@@ -85,13 +89,17 @@ export class SampleOuting {
       this.progress === 1,
       this.visibleCells.filter((id) => visited.includes(id)).length
     );
+    if (generation !== this.generation || !this.path.length) return;
     if (this.progress < 1) {
-      if (Math.floor(now / 400) !== Math.floor((now - 16) / 400)) {
-        this.follow(this.path[Math.min(this.path.length - 1, reached - 1)]);
+      const point = this.path[Math.min(this.path.length - 1, reached - 1)];
+      if (point && Math.floor(now / 400) !== Math.floor((now - 16) / 400)) {
+        this.follow(point);
       }
-      this.frame = requestAnimationFrame(this.tick);
-    } else this.frame = null;
-  };
+      if (generation === this.generation && this.path.length) {
+        this.frame = requestAnimationFrame((timestamp) => this.tick(timestamp, generation));
+      }
+    }
+  }
 
   private draw(): void {
     const map = this.map;
@@ -198,6 +206,7 @@ export class SampleOuting {
   }
 
   stop(): void {
+    this.generation += 1;
     if (this.frame !== null) cancelAnimationFrame(this.frame);
     this.frame = null;
     this.path = [];

@@ -283,6 +283,9 @@ export interface AppEvents extends Web3Events {
     summary: import('../types/neighbourhood').NeighbourhoodRunSummary;
     state: import('../types/neighbourhood').NeighbourhoodState;
   };
+  'neighbourhood:restored': {
+    state: import('../types/neighbourhood').NeighbourhoodState;
+  };
   /**
    * Live run stats. RunTrackingService emits the canonical `{ stats, runId }`
    * shape; the Orbis live demo still emits flat `{ distance, duration, speed }`.

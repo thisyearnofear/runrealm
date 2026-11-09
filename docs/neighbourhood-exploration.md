@@ -7,25 +7,23 @@ RunRealm opens on the neighbourhood map after its loading sequence. You can look
 A first visit is an invitation, not a ledger. What it carries depends on where
 you are, because the two platforms can do different things.
 
-**On a desk** nothing can be collected, so the panel drops the running
-furniture entirely — the goal selector, the credit rules, the unlock ladder,
-the ghost line, the ownership note. What is left is roughly 50 words: the
-headline, **Show my streets** as the one obvious action, three quieter ways to
-look around, the map legend, the honest line, and **Continue on your phone** as
-the real destination.
+On every platform the panel shows the same essentials up front: the headline
+and the one-line promise, **one objective** — finish a 500m outing in this
+neighbourhood — the rules as three chips (**500m+**, **GPS within 50m**, **No
+loop needed**), the location prompt, the 19-block boundary note, the browser-
+only storage note, and the ownership disclaimer. None of these sit inside a
+disclosure.
 
-**On the phone** the full panel shows: the rules as three chips (**500m+**,
-**GPS within 50m**, **No loop needed**), the goal selector, the locked goals,
-and the honest line.
+Everything optional — **Show my streets**, the sample outing, pick-a-spot,
+route sketch, the phone handoff, and the tour — folds behind a closed
+**Preview and plan** section. Locked goals and the ghost tease are gone: later
+modes appear only once they are available.
 
-The facts that remain are always visible rather than folded behind a "How it
-works" disclosure. The reason is that a collapsed rulebook is a rulebook nobody
-opens.
-
-A sample outing plays automatically once, after the loading sequence lifts, if
-no outing has been recorded yet. Returning runners do not get it. **Start run**
-is never started by the sample: it asks for no location and files nothing. When
-it finishes, its Skip control goes away with it.
+A sample outing plays automatically once on a first visit **on a desk only** —
+a phone never starts the sample unasked. Returning runners do not get it.
+**Start run** is never started by the sample: it asks for no location and files
+nothing. While a sample plays, a persistent **Sample — not your atlas** badge
+sits on the map with its own close control.
 
 ## Preview a neighbourhood
 
@@ -37,7 +35,7 @@ it finishes, its Skip control goes away with it.
 
 ## Watch a sample outing
 
-The sample shows a route trace through the preview area, with a moving marker and cells lighting up as it passes. It takes about 22 seconds, and plays automatically once on a first visit. The sample is labelled **Sample — not your atlas** and is not saved as a run. Use **Skip sample** to dismiss it; the button becomes **Replay sample** once it has played. Reduced-motion settings show the completed sample without the animation.
+The sample shows a route trace through the preview area, with a moving marker and cells lighting up as it passes. It takes about 22 seconds. The sample is labelled **Sample — not your atlas** and is not saved as a run. Use **Skip sample** to dismiss it; the button becomes **Replay sample** once it has played. Reduced-motion settings show the completed sample without the animation.
 
 **Show my streets** is the panel's one primary preview action. **Pick a spot** and **Sketch a route** sit beside it as quieter inline links — all remain full-size tap targets and are never hidden behind a disclosure.
 
@@ -62,3 +60,17 @@ A preview, route sketch, or sample does not count as an outing or register NFT o
 Each caveat appears exactly once, in the place it matters: the panel says only that previews and samples do not count and that the atlas is local, not NFTs or registered ownership, and the receipt states what a specific outing actually credited. The wallet-flow and cross-device detail — what **The wider realm** menu contains, and the fact that a linked wallet or a phone link does not move this atlas — appears in the caption shown when that menu opens, beside the **Back to your neighbourhood** control, so the boundary is explained in the same beat it is crossed rather than left as a blank map.
 
 The Realm tab also links to a free wallet- and GPS-free storyboard at [`/orbis-live`](https://runrealm-psi.vercel.app/orbis-live/). Live Realm generation is optional and uses Reactor credits.
+
+## Beyond one neighbourhood
+
+A qualifying outing that crosses no existing neighbourhood ring anchors a new
+page. When the atlas holds more than one page, a **Neighbourhood N of M**
+indicator with Previous/Next controls appears; switching pages only changes
+which page is shown — credit always lands in the page whose ring the run
+actually visited. Completing all 19 blocks surfaces the honest next step:
+a run somewhere new opens another page.
+
+Account → **Keep your atlas safe** exports a versioned JSON backup of every
+page, and restores it after an explicit replace confirmation. The backup is
+unencrypted and contains location-derived blocks, but no GPS tracks, wallet
+keys, or permissions.

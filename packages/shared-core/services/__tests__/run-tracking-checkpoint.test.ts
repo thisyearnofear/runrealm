@@ -99,6 +99,20 @@ describe('RunTrackingService checkpoints', () => {
     });
   });
 
+  it('still writes on pagehide when the run is paused, not recording', () => {
+    // Phone goes into the pocket mid-pause: a paused run is exactly the one
+    // that dies silently if the tab is reclaimed there.
+    const instance = service();
+    const run = seedRecordingRun(instance);
+    run.status = 'paused';
+
+    window.dispatchEvent(new Event('pagehide'));
+
+    expect(window.localStorage.getItem(KEY)).not.toBeNull();
+    const recovered = deserializeCheckpoint(window.localStorage.getItem(KEY));
+    expect(recovered?.id).toBe('run_midflight');
+  });
+
   it('is what a fresh boot finds after a crash', () => {
     // The interrupted run, written by the dead process...
     const dead = service();
