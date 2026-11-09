@@ -11,6 +11,11 @@ import {
   AtlasBackupError,
   parseAtlasBackup,
 } from '@runrealm/shared-core/utils/atlas-backup';
+import {
+  clampAtlasViewPage,
+  readAtlasViewPage,
+  recordAtlasViewPage,
+} from '@runrealm/shared-core/utils/atlas-view';
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type AtlasVrMonoView,
@@ -47,6 +52,7 @@ const ORBIT_AZ_LIMIT = 0.65;
 const ORBIT_EL_MIN = 0.35;
 const ORBIT_EL_MAX = 1.15;
 const CLICK_SLOP_PX = 6;
+const VR_INVITE_HINT = 'Headset ready — step in';
 
 function backupErrorMessage(error: unknown): string {
   if (error instanceof AtlasBackupError) {
@@ -72,6 +78,16 @@ function readDeviceAtlas(): NeighbourhoodAtlas | null {
   } catch {
     return null;
   }
+}
+
+function anchorPageIndex(atlas: NeighbourhoodAtlas): number {
+  const index = atlas.pages.findIndex((page) => page.anchorCell === atlas.viewAnchor);
+  return index >= 0 ? index : 0;
+}
+
+function rememberedPageIndex(atlas: NeighbourhoodAtlas): number {
+  const stored = readAtlasViewPage();
+  return stored === null ? 0 : clampAtlasViewPage(stored, atlas.pages.length);
 }
 
 function formatDay(ts: number): string {
@@ -108,6 +124,8 @@ export default function AtlasVrClient() {
   const [trailOn, setTrailOn] = useState(false);
   const atlasRef = useRef(atlas);
   atlasRef.current = atlas;
+  const pageIndexRef = useRef(pageIndex);
+  pageIndexRef.current = pageIndex;
   const sceneRef = useRef<AtlasVrScene | null>(null);
   const ledgerRef = useRef<NeighbourhoodLedger | null>(null);
   const vignetteOpenRef = useRef(false);
@@ -134,7 +152,12 @@ export default function AtlasVrClient() {
     vignetteOpenRef.current = false;
     vignetteCellRef.current = null;
     setVignette(null);
-    setPageIndex((p) => clampPageIndex(atlasRef.current, p + delta));
+    const next = clampPageIndex(atlasRef.current, pageIndexRef.current + delta);
+    if (next !== pageIndexRef.current) {
+      pageIndexRef.current = next;
+      recordAtlasViewPage(next);
+      setPageIndex(next);
+    }
   }, []);
 
   const ledger = atlas.pages[Math.max(0, Math.min(pageIndex, atlas.pages.length - 1))] ?? null;
@@ -275,6 +298,9 @@ export default function AtlasVrClient() {
     if (stored) {
       setAtlas(stored);
       setSource('device');
+      setPageIndex(anchorPageIndex(stored));
+    } else {
+      setPageIndex(rememberedPageIndex(atlasRef.current));
     }
     return () => document.body.classList.remove('atlas-vr-route');
   }, []);
@@ -472,7 +498,7 @@ export default function AtlasVrClient() {
     }
     setAtlas(stored);
     setSource('device');
-    setPageIndex(0);
+    setPageIndex(anchorPageIndex(stored));
     setScrubIndex(null);
     closeVignette();
     setError(null);
@@ -480,9 +506,10 @@ export default function AtlasVrClient() {
   }, [closeVignette]);
 
   const loadDemo = useCallback(() => {
-    setAtlas(createDemoAtlas());
+    const demo = createDemoAtlas();
+    setAtlas(demo);
     setSource('demo');
-    setPageIndex(0);
+    setPageIndex(rememberedPageIndex(demo));
     setScrubIndex(null);
     closeVignette();
     setError(null);
@@ -506,7 +533,7 @@ export default function AtlasVrClient() {
           const backup = parseAtlasBackup(String(reader.result));
           setAtlas(backup.atlas);
           setSource('file');
-          setPageIndex(0);
+          setPageIndex(rememberedPageIndex(backup.atlas));
           setScrubIndex(null);
           closeVignette();
           setError(null);
@@ -728,6 +755,9 @@ export default function AtlasVrClient() {
             >
               Enter VR
             </button>
+          )}
+          {xr.supported === true && !xr.active && collected > 0 && (
+            <p className="atlas-vr-hint">{VR_INVITE_HINT}</p>
           )}
           {xr.arSupported === true && !xr.active && (
             <button type="button" className="atlas-vr-btn" onClick={() => xr.enter('immersive-ar')}>

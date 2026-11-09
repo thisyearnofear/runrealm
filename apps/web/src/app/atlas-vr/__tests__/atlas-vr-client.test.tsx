@@ -1,5 +1,7 @@
 import '@testing-library/jest-dom';
+import { ATLAS_STORAGE_KEY } from '@runrealm/shared-core/types/neighbourhood';
 import { serializeAtlasBackup } from '@runrealm/shared-core/utils/atlas-backup';
+import { ATLAS_VIEW_KEY } from '@runrealm/shared-core/utils/atlas-view';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createDemoAtlas } from '../../../shell/atlas-vr/demo-atlas';
 import AtlasVrClient from '../atlas-vr-client';
@@ -63,6 +65,70 @@ describe('AtlasVrClient', () => {
     setNavigatorXr({ isSessionSupported: async () => true });
     render(<AtlasVrClient />);
     expect(await screen.findByRole('button', { name: 'Enter VR' })).toBeInTheDocument();
+  });
+
+  it('shows the headset invite beside Enter VR only when immersive-vr is supported', async () => {
+    setNavigatorXr({ isSessionSupported: async () => true });
+    render(<AtlasVrClient />);
+    expect(await screen.findByText('Headset ready — step in')).toBeInTheDocument();
+  });
+
+  it('hides the headset invite when immersive-vr is unsupported or unknown', async () => {
+    setNavigatorXr({ isSessionSupported: async () => false });
+    const { unmount } = render(<AtlasVrClient />);
+    await waitFor(() => {
+      expect(screen.getByText(/no immersive VR/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Headset ready — step in')).not.toBeInTheDocument();
+    unmount();
+    setNavigatorXr(undefined);
+    render(<AtlasVrClient />);
+    await waitFor(() => {
+      expect(screen.getByText(/no immersive VR/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Headset ready — step in')).not.toBeInTheDocument();
+  });
+
+  it('opens the demo atlas on the remembered view page', () => {
+    window.localStorage.setItem(ATLAS_VIEW_KEY, JSON.stringify({ pageIndex: 1, at: 5 }));
+    render(<AtlasVrClient />);
+    expect(screen.getByText(/Neighbourhood 2 of 2/)).toBeInTheDocument();
+  });
+
+  it('clamps a remembered view page past the end of the atlas', () => {
+    window.localStorage.setItem(ATLAS_VIEW_KEY, JSON.stringify({ pageIndex: 9, at: 5 }));
+    render(<AtlasVrClient />);
+    expect(screen.getByText(/Neighbourhood 2 of 2/)).toBeInTheDocument();
+  });
+
+  it('remembers the page reached through the page controls', () => {
+    render(<AtlasVrClient />);
+    fireEvent.click(screen.getByRole('button', { name: 'Next →' }));
+    const raw = window.localStorage.getItem(ATLAS_VIEW_KEY);
+    expect(raw).not.toBeNull();
+    expect(JSON.parse(raw as string)).toMatchObject({ pageIndex: 1 });
+  });
+
+  it('opens a restored backup on the remembered view page', async () => {
+    window.localStorage.setItem(ATLAS_VIEW_KEY, JSON.stringify({ pageIndex: 1, at: 5 }));
+    render(<AtlasVrClient />);
+    const backupText = serializeAtlasBackup(createDemoAtlas(), 1_757_000_000_000);
+    const input = screen.getByLabelText('Load atlas backup file') as HTMLInputElement;
+    pickFile(input, 'atlas.json', backupText);
+    await waitFor(() => {
+      expect(screen.getByText(/Neighbourhood 2 of 2/)).toBeInTheDocument();
+      expect(screen.getByText(/Atlas from backup file/)).toBeInTheDocument();
+    });
+  });
+
+  it('opens the device atlas on its own viewAnchor, not the remembered page', () => {
+    const atlas = createDemoAtlas();
+    atlas.viewAnchor = atlas.pages[0]?.anchorCell ?? null;
+    window.localStorage.setItem(ATLAS_STORAGE_KEY, JSON.stringify(atlas));
+    window.localStorage.setItem(ATLAS_VIEW_KEY, JSON.stringify({ pageIndex: 1, at: 5 }));
+    render(<AtlasVrClient />);
+    expect(screen.getByText(/Neighbourhood 1 of 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Atlas stored on this device/)).toBeInTheDocument();
   });
 
   it('loads a serialized atlas backup through the file input', async () => {

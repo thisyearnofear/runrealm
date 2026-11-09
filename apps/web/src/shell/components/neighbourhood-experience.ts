@@ -9,6 +9,11 @@ import {
   type NeighbourhoodRunSummary,
   type NeighbourhoodState,
 } from '@runrealm/shared-core/types/neighbourhood';
+import {
+  clampAtlasViewPage,
+  readAtlasViewPage,
+  recordAtlasViewPage,
+} from '@runrealm/shared-core/utils/atlas-view';
 import { NEIGHBOURHOOD_COPY } from '@runrealm/shared-core/utils/atlas-voice';
 import {
   dismissModalityOffer,
@@ -274,6 +279,7 @@ export class NeighbourhoodExperience {
       this.phase = current.status;
     }
 
+    this.applyRememberedViewPage();
     this.render();
     this.setupMap();
     this.mapController = new NeighbourhoodMapController({
@@ -783,11 +789,25 @@ export class NeighbourhoodExperience {
       </div>`;
   }
 
+  private applyRememberedViewPage(): void {
+    if (this.phase !== 'idle') return;
+    const pages = this.state.pages;
+    const remembered = readAtlasViewPage();
+    if (remembered === null || pages.length < 2) return;
+    const index = clampAtlasViewPage(remembered, pages.length);
+    if (index === this.viewedPageIndex()) return;
+    const page = pages[index];
+    if (!page || !this.deps.neighbourhood.viewPage(page.anchorCell)) return;
+    this.state = this.deps.neighbourhood.getState();
+  }
+
   private stepPage(delta: number): void {
     const pages = this.state.pages;
     if (pages.length < 2) return;
-    const next = pages[(this.viewedPageIndex() + delta + pages.length) % pages.length];
+    const index = (this.viewedPageIndex() + delta + pages.length) % pages.length;
+    const next = pages[index];
     if (!next || !this.deps.neighbourhood.viewPage(next.anchorCell)) return;
+    recordAtlasViewPage(index);
     this.render();
     this.syncMap();
     if (this.state.ringCellIds.length) this.mapController?.frameCells(this.state.ringCellIds);

@@ -1,5 +1,6 @@
 import { EventBus } from '@runrealm/shared-core/core/event-bus';
 import type { NeighbourhoodState } from '@runrealm/shared-core/types/neighbourhood';
+import { ATLAS_VIEW_KEY } from '@runrealm/shared-core/utils/atlas-view';
 import { gridDisk, latLngToCell } from 'h3-js';
 import { announceReveal, REVEAL_EVENT } from '../../../lib/reveal';
 import { NeighbourhoodExperience } from '../neighbourhood-experience';
@@ -183,6 +184,7 @@ function mount(over: Record<string, unknown> = {}) {
 // reveals would otherwise make every later mount auto-arrive — and autoplay.
 beforeEach(() => {
   document.documentElement.removeAttribute('data-rr-revealed');
+  window.localStorage.clear();
 });
 
 describe('NeighbourhoodExperience', () => {
@@ -410,6 +412,69 @@ describe('NeighbourhoodExperience', () => {
 
     root.querySelector<HTMLButtonElement>('[data-action="page-prev"]')?.click();
     expect(deps.neighbourhood.viewPage).toHaveBeenLastCalledWith('a2');
+  });
+
+  it('opens on the remembered view page when the atlas has several pages', () => {
+    window.localStorage.setItem(ATLAS_VIEW_KEY, JSON.stringify({ pageIndex: 1, at: 5 }));
+    const { deps, root } = mount({
+      state: {
+        collectedCount: 2,
+        qualifyingRuns: 1,
+        anchorCell: 'a1',
+        viewAnchorCell: 'a1',
+        pages: [
+          { anchorCell: 'a1', collectedCount: 2, qualifyingRuns: 1 },
+          { anchorCell: 'a2', collectedCount: 5, qualifyingRuns: 3 },
+        ],
+      },
+    });
+    expect(deps.neighbourhood.viewPage).toHaveBeenCalledWith('a2');
+    expect(root.querySelector('.nh-page')?.textContent).toBe('Neighbourhood 2 of 2');
+  });
+
+  it('leaves the viewAnchor page alone when memory agrees or is absent', () => {
+    const state = {
+      collectedCount: 2,
+      qualifyingRuns: 1,
+      anchorCell: 'a1',
+      viewAnchorCell: 'a2',
+      pages: [
+        { anchorCell: 'a1', collectedCount: 2, qualifyingRuns: 1 },
+        { anchorCell: 'a2', collectedCount: 5, qualifyingRuns: 3 },
+      ],
+    };
+    window.localStorage.setItem(ATLAS_VIEW_KEY, JSON.stringify({ pageIndex: 1, at: 5 }));
+    const matching = mount({ state });
+    expect(matching.deps.neighbourhood.viewPage).not.toHaveBeenCalled();
+    matching.shell.destroy();
+
+    window.localStorage.removeItem(ATLAS_VIEW_KEY);
+    const absent = mount({ state });
+    expect(absent.deps.neighbourhood.viewPage).not.toHaveBeenCalled();
+    expect(absent.root.querySelector('.nh-page')?.textContent).toBe('Neighbourhood 2 of 2');
+  });
+
+  it('remembers the page reached through prev and next', () => {
+    const { root } = mount({
+      state: {
+        collectedCount: 2,
+        qualifyingRuns: 1,
+        anchorCell: 'a1',
+        viewAnchorCell: 'a1',
+        pages: [
+          { anchorCell: 'a1', collectedCount: 2, qualifyingRuns: 1 },
+          { anchorCell: 'a2', collectedCount: 5, qualifyingRuns: 3 },
+        ],
+      },
+    });
+    root.querySelector<HTMLButtonElement>('[data-action="page-next"]')?.click();
+    expect(JSON.parse(window.localStorage.getItem(ATLAS_VIEW_KEY) ?? 'null')).toMatchObject({
+      pageIndex: 1,
+    });
+    root.querySelector<HTMLButtonElement>('[data-action="page-prev"]')?.click();
+    expect(JSON.parse(window.localStorage.getItem(ATLAS_VIEW_KEY) ?? 'null')).toMatchObject({
+      pageIndex: 0,
+    });
   });
 
   it('shows the page-complete hint when every block is collected', () => {
