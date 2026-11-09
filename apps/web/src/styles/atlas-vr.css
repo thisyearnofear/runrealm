@@ -1,0 +1,197 @@
+body.atlas-vr-route #maplibre-container {
+  display: none;
+}
+
+.atlas-vr-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rr-s-4);
+  padding: var(--rr-s-5) var(--rr-s-4) var(--rr-s-8);
+  background: radial-gradient(
+    120% 90% at 50% 0%,
+    var(--rr-sunprint-raised) 0%,
+    var(--rr-sunprint-blueprint) 55%,
+    #081c29 100%
+  );
+  color: var(--rr-text-1);
+  font-family: var(--rr-font-body);
+}
+
+.atlas-vr-header {
+  max-width: 46rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.atlas-vr-kicker {
+  margin: 0 0 var(--rr-s-1);
+  font-size: var(--rr-text-2xs);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+  color: var(--rr-sunprint-cyan);
+}
+
+.atlas-vr-header h1 {
+  margin: 0;
+  font-family: var(--rr-font-display);
+  font-size: var(--rr-text-3xl);
+  letter-spacing: var(--rr-track-tight);
+  color: var(--rr-sunprint-chalk);
+}
+
+.atlas-vr-sub {
+  margin: var(--rr-s-2) 0 0;
+  font-size: var(--rr-text-sm);
+  line-height: var(--rr-lead-normal);
+  color: var(--rr-text-3);
+}
+
+.atlas-vr-stage {
+  position: relative;
+  width: 100%;
+  max-width: 46rem;
+  margin: 0 auto;
+  aspect-ratio: 4 / 3;
+  min-height: 240px;
+  border: var(--rr-b-1);
+  border-radius: var(--rr-r-3);
+  overflow: hidden;
+  background: #081c29;
+}
+
+.atlas-vr-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.atlas-vr-fallback {
+  display: block;
+  position: absolute;
+  inset: auto var(--rr-s-3) var(--rr-s-3);
+  margin: 0;
+  padding: var(--rr-s-2) var(--rr-s-3);
+  border-radius: var(--rr-r-2);
+  background: rgba(8, 28, 41, 0.9);
+  border: var(--rr-b-1);
+  color: var(--rr-text-2);
+  font-size: var(--rr-text-xs);
+}
+
+.atlas-vr-controls {
+  width: 100%;
+  max-width: 46rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rr-s-3);
+}
+
+.atlas-vr-source,
+.atlas-vr-pagenav,
+.atlas-vr-vrrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rr-s-2);
+}
+
+.atlas-vr-pagenav {
+  justify-content: space-between;
+}
+
+.atlas-vr-btn {
+  appearance: none;
+  border: var(--rr-b-1);
+  border-radius: var(--rr-r-2);
+  background: var(--rr-bg-1);
+  color: var(--rr-text-1);
+  font: inherit;
+  font-size: var(--rr-text-sm);
+  padding: var(--rr-s-2) var(--rr-s-4);
+  cursor: pointer;
+  transition:
+    background var(--rr-d-2) var(--rr-ease-out),
+    border-color var(--rr-d-2) var(--rr-ease-out);
+}
+
+.atlas-vr-btn:hover:not(:disabled) {
+  background: var(--rr-bg-2);
+  border-color: var(--rr-border-strong);
+}
+
+.atlas-vr-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.atlas-vr-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--rr-sh-focus);
+}
+
+.atlas-vr-btn--primary {
+  background: var(--rr-sunprint-amber);
+  border-color: var(--rr-sunprint-amber);
+  color: var(--rr-sunprint-ink);
+  font-weight: var(--rr-w-semibold);
+}
+
+.atlas-vr-btn--primary:hover:not(:disabled) {
+  background: var(--rr-sunprint-amber-hover);
+  border-color: var(--rr-sunprint-amber-hover);
+}
+
+.atlas-vr-file {
+  position: relative;
+  overflow: hidden;
+}
+
+.atlas-vr-file input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.atlas-vr-demo-note {
+  margin: 0;
+  font-size: var(--rr-text-2xs);
+  letter-spacing: var(--rr-track-wide);
+  text-transform: uppercase;
+  color: var(--rr-sunprint-muted);
+}
+
+.atlas-vr-pageind {
+  margin: 0;
+  font-size: var(--rr-text-sm);
+  color: var(--rr-text-2);
+}
+
+.atlas-vr-hint {
+  margin: 0;
+  font-size: var(--rr-text-xs);
+  color: var(--rr-text-3);
+}
+
+.atlas-vr-error {
+  margin: 0;
+  padding: var(--rr-s-2) var(--rr-s-3);
+  border-left: 3px solid var(--rr-sunprint-coral);
+  background: rgba(232, 93, 93, 0.12);
+  color: var(--rr-sunprint-chalk);
+  font-size: var(--rr-text-sm);
+  border-radius: var(--rr-r-1);
+}
+
+.atlas-vr-notice {
+  display: block;
+  margin: 0;
+  padding: var(--rr-s-2) var(--rr-s-3);
+  border-left: 3px solid var(--rr-sunprint-verdigris);
+  background: rgba(79, 174, 139, 0.12);
+  color: var(--rr-sunprint-chalk);
+  font-size: var(--rr-text-sm);
+  border-radius: var(--rr-r-1);
+}

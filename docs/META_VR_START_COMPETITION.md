@@ -35,9 +35,33 @@ pretending it can undercuts the product's honesty contract.
 - The real new-work story for judges: multi-page atlas, atlas backup/restore,
   navigation/first-outing rework — plus this VR scene layer.
 
+### WebXR surface — prototype built (2026-10)
+
+`/atlas-vr/` is a first-pass WebXR atlas surface, built with raw WebGL2 +
+WebXR and zero added dependencies: a pure scene builder
+(`apps/web/src/shell/atlas-vr/atlas-vr-scene.ts`) maps a `NeighbourhoodAtlas`
+page to hexagonal prisms on a ~0.7 m "map table" — visits extrude blocks
+(capped), the Sunprint palette splits unvisited chalk outlines / verdigris
+collected / deep verdigris revisited / amber anchor. The renderer
+(`atlas-vr-renderer.ts`) draws instanced prisms in two passes (flat-lit fills,
+chalk rim lines) and is shared verbatim by the flat fallback camera and the
+per-eye `immersive-vr` path, so the render is deterministic — the same scene
+graph serves mono and stereo, which keeps QA honest without hardware.
+Sources: this device's `ATLAS_STORAGE_KEY` atlas, an atlas backup file via
+`parseAtlasBackup` (v1+v2, typed errors), or a labelled two-page demo atlas.
+Controller `selectstart` cycles pages forward, `squeezestart` back;
+arrow keys do the same in flat mode.
+
+**Honest gap:** verified on desktop Chrome only — flat rendering, page
+navigation, backup restore, and the no-VR hint path are exercised; actual
+Quest behavior (session entry, `local-floor` anchoring, controller mapping,
+fps) is unverified. Hardware validation is the next gate.
+
 ## Week plan
 
-- [ ] Week 1: WebXR atlas scene on Quest browser — map terrain + blocks.
+- [~] Week 1: WebXR atlas scene on Quest browser — prototype built at
+  `/atlas-vr/` (map table + block extrusion done in-browser); still needs
+  on-device Quest validation.
 - [ ] Week 2: Ghost/deed presentation, page navigation, ≥72fps measured.
 - [ ] Week 3: Realm opt-in layer, polish, record 2-min video, write META_COMPETITION.md.
 - [ ] Week 4: Devpost registration + submission; backup 360° capture if fps slips.

@@ -14,6 +14,7 @@ import '../styles/neighbourhood.css';
 import '../styles/realm-screens.css';
 import '../styles/neighbourhood-tour.css';
 import '../styles/living-realm.css';
+import '../styles/atlas-vr.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://runrealm.example.com'),

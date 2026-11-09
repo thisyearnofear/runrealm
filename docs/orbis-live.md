@@ -22,7 +22,9 @@ the actual ledger counts, labelled as not generated video.
 
 `/orbis-live/` remains as the wallet-free, GPS-free conductor QA route of the
 same Sunprint Atlas world-state loop steering Visko Orbis Dynamic in real
-time.
+time. A related surface, `/atlas-vr/`, renders the neighbourhood atlas
+itself as a raw-WebGL2/WebXR "map table" prototype for the Meta VR
+competition (see `docs/META_VR_START_COMPETITION.md`).
 
 ## Scene variants (A/B)
 
