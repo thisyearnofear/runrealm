@@ -173,6 +173,7 @@ export function useXrSession({
           return;
         }
         sessionRef.current = session;
+        (window as Window & { __atlasVrSession?: XRSession }).__atlasVrSession = session;
         const gl = renderer.gl;
         try {
           if (typeof gl.makeXRCompatible === 'function') await gl.makeXRCompatible();
@@ -217,6 +218,7 @@ export function useXrSession({
             }
           };
           const onSelect = (event: Event) => {
+            (window as Window & { __atlasVrSelectFired?: boolean }).__atlasVrSelectFired = true;
             const e = event as XRInputSourceEvent;
             const source = e.inputSource;
             const scene = cbRef.current.getScene();
@@ -240,6 +242,7 @@ export function useXrSession({
             releaseGrab((event as XRInputSourceEvent).inputSource);
           };
           const onSqueeze = (event: Event) => {
+            (window as Window & { __atlasVrSqueezeFired?: boolean }).__atlasVrSqueezeFired = true;
             const e = event as XRInputSourceEvent;
             if (tableHit(e.inputSource)) {
               startGrab(e.inputSource);
@@ -272,6 +275,8 @@ export function useXrSession({
             }
           };
           const onFrame = (_time: number, frame: XRFrame) => {
+            const w = window as Window & { __atlasVrFrameCount?: number };
+            w.__atlasVrFrameCount = (w.__atlasVrFrameCount ?? 0) + 1;
             const current = sessionRef.current;
             if (!current) return;
             rafRef.current = current.requestAnimationFrame(onFrame);
