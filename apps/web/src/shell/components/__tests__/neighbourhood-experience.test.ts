@@ -888,6 +888,127 @@ describe('NeighbourhoodExperience', () => {
     expect(root.querySelector('.nh-headline')?.textContent).toBe('Your neighbourhood');
     expect(root.querySelector('.nh-progress')?.textContent).toContain('1 outing');
   });
+
+  describe('atlas depth offer', () => {
+    const OFFER_KEY = 'runrealm-modality-offer-v1';
+    const returning = { collectedCount: 2, qualifyingRuns: 1 };
+
+    const finishRun = (
+      deps: ReturnType<typeof makeDeps>,
+      state = baseState({ collectedCount: 3, qualifyingRuns: 2 })
+    ) =>
+      deps.bus.emit('neighbourhood:runCompleted', {
+        summary: {
+          runId: 'offer-run',
+          goal: 'explore',
+          distanceMeters: 800,
+          durationMs: 300_000,
+          newCellIds: ['z'],
+          strengthenedCellIds: [],
+          outsideCellCount: 0,
+          reason: 'collected',
+          persisted: true,
+        },
+        state,
+      } as never);
+
+    beforeEach(() => {
+      window.localStorage.removeItem(OFFER_KEY);
+    });
+
+    it('offers one inline chip beside My atlas to a returning runner', () => {
+      const { root } = mount({ state: returning });
+      const chip = root.querySelector<HTMLElement>('[data-action="atlas-3d"]');
+      expect(chip).toBeTruthy();
+      expect(chip?.closest('.nh-footer')).toBeTruthy();
+      expect(root.querySelector('.nh-footer [data-action="atlas"]')).toBeTruthy();
+      expect(chip?.getAttribute('href')).toBe('/atlas-vr/');
+      expect(chip?.textContent).toContain('Walk your atlas');
+      expect(root.querySelectorAll('.nh-atlas-offer')).toHaveLength(1);
+      expect(
+        root.querySelector('[data-action="dismiss-atlas-3d"]')?.getAttribute('aria-label')
+      ).toBe("Don't show again");
+    });
+
+    it('never offers it on a first visit', () => {
+      const { root } = mount();
+      expect(root.querySelector('[data-action="atlas-3d"]')).toBeNull();
+      expect(root.querySelector('.nh-atlas-offer')).toBeNull();
+      expect(window.localStorage.getItem(OFFER_KEY)).toBeNull();
+    });
+
+    it('shows for at most two sessions, then stays quiet', () => {
+      const first = mount({ state: returning });
+      expect(first.root.querySelector('[data-action="atlas-3d"]')).toBeTruthy();
+      const second = mount({ state: returning });
+      expect(second.root.querySelector('[data-action="atlas-3d"]')).toBeTruthy();
+      const third = mount({ state: returning });
+      expect(third.root.querySelector('[data-action="atlas-3d"]')).toBeNull();
+      expect(third.root.querySelector('.nh-atlas-offer')).toBeNull();
+    });
+
+    it('counts a view when the chip is clicked and retires the offer', () => {
+      const first = mount({ state: returning });
+      first.root.querySelector<HTMLElement>('[data-action="atlas-3d"]')?.click();
+      const stored = JSON.parse(window.localStorage.getItem(OFFER_KEY) ?? '{}') as {
+        atlas3d?: { views: number; dismissed: boolean };
+      };
+      expect(stored.atlas3d?.views).toBe(2);
+      expect(stored.atlas3d?.dismissed).toBe(false);
+      const second = mount({ state: returning });
+      expect(second.root.querySelector('[data-action="atlas-3d"]')).toBeNull();
+    });
+
+    it('persists dismissal and suppresses the receipt link too', () => {
+      const first = mount({ state: returning });
+      first.root.querySelector<HTMLElement>('[data-action="dismiss-atlas-3d"]')?.click();
+      expect(first.root.querySelector('.nh-atlas-offer')).toBeNull();
+      const stored = JSON.parse(window.localStorage.getItem(OFFER_KEY) ?? '{}') as {
+        atlas3d?: { dismissed: boolean };
+      };
+      expect(stored.atlas3d?.dismissed).toBe(true);
+
+      const { deps, root } = mount({ state: returning });
+      expect(root.querySelector('[data-action="atlas-3d"]')).toBeNull();
+      finishRun(deps);
+      expect(root.querySelector('.nh-atlas-link')).toBeNull();
+      expect(root.querySelector('[data-action="continue"]')).toBeTruthy();
+    });
+
+    it('keeps the receipt link while the offer is still open, then drops it once exhausted', () => {
+      const first = mount({ state: returning });
+      finishRun(first.deps);
+      const link = first.root.querySelector<HTMLElement>('.nh-atlas-link a');
+      expect(link?.getAttribute('href')).toBe('/atlas-vr/');
+      expect(link?.textContent).toContain('Walk your atlas');
+      expect(first.root.querySelector('[data-action="continue"]')).toBeTruthy();
+
+      window.localStorage.setItem(
+        OFFER_KEY,
+        JSON.stringify({ atlas3d: { views: 2, lastShownAt: 1, dismissed: false } })
+      );
+      const second = mount({ state: returning });
+      finishRun(second.deps);
+      expect(second.root.querySelector('.nh-atlas-link')).toBeNull();
+    });
+
+    it('chooses the headset hint only when WebXR is present', () => {
+      Object.defineProperty(window.navigator, 'xr', {
+        value: { isSessionSupported: () => Promise.resolve(true) },
+        configurable: true,
+      });
+      try {
+        const { root } = mount({ state: returning });
+        expect(root.querySelector('.nh-atlas-offer-hint')?.textContent).toBe(
+          'in your browser or a headset'
+        );
+      } finally {
+        Object.defineProperty(window.navigator, 'xr', { value: undefined, configurable: true });
+      }
+      const plain = mount({ state: returning });
+      expect(plain.root.querySelector('.nh-atlas-offer-hint')?.textContent).toBe('in your browser');
+    });
+  });
 });
 
 function cellValue(map: ReturnType<typeof fakeMap>, cellId: string) {

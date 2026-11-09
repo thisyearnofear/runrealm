@@ -492,6 +492,58 @@ body.neighbourhood-mode .theater-pocket-btn {
   text-decoration-color: currentColor;
 }
 
+.nh-atlas-offer {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid #b9cbd0;
+  border-radius: 999px;
+  background: var(--rr-sunprint-bone);
+  overflow: hidden;
+}
+
+.nh-atlas-offer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--rr-sunprint-ink);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.nh-atlas-offer-link:hover {
+  background: rgba(99, 179, 200, 0.12);
+}
+
+.nh-atlas-offer-link:focus-visible,
+.nh-atlas-offer-dismiss:focus-visible {
+  outline: 2px solid var(--rr-sunprint-ink);
+  outline-offset: -2px;
+}
+
+.nh-atlas-offer-hint {
+  font-size: 0.72rem;
+  color: #3f6372;
+}
+
+.nh-atlas-offer-dismiss {
+  min-height: 44px;
+  min-width: 44px;
+  border: none;
+  border-left: 1px solid #b9cbd0;
+  background: transparent;
+  color: #3f6372;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.nh-atlas-offer-dismiss:hover {
+  color: var(--rr-sunprint-ink);
+  background: rgba(13, 43, 62, 0.06);
+}
+
 /* ---- First visit: an invitation, not a ledger ------------------------- */
 
 .nh-kicker {

@@ -10,6 +10,12 @@ import {
   type NeighbourhoodState,
 } from '@runrealm/shared-core/types/neighbourhood';
 import { NEIGHBOURHOOD_COPY } from '@runrealm/shared-core/utils/atlas-voice';
+import {
+  dismissModalityOffer,
+  markModalityOfferSeen,
+  modalityOfferVerdict,
+  readModalityOffer,
+} from '@runrealm/shared-core/utils/modality-offer';
 import { formatDistance, formatDuration, formatPace } from '@runrealm/shared-core/utils/run-status';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { hasRevealed, REVEAL_EVENT } from '../../lib/reveal';
@@ -111,6 +117,7 @@ export class NeighbourhoodExperience {
   private sampleBadge: HTMLElement | null = null;
   private tour: NeighbourhoodTour | null = null;
   private tourPromptDismissed = tourDismissed();
+  private atlasOfferCounted = false;
 
   constructor(private readonly deps: NeighbourhoodExperienceDeps) {
     this.state = deps.neighbourhood.getState();
@@ -572,6 +579,32 @@ export class NeighbourhoodExperience {
       </div>`;
   }
 
+  private atlasOfferVisible(): boolean {
+    if (this.state.qualifyingRuns < 1) return false;
+    return modalityOfferVerdict(readModalityOffer('atlas3d'), Date.now()) === 'offer';
+  }
+
+  private recordAtlasOfferImpression(): void {
+    if (this.atlasOfferCounted) return;
+    this.atlasOfferCounted = true;
+    markModalityOfferSeen('atlas3d', Date.now());
+  }
+
+  private atlasOfferBlock(): string {
+    if (!this.atlasOfferVisible()) return '';
+    this.recordAtlasOfferImpression();
+    const copy = NEIGHBOURHOOD_COPY.atlasOffer;
+    const hint =
+      typeof navigator !== 'undefined' && navigator.xr ? copy.headsetHint : copy.browserHint;
+    return `<span class="nh-atlas-offer"><a class="nh-atlas-offer-link" href="/atlas-vr/" data-action="atlas-3d">${copy.label}<span class="nh-atlas-offer-hint">${hint}</span></a><button type="button" class="nh-atlas-offer-dismiss" data-action="dismiss-atlas-3d" aria-label="${copy.dismiss}">×</button></span>`;
+  }
+
+  private summaryAtlasLinkBlock(): string {
+    if (!this.atlasOfferVisible()) return '';
+    this.recordAtlasOfferImpression();
+    return `<p class="nh-atlas-link"><a href="/atlas-vr/" data-action="atlas-3d">${NEIGHBOURHOOD_COPY.summaryAtlasLink}</a></p>`;
+  }
+
   private renderIdle(): void {
     if (!this.root) return;
     const firstVisit = this.isFirstVisit();
@@ -690,7 +723,7 @@ export class NeighbourhoodExperience {
             ${
               lean
                 ? ''
-                : `<button type="button" class="nh-secondary" data-action="atlas" aria-expanded="${this.atlasOpen}">${NEIGHBOURHOOD_COPY.myAtlas}</button>`
+                : `<button type="button" class="nh-secondary" data-action="atlas" aria-expanded="${this.atlasOpen}">${NEIGHBOURHOOD_COPY.myAtlas}</button>${this.atlasOfferBlock()}`
             }
             <button type="button" class="nh-secondary" data-action="account">${NEIGHBOURHOOD_COPY.account}</button>
             <button type="button" class="nh-secondary nh-advanced-toggle" data-action="advanced" aria-pressed="false">${NEIGHBOURHOOD_COPY.advancedTools}</button>
@@ -851,6 +884,13 @@ export class NeighbourhoodExperience {
     this.root.querySelector('[data-action="atlas"]')?.addEventListener('click', () => {
       this.atlasOpen = !this.atlasOpen;
       this.render();
+    });
+    this.root.querySelector('[data-action="atlas-3d"]')?.addEventListener('click', () => {
+      markModalityOfferSeen('atlas3d', Date.now());
+    });
+    this.root.querySelector('[data-action="dismiss-atlas-3d"]')?.addEventListener('click', () => {
+      dismissModalityOffer('atlas3d', Date.now());
+      this.root?.querySelector('.nh-atlas-offer')?.remove();
     });
     this.root.querySelector('[data-action="account"]')?.addEventListener('click', () => {
       this.deps.eventBus.emit('account:showRequested', {} as never);
@@ -1223,7 +1263,7 @@ export class NeighbourhoodExperience {
           ${challengeBlock}
           <p class="nh-receipt-save">${persistedNote}</p>
           <p class="nh-nextstep">${this.nextStepLine()}</p>
-          <p class="nh-atlas-link"><a href="/atlas-vr/">${NEIGHBOURHOOD_COPY.summaryAtlasLink}</a></p>
+          ${this.summaryAtlasLinkBlock()}
           ${this.ownershipBlock()}
           <p class="nh-error" role="alert" hidden></p>
         </div>
@@ -1237,6 +1277,9 @@ export class NeighbourhoodExperience {
     });
     this.root.querySelector('[data-action="see-ground"]')?.addEventListener('click', () => {
       this.showGroundOnMap();
+    });
+    this.root.querySelector('[data-action="atlas-3d"]')?.addEventListener('click', () => {
+      markModalityOfferSeen('atlas3d', Date.now());
     });
   }
 
