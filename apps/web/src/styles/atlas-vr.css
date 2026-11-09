@@ -195,3 +195,115 @@ body.atlas-vr-route #maplibre-container {
   font-size: var(--rr-text-sm);
   border-radius: var(--rr-r-1);
 }
+
+.atlas-vr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rr-s-2);
+}
+
+.atlas-vr-scrub {
+  display: flex;
+  align-items: center;
+  gap: var(--rr-s-3);
+  padding: var(--rr-s-2) 0;
+}
+
+.atlas-vr-scrub-label {
+  font-size: var(--rr-text-xs);
+  color: var(--rr-sunprint-cyan);
+  letter-spacing: var(--rr-track-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.atlas-vr-scrub-range {
+  flex: 1;
+  min-width: 8rem;
+  accent-color: var(--rr-sunprint-verdigris);
+}
+
+.atlas-vr-cellhint {
+  display: block;
+  margin: 0;
+  padding: var(--rr-s-2) var(--rr-s-3);
+  border-left: 3px solid var(--rr-sunprint-muted);
+  background: rgba(159, 184, 191, 0.12);
+  color: var(--rr-sunprint-chalk);
+  font-size: var(--rr-text-sm);
+  border-radius: var(--rr-r-1);
+}
+
+.atlas-vr-vignette {
+  position: absolute;
+  top: var(--rr-s-3);
+  right: var(--rr-s-3);
+  width: min(15rem, calc(100% - var(--rr-s-6)));
+  padding: var(--rr-s-3);
+  border: var(--rr-b-1);
+  border-radius: var(--rr-r-2);
+  background: rgba(8, 28, 41, 0.92);
+  color: var(--rr-sunprint-chalk);
+  display: flex;
+  flex-direction: column;
+  gap: var(--rr-s-2);
+}
+
+.atlas-vr-vignette-kicker {
+  margin: 0;
+  font-size: var(--rr-text-2xs);
+  letter-spacing: var(--rr-track-caps);
+  text-transform: uppercase;
+  color: var(--rr-sunprint-cyan);
+}
+
+.atlas-vr-vignette-id {
+  margin: 0;
+  font-family: var(--rr-font-display);
+  font-size: var(--rr-text-lg);
+  color: var(--rr-sunprint-chalk);
+}
+
+.atlas-vr-vignette-facts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rr-s-2);
+}
+
+.atlas-vr-vignette-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--rr-s-2);
+}
+
+.atlas-vr-vignette-facts dt {
+  font-size: var(--rr-text-2xs);
+  letter-spacing: var(--rr-track-wide);
+  text-transform: uppercase;
+  color: var(--rr-text-3);
+}
+
+.atlas-vr-vignette-facts dd {
+  margin: 0;
+  font-size: var(--rr-text-xs);
+  text-align: right;
+  color: var(--rr-sunprint-chalk);
+}
+
+.atlas-vr-vignette-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rr-s-2);
+}
+
+@media (max-width: 560px) {
+  .atlas-vr-vignette {
+    top: auto;
+    right: var(--rr-s-3);
+    left: var(--rr-s-3);
+    bottom: var(--rr-s-3);
+    width: auto;
+  }
+}

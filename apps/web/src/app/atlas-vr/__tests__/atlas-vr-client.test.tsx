@@ -99,4 +99,44 @@ describe('AtlasVrClient', () => {
     fireEvent.click(screen.getByRole('button', { name: 'This device' }));
     expect(screen.getByRole('alert')).toHaveTextContent('No atlas is stored on this device');
   });
+
+  it('renders the demo spine controls with honest labels', () => {
+    render(<AtlasVrClient />);
+    expect(screen.getByRole('button', { name: 'Develop newest' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Replay last outing' })).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: /Time-scrub the atlas/i })).toBeInTheDocument();
+    expect(screen.getByText('Demo atlas — not your data')).toBeInTheDocument();
+    expect(screen.getByText(/Atlas as of latest/)).toBeInTheDocument();
+  });
+
+  it('marks newest blocks developed instantly under reduced motion', () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    try {
+      render(<AtlasVrClient />);
+      expect(screen.queryByText('Developing newest blocks…')).not.toBeInTheDocument();
+      expect(screen.getByText('Newest blocks developed')).toBeInTheDocument();
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  it('labels the time scrub when dragged back to an earlier visit date', () => {
+    render(<AtlasVrClient />);
+    const slider = screen.getByRole('slider', { name: /Time-scrub the atlas/i });
+    fireEvent.change(slider, { target: { value: '0' } });
+    expect(screen.queryByText('Atlas as of latest')).not.toBeInTheDocument();
+    expect(screen.getByText(/Atlas as of/)).toBeInTheDocument();
+    fireEvent.change(slider, { target: { value: '3' } });
+    expect(screen.getByText('Atlas as of latest')).toBeInTheDocument();
+  });
 });

@@ -35,27 +35,61 @@ pretending it can undercuts the product's honesty contract.
 - The real new-work story for judges: multi-page atlas, atlas backup/restore,
   navigation/first-outing rework — plus this VR scene layer.
 
-### WebXR surface — prototype built (2026-10)
+### WebXR surface — demo spine built (2026-10)
 
-`/atlas-vr/` is a first-pass WebXR atlas surface, built with raw WebGL2 +
-WebXR and zero added dependencies: a pure scene builder
+`/atlas-vr/` is a WebXR atlas surface, built with raw WebGL2 + WebXR and zero
+added dependencies: a pure scene builder
 (`apps/web/src/shell/atlas-vr/atlas-vr-scene.ts`) maps a `NeighbourhoodAtlas`
 page to hexagonal prisms on a ~0.7 m "map table" — visits extrude blocks
 (capped), the Sunprint palette splits unvisited chalk outlines / verdigris
 collected / deep verdigris revisited / amber anchor. The renderer
-(`atlas-vr-renderer.ts`) draws instanced prisms in two passes (flat-lit fills,
-chalk rim lines) and is shared verbatim by the flat fallback camera and the
-per-eye `immersive-vr` path, so the render is deterministic — the same scene
-graph serves mono and stereo, which keeps QA honest without hardware.
-Sources: this device's `ATLAS_STORAGE_KEY` atlas, an atlas backup file via
-`parseAtlasBackup` (v1+v2, typed errors), or a labelled two-page demo atlas.
-Controller `selectstart` cycles pages forward, `squeezestart` back;
-arrow keys do the same in flat mode.
+(`atlas-vr-renderer.ts`) draws instanced prisms in one shader program
+(flat-lit fills, chalk rim lines, trail pass) and is shared verbatim by the
+flat fallback camera and the per-eye `immersive-vr`/`immersive-ar` paths, so
+the render is deterministic — the same scene graph serves mono and stereo,
+which keeps QA honest without hardware. Sources: this device's
+`ATLAS_STORAGE_KEY` atlas, an atlas backup file via `parseAtlasBackup`
+(v1+v2, typed errors), or a labelled two-page demo atlas.
 
-**Honest gap:** verified on desktop Chrome only — flat rendering, page
-navigation, backup restore, and the no-VR hint path are exercised; actual
-Quest behavior (session entry, `local-floor` anchoring, controller mapping,
-fps) is unverified. Hardware validation is the next gate.
+The demo spine (open → develop → grab → inspect → return) is in:
+
+- **Ink-develop** — cells last visited in the newest cohort (same-day window
+  of `max(lastVisitedAt)`) bloom chalk→verdigris over ~1.2 s via a per-instance
+  reveal + hash-noise irregular edge and a paper-grain term; re-triggerable via
+  "Develop newest". Reduced-motion devices get an instant T=1. Animation cost
+  stays on the changing cells only (per-cell `bufferSubData`).
+- **Grab the table** — in XR, `squeezestart` while pointing inside table
+  bounds, or a hand pinch within 0.5 m of the tabletop, attaches the table to
+  the controller/hand pose (position + yaw delta, height preserved); release
+  sets it down. Cell select requires a ray hit inside cell bounds, so grab
+  and select can't collide. Flat mode gets a small damped drag-orbit instead.
+- **Cell vignette** — selecting a collected cell lifts it ~3×, brightens its
+  rim, and dollies the camera in (flat mode) with a side panel: visits, last
+  visit date, latest-run credit (from `lastSummary`), and a "deepest ground —
+  your ghost stands here" line. Unvisited cells answer with a gentle
+  "not yet collected" hint. Trigger/select on bare paper, Back, or Esc returns.
+- **Ghost trail (honest)** — "Replay last outing" sweeps a luminous chalk
+  ribbon across the latest run's credited cells
+  (`newCellIds ∪ strengthenedCellIds`) in greedy nearest-neighbour order with
+  a short afterimage — labelled "nearest-neighbour order, not a GPS trace"
+  because raw tracks are never stored.
+- **Time-scrub** — a slider (XR: gamepad A/B buttons, edge-triggered) filters
+  the table to cells visited on/before a date: older ground keeps its print,
+  newer blocks dim to outline. Label reads "Atlas as of <date>".
+- **AR stretch** — `isSessionSupported('immersive-ar')` surfaces an
+  "Enter AR" button; the same table anchors via `local-floor` over
+  passthrough (alpha-0 clear). Everything fails open.
+
+Comfort/perf discipline held: seated-scale table, no locomotion, one shader
+program with ≤ 4 draw calls per eye (instanced fills + rim lines + ≤2 trail
+passes), no post/fog/particles, transitions eased ≥ 300 ms.
+
+**Honest gap:** verified on desktop Chrome only — flat rendering, develop
+animation, vignette open/close, trail replay, time-scrub, drag-orbit, page
+navigation, backup restore, and the no-VR hint path are exercised. Actual
+Quest behavior (session entry, `local-floor` anchoring, controller/hand
+mapping, grip-grab feel, fps, immersive-ar passthrough) is unverified — no
+headset was available. Hardware validation is the next gate.
 
 ## Week plan
 

@@ -29,13 +29,21 @@ interface XRSession extends EventTarget {
 
 type XRFrameRequestCallback = (time: number, frame: XRFrame) => void;
 
+interface XRSpace extends EventTarget {}
+
 interface XRFrame {
   readonly session: XRSession;
   getViewerPose(space: XRReferenceSpace): XRViewerPose | null;
+  getPose(space: XRSpace, baseSpace: XRSpace): XRPose | null;
 }
 
-interface XRReferenceSpace extends EventTarget {
+interface XRReferenceSpace extends XRSpace {
   getOffsetReferenceSpace?(originOffset: XRRigidTransform): XRReferenceSpace;
+}
+
+interface XRPose {
+  readonly transform: XRRigidTransform;
+  readonly emulatedPosition?: boolean;
 }
 
 interface XRViewerPose {
@@ -81,7 +89,15 @@ declare var XRWebGLLayer: {
 interface XRInputSource {
   readonly handedness: 'none' | 'left' | 'right' | string;
   readonly targetRayMode: string;
+  readonly targetRaySpace: XRSpace;
+  readonly gripSpace?: XRSpace;
+  readonly hand?: unknown;
   readonly gamepad?: Gamepad;
+}
+
+interface XRInputSourceEvent extends Event {
+  readonly frame: XRFrame;
+  readonly inputSource: XRInputSource;
 }
 
 interface XRInputSourceArray extends Iterable<XRInputSource> {
