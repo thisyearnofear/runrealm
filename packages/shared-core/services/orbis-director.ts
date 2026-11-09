@@ -53,7 +53,7 @@ export class OrbisDirector extends BaseService {
     this.enabled = options.enabled ?? this.config.getConfig().experience.orbisEnabled;
     this.minDispatchIntervalMs = options.minDispatchIntervalMs ?? DEFAULT_MIN_DISPATCH_INTERVAL_MS;
     this.now = options.now ?? (() => Date.now());
-    this.promptVariant = options.promptVariant ?? 'character';
+    this.promptVariant = options.promptVariant ?? 'atlas';
   }
 
   static getInstance(options: OrbisDirectorOptions = {}): OrbisDirector {

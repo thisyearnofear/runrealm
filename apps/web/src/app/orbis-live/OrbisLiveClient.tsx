@@ -241,7 +241,7 @@ function OrbisLiveExperience() {
       bus.off('orbis:promptDispatched', onDispatched);
       bus.off('orbis:promptFailed', onFailed);
       bus.off('territory:claimed', onDemoClaimed);
-      director.setPromptVariant('character');
+      director.setPromptVariant('atlas');
       director.cleanup();
       world.cleanup();
       directorRef.current = null;

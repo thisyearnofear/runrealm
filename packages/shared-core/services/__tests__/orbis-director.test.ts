@@ -136,7 +136,7 @@ describe('OrbisDirector', () => {
     director.enqueueWorldChange(sceneChange('run-paused'));
     now += 5000;
     await jest.runAllTimersAsync();
-    expect(prompts[1]).toContain('The same unbroken scene continues.');
+    expect(prompts[1]).toContain('The same unbroken atlas scene continues.');
     expect(prompts[1]).not.toContain('cyanotype-inspired athletic atlas');
     director.cleanup();
   });
@@ -159,7 +159,7 @@ describe('OrbisDirector', () => {
     director.enqueueWorldChange(sceneChange('run-resumed'));
     now += 5000;
     await jest.runAllTimersAsync();
-    expect(prompts[1]).toContain('The same unbroken scene continues.');
+    expect(prompts[1]).toContain('The same unbroken atlas scene continues.');
 
     director.resetScene();
     director.enqueueWorldChange(sceneChange('realm-entered'));
@@ -182,11 +182,11 @@ describe('OrbisDirector', () => {
     now += 5000;
     await jest.runAllTimersAsync();
     expect(prompts).toHaveLength(1);
-    expect(prompts[0]).toContain('revisit familiar ground');
+    expect(prompts[0]).toContain('familiar ground');
     director.cleanup();
   });
 
-  it('routes the prompt variant through to neighbourhood builds, defaulting to character', async () => {
+  it('routes the prompt variant through to neighbourhood builds, defaulting to atlas', async () => {
     const director = new OrbisDirector({ enabled: true, now: () => now });
     const prompts: string[] = [];
     director.setTransport({
@@ -194,21 +194,21 @@ describe('OrbisDirector', () => {
         prompts.push(prompt);
       },
     });
-    expect(director.getPromptVariant()).toBe('character');
+    expect(director.getPromptVariant()).toBe('atlas');
 
-    director.setPromptVariant('atlas');
+    director.setPromptVariant('character');
     director.enqueueWorldChange(sceneChange('realm-entered'));
     now += 5000;
     await jest.runAllTimersAsync();
-    expect(prompts[0]).toContain('hexagonal survey grid');
-    expect(prompts[0]).not.toContain('imaginary city district');
+    expect(prompts[0]).toContain('stands beside');
+    expect(prompts[0]).toContain('imaginary city district');
+    expect(prompts[0]).not.toContain('map itself is the whole scene');
 
-    director.setPromptVariant('character');
+    director.setPromptVariant('atlas');
     director.enqueueWorldChange(sceneChange('cell-exposed'));
     now += 5000;
     await jest.runAllTimersAsync();
-    expect(prompts[1]).toContain('The same unbroken scene continues.');
-    expect(prompts[1]).not.toContain('same unbroken atlas scene');
+    expect(prompts[1]).toContain('The same unbroken atlas scene continues.');
     director.cleanup();
   });
 

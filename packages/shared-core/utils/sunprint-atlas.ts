@@ -252,7 +252,7 @@ export function buildOrbisPromptIntent(
       scene,
       change.reason,
       initial,
-      options.variant ?? 'character'
+      options.variant ?? 'atlas'
     );
     return {
       reason: change.reason,

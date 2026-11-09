@@ -134,14 +134,14 @@ describe('Sunprint Atlas foundation', () => {
     expect(entered?.priority).toBe(110);
     expect(entered?.initial).toBe(true);
     expect(entered?.prompt).toContain('living cyanotype-inspired athletic atlas');
-    expect(entered?.prompt).toContain('7 cells');
+    expect(entered?.prompt).toContain('7 collected cells');
     expect(entered?.prompt).not.toMatch(/\d{2}\.\d{3,}/);
 
     const resumedDelta = buildOrbisPromptIntent(withScene('run-started'), 1000, {
       initial: false,
     });
     expect(resumedDelta?.initial).toBe(false);
-    expect(resumedDelta?.prompt).toContain('The same unbroken scene continues.');
+    expect(resumedDelta?.prompt).toContain('The same unbroken atlas scene continues.');
 
     const settled = buildOrbisPromptIntent(
       {
@@ -162,10 +162,10 @@ describe('Sunprint Atlas foundation', () => {
     expect(settled?.priority).toBe(100);
     expect(settled?.prompt).toContain('3 new cells');
     expect(settled?.prompt).toContain('not registered ownership');
-    expect(settled?.audioPrompt).toContain('paper-development chime');
+    expect(settled?.audioPrompt).toContain('developing chime');
 
     const paused = buildOrbisPromptIntent(withScene('run-paused'), 1000);
-    expect(paused?.prompt).toContain('The runner pauses safely beside the atlas');
+    expect(paused?.prompt).toContain('The trace rests on the paper');
     expect(paused?.priority).toBe(45);
   });
 

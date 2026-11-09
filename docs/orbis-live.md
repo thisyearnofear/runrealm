@@ -27,15 +27,15 @@ time.
 ## Scene variants (A/B)
 
 `OrbisDirector` carries a `promptVariant` (`'character' | 'atlas'`, default
-`'character'`). The character variant is the legacy grammar — a runner
+`'atlas'`). The character variant is the legacy grammar — a runner
 standing beside a living atlas in an imaginary district. The atlas variant
 renders the map itself as the scene: blueprint paper terrain, chalk hexagonal
 grid, verdigris-developed collected cells, a chalk trace inside the map —
 with strict negatives (no city, weather, landmarks, people, faces, buildings)
 and a per-delta preservation clause. The QA route exposes a **Scene:
 Character | Atlas** toggle in the Session panel so the two grammars can be
-compared on identical demo events; the main shell keeps `'character'` until
-the variant is flipped deliberately. Both variants share the same honesty
+compared on identical demo events; the main shell defaults to `'atlas'` —
+`'character'` remains available via `setPromptVariant` for fallback. Both variants share the same honesty
 contract — provisional paint is never claimed ground.
 
 ## What it demonstrates
