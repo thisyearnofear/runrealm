@@ -15,7 +15,11 @@ import type {
   WorldTerritoryStatus,
   WorldTimeOfDay,
 } from '../types/world-state';
-import { buildNeighbourhoodOrbisText, NEIGHBOURHOOD_ORBIS_PRIORITIES } from './neighbourhood-orbis';
+import {
+  buildNeighbourhoodOrbisPrompt,
+  NEIGHBOURHOOD_ORBIS_PRIORITIES,
+  type NeighbourhoodOrbisVariant,
+} from './neighbourhood-orbis';
 
 export const SUNPRINT_ATLAS_COLORS = {
   blueprint: '#0d2b3e',
@@ -222,6 +226,7 @@ function buildAudioPrompt(reason: OrbisTransitionReason, snapshot: WorldSnapshot
 
 export interface OrbisPromptIntentOptions {
   initial?: boolean;
+  variant?: NeighbourhoodOrbisVariant;
 }
 
 export function buildOrbisPromptIntent(
@@ -243,7 +248,12 @@ export function buildOrbisPromptIntent(
       change.previous.runStatus === 'cancelled');
 
   if (scene) {
-    const { prompt, audioPrompt } = buildNeighbourhoodOrbisText(scene, change.reason, initial);
+    const { prompt, audioPrompt } = buildNeighbourhoodOrbisPrompt(
+      scene,
+      change.reason,
+      initial,
+      options.variant ?? 'character'
+    );
     return {
       reason: change.reason,
       priority: ORBIS_REASON_PRIORITIES[change.reason],

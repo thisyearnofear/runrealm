@@ -13,6 +13,7 @@
  */
 
 import '@testing-library/jest-dom';
+import { OrbisDirector } from '@runrealm/shared-core/services/orbis-director';
 import { TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { createElement, Fragment, type ReactNode } from 'react';
@@ -152,6 +153,55 @@ describe('territory persistence', () => {
       id: string;
     }>;
     expect(stored.some((territory) => territory.id === 'orbis-demo-territory')).toBe(true);
+  });
+});
+
+describe('scene variant toggle', () => {
+  it('defaults to Atlas and forwards toggles to the director', async () => {
+    window.localStorage.setItem(INTRO_STORAGE_KEY, '1');
+    render(<OrbisLiveClient />);
+    await act(async () => {});
+
+    const toggle = screen.getByRole('group', { name: 'Scene:' });
+    expect(toggle).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Atlas' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Character' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+    expect(OrbisDirector.getInstance().getPromptVariant()).toBe('atlas');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Character' }));
+    expect(screen.getByRole('button', { name: 'Character' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(OrbisDirector.getInstance().getPromptVariant()).toBe('character');
+  });
+
+  it('switches the storyboard prompt builder between atlas and character grammar', async () => {
+    jest.useFakeTimers();
+    window.localStorage.setItem(INTRO_STORAGE_KEY, '1');
+    const { container } = render(<OrbisLiveClient />);
+    await act(async () => {});
+
+    // Storyboard mode attaches a local transport; the seeded realm-entered
+    // scene dispatches first as the (atlas-variant) initial prompt.
+    fireEvent.click(screen.getByRole('button', { name: 'Play storyboard' }));
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+    const caption = () => container.querySelector('.orbis-storyboard__caption p');
+    expect(caption()?.textContent).toContain('hexagonal survey grid');
+    expect(caption()?.textContent).not.toContain('imaginary city district');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Character' }));
+    fireEvent.click(screen.getByRole('button', { name: /Expose a cell/ }));
+    await act(async () => {
+      jest.advanceTimersByTime(2_000);
+    });
+    expect(caption()?.textContent).toContain('The same unbroken scene continues.');
+    expect(caption()?.textContent).not.toContain('unbroken atlas scene');
   });
 });
 

@@ -262,6 +262,29 @@ body.orbis-live-route #maplibre-container {
   gap: var(--rr-s-2);
 }
 
+.orbis-variant-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--rr-s-2);
+  min-width: 0;
+  margin: 0 0 var(--rr-s-3);
+  padding: 0;
+  border: 0;
+}
+
+.orbis-variant-toggle__label {
+  float: left;
+  color: var(--rr-text-3);
+  font-size: var(--rr-text-xs);
+  font-weight: var(--rr-w-semibold);
+  margin-right: auto;
+}
+
+.orbis-variant-toggle .orbis-button {
+  flex: 1;
+  min-height: 36px;
+}
+
 .orbis-button,
 .orbis-error button {
   min-height: 44px;

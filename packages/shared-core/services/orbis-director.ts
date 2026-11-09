@@ -10,6 +10,7 @@ import {
   type OrbisPromptIntent,
   type WorldStateChange,
 } from '../types/world-state';
+import type { NeighbourhoodOrbisVariant } from '../utils/neighbourhood-orbis';
 import { buildOrbisPromptIntent } from '../utils/sunprint-atlas';
 
 export interface OrbisTransport {
@@ -22,6 +23,7 @@ export interface OrbisDirectorOptions {
   enabled?: boolean;
   minDispatchIntervalMs?: number;
   now?: () => number;
+  promptVariant?: NeighbourhoodOrbisVariant;
 }
 
 interface PendingEntry {
@@ -44,12 +46,14 @@ export class OrbisDirector extends BaseService {
   private sceneInitialized = false;
   private flushing = false;
   private worldSubscribed = false;
+  private promptVariant: NeighbourhoodOrbisVariant;
 
   constructor(options: OrbisDirectorOptions = {}) {
     super();
     this.enabled = options.enabled ?? this.config.getConfig().experience.orbisEnabled;
     this.minDispatchIntervalMs = options.minDispatchIntervalMs ?? DEFAULT_MIN_DISPATCH_INTERVAL_MS;
     this.now = options.now ?? (() => Date.now());
+    this.promptVariant = options.promptVariant ?? 'character';
   }
 
   static getInstance(options: OrbisDirectorOptions = {}): OrbisDirector {
@@ -91,6 +95,14 @@ export class OrbisDirector extends BaseService {
     return this.transport === transport;
   }
 
+  public getPromptVariant(): NeighbourhoodOrbisVariant {
+    return this.promptVariant;
+  }
+
+  public setPromptVariant(variant: NeighbourhoodOrbisVariant): void {
+    this.promptVariant = variant;
+  }
+
   public enqueueWorldChange(change: WorldStateChange): OrbisPromptIntent | null {
     if (!this.enabled) return null;
     const owned: WorldStateChange = {
@@ -101,7 +113,9 @@ export class OrbisDirector extends BaseService {
 
     if (this.pending?.change.reason === 'realm-entered' && owned.snapshot.neighbourhood) {
       const refreshed: WorldStateChange = { ...owned, reason: 'realm-entered' };
-      const intent = buildOrbisPromptIntent(refreshed, this.now());
+      const intent = buildOrbisPromptIntent(refreshed, this.now(), {
+        variant: this.promptVariant,
+      });
       if (!intent) return null;
       this.pending = { change: refreshed, intent, createdAt: this.pending.createdAt };
       this.safeEmit('orbis:promptQueued', { intent });
@@ -109,7 +123,7 @@ export class OrbisDirector extends BaseService {
       return intent;
     }
 
-    const intent = buildOrbisPromptIntent(owned, this.now());
+    const intent = buildOrbisPromptIntent(owned, this.now(), { variant: this.promptVariant });
     if (!intent) return null;
 
     // Keep the highest-priority pending scene. For equal priority, the newest
@@ -153,6 +167,7 @@ export class OrbisDirector extends BaseService {
       const intent = entry.change.snapshot.neighbourhood
         ? buildOrbisPromptIntent(entry.change, entry.createdAt, {
             initial: !this.sceneInitialized,
+            variant: this.promptVariant,
           })
         : entry.intent;
       if (!intent) return;

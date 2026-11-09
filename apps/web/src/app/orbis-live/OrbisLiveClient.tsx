@@ -16,7 +16,9 @@ import { OrbisDirector } from '@runrealm/shared-core/services/orbis-director';
 import { type Territory, TerritoryService } from '@runrealm/shared-core/services/territory-service';
 import { WorldStateService } from '@runrealm/shared-core/services/world-state-service';
 import type { OrbisPromptIntent, WorldSnapshot } from '@runrealm/shared-core/types/world-state';
+import type { NeighbourhoodOrbisVariant } from '@runrealm/shared-core/utils/neighbourhood-orbis';
 import {
+  createOrbisDemoNeighbourhoodState,
   createOrbisDemoTerritory,
   emitOrbisDemoStep,
   ORBIS_DEMO_STEPS,
@@ -143,6 +145,7 @@ function OrbisLiveExperience() {
   const [ambienceOn, setAmbienceOn] = useState(false);
   const [cuesOn, setCuesOn] = useState(true);
   const [savedTerritoryName, setSavedTerritoryName] = useState<string | null>(null);
+  const [promptVariant, setPromptVariant] = useState<NeighbourhoodOrbisVariant>('atlas');
 
   const stageRef = useRef<HTMLDivElement>(null);
   const deedModalRef = useRef<SunprintDeedModal | null>(null);
@@ -223,6 +226,9 @@ function OrbisLiveExperience() {
 
     void Promise.all([world.initialize(), territoryStore.initialize()])
       .then(() => director.initialize())
+      .then(() => {
+        world.setNeighbourhoodState(createOrbisDemoNeighbourhoodState());
+      })
       .catch((error: unknown) => {
         setCommandError(error instanceof Error ? error.message : String(error));
       });
@@ -235,11 +241,16 @@ function OrbisLiveExperience() {
       bus.off('orbis:promptDispatched', onDispatched);
       bus.off('orbis:promptFailed', onFailed);
       bus.off('territory:claimed', onDemoClaimed);
+      director.setPromptVariant('character');
       director.cleanup();
       world.cleanup();
       directorRef.current = null;
     };
   }, [bus]);
+
+  useEffect(() => {
+    directorRef.current?.setPromptVariant(promptVariant);
+  }, [promptVariant]);
 
   useEffect(() => {
     const director = directorRef.current;
@@ -623,6 +634,25 @@ function OrbisLiveExperience() {
           <aside className="orbis-control-panel" aria-label="Orbis challenge controls">
             <div className="orbis-panel-section">
               <p className="orbis-panel-label">Session</p>
+              <fieldset className="orbis-variant-toggle">
+                <legend className="orbis-variant-toggle__label">Scene:</legend>
+                <button
+                  type="button"
+                  className={`orbis-button orbis-button--quiet ${promptVariant === 'character' ? 'is-on' : ''}`}
+                  aria-pressed={promptVariant === 'character'}
+                  onClick={() => setPromptVariant('character')}
+                >
+                  Character
+                </button>
+                <button
+                  type="button"
+                  className={`orbis-button orbis-button--quiet ${promptVariant === 'atlas' ? 'is-on' : ''}`}
+                  aria-pressed={promptVariant === 'atlas'}
+                  onClick={() => setPromptVariant('atlas')}
+                >
+                  Atlas
+                </button>
+              </fieldset>
               <div className="orbis-button-grid">
                 <button
                   type="button"

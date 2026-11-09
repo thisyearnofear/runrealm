@@ -8,6 +8,7 @@
 import type { EventBus } from '../core/event-bus';
 import type { GhostRunner } from '../services/ai-service';
 import type { Territory } from '../services/territory-service';
+import type { NeighbourhoodState } from '../types/neighbourhood';
 
 export type OrbisDemoStepId =
   | 'run-started'
@@ -112,6 +113,24 @@ export function createOrbisDemoTerritory(
     lastActivityUpdate: Date.now(),
     defenseStatus,
     confidentialShield: false,
+  };
+}
+
+export function createOrbisDemoNeighbourhoodState(): NeighbourhoodState {
+  return {
+    anchorCell: null,
+    cells: {},
+    collectedCount: 9,
+    strengthenedCount: 3,
+    ringCellIds: [],
+    qualifyingRuns: 4,
+    goal: 'explore',
+    lastSummary: null,
+    referenceRun: null,
+    persisted: false,
+    readOnly: true,
+    pages: [],
+    viewAnchorCell: null,
   };
 }
 

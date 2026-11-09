@@ -186,6 +186,32 @@ describe('OrbisDirector', () => {
     director.cleanup();
   });
 
+  it('routes the prompt variant through to neighbourhood builds, defaulting to character', async () => {
+    const director = new OrbisDirector({ enabled: true, now: () => now });
+    const prompts: string[] = [];
+    director.setTransport({
+      setPrompt: async (prompt: string) => {
+        prompts.push(prompt);
+      },
+    });
+    expect(director.getPromptVariant()).toBe('character');
+
+    director.setPromptVariant('atlas');
+    director.enqueueWorldChange(sceneChange('realm-entered'));
+    now += 5000;
+    await jest.runAllTimersAsync();
+    expect(prompts[0]).toContain('hexagonal survey grid');
+    expect(prompts[0]).not.toContain('imaginary city district');
+
+    director.setPromptVariant('character');
+    director.enqueueWorldChange(sceneChange('cell-exposed'));
+    now += 5000;
+    await jest.runAllTimersAsync();
+    expect(prompts[1]).toContain('The same unbroken scene continues.');
+    expect(prompts[1]).not.toContain('same unbroken atlas scene');
+    director.cleanup();
+  });
+
   it('an in-flight disconnect does not emit a successor', async () => {
     const director = new OrbisDirector({ enabled: true, now: () => now });
     const dispatched: string[] = [];
