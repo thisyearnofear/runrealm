@@ -14,6 +14,19 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run build:shared && npm run build --workspace=@runrealm/web
+      - name: Install XR emulator runtime
+        run: |
+          curl -sL "https://unpkg.com/immersive-web-emulator/dist/iwer.min.js" -o scripts/qa/iwer.min.js
+          cp scripts/qa/iwer.min.js apps/web/dist/iwer.min.js
+          python3 - <<'PYEOF'
+          from pathlib import Path
+          html = Path('apps/web/dist/atlas-vr/index.html')
+          s = html.read_text()
+          boot = '<script src="/iwer.min.js"></script><script>try{var d=new IWER.XRDevice(IWER.metaQuest3);d.stereoEnabled=true;d.installRuntime({forceInstall:true});}catch(e){}</script>'
+          if 'iwer.min.js' not in s:
+              s = s.replace('</head>', boot + '</head>')
+              html.write_text(s)
+          PYEOF
       - name: Serve static export
         run: |
           cd apps/web/dist

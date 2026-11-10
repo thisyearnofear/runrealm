@@ -145,15 +145,18 @@ try {
         if (!navigator.xr) { out.errors.push('no navigator.xr iwer='+out.dbg); return out; }
         out.dbg = 'iwer=' + typeof IWER + ' dev=' + typeof (IWER && IWER.XRDevice) + ' q3=' + typeof (IWER && IWER.metaQuest3);
         try {
-          if (typeof IWER.installRuntime === 'function') IWER.installRuntime();
           window.__device = new IWER.XRDevice(IWER.metaQuest3);
           window.__device.stereoEnabled = true;
-          if (typeof window.__device.installRuntime === 'function') window.__device.installRuntime();
-          if (typeof window.__device.install === 'function') window.__device.install();
+          window.__device.installRuntime({ forceInstall: true });
         } catch (e) { out.errors.push('device: ' + String(e).slice(0, 200)); return out; }
         out.dbg = 'proto=' + Object.getOwnPropertyNames(Object.getPrototypeOf(window.__device)).slice(0, 40).join(',');
         out.supported = await navigator.xr.isSessionSupported('immersive-vr');
         if (!out.supported) { out.errors.push('immersive-vr unsupported'); return out; }
+        try {
+          const probe = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor', 'hand-tracking'] });
+          out.directSession = true;
+          await probe.end();
+        } catch (e) { out.errors.push('reqSess: ' + String(e && e.message ? e.message : e).slice(0, 200)); }
         const btn = [...document.querySelectorAll('button')].find((b) => /enter vr/i.test(b.textContent || ''));
         if (!btn) { out.errors.push('no enter-vr button'); return out; }
         btn.click();
@@ -161,7 +164,10 @@ try {
         const session = window.__atlasVrSession ?? null;
         out.sessionEntered = !!session;
         out.frames = window.__atlasVrFrameCount ?? 0;
-        if (!session) { out.errors.push('session not entered'); return out; }
+        if (!session) {
+          out.status = [...document.querySelectorAll('.atlas-vr-hint,[role=status],[role=alert]')].map((n) => n.textContent).filter(Boolean).join(' | ');
+          out.errors.push('session not entered'); return out;
+        }
         for (const type of ['selectstart', 'squeezestart', 'squeezeend', 'selectend']) {
           const ev = new Event(type);
           ev.inputSource = {};
