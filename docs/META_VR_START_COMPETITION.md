@@ -84,18 +84,35 @@ Comfort/perf discipline held: seated-scale table, no locomotion, one shader
 program with ≤ 4 draw calls per eye (instanced fills + rim lines + ≤2 trail
 passes), no post/fog/particles, transitions eased ≥ 300 ms.
 
-**Honest gap:** verified on desktop Chrome only — flat rendering, develop
-animation, vignette open/close, trail replay, time-scrub, drag-orbit, page
-navigation, backup restore, and the no-VR hint path are exercised. Actual
-Quest behavior (session entry, `local-floor` anchoring, controller/hand
-mapping, grip-grab feel, fps, immersive-ar passthrough) is unverified — no
-headset was available. Hardware validation is the next gate.
+**Honest gap (updated):** verified on desktop Chrome — flat rendering,
+develop animation, vignette open/close, trail replay, time-scrub,
+drag-orbit, page navigation, backup restore, and the no-VR hint path are
+exercised. The XR session/input paths are now also exercised headlessly:
+`scripts/qa/atlas-vr-xr.mjs` (script `qa:atlas-vr-xr`) enters an
+`immersive-vr` session and drives `selectstart` on a cell → vignette,
+select-miss → page cycle, `squeezestart` inside bounds → table grab,
+squeeze off-table → replay/prev-page, and gamepad A/B → time-scrub, with
+PASS/FAIL + JSON report + screenshots and a session-frame p50/p95 probe.
+A second bounded harness, `scripts/qa/atlas-vr-xr-harness.mjs` (CI workflow
+`atlas-vr-xr-smoke`, manual trigger), boots the iwer runtime with
+`forceInstall` before the app's support probe and verified the real path:
+Enter VR click → `immersive-vr` session entered → 232 frames through the
+XRWebGLLayer pose loop → select/squeeze input reaching app handlers →
+screenshot + JSON artifact, all inside a 60s hard kill bound.
+Caveat: `navigator.xr.test` (the WebXR Test API) is absent from Chrome for
+Testing 157, so sessions are emulated by the iwer runtime
+(`scripts/qa/iwer.min.js`, vendored, no npm dep) — input/pose handling and
+the app's session lifecycle are real, but device quirks are emulated.
+**Remaining:** physical presence/comfort/grip feel, real Quest fps, and
+`immersive-ar` passthrough still need on-device validation — no headset was
+available.
 
 ## Week plan
 
 - [~] Week 1: WebXR atlas scene on Quest browser — prototype built at
-  `/atlas-vr/` (map table + block extrusion done in-browser); still needs
-  on-device Quest validation.
+  `/atlas-vr/` (map table + block extrusion done in-browser); XR session,
+  input, and render paths verified end-to-end via emulated session (CI
+  `atlas-vr-xr-smoke`); still needs on-device Quest feel/fps validation.
 - [ ] Week 2: Ghost/deed presentation, page navigation, ≥72fps measured.
 - [ ] Week 3: Realm opt-in layer, polish, record 2-min video, write META_COMPETITION.md.
 - [ ] Week 4: Devpost registration + submission; backup 360° capture if fps slips.
